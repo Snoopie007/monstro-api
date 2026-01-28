@@ -206,11 +206,11 @@ export function PreviewStep({
         <div className='space-y-6'>
             {/* Validation Warning */}
             {invalidRows > 0 && (
-                <div className='p-4 rounded-lg bg-red-500/5 border border-red-500/20 flex items-start gap-3'>
-                    <AlertCircle className='size-5 text-red-500 flex-shrink-0 mt-0.5' />
+                <div className='p-4 rounded-lg bg-amber-500/5 border border-amber-500/20 flex items-start gap-3'>
+                    <AlertCircle className='size-5 text-amber-600 flex-shrink-0 mt-0.5' />
                     <div>
-                        <div className='text-sm font-medium text-red-500'>Fix {invalidRows} validation error{invalidRows > 1 ? 's' : ''} before importing</div>
-                        <p className='text-xs text-red-500/70 mt-1'>Review the validation issues below to correct your data</p>
+                        <div className='text-sm font-medium text-amber-600'>{invalidRows} row{invalidRows > 1 ? 's' : ''} will be skipped</div>
+                        <p className='text-xs text-amber-600/70 mt-1'>These rows contain invalid data and will not be imported</p>
                     </div>
                 </div>
             )}
@@ -226,27 +226,15 @@ export function PreviewStep({
                         <div className='text-xs text-muted-foreground'>Total Rows</div>
                     </div>
                 </div>
-                {invalidRows === 0 ? (
-                    <div className='flex items-center gap-3 p-4 rounded-lg bg-green-500/5 border border-green-500/20'>
-                        <div className='size-10 rounded-full bg-green-500/10 flex items-center justify-center'>
-                            <CheckCircle2 className='size-5 text-green-500' />
-                        </div>
-                        <div>
-                            <div className='text-2xl font-semibold text-green-500'>{validRows}</div>
-                            <div className='text-xs text-green-500/70'>Valid Rows</div>
-                        </div>
+                <div className='flex items-center gap-3 p-4 rounded-lg bg-green-500/5 border border-green-500/20'>
+                    <div className='size-10 rounded-full bg-green-500/10 flex items-center justify-center'>
+                        <CheckCircle2 className='size-5 text-green-500' />
                     </div>
-                ) : (
-                    <div className='flex items-center gap-3 p-4 rounded-lg bg-red-500/5 border border-red-500/20'>
-                        <div className='size-10 rounded-full bg-red-500/10 flex items-center justify-center'>
-                            <AlertCircle className='size-5 text-red-500' />
-                        </div>
-                        <div>
-                            <div className='text-2xl font-semibold text-red-500'>{invalidRows}</div>
-                            <div className='text-xs text-red-500/70'>Invalid Rows</div>
-                        </div>
+                    <div>
+                        <div className='text-2xl font-semibold text-green-500'>{validRows}</div>
+                        <div className='text-xs text-green-500/70'>Valid Rows</div>
                     </div>
-                )}
+                </div>
                 <div className='flex items-center gap-3 p-4 rounded-lg bg-foreground/5 border border-foreground/10'>
                     <div className='size-10 rounded-full bg-blue-500/10 flex items-center justify-center'>
                         <FileSpreadsheet className='size-5 text-blue-500' />
@@ -407,7 +395,7 @@ export function PreviewStep({
             {/* Validation Issues */}
             {invalidRows > 0 && (
                 <div className='space-y-2'>
-                    <div className='text-sm font-medium'>Validation Issues</div>
+                    <div className='text-sm font-medium text-amber-600'>Rows That Will Be Skipped</div>
                     <div className='border border-foreground/10 rounded-lg overflow-hidden'>
                         {Array.from(errorsByRow.entries()).map(([rowNum, errors]) => (
                             <div key={`error-row-${rowNum}`} className='border-b border-foreground/10 last:border-b-0'>
@@ -417,7 +405,7 @@ export function PreviewStep({
                                     className='w-full flex items-center justify-between p-3 hover:bg-foreground/5 transition-colors'
                                 >
                                     <div className='flex items-center gap-2'>
-                                        <AlertCircle className='size-4 text-red-500' />
+                                        <AlertCircle className='size-4 text-amber-600' />
                                         <span className='text-sm font-medium'>Row {rowNum + 1}</span>
                                         <Badge variant='secondary' className='text-xs'>{errors.length} error{errors.length > 1 ? 's' : ''}</Badge>
                                     </div>
@@ -536,9 +524,10 @@ export function PreviewStep({
                 size='lg'
                 className='w-full'
                 onClick={handleImport}
-                disabled={isImporting || !file || invalidRows > 0}
+                disabled={isImporting || !file}
             >
-                Import {fullData.length} Members
+                Import {validRows} of {totalRows} Members
+                {invalidRows > 0 && ` (${invalidRows} skipped)`}
                 {totalCustomFieldsCount > 0 ? ` with ${totalCustomFieldsCount} custom field${totalCustomFieldsCount > 1 ? 's' : ''}` : ''}
             </Button>
         </div>
