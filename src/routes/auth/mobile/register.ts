@@ -41,10 +41,10 @@ export async function mobileRegister(app: Elysia) {
                 });
             }
 
+            const hashedPassword = await bcrypt.hash(password, 10);
             await db.transaction(async (tx) => {
 
                 if (!user) {
-                    const hashedPassword = await bcrypt.hash(password, 10);
                     const [newUser] = await tx.insert(users).values({
                         name: `${firstName} ${lastName}`,
                         email: normalizedEmail,
@@ -59,13 +59,7 @@ export async function mobileRegister(app: Elysia) {
                         await tx.rollback();
                         return;
                     }
-                    await tx.insert(accounts).values({
-                        userId: newUser.id,
-                        provider: "credential",
-                        type: 'email',
-                        accountId: normalizedEmail,
-                        password: hashedPassword,
-                    });
+
                     user = newUser;
                 }
 
@@ -88,7 +82,15 @@ export async function mobileRegister(app: Elysia) {
                     member = newMember;
                 }
 
-
+                await tx.insert(accounts).values({
+                    userId: user.id,
+                    provider: "credential",
+                    type: 'email',
+                    accountId: normalizedEmail,
+                    password: hashedPassword,
+                }).onConflictDoNothing({
+                    target: [accounts.accountId, accounts.provider],
+                })
             });
 
             if (!member) {
