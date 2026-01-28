@@ -90,7 +90,7 @@ export async function mobileRegister(app: Elysia) {
                     password: hashedPassword,
                 }).onConflictDoNothing({
                     target: [accounts.accountId, accounts.provider],
-                })
+                }).returning();
             });
 
             if (!member) {
