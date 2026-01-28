@@ -18,15 +18,21 @@ import { Loader2 } from 'lucide-react'
 export function TypeFields({ form }: { form: UseFormReturn<z.infer<typeof LoginSchema>> }) {
     const { user, setStep } = useLogin();
     const [loading, setLoading] = useState(false);
-
+    const type = form.watch('type');
     async function handleGetToken() {
+
+        if (!type) {
+            toast.error('Please select either email or phone to verify your account.');
+            return;
+        }
+
         setLoading(true);
 
         const { result, error } = await tryCatch(fetch(`/api/auth/login/token`, {
             method: 'POST',
             body: JSON.stringify({
                 user,
-                type: form.getValues('type')
+                type: type
             }),
         }));
 
@@ -88,7 +94,7 @@ export function TypeFields({ form }: { form: UseFormReturn<z.infer<typeof LoginS
                 <Button
                     size="lg"
                     onClick={handleGetToken}
-                    disabled={loading}
+                    disabled={loading || !type}
                     className={cn("children:hidden", loading && "children:block")}
                 >
                     <Loader2 className='size-4 mr-2 animate-spin' />

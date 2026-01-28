@@ -9,14 +9,14 @@ import {
     PasswordField
 } from "@/components/forms";
 import { useSearchParams } from "next/navigation";
-import { cn, sleep } from "@/libs/utils";
+import { cn, getPhoneFormat, sleep } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { RegisterSchema } from "@/libs/FormSchemas/schemas";
-import PhoneInput from 'react-phone-number-input/input'
+import { PatternFormat } from "react-number-format";
 import { CountryCodes } from "@/libs/data";
 import { CountryCode } from "@/types";
 import { useJoin } from "../providers/JoinProvider";
@@ -206,18 +206,22 @@ export function RegisterForm() {
                                     }) => (
                                         <FormItem className="flex-1">
                                             <FormControl>
-                                                <PhoneInput
-                                                    type="tel"
+                                                <PatternFormat
+                                                    value={value}
                                                     className={cn(
                                                         InputStyle,
                                                         "inline-block w-full  h-12 rounded-lg border  px-4"
                                                     )}
-                                                    value={value}
-                                                    withCountryCallingCode={true}
-                                                    international={true}
-                                                    country={phoneRegion}
+                                                    placeholder="Phone"
+                                                    onValueChange={(values) => {
+                                                        if (values.value) {
+                                                            onChange(values.value);
+                                                        } else {
+                                                            onChange("");
+                                                        }
+                                                    }}
+                                                    format={getPhoneFormat(phoneRegion)}
                                                     onChange={onChange}
-                                                    {...rest}
                                                 />
                                             </FormControl>
                                         </FormItem>

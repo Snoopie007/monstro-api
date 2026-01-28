@@ -52,7 +52,6 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
     async function onSubmit(v: z.infer<typeof taxRateSchema>) {
         if (form.formState.isSubmitting) return;
 
-        console.log(v);
         const isDefault = taxRates.length === 0;
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/config/tax`, {
@@ -130,7 +129,6 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
 
                                                     onValueChange={(values) => {
                                                         if (values.floatValue) {
-                                                            console.log(values.floatValue);
                                                             field.onChange(values.floatValue);
                                                         } else {
                                                             field.onChange(0);
@@ -147,8 +145,8 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                 <FormField control={form.control} name="inclusive" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size='tiny'>Inclusive</FormLabel>
-                                        <Select 
-                                            onValueChange={(value) => field.onChange(value === "true")} 
+                                        <Select
+                                            onValueChange={(value) => field.onChange(value === "true")}
                                             defaultValue={field.value.toString()}
                                             value={field.value.toString()}
                                         >
@@ -182,8 +180,8 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size='tiny'>Country</FormLabel>
-                                            <Select 
-                                                onValueChange={field.onChange} 
+                                            <Select
+                                                onValueChange={field.onChange}
                                                 defaultValue={field.value}
                                                 value={field.value}
                                             >

@@ -13,63 +13,63 @@ export function stringToTime(time: string) {
 
 
 export const StripeCardOptions = {
-  style: {
-      base: {
-          fontWeight: "600",
-          fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-          fontSize: "16px",
-          fontSmoothing: "antialiased",
-      },
-      invalid: {
-          iconColor: "#fd0034",
-          color: "#fd0034",
-      },
-  },
+    style: {
+        base: {
+            fontWeight: "600",
+            fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
+            fontSize: "16px",
+            fontSmoothing: "antialiased",
+        },
+        invalid: {
+            iconColor: "#fd0034",
+            color: "#fd0034",
+        },
+    },
 };
 
 
 
- const formatAmountForDisplay = (
-	amount: number,
-	currency: string | null,
-	withSymbol = true,
-	minimumFractionDigits = 0
+const formatAmountForDisplay = (
+    amount: number,
+    currency: string | null,
+    withSymbol = true,
+    minimumFractionDigits = 0
 ): string => {
-	const formatter = new Intl.NumberFormat('en-US', {
-		style: withSymbol ? 'currency' : 'decimal',
-		currency: currency ?? 'USD',
-		minimumFractionDigits,
-	});
-	
-	return formatter.format(amount);
+    const formatter = new Intl.NumberFormat('en-US', {
+        style: withSymbol ? 'currency' : 'decimal',
+        currency: currency ?? 'USD',
+        minimumFractionDigits,
+    });
+
+    return formatter.format(amount);
 }
 
 
 function cn(...inputs: ClassValue[]) {
-  	return twMerge(clsx(inputs));
+    return twMerge(clsx(inputs));
 }
 function sleep(ms: number) {
-  	return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 
 
 
 function ErrorHandler<T, E extends new (message?: string) => Error>(
-	promise: Promise<T>,
-	errorFilters: E[]
-  	): Promise<[T, undefined] | [InstanceType<E>]> {
-		return promise
-			.then((data) => [data, undefined] as [T, undefined])
-			.catch((error) => {
-				if (errorFilters === undefined) {
-				return [error]
-			}
-			if (errorFilters.some((filter) => error instanceof filter)) {
-				return [error] 
-			}
-			throw error
-	});
+    promise: Promise<T>,
+    errorFilters: E[]
+): Promise<[T, undefined] | [InstanceType<E>]> {
+    return promise
+        .then((data) => [data, undefined] as [T, undefined])
+        .catch((error) => {
+            if (errorFilters === undefined) {
+                return [error]
+            }
+            if (errorFilters.some((filter) => error instanceof filter)) {
+                return [error]
+            }
+            throw error
+        });
 }
 
 async function tryCatch<T, E = Error>(
@@ -86,27 +86,27 @@ async function tryCatch<T, E = Error>(
 }
 
 function formatTime(timeString: string | undefined): string {
-	if (!timeString) return '';
+    if (!timeString) return '';
 
-	const [hours, minutes] = timeString.split(':').map(Number);
-	const period = hours >= 12 ? 'PM' : 'AM';
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
 
-	const displayHours = hours % 12 || 12;
+    const displayHours = hours % 12 || 12;
 
-	return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
 
 function formatEmail(email: string) {
-	if (!email) return '';
-	const [username, domain] = email.split('@') || [];
-	return `${username?.substring(0, 2)}${'*'.repeat(username?.length - 2)}@${domain}`;
-  }
-  
+    if (!email) return '';
+    const [username, domain] = email.split('@') || [];
+    return `${username?.substring(0, 2)}${'*'.repeat(username?.length - 2)}@${domain}`;
+}
+
 function formatPhone(phone: string) {
-	if (!phone) return '';
-	const lastThreeDigits = phone.slice(-4);
-	return `${'*'.repeat(phone.length - 4)}${lastThreeDigits}`;
+    if (!phone) return '';
+    const lastThreeDigits = phone.slice(-4);
+    return `${'*'.repeat(phone.length - 4)}${lastThreeDigits}`;
 }
 
 
@@ -146,14 +146,14 @@ function interEmailsAndText(template: string, data: Record<string, any>): string
 }
 
 function authenticateMember(req: NextRequest): { member: Member } {
-	const token = req.headers.get("Authorization")?.split(" ")[1]
-	const authMember = decodeJwt(token ?? "");
-	if (!authMember) {
-			throw new Error("Access denied");
-	}
-	return authMember as { member: Member };
+    const token = req.headers.get("Authorization")?.split(" ")[1]
+    const authMember = decodeJwt(token ?? "");
+    if (!authMember) {
+        throw new Error("Access denied");
+    }
+    return authMember as { member: Member };
 }
-  
+
 
 
 function interpolate(template: string, variables: Record<string, any>): string {
@@ -197,13 +197,13 @@ function interpolate(template: string, variables: Record<string, any>): string {
 }
 
 function getTimezoneOffset() {
-	const offsetMinutes = new Date().getTimezoneOffset();
-      const offsetHours = -offsetMinutes / 60;
-      const offsetString = offsetHours >= 0 
-      ? `+${Math.abs(offsetHours).toString().padStart(2, '0')}:00`
-      : `-${Math.abs(offsetHours).toString().padStart(2, '0')}:00`;
-  //  Results in: "+08:00", "-05:00", etc.
-	return offsetString;
+    const offsetMinutes = new Date().getTimezoneOffset();
+    const offsetHours = -offsetMinutes / 60;
+    const offsetString = offsetHours >= 0
+        ? `+${Math.abs(offsetHours).toString().padStart(2, '0')}:00`
+        : `-${Math.abs(offsetHours).toString().padStart(2, '0')}:00`;
+    //  Results in: "+08:00", "-05:00", etc.
+    return offsetString;
 }
 
 
@@ -219,20 +219,20 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
     const ninetyDaysAgo = subDays(now, 90)
     const attendances: ExtendedAttendance[] = []
     let seed = 12345 // Fixed seed for consistent results
-    
+
     // Generate 3-4 random attendances per week for the past 90 days
     let currentDate = new Date(ninetyDaysAgo)
     let weekIndex = 0
-    
+
     while (currentDate <= now) {
         // Deterministically decide if this week should have 3 or 4 attendances
         seed = (seed * 9301 + 49297) % 233280
         const attendancesThisWeek = seededRandom(seed) > 0.5 ? 3 : 4
-        
+
         // Generate random days within this week (Monday-Friday mostly)
         const possibleDays = [1, 2, 3, 4, 5] // Mon-Fri
         const selectedDays: number[] = []
-        
+
         for (let i = 0; i < attendancesThisWeek; i++) {
             let randomDay: number
             do {
@@ -241,28 +241,28 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
             } while (selectedDays.includes(randomDay))
             selectedDays.push(randomDay)
         }
-        
+
         selectedDays.forEach((dayOffset, dayIndex) => {
             const attendanceDate = addDays(currentDate, dayOffset)
             if (attendanceDate <= now) {
                 seed = (seed * 9301 + 49297) % 233280
                 const checkInTime = new Date(attendanceDate)
                 checkInTime.setHours(Math.floor(seededRandom(seed) * 3) + 16) // 4pm-7pm
-                
+
                 seed = (seed * 9301 + 49297) % 233280
                 checkInTime.setMinutes(Math.floor(seededRandom(seed) * 60))
-                
+
                 const checkOutTime = new Date(checkInTime)
                 seed = (seed * 9301 + 49297) % 233280
                 checkOutTime.setHours(checkOutTime.getHours() + 1)
                 checkOutTime.setMinutes(checkOutTime.getMinutes() + Math.floor(seededRandom(seed) * 30))
-                
+
                 const startTime = new Date(checkInTime)
                 startTime.setHours(checkInTime.getHours() - 1) // Program starts 1 hour before check-in
-                
+
                 seed = (seed * 9301 + 49297) % 233280
                 const programs = ['Boxing', 'Muay Thai', 'CrossFit', 'Yoga']
-                
+
                 attendances.push({
                     id: `test-att-${weekIndex}-${dayIndex}`,
                     memberId: 'mbr_BpT7jEb3Q16nOPL3vo7qlw',
@@ -282,12 +282,12 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
                 } as ExtendedAttendance)
             }
         })
-        
+
         // Move to next week (7 days)
         currentDate = addDays(currentDate, 7)
         weekIndex++
     }
-    
+
     return attendances
 }
 
@@ -333,18 +333,18 @@ function isGroupedMessage(
     options?: { thresholdMs?: number }
 ): boolean {
     if (!previous || !current) return false;
-    
+
     const { thresholdMs = 120000 } = options ?? {}; // 2 minutes default
-    
+
     // Must be same sender
     if (previous.senderId !== current.senderId) return false;
-    
+
     const prevDate = new Date(previous.created);
     const currDate = new Date(current.created);
-    
+
     // Must be same day (don't group across date separators)
     if (!isSameDay(prevDate, currDate)) return false;
-    
+
     // Must be within time threshold
     const timeDiff = currDate.getTime() - prevDate.getTime();
     return timeDiff < thresholdMs && timeDiff >= 0;
@@ -360,20 +360,20 @@ function isGroupedSupportMessage(
     options?: { thresholdMs?: number }
 ): boolean {
     if (!previous || !current) return false;
-    
+
     const { thresholdMs = 120000 } = options ?? {};
-    
+
     // Must be same role
     if (previous.role !== current.role) return false;
-    
+
     // For staff messages, must be same agent
     if (current.role === 'staff' && previous.agentId !== current.agentId) return false;
-    
+
     const prevDate = new Date(previous.created);
     const currDate = new Date(current.created);
-    
+
     if (!isSameDay(prevDate, currDate)) return false;
-    
+
     const timeDiff = currDate.getTime() - prevDate.getTime();
     return timeDiff < thresholdMs && timeDiff >= 0;
 }
@@ -393,6 +393,27 @@ export function isUnder18(dob: string | Date): boolean {
     return calculateAge(dob) < 18;
 }
 
+/**
+ * Returns the phone number format pattern for a given country code
+ * @param countryCode - Country code (US, CA, UK, GB, AU, etc.)
+ * @returns Format pattern string for react-number-format PatternFormat component
+ */
+export function getPhoneFormat(countryCode: string): string {
+    const code = countryCode.toUpperCase();
+
+    switch (code) {
+        case 'US':
+        case 'CA':
+            return '(###) ###-####';
+        case 'GB':
+        case 'UK':
+            return '#### ######';
+        case 'AU':
+            return '#### ### ###';
+    }
+    return '(###) ###-####';
+}
+
 export {
     authenticateMember, cn, formatAmountForDisplay, formatEmail, formatMessageTimestamp, formatPhone, formatTime, generateTestAttendanceData, getDateLabel, getTimezoneOffset, interEmailsAndText, interpolate, sleep,
     tryCatch, isGroupedMessage, isGroupedSupportMessage
@@ -403,7 +424,7 @@ export {
 //   const phone = parsePhoneNumberFromString(arg, {
 //     // set this to use a default country when the phone number omits country code
 //     defaultCountry: 'US',
-    
+
 //     // set to false to require that the whole string is exactly a phone number,
 //     // otherwise, it will search for a phone number anywhere within the string
 //     extract: false,

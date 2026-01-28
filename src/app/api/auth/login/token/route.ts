@@ -22,23 +22,23 @@ export async function POST(req: NextRequest) {
             const token = generateOtp();
             redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
 
-            if (type === "email") {
-                await sendEmailViaApi({
-                    recipient: user.email,
-                    template: 'SimpleOTPEmail',
-                    subject: 'Verify your email address',
-                    data: {
-                        member: {
-                            firstName: user.name?.split(' ')[0] || 'there'
-                        },
-                        otp: { token }
-                    }
-                });
-            } else if (type === "sms") {
-                await twilio.send(user.phone, LoginTokenSMS, {
-                    otp: { token }
-                });
-            }
+            // if (type === "email") {
+            //     await sendEmailViaApi({
+            //         recipient: user.email,
+            //         template: 'SimpleOTPEmail',
+            //         subject: 'Verify your email address',
+            //         data: {
+            //             member: {
+            //                 firstName: user.name?.split(' ')[0] || 'there'
+            //             },
+            //             otp: { token }
+            //         }
+            //     });
+            // } else if (type === "sms") {
+            //     await twilio.send(user.phone, LoginTokenSMS, {
+            //         otp: { token }
+            //     });
+            // }
 
         }
 

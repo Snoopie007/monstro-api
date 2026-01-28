@@ -26,7 +26,6 @@ import {
     SelectValue,
     Input,
     Textarea,
-    PriceInput,
 } from "@/components/forms";
 import { SetStateAction, Dispatch, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -37,6 +36,7 @@ import { CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { format } from "date-fns"
 import { ChargeItemSchema } from "../../schema";
+import CurrencyInput from 'react-currency-input-field';
 
 
 interface Props {
@@ -69,7 +69,7 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${params.id}/members/${params.mid}/payment`, {
                 method: "POST",
-                body: JSON.stringify(v)
+                body: JSON.stringify({ ...v })
             })
         );
 
@@ -107,7 +107,20 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormLabel size="tiny">Amount</FormLabel>
-                                        <PriceInput value={field.value} onChange={field.onChange} />
+                                        <CurrencyInput
+                                            className={cn(
+
+                                                "inline-block w-full  h-12 rounded-lg bg-background border border-foreground/10 px-4"
+                                            )}
+                                            allowNegativeValue={false}
+
+                                            value={field.value ? field.value / 100 : 0}
+                                            decimalsLimit={2}
+                                            onValueChange={(value) => {
+                                                const amount = value ? Math.round(Number(value) * 100) : 0;
+                                                field.onChange(amount);
+                                            }}
+                                        />
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -190,11 +203,10 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
                 </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="outline" size="sm">Cancel</Button>
+                        <Button type="button" variant="outline">Cancel</Button>
                     </DialogClose>
                     <Button
                         variant="foreground"
-                        size="sm"
                         onClick={form.handleSubmit(onSubmit)}
                         disabled={loading}
                     >

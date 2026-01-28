@@ -21,12 +21,11 @@ import {
 	SelectItem,
 	Input,
 } from "@/components/forms";
-import { tryCatch } from "@/libs/utils";
+import { getPhoneFormat, tryCatch } from "@/libs/utils";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateMemberSchema, CreateMemberFormValues } from "../../schema";
-import PhoneInput from "react-phone-number-input/input";
 import { CountryCodes } from "@/libs/data";
 import { CountryCode, Member } from "@/types";
 import { Avatar, AvatarImage } from "@/components/ui";
@@ -36,6 +35,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BirthdayField } from "./DOBField";
 import { Loader2 } from "lucide-react";
+import { PatternFormat } from "react-number-format";
 
 export function CreateMemberForm({ lid }: { lid: string }) {
 	const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
@@ -233,13 +233,18 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 											render={({ field: { onChange, value } }) => (
 												<FormItem className="flex-1">
 													<FormControl>
-														<PhoneInput
+														<PatternFormat
 															type="tel"
 															className="rounded-lg bg-background inline-block w-full border px-4 h-12 border-foreground/10"
 															value={value}
-															withCountryCallingCode
-															international
-															country={phoneRegion}
+															onValueChange={(values) => {
+																if (values.value) {
+																	onChange(values.value);
+																} else {
+																	onChange("");
+																}
+															}}
+															format={getPhoneFormat(phoneRegion)}
 															onChange={onChange}
 														/>
 													</FormControl>

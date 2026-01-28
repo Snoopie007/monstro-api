@@ -1,18 +1,33 @@
 'use client'
 import { Loader2 } from "lucide-react";
-import React, { useState } from 'react'
-import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
-import { CountryCode, Location } from "@/types";
-import { cn, tryCatch } from "@/libs/utils";
+import { useState } from 'react'
+import { Button } from "@/components/ui";
+import { Location } from "@/types";
+import { tryCatch } from "@/libs/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { toast } from "react-toastify";
-import PhoneInput from 'react-phone-number-input/input'
 import { CountryCodes } from "@/libs/data";
+import { PatternFormat } from "react-number-format";
+import { getPhoneFormat } from "@/libs/utils";
 
 export default function CompanyPhone({ location }: { location: Location }) {
-    const [phone, setPhone] = useState(location.phone);
+    const normalizedPhone = location.phone
+        ? location.phone.replace(/^\+?1/, '').replace(/\D/g, '')
+        : "";
+    const [phone, setPhone] = useState(normalizedPhone);
     const [loading, setLoading] = useState(false);
-    const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
+    // Store the actual country code from CountryCodes (which uses "UK" not "GB")
+    // Map it for the format function which handles both
+    const getInitialCountryCode = (): string => {
+        const country = location.country;
+        if (!country) return "US";
+        // If location has "GB", map it to "UK" to match CountryCodes
+        if (country === "GB") return "UK";
+        // Check if it's one of the valid codes from CountryCodes
+        const validCodes = CountryCodes.map(c => c.code);
+        return validCodes.includes(country) ? country : "US";
+    };
+    const [phoneRegion, setPhoneRegion] = useState<string>(getInitialCountryCode());
 
     async function update() {
         if (!phone || phone === location.phone) return;
@@ -26,7 +41,7 @@ export default function CompanyPhone({ location }: { location: Location }) {
         setLoading(false);
         if (error || !result || !result.ok) {
             toast.error("Failed to update phone number");
-            setPhone(location.phone);
+            setPhone(normalizedPhone);
             return;
         }
     }
@@ -44,9 +59,13 @@ export default function CompanyPhone({ location }: { location: Location }) {
                     </p>
                 </div>
                 <div className="flex flex-row gap-1 justify-start w-100">
-                    <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
+                    <Select onValueChange={(value: string) => {
+                        setPhoneRegion(value);
+                        // Reset phone when country changes to allow new format
+                        setPhone("");
+                    }} defaultValue={phoneRegion} value={phoneRegion}>
                         <SelectTrigger className=" w-[22%]">
-                            <SelectValue defaultValue={location.country || "US"} />
+                            <SelectValue defaultValue={getInitialCountryCode()} />
                         </SelectTrigger>
 
                         <SelectContent>
@@ -58,14 +77,19 @@ export default function CompanyPhone({ location }: { location: Location }) {
                         </SelectContent>
                     </Select>
 
-                    <PhoneInput
+                    <PatternFormat
                         type="tel"
                         className="flex-1 rounded-lg bg-background  border h-12 border-foreground/10 px-4"
-                        value={phone ?? undefined}
-                        withCountryCallingCode={true}
-                        international={true}
-                        country={phoneRegion}
-                        onChange={(value) => setPhone(value ?? null)}
+                        value={phone}
+                        onValueChange={(values) => {
+                            if (values.value) {
+                                setPhone(values.value);
+                            } else {
+                                setPhone("");
+                            }
+                        }}
+                        format={getPhoneFormat(phoneRegion === "UK" ? "GB" : phoneRegion)}
+                        onChange={(e) => setPhone(e.target.value)}
                     />
                 </div>
             </div>

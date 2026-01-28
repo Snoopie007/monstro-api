@@ -1,22 +1,27 @@
 'use client'
 import { Loader2 } from "lucide-react";
-import React, { useState } from 'react'
-import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
-import { CountryCode } from "@/types";
-import { cn, tryCatch } from "@/libs/utils";
+import { useState } from 'react'
+import { Button } from "@/components/ui";
+import { tryCatch } from "@/libs/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { toast } from "react-toastify";
-import PhoneInput from 'react-phone-number-input/input'
 import { CountryCodes } from "@/libs/data";
-import { Staff, Vendor } from "@/types";
+import { CountryCode, Staff, Vendor } from "@/types";
+import { PatternFormat } from "react-number-format";
+import { getPhoneFormat } from "@/libs/utils";
 
 export default function UserPhone({ user }: { user: Vendor | Staff }) {
-    const [newPhone, setNewPhone] = useState(user.phone || "");
+
+    const normalizedPhone = user.phone
+        ? user.phone.replace(/^\+?1/, '').replace(/\D/g, '')
+        : "";
+    const [newPhone, setNewPhone] = useState(normalizedPhone || "");
     const [loading, setLoading] = useState(false);
+    // Store country code as string to match CountryCodes values (which uses "UK" not "GB")
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
 
     async function update() {
-        if (!newPhone || newPhone === user.phone) return;
+        if (!newPhone || newPhone === normalizedPhone) return;
         setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/protected/account/settings/${user.id}/phone`, {
@@ -58,15 +63,19 @@ export default function UserPhone({ user }: { user: Vendor | Staff }) {
                             ))}
                         </SelectContent>
                     </Select>
-
-                    <PhoneInput
+                    <PatternFormat
                         type="tel"
-                        className="flex-1 rounded-lg bg-background inline-block w-full border h-12 border-foreground/10 px-4"
-                        value={newPhone ?? undefined}
-                        withCountryCallingCode={true}
-                        international={true}
-                        country={phoneRegion}
-                        onChange={(value) => setNewPhone(value ?? "")}
+                        className="flex-1 rounded-lg bg-background  border h-12 border-foreground/10 px-4"
+                        value={newPhone}
+                        onValueChange={(values) => {
+                            if (values.value) {
+                                setNewPhone(values.value);
+                            } else {
+                                setNewPhone("");
+                            }
+                        }}
+                        format={getPhoneFormat(phoneRegion)}
+                        onChange={(e) => setNewPhone(e.target.value)}
                     />
                 </div>
             </div>

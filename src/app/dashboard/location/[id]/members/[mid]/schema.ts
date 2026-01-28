@@ -9,7 +9,7 @@ export const UpdateMemberSchema = z.object({
 
 
 export const ChargeItemSchema = z.object({
-    amount: z.number().min(1, "Amount is required"),
+    amount: z.number().min(100, "Amount must be at least $1"),
     paymentType: z.enum(["card", "cash", "us_bank_account", "paypal", "apple_pay", "google_pay"], { message: "required" }),
     description: z.string().optional(),
     item: z.string().min(1, "Item is required"),
