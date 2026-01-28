@@ -1,8 +1,6 @@
-
-import type { BillingCycleAnchorConfig, MemberPlanPricing, PaymentMethod, PaymentType } from "@/types";
-import type { MonstroPlan } from "@/types/admin";
+import type { BillingCycleAnchorConfig, MemberPlan, MemberPlanPricing, PaymentType } from "@/types";
 import type { AddressParam } from "@stripe/stripe-js";
-import { isSameDay, addMonths, isAfter } from "date-fns";
+import { isSameDay, addMonths, isAfter, isBefore } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
@@ -30,6 +28,7 @@ interface PaymentIntentSettings extends BaseSettings {
     unitCost?: number,
 }
 type MemberSubscriptionSettings = BaseSettings & {
+    backdateStartDate?: Date | null,
     cancelAt?: Date | null,
     trialEnd?: Date | null,
     taxRateId?: string;
@@ -560,6 +559,10 @@ class MemberStripePayments extends BaseStripePayments {
                 options.proration_behavior = (allowProration || allowProration) ? "create_prorations" : "none";
                 options.billing_cycle_anchor = startDate.getTime() / 1000;
             }
+        }
+
+        if (settings.backdateStartDate) {
+            options.backdate_start_date = settings.backdateStartDate.getTime() / 1000;
         }
 
         return this._stripe.subscriptions.create(options);

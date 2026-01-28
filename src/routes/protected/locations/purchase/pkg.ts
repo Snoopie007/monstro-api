@@ -5,7 +5,7 @@ import { Elysia, t } from "elysia";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
-    calculatePeriodEnd,
+    calculateThresholdDate,
     calculateTax,
     calculateStripeFeeAmount
 } from "./utils";
@@ -41,11 +41,14 @@ export function purchasePkgRoutes(app: Elysia) {
                 }
 
                 const today = new Date();
-                const endDate = calculatePeriodEnd(
-                    today,
-                    pricing.expireInterval!,
-                    pricing.expireThreshold!
-                );
+                let endDate: Date | undefined = undefined;
+                if (pricing.expireThreshold && pricing.expireInterval) {
+                    endDate = calculateThresholdDate({
+                        startDate: today,
+                        threshold: pricing.expireThreshold,
+                        interval: pricing.expireInterval,
+                    });
+                }
 
 
                 const [pkg] = await db.insert(memberPackages).values({

@@ -8,7 +8,7 @@ import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
-    calculatePeriodEnd,
+    calculateThresholdDate,
     calculateTax,
     calculateStripeFeeAmount
 } from "../purchase/utils";
@@ -26,46 +26,57 @@ export function migratePkgRoutes(app: Elysia) {
     app.post('/pkg', async ({ params, status, body }) => {
 
         const { lid, migrateId } = params;
-        const { priceId, mid, paymentType, paymentMethodId } = body;
-        console.log(body);
-        try {
-            const member = await db.query.members.findFirst({
-                where: (member, { eq }) => eq(member.id, mid),
-            });
+        const { mid, paymentMethodId } = body;
 
+        try {
+            const [migrate, member, location, paymentMethod] = await Promise.all([
+                db.query.migrateMembers.findFirst({
+                    where: (migrateMember, { eq }) => eq(migrateMember.id, migrateId),
+                    with: {
+                        pricing: {
+                            with: {
+                                plan: true
+                            },
+                        },
+                    },
+                }),
+                db.query.members.findFirst({
+                    where: (member, { eq }) => eq(member.id, mid),
+                    columns: {
+                        stripeCustomerId: true,
+                    },
+                }),
+                db.query.locations.findFirst({
+                    where: (location, { eq }) => eq(location.id, lid),
+                    with: {
+                        taxRates: true,
+                        locationState: true,
+                        integrations: true,
+                    },
+                }),
+                db.query.paymentMethods.findFirst({
+                    where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
+                }),
+            ]);
+
+            if (!migrate) {
+                return status(404, { error: "Migrate not found" });
+            }
 
             if (!member || !member.stripeCustomerId) {
                 return status(404, { error: "Member or Stripe customer not found" });
             }
 
-            const location = await db.query.locations.findFirst({
-                where: (location, { eq }) => eq(location.id, lid),
-                with: {
-                    taxRates: true,
-                    locationState: true,
-                    integrations: {
-                        where: (integration, { eq }) => eq(integration.service, "stripe"),
-                        columns: {
-                            accountId: true,
-                            service: true,
-                        },
-                    },
-                },
-            });
-
-
             if (!location) {
                 return status(404, { error: "Location not found" });
             }
 
+            if (!paymentMethod) {
+                return status(404, { error: "Payment method not found" });
+            }
 
 
-            const pricing = await db.query.memberPlanPricing.findFirst({
-                where: (mpp, { eq }) => eq(mpp.id, priceId),
-                with: {
-                    plan: true,
-                },
-            });
+            const pricing = migrate.pricing;
 
             if (!pricing) {
                 return status(404, { error: "Pricing not found" });
@@ -80,14 +91,6 @@ export function migratePkgRoutes(app: Elysia) {
 
             const stripe = new MemberStripePayments(integration.accountId);
 
-            const paymentMethod = await db.query.paymentMethods.findFirst({
-                where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
-            });
-
-            if (!paymentMethod) {
-                return status(404, { error: "Payment method not found" });
-            }
-
             await db.insert(memberPaymentMethods).values({
                 paymentMethodId: paymentMethod.id,
                 memberId: mid,
@@ -101,11 +104,12 @@ export function migratePkgRoutes(app: Elysia) {
             });
 
             const today = new Date();
-            const endDate = calculatePeriodEnd(
-                today,
-                pricing.expireInterval!,
-                pricing.expireThreshold!
-            );
+            const startDate = migrate.backdateStartDate ? new Date(migrate.backdateStartDate) : today;
+            const endDate = calculateThresholdDate({
+                startDate,
+                threshold: pricing.expireThreshold!,
+                interval: pricing.expireInterval!,
+            });
 
             const metadata = {
                 locationId: lid,
@@ -130,29 +134,36 @@ export function migratePkgRoutes(app: Elysia) {
             }
 
 
-            const description = `Payment for ${pricing.plan.name}/${pricing.name}`;
+            const { plan, ...rest } = pricing;
+
+            const description = `Payment for ${plan.name}/${rest.name}`;
             await stripe.createPaymentIntent(total, applicationFeeAmount, {
                 paymentMethod: paymentMethod.stripeId,
-                currency: pricing.plan.currency,
+                currency: plan.currency,
                 description: description,
-                productName: `${pricing.plan.name}/${pricing.name}`,
+                productName: `${plan.name}/${rest.name}`,
                 unitCost: subTotal,
                 tax: tax,
                 metadata: {
                     pricingId: pricing.id,
-                    planId: pricing.plan.id,
+                    planId: plan.id,
                     ...metadata,
                 },
             });
 
 
+
+            const totalClassLimit = plan.totalClassLimit || 0;
+            const totalClassAttended = Math.max(0, totalClassLimit - (migrate.classCredits || 0));
             const pkg = await db.transaction(async (tx) => {
                 const [pkg] = await tx.insert(memberPackages).values({
                     locationId: lid,
                     memberId: mid,
                     memberPlanPricingId: pricing.id,
-                    paymentType: paymentType,
-                    startDate: today,
+                    startDate,
+                    paymentType: paymentMethod.type,
+                    totalClassLimit,
+                    totalClassAttended,
                     expireDate: endDate,
                     status: "active",
                     metadata: {
@@ -178,7 +189,7 @@ export function migratePkgRoutes(app: Elysia) {
 
             await db.insert(transactions).values({
                 description: description,
-                items: [{ name: pricing.plan.name, quantity: 1, price: pricing.price }],
+                items: [{ name: `${plan.name}/${rest.name}`, quantity: 1, price: pricing.price }],
                 type: "inbound",
                 total: pricing.price + tax,
                 subTotal: pricing.price,
@@ -186,11 +197,9 @@ export function migratePkgRoutes(app: Elysia) {
                 status: "paid",
                 locationId: lid,
                 memberId: mid,
-                paymentType: paymentType,
+                paymentType: paymentMethod.type,
                 chargeDate: today,
             });
-
-            const { plan, ...rest } = pricing;
 
             return status(200, {
                 ...pkg,
@@ -205,10 +214,10 @@ export function migratePkgRoutes(app: Elysia) {
     }, {
         ...MigratePkgProps,
         body: t.Object({
-            priceId: t.String(),
+            priceId: t.Optional(t.String()),
             mid: t.String(),
             paymentMethodId: t.String(),
-            paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
+            paymentType: t.Optional(t.Enum(t.Literal('card'), t.Literal('us_bank_account')))
         }),
     })
 

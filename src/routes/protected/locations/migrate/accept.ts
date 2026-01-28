@@ -4,20 +4,36 @@ import type { MemberPlanPricing, PaymentType } from "@/types";
 import { Elysia, t } from "elysia";
 import { eq, sql } from "drizzle-orm";
 import { addYears, addMonths } from "date-fns";
+import { calculateThresholdDate } from "../purchase/utils";
 
 
 export function migrateAcceptRoutes(app: Elysia) {
     app.post('/accept', async ({ status, params, body }) => {
         const { migrateId, lid } = params;
-        const { mid, payment, planType, lastRenewalDay, pricingId } = body;
+        const { mid } = body;
         const today = new Date();
 
-        const hasPlan = pricingId && planType;
 
 
         try {
+            // Fetch migrate record to get custom field values
+            const migrate = await db.query.migrateMembers.findFirst({
+                where: (mm, { eq }) => eq(mm.id, migrateId),
+                with: {
+                    pricing: {
+                        with: {
+                            plan: true,
+                        },
+                    },
+                },
+            });
 
-            const state = hasPlan && payment ? "incomplete" : "active";
+
+
+            const hasPlan = migrate?.pricing && migrate?.planType;
+
+            const hasPayment = migrate?.payment;
+            const state = hasPlan && hasPayment ? "incomplete" : "active";
 
             await db.insert(memberLocations).values({
                 memberId: mid,
@@ -31,14 +47,12 @@ export function migrateAcceptRoutes(app: Elysia) {
                 },
             });
 
-            // Fetch migrate record to get custom field values
-            const migrateRecord = await db.query.migrateMembers.findFirst({
-                where: (mm, { eq }) => eq(mm.id, migrateId),
-            });
+
 
             // Transfer custom field values if they exist
-            if (migrateRecord?.metadata?.customFieldValues?.length) {
-                const validValues = migrateRecord.metadata.customFieldValues
+            const customFieldValues = migrate?.metadata?.customFieldValues;
+            if (customFieldValues?.length) {
+                const validValues = customFieldValues
                     .filter(cf => cf.fieldId && cf.value != null && cf.value !== '')
                     .map(cf => ({
                         memberId: mid,
@@ -59,15 +73,12 @@ export function migrateAcceptRoutes(app: Elysia) {
                 }
             }
 
-            if (!payment && pricingId && planType) {
+            if (!hasPayment && migrate?.pricing && migrate?.planType) {
 
                 await db.transaction(async (tx) => {
-                    const pricing = await db.query.memberPlanPricing.findFirst({
-                        where: (mpp, { eq }) => eq(mpp.id, pricingId)
-                    });
+                    const pricing = migrate?.pricing;
 
                     if (!pricing) return;
-
 
                     const commonValues = {
                         memberId: mid,
@@ -76,20 +87,35 @@ export function migrateAcceptRoutes(app: Elysia) {
                         status: "active" as const,
                         paymentType: 'cash' as PaymentType,
                     }
+                    const startDate = migrate?.backdateStartDate ? new Date(migrate?.backdateStartDate) : today;
+                    if (migrate?.planType === "recurring") {
 
-                    if (planType === "recurring") {
+                        // Should never happen but for type safety.
+                        if (!pricing.interval || !pricing.intervalThreshold) {
+                            return status(400, { error: "Invalid pricing for subscription plan." });
+                        }
 
-                        const { renewalDate, endDate } = calculateRenewalPeriod(new Date(lastRenewalDay), pricing);
+                        const currentPeriodStart = migrate?.lastRenewalDay ? new Date(migrate?.lastRenewalDay) : today;
+                        const currentPeriodEnd = calculateThresholdDate({
+                            startDate: currentPeriodStart,
+                            threshold: pricing.intervalThreshold,
+                            interval: pricing.interval,
+                        });
                         await tx.insert(memberSubscriptions).values({
                             ...commonValues,
-                            startDate: renewalDate,
-                            currentPeriodStart: renewalDate,
-                            currentPeriodEnd: endDate,
+                            startDate,
+                            currentPeriodStart,
+                            currentPeriodEnd,
+                            classCredits: migrate?.classCredits || 0,
                         });
                     } else {
+                        const totalClassLimit = pricing.plan.totalClassLimit || 0;
+                        const totalClassAttended = Math.max(0, totalClassLimit - (migrate?.classCredits || 0));
                         await tx.insert(memberPackages).values({
                             ...commonValues,
-                            startDate: today,
+                            startDate,
+                            totalClassLimit,
+                            totalClassAttended,
                         });
                     }
 
@@ -97,7 +123,7 @@ export function migrateAcceptRoutes(app: Elysia) {
             }
 
             await db.update(migrateMembers).set({
-                ...(!payment && { status: "completed" }),
+                ...(!migrate?.payment && { status: "completed" }),
                 acceptedOn: today,
                 updated: today,
             }).where(eq(migrateMembers.id, migrateId));
@@ -115,8 +141,8 @@ export function migrateAcceptRoutes(app: Elysia) {
         }),
         body: t.Object({
             mid: t.String(),
-            payment: t.Boolean(),
-            lastRenewalDay: t.String(),
+            payment: t.Optional(t.Boolean()),
+            lastRenewalDay: t.Optional(t.String()),
             pricingId: t.Optional(t.Union([t.String(), t.Null()])),
             planType: t.Optional(t.Union([
                 t.Literal('recurring'),
@@ -148,21 +174,3 @@ export function migrateAcceptRoutes(app: Elysia) {
 }
 
 
-
-function calculateRenewalPeriod(startDate: Date, pricing: MemberPlanPricing): { renewalDate: Date, endDate: Date } {
-
-    let renewalDate = startDate;
-    let endDate = startDate;
-    if (pricing.interval === "month") {
-        renewalDate = addMonths(startDate, pricing.intervalThreshold || 1);
-        endDate = addMonths(renewalDate, pricing.intervalThreshold || 1);
-    } else if (pricing.interval === "year") {
-        renewalDate = addYears(startDate, pricing.intervalThreshold || 1);
-        endDate = addYears(renewalDate, pricing.intervalThreshold || 1);
-    }
-
-    return {
-        renewalDate,
-        endDate,
-    }
-}

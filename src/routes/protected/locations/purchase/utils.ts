@@ -1,36 +1,10 @@
-import type { MemberPlanPricing, PaymentType, TaxRate } from "@/types";
-import { addMonths, addYears, isAfter } from "date-fns";
-
-
-function calculatePeriodEnd(
-    startDate: Date,
-    interval: string,
-    threshold: number
-): Date {
-    const endDate = new Date(startDate); // Initialize endDate with startDate
-    console.log(interval, threshold);
-    switch (interval) {
-        case "day":
-            endDate.setDate(endDate.getDate() + threshold);
-            break;
-        case "week":
-            endDate.setDate(endDate.getDate() + threshold * 7);
-            break;
-        case "month":
-            endDate.setMonth(endDate.getMonth() + threshold);
-            break;
-        case "year":
-            endDate.setFullYear(endDate.getFullYear() + threshold);
-            break;
-        default:
-            throw new Error("Invalid plan interval");
-    }
-    return endDate;
-}
+import type { PaymentType, TaxRate } from "@/types";
+import { addDays, addMonths, addWeeks, addYears, isAfter } from "date-fns";
 
 const STRIPE_FEE_PERCENT = 2.9
 const STRIPE_FEE_AMOUNT = 0.30
 const STRIPE_BANK_FEE = 0.8;
+
 function calculateStripeFeePercentage(amount: number, paymentType: PaymentType) {
     if (paymentType === 'us_bank_account') {
         return STRIPE_BANK_FEE;
@@ -83,18 +57,22 @@ function calculateTrialEnd(startDate: Date, trialDays: number): Date {
     }
 }
 
+interface EndDateParams {
+    startDate: Date,
+    threshold: number,
+    interval: 'day' | 'week' | 'month' | 'year'
+}
 
-function calculateCancelAt(startDate: Date, pricing: MemberPlanPricing) {
-    const { expireInterval, expireThreshold } = pricing;
-    if (!expireInterval || !expireThreshold) {
-        return undefined;
-    }
-    if (expireInterval === "month") {
-        return addMonths(startDate, expireThreshold);
-    } else if (expireInterval === "year") {
-        return addYears(startDate, expireThreshold);
-    } else {
-        return undefined;
+function calculateThresholdDate({ startDate, threshold, interval }: EndDateParams) {
+    switch (interval) {
+        case "day":
+            return addDays(startDate, threshold);
+        case "week":
+            return addWeeks(startDate, threshold);
+        case "month":
+            return addMonths(startDate, threshold);
+        case "year":
+            return addYears(startDate, threshold);
     }
 }
 
@@ -102,9 +80,8 @@ function calculateCancelAt(startDate: Date, pricing: MemberPlanPricing) {
 export {
     getTaxRateId,
     calculateTax,
-    calculateCancelAt,
+    calculateThresholdDate,
     calculateTrialEnd,
-    calculatePeriodEnd,
     calculateStripeFeePercentage,
     calculateStripeFeeAmount,
 };

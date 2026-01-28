@@ -1,5 +1,5 @@
 
-import { Elysia, t } from "elysia"
+import { Elysia } from "elysia"
 import { migrateSubRoutes } from "./sub";
 import { migratePkgRoutes } from "./pkg";
 import { migrateAcceptRoutes } from "./accept";

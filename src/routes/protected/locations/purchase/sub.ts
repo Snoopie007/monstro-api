@@ -5,9 +5,8 @@ import { Elysia, t } from "elysia";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
-    calculatePeriodEnd,
+    calculateThresholdDate,
     calculateStripeFeePercentage,
-    calculateCancelAt
 } from "./utils";
 
 
@@ -39,21 +38,29 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(404, { error: "Pricing not found" });
                 }
 
-                const startDate = new Date();
-                const endDate = calculatePeriodEnd(
-                    startDate,
-                    pricing.interval!,
-                    pricing.intervalThreshold!
-                );
+                if (!pricing.interval || !pricing.intervalThreshold) {
+                    return status(400, { error: "Invalid pricing for subscription plan." });
+                }
+
+                const today = new Date();
+                const currentPeriodEnd = calculateThresholdDate({
+                    startDate: today,
+                    threshold: pricing.intervalThreshold,
+                    interval: pricing.interval,
+                });
+
+
+                const classCredits = pricing.plan.classLimitInterval === 'term' ? pricing.plan.totalClassLimit || 0 : 0;
 
                 const [subscription] = await db.insert(memberSubscriptions).values({
-                    startDate: startDate,
-                    currentPeriodStart: startDate,
-                    currentPeriodEnd: endDate,
+                    startDate: today,
+                    currentPeriodStart: today,
+                    currentPeriodEnd,
                     locationId: lid,
                     memberId: mid,
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentType,
+                    classCredits,
                     status: 'incomplete',
                 }).returning({ id: memberSubscriptions.id });
 
@@ -75,6 +82,7 @@ export function purchaseSubRoutes(app: Elysia) {
         }, {
             ...PurchaseSubProps,
             body: t.Object({
+                startDate: t.Optional(t.String()),
                 priceId: t.String(),
                 mid: t.String(),
                 paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
@@ -89,42 +97,43 @@ export function purchaseSubRoutes(app: Elysia) {
 
             try {
 
-                const member = await db.query.members.findFirst({
-                    where: (member, { eq }) => eq(member.id, mid),
-                });
+                const [member, location, pricing] = await Promise.all([
+                    db.query.members.findFirst({
+                        where: (member, { eq }) => eq(member.id, mid),
+                        columns: {
+                            stripeCustomerId: true,
+                        },
+                    }),
+                    db.query.locations.findFirst({
+                        where: (location, { eq }) => eq(location.id, lid),
+                        with: {
+                            taxRates: true,
+                            locationState: true,
+                            integrations: {
+                                where: (integration, { eq }) => eq(integration.service, "stripe"),
+                                columns: {
+                                    accountId: true,
+                                    service: true,
+                                },
+                            },
+                        },
+                    }),
+                    db.query.memberPlanPricing.findFirst({
+                        where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
+                        with: {
+                            plan: true,
+                        },
+                    }),
+                ]);
 
 
                 if (!member || !member.stripeCustomerId) {
                     return status(404, { error: "Member or Stripe customer not found" });
                 }
 
-                const location = await db.query.locations.findFirst({
-                    where: (location, { eq }) => eq(location.id, lid),
-                    with: {
-                        taxRates: true,
-                        locationState: true,
-                        integrations: {
-                            where: (integration, { eq }) => eq(integration.service, "stripe"),
-                            columns: {
-                                accountId: true,
-                                service: true,
-                            },
-                        },
-                    },
-                });
-
-
                 if (!location) {
                     return status(404, { error: "Location not found" });
                 }
-
-                const pricing = await db.query.memberPlanPricing.findFirst({
-                    where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
-                    with: {
-                        plan: true,
-                    },
-                });
-
 
                 if (!pricing) {
                     return status(404, { error: "Pricing not found" });
@@ -152,10 +161,18 @@ export function purchaseSubRoutes(app: Elysia) {
                 const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentType as PaymentType);
                 const feePercent = locationState?.usagePercent + stripeFeePercentage;
 
+                let cancelAt: Date | undefined = undefined;
+                if (pricing.expireThreshold && pricing.expireInterval) {
+                    cancelAt = calculateThresholdDate({
+                        startDate: startDate,
+                        threshold: pricing.expireThreshold,
+                        interval: pricing.expireInterval,
+                    });
+                }
                 const sub = await stripe.createSubscription(pricing, {
                     startDate,
                     taxRateId: taxRate?.stripeRateId || undefined,
-                    cancelAt: calculateCancelAt(startDate, pricing),
+                    cancelAt,
                     feePercent,
                     paymentMethod: paymentMethodId || undefined,
                     metadata,
@@ -171,8 +188,6 @@ export function purchaseSubRoutes(app: Elysia) {
                         },
                     }).where(eq(memberSubscriptions.id, memberPlanId));
                 });
-
-
 
 
                 return status(200, { status: sub.status });
