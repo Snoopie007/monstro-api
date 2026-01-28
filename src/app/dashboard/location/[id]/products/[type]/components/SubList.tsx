@@ -19,8 +19,14 @@ import { MemberPlan, PlanProgram } from "@/types";
 import { useState } from "react";
 import { formatAmountForDisplay } from "@/libs/utils";
 import PlanActions from "./PlanActions";
-export function SubscriptionList({ lid }: { lid: string }) {
-	const { subscriptions, isLoading, error } = useSubscriptions(lid);
+
+interface SubscriptionListProps {
+	lid: string;
+	archived?: boolean;
+}
+
+export function SubscriptionList({ lid, archived = false }: SubscriptionListProps) {
+	const { subscriptions, isLoading, error } = useSubscriptions(lid, archived);
 
 	if (error) return <ErrorComponent error={error} />;
 	if (isLoading) return <Loading />;
@@ -28,17 +34,24 @@ export function SubscriptionList({ lid }: { lid: string }) {
 	return (
 		<>
 			{subscriptions && subscriptions.length > 0 ? (
-				subscriptions.map((sub) => (
-					<SubscriptionItem key={sub.id} sub={sub} />
-				))
+				<div className="space-y-2">
+					{subscriptions.map((sub) => (
+						<SubscriptionItem key={sub.id} sub={sub} />
+					))}
+				</div>
 			) : (
 				<Empty variant="border">
 					<EmptyHeader>
 						<EmptyMedia variant="icon">
 							<CircleFadingPlusIcon className="size-5" />
 						</EmptyMedia>
-						<EmptyTitle>No subscriptions found</EmptyTitle>
-						<EmptyDescription>Subscriptions will appear here when they are created</EmptyDescription>
+						<EmptyTitle>No {archived ? 'archived' : 'active'} subscriptions found</EmptyTitle>
+						<EmptyDescription>
+							{archived 
+								? 'Archived subscriptions will appear here'
+								: 'Subscriptions will appear here when they are created'
+							}
+						</EmptyDescription>
 					</EmptyHeader>
 				</Empty>
 			)}

@@ -20,13 +20,13 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui";
-import { NewPlanSchema, PresetIntervals } from "@/libs/FormSchemas";
+import { PresetIntervals } from "@/libs/FormSchemas";
 import { HelpCircle, Plus, Trash2 } from "lucide-react";
-import { UseFormReturn, useFieldArray } from "react-hook-form";
-import { z } from "zod";
+import { useFieldArray } from "react-hook-form";
 
 interface PricingOptionsProps {
-	form: UseFormReturn<z.infer<typeof NewPlanSchema>>;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	form: any;
 	planType: "recurring" | "one-time";
 }
 

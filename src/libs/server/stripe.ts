@@ -565,6 +565,12 @@ class MemberStripePayments extends BaseStripePayments {
 		return product.default_price as Stripe.Price;
 	}
 
+	async archivePrice(priceId: string): Promise<Stripe.Price> {
+		return this._stripe.prices.update(priceId, {
+			active: false,
+		});
+	}
+
 	// async retrieveTaxSettings() {
 	// 	return await this._stripe.tax.settings.retrieve();
 

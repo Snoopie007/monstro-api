@@ -17,12 +17,16 @@ export async function GET(
   props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
+  const { searchParams } = new URL(req.url);
+  const archived = searchParams.get("archived") === "true";
+
   try {
     const pkgs = await db.query.memberPlans.findMany({
       where: (memberPlans, { eq, and }) =>
         and(
           eq(memberPlans.locationId, params.id),
-          eq(memberPlans.type, "one-time")
+          eq(memberPlans.type, "one-time"),
+          eq(memberPlans.archived, archived)
         ),
       with: {
         planPrograms: {
