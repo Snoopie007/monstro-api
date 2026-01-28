@@ -1,16 +1,18 @@
 'use client'
 
 import { Dispatch, SetStateAction, useState, useMemo, useEffect } from 'react'
-import { Loader2, Users, FileSpreadsheet, CheckCircle2, Plus, Layers } from 'lucide-react'
+import { Loader2, Users, FileSpreadsheet, CheckCircle2, Plus, Layers, ChevronDown, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/libs/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 import { Label, Switch } from '@/components/forms'
 import { Badge } from '@/components/ui'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/ToolTip'
 import { toast } from 'react-toastify'
 import { tryCatch, formatAmountForDisplay } from '@/libs/utils'
 import { useMemberPlans } from '@/hooks'
+import { validateImportData } from '@/libs/validation/importValidation'
 import type { MemberPlan, MemberPlanPricing, CustomFieldDefinition } from '@/types'
 import type { NewCustomField } from './ImportStepperPage'
 
@@ -53,7 +55,22 @@ export function PreviewStep({
     const [pricingId, setPricingId] = useState<string | null>(null)
     const [requirePayment, setRequirePayment] = useState(false)
     const [importSuccess, setImportSuccess] = useState(false)
+    const [expandedAccordion, setExpandedAccordion] = useState<number | null>(null)
     const { plans } = useMemberPlans(lid)
+
+    // Validation
+    const validationResult = useMemo(() => {
+        return validateImportData(fullData, {
+            fieldMapping,
+            customFieldMapping,
+            customFields: [
+                ...existingCustomFields.map(f => ({ key: f.id, type: f.type })),
+                ...newCustomFields.filter(f => f.selected).map(f => ({ key: f.csvColumn, type: f.fieldType }))
+            ]
+        })
+    }, [fullData, fieldMapping, customFieldMapping, existingCustomFields, newCustomFields])
+
+    const { totalRows, validRows, invalidRows, errorsByRow } = validationResult
 
     // Derived state for selected plan and pricing options
     const selectedPlan = useMemo(() => {
@@ -161,7 +178,9 @@ export function PreviewStep({
                 </div>
                 <Button
                     variant='primary'
-                    onClick={() => window.location.href = `/dashboard/location/${lid}/migration`}
+                    onClick={() => {
+                        window.location.href = `/dashboard/location/${lid}/migration`
+                    }}
                 >
                     View Members
                 </Button>
@@ -185,20 +204,52 @@ export function PreviewStep({
 
     return (
         <div className='space-y-6'>
+            {/* Validation Warning */}
+            {invalidRows > 0 && (
+                <div className='p-4 rounded-lg bg-red-500/5 border border-red-500/20 flex items-start gap-3'>
+                    <AlertCircle className='size-5 text-red-500 flex-shrink-0 mt-0.5' />
+                    <div>
+                        <div className='text-sm font-medium text-red-500'>Fix {invalidRows} validation error{invalidRows > 1 ? 's' : ''} before importing</div>
+                        <p className='text-xs text-red-500/70 mt-1'>Review the validation issues below to correct your data</p>
+                    </div>
+                </div>
+            )}
+
             {/* Stats */}
-            <div className={cn('grid gap-4', includeCustomFields ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2')}>
+            <div className={cn('grid gap-4', includeCustomFields ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3')}>
                 <div className='flex items-center gap-3 p-4 rounded-lg bg-foreground/5 border border-foreground/10'>
                     <div className='size-10 rounded-full bg-primary/10 flex items-center justify-center'>
                         <Users className='size-5 text-primary' />
                     </div>
                     <div>
-                        <div className='text-2xl font-semibold'>{fullData.length}</div>
-                        <div className='text-xs text-muted-foreground'>Members</div>
+                        <div className='text-2xl font-semibold'>{totalRows}</div>
+                        <div className='text-xs text-muted-foreground'>Total Rows</div>
                     </div>
                 </div>
+                {invalidRows === 0 ? (
+                    <div className='flex items-center gap-3 p-4 rounded-lg bg-green-500/5 border border-green-500/20'>
+                        <div className='size-10 rounded-full bg-green-500/10 flex items-center justify-center'>
+                            <CheckCircle2 className='size-5 text-green-500' />
+                        </div>
+                        <div>
+                            <div className='text-2xl font-semibold text-green-500'>{validRows}</div>
+                            <div className='text-xs text-green-500/70'>Valid Rows</div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className='flex items-center gap-3 p-4 rounded-lg bg-red-500/5 border border-red-500/20'>
+                        <div className='size-10 rounded-full bg-red-500/10 flex items-center justify-center'>
+                            <AlertCircle className='size-5 text-red-500' />
+                        </div>
+                        <div>
+                            <div className='text-2xl font-semibold text-red-500'>{invalidRows}</div>
+                            <div className='text-xs text-red-500/70'>Invalid Rows</div>
+                        </div>
+                    </div>
+                )}
                 <div className='flex items-center gap-3 p-4 rounded-lg bg-foreground/5 border border-foreground/10'>
-                    <div className='size-10 rounded-full bg-green-500/10 flex items-center justify-center'>
-                        <FileSpreadsheet className='size-5 text-green-500' />
+                    <div className='size-10 rounded-full bg-blue-500/10 flex items-center justify-center'>
+                        <FileSpreadsheet className='size-5 text-blue-500' />
                     </div>
                     <div>
                         <div className='text-2xl font-semibold'>{Object.keys(fieldMapping).length}</div>
@@ -262,29 +313,131 @@ export function PreviewStep({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {previewData.map((row, index) => (
-                                <TableRow key={index}>
-                                    {displayFields.map((field) => (
-                                        <TableCell key={field.key} className='text-sm whitespace-nowrap'>
-                                            {getMappedValue(row, field.key)}
-                                        </TableCell>
-                                    ))}
-                                    {mappedExistingFields.map((field) => (
-                                        <TableCell key={field.id} className='text-sm whitespace-nowrap'>
-                                            {getCustomFieldValue(row, field.id)}
-                                        </TableCell>
-                                    ))}
-                                    {selectedNewFields.map((field) => (
-                                        <TableCell key={field.csvColumn} className='text-sm whitespace-nowrap'>
-                                            {row[field.csvColumn] || '-'}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))}
+                            {previewData.map((row, rowIndex) => {
+                                const rowErrors = errorsByRow.get(rowIndex) || []
+                                const errorsByColumn = new Map(rowErrors.map(e => [e.column, e.error]))
+                                
+                                return (
+                                    <TableRow key={`row-${rowIndex}`}>
+                                        {displayFields.map((field) => {
+                                            const csvColumn = fieldMapping[field.key]
+                                            const error = csvColumn ? errorsByColumn.get(csvColumn) : undefined
+                                            const cellContent = getMappedValue(row, field.key)
+
+                                            return (
+                                                <TableCell
+                                                    key={field.key}
+                                                    className={cn(
+                                                        'text-sm whitespace-nowrap',
+                                                        error && 'bg-red-500/10 text-red-500'
+                                                    )}
+                                                >
+                                                    {error ? (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <span className='cursor-help underline'>{cellContent}</span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>{error}</TooltipContent>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        cellContent
+                                                    )}
+                                                </TableCell>
+                                            )
+                                        })}
+                                        {mappedExistingFields.map((field) => {
+                                            const csvColumn = customFieldMapping[field.id]
+                                            const error = csvColumn ? errorsByColumn.get(csvColumn) : undefined
+                                            const cellContent = getCustomFieldValue(row, field.id)
+
+                                            return (
+                                                <TableCell
+                                                    key={field.id}
+                                                    className={cn(
+                                                        'text-sm whitespace-nowrap',
+                                                        error && 'bg-red-500/10 text-red-500'
+                                                    )}
+                                                >
+                                                    {error ? (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <span className='cursor-help underline'>{cellContent}</span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>{error}</TooltipContent>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        cellContent
+                                                    )}
+                                                </TableCell>
+                                            )
+                                        })}
+                                        {selectedNewFields.map((field) => {
+                                            const error = errorsByColumn.get(field.csvColumn)
+                                            const cellContent = row[field.csvColumn] || '-'
+                                            
+                                            return (
+                                                <TableCell 
+                                                    key={field.csvColumn} 
+                                                    className={cn(
+                                                        'text-sm whitespace-nowrap',
+                                                        error && 'bg-red-500/10 text-red-500'
+                                                    )}
+                                                >
+                                                    {error ? (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <span className='cursor-help underline'>{cellContent}</span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>{error}</TooltipContent>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        cellContent
+                                                    )}
+                                                </TableCell>
+                                            )
+                                        })}
+                                    </TableRow>
+                                )
+                            })}
                         </TableBody>
                     </Table>
                 </div>
             </div>
+
+            {/* Validation Issues */}
+            {invalidRows > 0 && (
+                <div className='space-y-2'>
+                    <div className='text-sm font-medium'>Validation Issues</div>
+                    <div className='border border-foreground/10 rounded-lg overflow-hidden'>
+                        {Array.from(errorsByRow.entries()).map(([rowNum, errors]) => (
+                            <div key={`error-row-${rowNum}`} className='border-b border-foreground/10 last:border-b-0'>
+                                <button
+                                    type='button'
+                                    onClick={() => setExpandedAccordion(expandedAccordion === rowNum ? null : rowNum)}
+                                    className='w-full flex items-center justify-between p-3 hover:bg-foreground/5 transition-colors'
+                                >
+                                    <div className='flex items-center gap-2'>
+                                        <AlertCircle className='size-4 text-red-500' />
+                                        <span className='text-sm font-medium'>Row {rowNum + 1}</span>
+                                        <Badge variant='secondary' className='text-xs'>{errors.length} error{errors.length > 1 ? 's' : ''}</Badge>
+                                    </div>
+                                    <ChevronDown className={cn('size-4 transition-transform', expandedAccordion === rowNum && 'rotate-180')} />
+                                </button>
+                                {expandedAccordion === rowNum && (
+                                    <div className='px-3 pb-3 space-y-2 bg-foreground/5'>
+                                        {errors.map((error, idx) => (
+                                            <div key={`error-${rowNum}-${idx}`} className='text-xs space-y-1'>
+                                                <div className='font-medium text-foreground'>{error.column}</div>
+                                                <div className='text-muted-foreground'>{error.error}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* New Fields Summary */}
             {selectedNewFields.length > 0 ? (
@@ -383,7 +536,7 @@ export function PreviewStep({
                 size='lg'
                 className='w-full'
                 onClick={handleImport}
-                disabled={isImporting || !file}
+                disabled={isImporting || !file || invalidRows > 0}
             >
                 Import {fullData.length} Members
                 {totalCustomFieldsCount > 0 ? ` with ${totalCustomFieldsCount} custom field${totalCustomFieldsCount > 1 ? 's' : ''}` : ''}
