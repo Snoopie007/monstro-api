@@ -1,9 +1,8 @@
 import { db } from "@/db/db";
 import { memberPackages, memberSubscriptions, migrateMembers, memberLocations, memberCustomFields } from "@/db/schemas";
-import type { MemberPlanPricing, PaymentType } from "@/types";
+import type { PaymentType } from "@/types";
 import { Elysia, t } from "elysia";
 import { eq, sql } from "drizzle-orm";
-import { addYears, addMonths } from "date-fns";
 import { calculateThresholdDate } from "../purchase/utils";
 
 
@@ -29,7 +28,6 @@ export function migrateAcceptRoutes(app: Elysia) {
             });
 
 
-
             const hasPlan = migrate?.pricing && migrate?.planType;
 
             const hasPayment = migrate?.payment;
@@ -46,8 +44,6 @@ export function migrateAcceptRoutes(app: Elysia) {
                     status: state,
                 },
             });
-
-
 
             // Transfer custom field values if they exist
             const customFieldValues = migrate?.metadata?.customFieldValues;
@@ -111,9 +107,18 @@ export function migrateAcceptRoutes(app: Elysia) {
                     } else {
                         const totalClassLimit = pricing.plan.totalClassLimit || 0;
                         const totalClassAttended = Math.max(0, totalClassLimit - (migrate?.classCredits || 0));
+                        let endDate = undefined;
+                        if (pricing.expireThreshold && pricing.expireInterval) {
+                            endDate = calculateThresholdDate({
+                                startDate,
+                                threshold: migrate.paymentTermsLeft || pricing.expireThreshold,
+                                interval: pricing.expireInterval,
+                            });
+                        }
                         await tx.insert(memberPackages).values({
                             ...commonValues,
                             startDate,
+                            expireDate: endDate,
                             totalClassLimit,
                             totalClassAttended,
                         });

@@ -8,7 +8,6 @@ import {
     calculateThresholdDate,
     calculateStripeFeePercentage,
 } from "../purchase/utils";
-import type { PaymentType } from "@/types/DatabaseEnums";
 import { isToday } from "date-fns";
 
 const MigrateSubProps = {
@@ -80,6 +79,10 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(404, { error: "Pricing not found" });
             }
 
+            if (!pricing.stripePriceId || !pricing.interval || !pricing.intervalThreshold) {
+                return status(400, { error: "Invalid pricing for subscription plan." });
+            }
+
             await db.insert(memberPaymentMethods).values({
                 paymentMethodId: paymentMethod.id,
                 memberId: mid,
@@ -91,11 +94,6 @@ export function migrateSubRoutes(app: Elysia) {
                     memberPaymentMethods.locationId,
                 ],
             });
-
-            if (!pricing.interval || !pricing.intervalThreshold) {
-                return status(400, { error: "Invalid pricing for subscription plan." });
-            }
-
 
 
             const currentPeriodStart = migrate.lastRenewalDay ? new Date(migrate.lastRenewalDay) : new Date();
@@ -140,12 +138,14 @@ export function migrateSubRoutes(app: Elysia) {
             }
 
             const backdateStartDate = migrate.backdateStartDate ? new Date(migrate.backdateStartDate) : undefined;
-            const stripeSubscription = await stripe.createSubscription(pricing, {
+            const stripeSubscription = await stripe.createSubscription({
+                stripePriceId: pricing.stripePriceId,
+                paymentMethodId: paymentMethod.stripeId,
+                feePercent,
                 startDate: nextBillingDate,
+                description: `Subscription to ${pricing.plan.name}/${pricing.name}`,
                 taxRateId: taxRate?.stripeRateId || undefined,
                 cancelAt,
-                feePercent,
-                paymentMethod: paymentMethod.stripeId,
                 metadata,
                 backdateStartDate
             });

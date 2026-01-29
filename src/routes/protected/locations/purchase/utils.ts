@@ -19,42 +19,11 @@ function calculateStripeFeeAmount(amount: number, paymentType: PaymentType) {
 }
 
 
-function getTaxRateId(taxRates: TaxRate[]): string | undefined {
-    if (taxRates.length === 0) return undefined;
-    const defaultTaxRate = taxRates.find((taxRate) => taxRate.isDefault);
-    if (defaultTaxRate && defaultTaxRate.stripeRateId) {
-        return defaultTaxRate.stripeRateId as string;
-    } else {
-        return taxRates[0]?.stripeRateId as string;
-    }
-}
 
-function calculateTax(price: number, taxRates: TaxRate[]) {
-    if (taxRates.length === 0) return 0;
-
-    let tax = 0;
-    let defaultTaxRate = taxRates.find((taxRate) => taxRate.isDefault);
-    if (!defaultTaxRate) {
-        defaultTaxRate = taxRates[0];
-    }
-    if (defaultTaxRate) {
-        tax = Math.floor(price * (defaultTaxRate.percentage || 0) / 100);
-    }
-
+function calculateTax(price: number, taxRate: TaxRate | undefined) {
+    if (!taxRate) return 0;
+    const tax = Math.floor(price * (taxRate.percentage || 0) / 100);
     return tax;
-}
-
-function calculateTrialEnd(startDate: Date, trialDays: number): Date {
-    const today = new Date();
-    if (isAfter(startDate, today)) {
-        return new Date(
-            Math.max(startDate.getTime(), startDate.getTime() + trialDays * 24 * 60 * 60 * 1000)
-        );
-    } else {
-        return new Date(
-            Math.max(today.getTime(), today.getTime() + trialDays * 24 * 60 * 60 * 1000)
-        );
-    }
 }
 
 interface EndDateParams {
@@ -78,10 +47,8 @@ function calculateThresholdDate({ startDate, threshold, interval }: EndDateParam
 
 
 export {
-    getTaxRateId,
     calculateTax,
     calculateThresholdDate,
-    calculateTrialEnd,
     calculateStripeFeePercentage,
     calculateStripeFeeAmount,
 };

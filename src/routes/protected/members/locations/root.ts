@@ -70,12 +70,24 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         const { mid } = params;
         const { lid } = body;
         try {
-            const ml = await db.insert(memberLocations).values({
+            const [newMemberLocation] = await db.insert(memberLocations).values({
                 memberId: mid,
                 locationId: lid,
                 status: "incomplete",
             }).onConflictDoNothing().returning();
-            return status(200, ml);
+
+
+            const location = await db.query.locations.findFirst({
+                where: (l, { eq }) => eq(l.id, lid),
+                with: {
+                    locationState: true,
+                },
+            });
+
+            return status(200, {
+                ...newMemberLocation,
+                location: location,
+            });
         } catch (error) {
             console.error(error);
             status(500, { error: 'Internal server error' });

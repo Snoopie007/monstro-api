@@ -68,6 +68,7 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
                                     email: true,
                                     phone: true,
                                     referralCode: true,
+
                                 },
                                 with: {
                                     user: {

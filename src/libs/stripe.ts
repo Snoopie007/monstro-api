@@ -11,30 +11,38 @@ type Customer = {
     address?: AddressParam;
 };
 
-type BaseSettings = {
-    description?: string;
-    feePercent?: number;
-    currency?: string;
-    returnUrl?: string;
-    paymentMethod?: string;
-    metadata?: Record<string, any>;
-};
 
-interface PaymentIntentSettings extends BaseSettings {
+interface MemberPaymentOptions {
+    amount: number,
+    paymentMethodId: string,
+    applicationFeeAmount: number,
     authorizeOnly?: boolean,
     taxRateId?: string,
+    description?: string,
     productName?: string,
+    quantity?: number,
+    currency?: string,
     tax?: number,
     unitCost?: number,
+    metadata?: Record<string, any>;
+    returnUrl?: string;
 }
-type MemberSubscriptionSettings = BaseSettings & {
+
+type MemberSubscriptionOptions = {
+    stripePriceId: string,
+    paymentMethodId: string,
+    feePercent: number,
+    startDate: Date,
+    currency?: string,
     backdateStartDate?: Date | null,
     cancelAt?: Date | null,
     trialEnd?: Date | null,
     taxRateId?: string;
-    startDate?: Date,
-    allowProration?: boolean
+    isAllowProration?: boolean;
+    description?: string;
+    metadata?: Record<string, any>;
     billingAnchorConfig?: BillingCycleAnchorConfig
+
 }
 const isProd = process.env.NODE_ENV === "production";
 const STRIPE_API_VERSION = "2025-12-15.clover";
@@ -459,7 +467,7 @@ class MemberStripePayments extends BaseStripePayments {
         return res.data;
     }
 
-    async createPaymentIntent(amount: number, applicationFeeAmount: number, options?: PaymentIntentSettings) {
+    async createPaymentIntent(options: MemberPaymentOptions) {
 
         if (!this._customer) {
             throw new Error("Customer not set");
@@ -468,32 +476,37 @@ class MemberStripePayments extends BaseStripePayments {
             throw new Error("Account ID not set");
         }
 
+        const { description, unitCost, tax, metadata,
+            returnUrl, authorizeOnly, productName, currency,
+            amount, applicationFeeAmount, paymentMethodId
+        } = options || {};
+
         const option: Stripe.PaymentIntentCreateParams = {
             payment_method_types: ['card', 'us_bank_account'],
             customer: this._customer,
             amount,
+            currency: currency || "usd",
             amount_details: {
                 line_items: [{
-                    product_name: options?.productName || "",
+                    product_name: productName || "",
                     quantity: 1,
-                    unit_cost: options?.unitCost || 0,
+                    unit_cost: unitCost || 0,
                     tax: {
-                        total_tax_amount: options?.tax || 0,
+                        total_tax_amount: tax || 0,
                     },
                 }],
             },
-            description: options?.description,
+            description: description,
             transfer_data: {
                 destination: this._accountId,
             },
-            currency: options?.currency || "usd",
             confirm: true,
             application_fee_amount: applicationFeeAmount,
-            payment_method: options?.paymentMethod || undefined,
-            capture_method: options?.authorizeOnly ? "manual" : "automatic",
-            return_url: options?.returnUrl || "https://unknown.com",
+            payment_method: paymentMethodId || undefined,
+            capture_method: authorizeOnly ? "manual" : "automatic",
+            return_url: returnUrl || "https://unknown.com",
             expand: ["payment_method"],
-            metadata: options?.metadata || undefined
+            metadata: metadata || undefined
         }
 
         const { client_secret, payment_method, latest_charge } = await this._stripe.paymentIntents.create(option);
@@ -501,7 +514,43 @@ class MemberStripePayments extends BaseStripePayments {
     }
 
 
-    async createSubscription(pricing: MemberPlanPricing, settings: MemberSubscriptionSettings) {
+    async createCheckoutSession() {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
+
+
+
+        const option: Stripe.Checkout.SessionCreateParams = {
+            customer: this._customer,
+            payment_method_types: ['card', 'us_bank_account'],
+
+
+            mode: 'subscription',
+        }
+
+        const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
+            transfer_data: {
+                destination: this._accountId,
+            },
+            invoice_settings: {
+                issuer: {
+                    type: "account" as const,
+                    account: this._accountId
+                }
+            },
+            on_behalf_of: this._accountId,
+
+        }
+
+
+        return this._stripe.checkout.sessions.create(option);
+    }
+
+    async createSubscription(options: MemberSubscriptionOptions) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
@@ -509,63 +558,69 @@ class MemberStripePayments extends BaseStripePayments {
             throw new Error("Account ID not set");
         }
         const {
+            stripePriceId,
+            paymentMethodId,
+            feePercent,
             startDate,
             trialEnd,
-            paymentMethod,
-            feePercent,
-            allowProration,
             cancelAt,
             taxRateId,
+            isAllowProration,
+            description,
+            currency,
             billingAnchorConfig,
-            ...rest
-        } = settings;
-
-        if (!pricing.stripePriceId) {
-            throw new Error("Price not found");
-        }
-
-        const planName = pricing.plan?.name || "";
-        const isAllowProration = pricing.interval === "month" || pricing.interval === "year"
+            backdateStartDate,
+        } = options;
 
 
-        const accountDestination = {
-            type: "account" as const,
-            account: this._accountId
-        }
 
-        const options: Stripe.SubscriptionCreateParams = {
-            ...rest,
-            ... (taxRateId && { default_tax_rates: [taxRateId] }),
+        const option: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             transfer_data: {
                 destination: this._accountId,
             },
-            automatic_tax: { enabled: false },
-            invoice_settings: { issuer: accountDestination },
-            description: `Subscription to ${planName}`,
-            items: [{ price: pricing.stripePriceId }],
+            on_behalf_of: this._accountId,
+            automatic_tax: {
+                enabled: taxRateId ? true : false,
+                ...(taxRateId && {
+                    liability: {
+                        type: "account",
+                    }
+                }),
+            },
+            currency: currency || "usd",
+            invoice_settings: {
+                issuer: {
+                    type: "account" as const,
+                    account: this._accountId
+                }
+            },
+            description,
+            items: [{ price: stripePriceId }],
             collection_method: "charge_automatically",
-            default_payment_method: paymentMethod || undefined,
+            default_payment_method: paymentMethodId || undefined,
             application_fee_percent: feePercent || 0,
             cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
             trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
         };
 
-        if (isAllowProration) {
-            if (billingAnchorConfig) {
-                options.billing_cycle_anchor_config = billingAnchorConfig;
-            }
-            if (startDate && isAfter(startDate, new Date())) {
-                options.proration_behavior = (allowProration || allowProration) ? "create_prorations" : "none";
-                options.billing_cycle_anchor = startDate.getTime() / 1000;
-            }
+        if (taxRateId) {
+            option.default_tax_rates = [taxRateId];
         }
 
-        if (settings.backdateStartDate) {
-            options.backdate_start_date = settings.backdateStartDate.getTime() / 1000;
+        if (billingAnchorConfig && Object.keys(billingAnchorConfig).length > 0) {
+            option.billing_cycle_anchor_config = billingAnchorConfig;
         }
 
-        return this._stripe.subscriptions.create(options);
+        if (startDate && isAfter(startDate, new Date())) {
+            option.proration_behavior = isAllowProration ? "create_prorations" : "none";
+            option.billing_cycle_anchor = Math.floor(startDate.getTime() / 1000);
+        }
+        if (backdateStartDate) {
+            option.backdate_start_date = Math.floor(backdateStartDate.getTime() / 1000);
+        }
+
+        return this._stripe.subscriptions.create(option);
     }
 
 

@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
+import { memberLocations, memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
@@ -88,7 +88,7 @@ export function purchasePkgRoutes(app: Elysia) {
             const { lid } = params;
             const {
                 paymentMethodId, mid, priceId,
-                memberPlanId, paymentType
+                memberPlanId
             } = body;
 
             try {
@@ -172,8 +172,8 @@ export function purchasePkgRoutes(app: Elysia) {
                 stripe.setCustomer(member.stripeCustomerId);
 
                 const today = new Date();
-
-                const tax = calculateTax(pricing.price, taxRates);
+                const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
+                const tax = calculateTax(pricing.price, taxRate);
                 let subTotal = pricing.price;
                 let total = subTotal + tax;
                 const monstroFee = Math.floor(subTotal * (locationState.usagePercent / 100));
@@ -189,12 +189,15 @@ export function purchasePkgRoutes(app: Elysia) {
                 }
 
 
-                const description = `Payment for ${pricing.plan.name}/${pricing.name}`;
-                await stripe.createPaymentIntent(total, applicationFeeAmount, {
-                    paymentMethod: paymentMethod.stripeId,
+                const planName = `${pricing.plan.name}/${pricing.name}`;
+
+                await stripe.createPaymentIntent({
+                    amount: total,
+                    applicationFeeAmount: applicationFeeAmount,
+                    paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.plan.currency,
-                    description: description,
-                    productName: `${pricing.plan.name}/${pricing.name}`,
+                    description: `Payment for ${planName}`,
+                    productName: planName,
                     unitCost: subTotal,
                     tax: tax,
                     metadata: {
@@ -212,8 +215,8 @@ export function purchasePkgRoutes(app: Elysia) {
                         },
                     }).where(eq(memberPackages.id, memberPlanId));
                     await tx.insert(transactions).values({
-                        description: description,
-                        items: [{ name: pricing.plan.name, quantity: 1, price: pricing.price }],
+                        description: `Payment for ${planName}`,
+                        items: [{ name: planName, quantity: 1, price: pricing.price }],
                         type: "inbound",
                         total: pricing.price + tax,
                         subTotal: pricing.price,
@@ -221,14 +224,13 @@ export function purchasePkgRoutes(app: Elysia) {
                         status: "paid",
                         locationId: lid,
                         memberId: mid,
-                        paymentType: paymentType,
+                        paymentType: paymentMethod.type,
                         chargeDate: today,
                     });
+                    await tx.update(memberLocations).set({
+                        status: "active",
+                    }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
                 });
-
-
-
-
 
                 return status(200, { status: "active" });
             } catch (error) {
@@ -245,8 +247,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 paymentMethodId: t.String(),
                 priceId: t.String(),
                 memberPlanId: t.String(),
-                mid: t.String(),
-                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
+                mid: t.String()
             }),
         });
 
