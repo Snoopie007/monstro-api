@@ -36,6 +36,11 @@ const displayFields = [
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
     { key: 'lastRenewalDate', label: 'Renewal Date' },
+    // Optional fields (shown only when mapped)
+    { key: 'classCredits', label: 'Credits', optional: true },
+    { key: 'paymentTermsLeft', label: 'Terms', optional: true },
+    { key: 'backdateStartDate', label: 'Backdate', optional: true },
+    { key: 'termEndDate', label: 'Term End', optional: true },
 ]
 
 export function PreviewStep({
@@ -277,11 +282,13 @@ export function PreviewStep({
                     <Table>
                         <TableHeader>
                             <TableRow className='bg-foreground/5'>
-                                {displayFields.map((field) => (
-                                    <TableHead key={field.key} className='text-xs font-medium whitespace-nowrap'>
-                                        {field.label}
-                                    </TableHead>
-                                ))}
+                                {displayFields
+                                    .filter(field => !field.optional || fieldMapping[field.key])
+                                    .map((field) => (
+                                        <TableHead key={field.key} className='text-xs font-medium whitespace-nowrap'>
+                                            {field.label}
+                                        </TableHead>
+                                    ))}
                                 {mappedExistingFields.map((field) => (
                                     <TableHead key={field.id} className='text-xs font-medium whitespace-nowrap'>
                                         <span className='flex items-center gap-1'>
@@ -307,32 +314,34 @@ export function PreviewStep({
                                 
                                 return (
                                     <TableRow key={`row-${rowIndex}`}>
-                                        {displayFields.map((field) => {
-                                            const csvColumn = fieldMapping[field.key]
-                                            const error = csvColumn ? errorsByColumn.get(csvColumn) : undefined
-                                            const cellContent = getMappedValue(row, field.key)
+                                        {displayFields
+                                            .filter(field => !field.optional || fieldMapping[field.key])
+                                            .map((field) => {
+                                                const csvColumn = fieldMapping[field.key]
+                                                const error = csvColumn ? errorsByColumn.get(csvColumn) : undefined
+                                                const cellContent = getMappedValue(row, field.key)
 
-                                            return (
-                                                <TableCell
-                                                    key={field.key}
-                                                    className={cn(
-                                                        'text-sm whitespace-nowrap',
-                                                        error && 'bg-red-500/10 text-red-500'
-                                                    )}
-                                                >
-                                                    {error ? (
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <span className='cursor-help underline'>{cellContent}</span>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>{error}</TooltipContent>
-                                                        </Tooltip>
-                                                    ) : (
-                                                        cellContent
-                                                    )}
-                                                </TableCell>
-                                            )
-                                        })}
+                                                return (
+                                                    <TableCell
+                                                        key={field.key}
+                                                        className={cn(
+                                                            'text-sm whitespace-nowrap',
+                                                            error && 'bg-red-500/10 text-red-500'
+                                                        )}
+                                                    >
+                                                        {error ? (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span className='cursor-help underline'>{cellContent}</span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>{error}</TooltipContent>
+                                                            </Tooltip>
+                                                        ) : (
+                                                            cellContent
+                                                        )}
+                                                    </TableCell>
+                                                )
+                                            })}
                                         {mappedExistingFields.map((field) => {
                                             const csvColumn = customFieldMapping[field.id]
                                             const error = csvColumn ? errorsByColumn.get(csvColumn) : undefined

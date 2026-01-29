@@ -125,6 +125,11 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
                     email: ['email', 'e-mail', 'emailaddress', 'email_address'],
                     phone: ['phone', 'phonenumber', 'phone_number', 'mobile', 'cell'],
                     lastRenewalDate: ['lastrenewaldate', 'last_renewal_date', 'renewal_date', 'renewaldate'],
+                    // Auto-mapping for optional fields
+                    classCredits: ['classcredits', 'class_credits', 'credits', 'remaining_credits', 'class credits'],
+                    paymentTermsLeft: ['paymenttermsleft', 'payment_terms_left', 'terms_left', 'payments_remaining', 'terms remaining'],
+                    backdateStartDate: ['backdate', 'backdate_start', 'backdate_start_date', 'original_start', 'start_date_backdate'],
+                    termEndDate: ['term_end_date', 'termenddate', 'end_date', 'plan_end_date', 'membership_end'],
                 }
 
                 for (const [field, patterns] of Object.entries(fieldPatterns)) {
