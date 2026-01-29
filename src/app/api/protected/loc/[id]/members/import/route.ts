@@ -81,13 +81,45 @@ export async function POST(
 
 		const insertMembers: Array<typeof migrateMembers.$inferInsert> = [];
 		for (const record of records) {
-			const firstName = record[fieldMapping.firstName];
-			const lastName = record[fieldMapping.lastName];
-			const email = record[fieldMapping.email];
-			const phone = record[fieldMapping.phone];
-			const lastRenewalDate = record[fieldMapping.lastRenewalDate];
+		const firstName = record[fieldMapping.firstName];
+		const lastName = record[fieldMapping.lastName];
+		const email = record[fieldMapping.email];
+		const phone = record[fieldMapping.phone];
+		const lastRenewalDate = record[fieldMapping.lastRenewalDate];
 
-			if (!email) continue;
+		// Extract optional fields
+		const classCreditsRaw = record[fieldMapping.classCredits];
+		const paymentTermsLeftRaw = record[fieldMapping.paymentTermsLeft];
+		const backdateStartDateRaw = record[fieldMapping.backdateStartDate];
+		
+		// Parse optional integer fields
+		const classCredits = classCreditsRaw ? parseInt(classCreditsRaw, 10) : null;
+		const paymentTermsLeft = paymentTermsLeftRaw ? parseInt(paymentTermsLeftRaw, 10) : null;
+		
+		// Validate parsed integers are not NaN
+		const validClassCredits = classCreditsRaw && !isNaN(classCredits) ? classCredits : null;
+		const validPaymentTermsLeft = paymentTermsLeftRaw && !isNaN(paymentTermsLeft) ? paymentTermsLeft : null;
+		
+		// Parse optional date field
+		let validBackdateStartDate: Date | null = null;
+		if (backdateStartDateRaw) {
+			const backdate = new Date(backdateStartDateRaw);
+			if (!isNaN(backdate.getTime())) {
+				validBackdateStartDate = backdate;
+			}
+		}
+
+		// Extract term end date (optional)
+		const termEndDateRaw = record[fieldMapping.termEndDate];
+		let validTermEndDate: Date | null = null;
+		if (termEndDateRaw) {
+			const termEnd = new Date(termEndDateRaw);
+			if (!isNaN(termEnd.getTime())) {
+				validTermEndDate = termEnd;
+			}
+		}
+
+		if (!email) continue;
 			const formattedPhone = parsePhoneNumberFromString(phone, "US");
 			
 			if (!formattedPhone) continue;
@@ -114,18 +146,22 @@ export async function POST(
 				}
 			}
 
-		insertMembers.push({
-			firstName,
-			lastName,
-			email,
-			phone: formattedPhone.number,
-			lastRenewalDay,
-			pricingId: pricingId ? pricingId.toString() : null,
-			planType: planType || null,
-			locationId: params.id,
-			metadata: { customFieldValues },
-			payment: requirePayment,
-		});
+	insertMembers.push({
+		firstName,
+		lastName,
+		email,
+		phone: formattedPhone.number,
+		lastRenewalDay,
+		classCredits: validClassCredits,
+		paymentTermsLeft: validPaymentTermsLeft,
+		backdateStartDate: validBackdateStartDate,
+		termEndDate: validTermEndDate,
+		pricingId: pricingId ? pricingId.toString() : null,
+		planType: planType || null,
+		locationId: params.id,
+		metadata: { customFieldValues },
+		payment: requirePayment,
+	});
 		}
 
 		if (insertMembers.length === 0) {

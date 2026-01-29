@@ -95,6 +95,38 @@ export function validateDate(dateStr: string): { valid: boolean; error?: string 
 }
 
 /**
+ * Validates non-negative integer
+ */
+export function validateInteger(value: string | number | undefined): { valid: boolean; error?: string } {
+  if (value === undefined || value === null || value === '') {
+    return { valid: true }; // Optional field - empty is valid
+  }
+  
+  const num = typeof value === 'string' ? parseInt(value, 10) : value;
+  
+  if (isNaN(num)) {
+    return { valid: false, error: 'Must be a valid number' };
+  }
+  
+  if (num < 0) {
+    return { valid: false, error: 'Must be a non-negative number (0 or greater)' };
+  }
+  
+  return { valid: true };
+}
+
+/**
+ * Validates optional date (allows empty values)
+ */
+export function validateOptionalDate(dateStr: string | undefined): { valid: boolean; error?: string } {
+  if (!dateStr || dateStr.trim() === '') {
+    return { valid: true }; // Optional field - empty is valid
+  }
+  
+  return validateDate(dateStr);
+}
+
+/**
  * Validates custom field based on its type
  */
 export function validateCustomField(
