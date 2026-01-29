@@ -72,7 +72,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 				intervalThreshold: 1,
 				expireInterval: null,
 				expireThreshold: null,
-				downpayment: 0,
+				downpayment: type === "subs" ? 0 : undefined,
 			}],
 			programs: [],
 			intervalClassLimit: undefined,

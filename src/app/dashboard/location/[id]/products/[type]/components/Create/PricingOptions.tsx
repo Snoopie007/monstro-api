@@ -23,7 +23,6 @@ import { cn } from "@/libs/utils";
 import { HelpCircle, Plus, Trash2 } from "lucide-react";
 import CurrencyInput from "react-currency-input-field";
 import { useFieldArray } from "react-hook-form";
-
 interface PricingOptionsProps {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	form: any;
@@ -44,7 +43,7 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 			intervalThreshold: 1,
 			expireInterval: null,
 			expireThreshold: null,
-			downpayment: 0,
+			...(planType === "recurring" ? { downpayment: 0 } : {}),
 		});
 	};
 
@@ -198,48 +197,50 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 							</div>
 						)}
 
-						{/* Downpayment and Term/Expiration fields */}
-						<div className="grid grid-cols-2 gap-2">
-							<FormField
-								control={form.control}
-								name={`pricingOptions.${index}.downpayment`}
-								render={({ field }) => (
-									<FormItem>
-										<div className="flex items-center gap-1">
-											<FormLabel size="tiny">Downpayment</FormLabel>
-											<TooltipProvider>
-												<Tooltip>
-													<TooltipTrigger type="button">
-														<HelpCircle className="size-3 text-muted-foreground" />
-													</TooltipTrigger>
-													<TooltipContent className="max-w-xs">
-														<p>
-															Optional upfront payment collected when the member
-															signs up for this plan.
-														</p>
-													</TooltipContent>
-												</Tooltip>
-											</TooltipProvider>
-										</div>
-										<FormControl>
-											<CurrencyInput
-												className={cn(
-													"inline-block w-full  h-12 rounded-lg bg-background border border-foreground/10 px-4"
-												)}
-												value={field.value ? field.value / 100 : 0}
-												onValueChange={(value) => {
-													const downpayment = value ? Math.round(Number(value) * 100) : 0;
-													field.onChange(downpayment);
-												}}
-												allowNegativeValue={false}
+						{/* Downpayment (subscriptions only) and Term/Expiration fields */}
+						<div className={cn("grid gap-2", planType === "recurring" ? "grid-cols-2" : "grid-cols-1")}>
+							{planType === "recurring" && (
+								<FormField
+									control={form.control}
+									name={`pricingOptions.${index}.downpayment`}
+									render={({ field }) => (
+										<FormItem>
+											<div className="flex items-center gap-1">
+												<FormLabel size="tiny">Downpayment</FormLabel>
+												<TooltipProvider>
+													<Tooltip>
+														<TooltipTrigger type="button">
+															<HelpCircle className="size-3 text-muted-foreground" />
+														</TooltipTrigger>
+														<TooltipContent className="max-w-xs">
+															<p>
+																Optional upfront payment collected when the member
+																signs up for this plan.
+															</p>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											</div>
+											<FormControl>
+												<CurrencyInput
+													className={cn(
+														"inline-block w-full  h-12 rounded-lg bg-background border border-foreground/10 px-4"
+													)}
+													value={field.value ? field.value / 100 : 0}
+													onValueChange={(value) => {
+														const downpayment = value ? Math.round(Number(value) * 100) : 0;
+														field.onChange(downpayment);
+													}}
+													allowNegativeValue={false}
 
-												decimalsLimit={2}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+													decimalsLimit={2}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
 							<FormField
 								control={form.control}
 								name={`pricingOptions.${index}.expireInterval`}
@@ -287,8 +288,8 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 							/>
 						</div>
 						{form.watch(`pricingOptions.${index}.expireInterval`) && (
-							<div className="grid grid-cols-2 gap-2">
-								<div /> {/* Empty spacer to align with downpayment */}
+							<div className={cn("grid gap-2", planType === "recurring" ? "grid-cols-2" : "grid-cols-1")}>
+								{planType === "recurring" && <div /> /* Empty spacer to align with downpayment */}
 								<FormField
 									control={form.control}
 									name={`pricingOptions.${index}.expireThreshold`}
