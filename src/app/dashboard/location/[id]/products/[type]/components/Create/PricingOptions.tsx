@@ -23,13 +23,10 @@ import { cn } from "@/libs/utils";
 import { HelpCircle, Plus, Trash2 } from "lucide-react";
 import CurrencyInput from "react-currency-input-field";
 import { useFieldArray } from "react-hook-form";
-import { NewPlanSchema } from "@/libs/FormSchemas";
-import { UseFormReturn } from "react-hook-form";
-import { z } from "zod";
 
 interface PricingOptionsProps {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	form: UseFormReturn<z.infer<typeof NewPlanSchema>>;
+	form: any;
 	planType: "recurring" | "one-time";
 }
 
