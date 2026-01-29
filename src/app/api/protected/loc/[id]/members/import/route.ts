@@ -96,9 +96,9 @@ export async function POST(
 		const classCredits = classCreditsRaw ? parseInt(classCreditsRaw, 10) : null;
 		const paymentTermsLeft = paymentTermsLeftRaw ? parseInt(paymentTermsLeftRaw, 10) : null;
 		
-		// Validate parsed integers are not NaN
-		const validClassCredits = classCreditsRaw && !isNaN(classCredits) ? classCredits : null;
-		const validPaymentTermsLeft = paymentTermsLeftRaw && !isNaN(paymentTermsLeft) ? paymentTermsLeft : null;
+		// Validate parsed integers are not NaN (0 is a valid value)
+		const validClassCredits = classCreditsRaw !== undefined && classCredits !== null && !isNaN(classCredits) ? classCredits : null;
+		const validPaymentTermsLeft = paymentTermsLeftRaw !== undefined && paymentTermsLeft !== null && !isNaN(paymentTermsLeft) ? paymentTermsLeft : null;
 		
 		// Parse optional date field
 		let validBackdateStartDate: Date | null = null;
