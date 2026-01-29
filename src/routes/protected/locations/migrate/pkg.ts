@@ -73,9 +73,9 @@ export function migratePkgRoutes(app: Elysia) {
             const today = new Date();
             const startDate = migrate.backdateStartDate ? new Date(migrate.backdateStartDate) : today;
 
-            let endDate = undefined;
-            if (pricing.expireThreshold && pricing.expireInterval) {
-                endDate = calculateThresholdDate({
+            let expireDate = migrate?.endDate ? new Date(migrate?.endDate) : undefined;
+            if (!expireDate && pricing.expireThreshold && pricing.expireInterval) {
+                expireDate = calculateThresholdDate({
                     startDate,
                     threshold: migrate.paymentTermsLeft || pricing.expireThreshold,
                     interval: pricing.expireInterval,
@@ -95,7 +95,7 @@ export function migratePkgRoutes(app: Elysia) {
                     paymentType: paymentMethod.type,
                     totalClassLimit,
                     totalClassAttended,
-                    expireDate: endDate,
+                    expireDate,
                     status: "active",
                     metadata: {
                         paymentMethodId: paymentMethod.stripeId,

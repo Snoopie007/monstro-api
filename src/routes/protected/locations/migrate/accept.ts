@@ -91,6 +91,8 @@ export function migrateAcceptRoutes(app: Elysia) {
                             return status(400, { error: "Invalid pricing for subscription plan." });
                         }
 
+                        const expiresAt = migrate?.endDate ? new Date(migrate?.endDate) : undefined;
+
                         const currentPeriodStart = migrate?.lastRenewalDay ? new Date(migrate?.lastRenewalDay) : today;
                         const currentPeriodEnd = calculateThresholdDate({
                             startDate: currentPeriodStart,
@@ -102,14 +104,15 @@ export function migrateAcceptRoutes(app: Elysia) {
                             startDate,
                             currentPeriodStart,
                             currentPeriodEnd,
+                            expiresAt,
                             classCredits: migrate?.classCredits || 0,
                         });
                     } else {
                         const totalClassLimit = pricing.plan.totalClassLimit || 0;
                         const totalClassAttended = Math.max(0, totalClassLimit - (migrate?.classCredits || 0));
-                        let endDate = undefined;
-                        if (pricing.expireThreshold && pricing.expireInterval) {
-                            endDate = calculateThresholdDate({
+                        let expireDate = migrate?.endDate ? new Date(migrate?.endDate) : undefined;
+                        if (!expireDate && pricing.expireThreshold && pricing.expireInterval) {
+                            expireDate = calculateThresholdDate({
                                 startDate,
                                 threshold: migrate.paymentTermsLeft || pricing.expireThreshold,
                                 interval: pricing.expireInterval,
@@ -118,7 +121,7 @@ export function migrateAcceptRoutes(app: Elysia) {
                         await tx.insert(memberPackages).values({
                             ...commonValues,
                             startDate,
-                            expireDate: endDate,
+                            expireDate,
                             totalClassLimit,
                             totalClassAttended,
                         });

@@ -34,11 +34,10 @@ export const migrateMembers = pgTable('migrate_members', {
   priceId: text('pricing_id').references(() => memberPlanPricing.id, { onDelete: 'set null' }),
   payment: boolean('payment').notNull().default(true),
   locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
-  metadata: jsonb('metadata')
-    .$type<{
-      customFieldValues?: Array<{ fieldId: string; value: string }>
-    }>()
-    .default(sql`'{}'::jsonb`),
+  endDate: timestamp('term_end_date', { withTimezone: true }),
+  metadata: jsonb('metadata').$type<{
+    customFieldValues?: Array<{ fieldId: string; value: string }>
+  }>().default(sql`'{}'::jsonb`),
 })
 
 export const migrateRelations = relations(migrateMembers, ({ one }) => ({

@@ -29,7 +29,11 @@ export async function locationPlans(app: Elysia) {
                             program: true,
                         },
                     },
-                    pricings: true,
+                    pricings: {
+                        columns: {
+                            stripePriceId: false,
+                        },
+                    },
                 },
             });
             const mappedPlans = plans.map(plan => {

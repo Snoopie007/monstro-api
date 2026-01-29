@@ -128,8 +128,8 @@ export function migrateSubRoutes(app: Elysia) {
 
             const nextBillingDate = isToday(currentPeriodStart) ? currentPeriodStart : currentPeriodEnd!;
 
-            let cancelAt: Date | undefined = undefined;
-            if (migrate.paymentTermsLeft && pricing.interval) {
+            let cancelAt: Date | undefined = migrate?.endDate ? new Date(migrate?.endDate) : undefined;
+            if (!cancelAt && migrate.paymentTermsLeft && pricing.interval) {
                 cancelAt = calculateThresholdDate({
                     startDate: nextBillingDate,
                     threshold: migrate.paymentTermsLeft,
