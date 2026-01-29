@@ -2,7 +2,7 @@ import { VendorStripePayments } from "@/libs/stripe";
 import Elysia from "elysia";
 import { db } from "@/db/db";
 import { z } from "zod";
-import { members, paymentMethods } from "@/db/schemas";
+import { memberPaymentMethods, members, paymentMethods } from "@/db/schemas";
 import type { PaymentType } from "@/types/DatabaseEnums";
 import type Stripe from "stripe";
 import { eq } from "drizzle-orm";
@@ -65,7 +65,7 @@ export function memberPayments(app: Elysia) {
         app.group("/new", (app) => {
             app.post("/", async ({ status, body, params }) => {
                 const { mid } = params;
-                const { userAgent, secret } = body;
+                const { userAgent, secret, lid } = body;
                 // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
                 const setupIntentId = secret.split('_secret_')[0];
                 if (!setupIntentId) {
@@ -113,6 +113,13 @@ export function memberPayments(app: Elysia) {
 
                         const pm = await attachPaymentMethod(paymentMethod, mid);
 
+                        if (lid && pm) {
+                            await db.insert(memberPaymentMethods).values({
+                                paymentMethodId: pm.id,
+                                memberId: mid,
+                                locationId: lid,
+                            })
+                        }
                         return status(200, pm);
                     } else {
                         return status(400, { error: 'Setup intent not succeeded' });
@@ -125,6 +132,7 @@ export function memberPayments(app: Elysia) {
             }, {
                 ...GetMPProps,
                 body: z.object({
+                    lid: z.string().optional(),
                     userAgent: z.string().optional(),
                     secret: z.string(),
                 }),
@@ -142,8 +150,6 @@ export function memberPayments(app: Elysia) {
                     }
 
                     const isTestMember = member.email === 'mtest@yahoo.com';
-                    console.log(isTestMember)
-                    console.log(process.env.STRIPE_TEST_SECRET_KEY)
                     const stripe = new VendorStripePayments(isTestMember ? process.env.STRIPE_TEST_SECRET_KEY : undefined);
 
                     let stripeCustomerId = member.stripeCustomerId;
