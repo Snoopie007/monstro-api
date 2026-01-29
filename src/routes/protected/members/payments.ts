@@ -28,6 +28,8 @@ export function memberPayments(app: Elysia) {
                 const methods = await db.query.paymentMethods.findMany({
                     where: (paymentMethod, { eq }) => eq(paymentMethod.memberId, mid),
                     columns: {
+
+                        stripeId: false,
                         fingerprint: false,
                     }
                 })
