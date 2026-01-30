@@ -60,7 +60,7 @@ type ExtendedStripeInvoice = Stripe.Invoice & {
 };
 
 export function stripeWebhookRoutes(app: Elysia) {
-    app.post('/stripe', async ({ body, headers, request, status }) => {
+    app.post('/member/stripe', async ({ body, headers, request, status }) => {
 
         const signature = headers["stripe-signature"];
         if (typeof signature !== "string") {
@@ -133,7 +133,6 @@ async function processEvent(event: Stripe.Event) {
             `[STRIPE WEBHOOK] Error processing event ${event.type} (${event.id}):`,
             error
         );
-        // Re-throw to trigger retry in Stripe's webhook system
         throw error;
     }
 }
@@ -470,6 +469,7 @@ async function createInvoiceTransaction(tx: PgTransaction<
 }
 
 async function updateSubscriptionStatus(event: Stripe.Event) {
+    console.log('[STRIPE WEBHOOK] Updating subscription status:', event.id);
     const subscription = event.data.object as Stripe.Subscription;
 
     await db.update(memberSubscriptions).set({
