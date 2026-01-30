@@ -7,7 +7,7 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateStripeFeePercentage,
-} from "../purchase/utils";
+} from "@/libs/utils";
 import { isToday } from "date-fns";
 
 const MigrateSubProps = {
@@ -122,7 +122,7 @@ export function migrateSubRoutes(app: Elysia) {
 
             stripe.setCustomer(member.stripeCustomerId);
 
-            const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type);
+            const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type, true);
             const feePercent = locationState?.usagePercent + stripeFeePercentage;
 
 

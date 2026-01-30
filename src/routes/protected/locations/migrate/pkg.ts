@@ -1,17 +1,14 @@
 import { db } from "@/db/db";
 import {
     migrateMembers, memberLocations, memberPackages,
-    memberPaymentMethods, transactions
+    memberPaymentMethods
 } from "@/db/schemas";
-import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
-    calculateTax,
-    calculateStripeFeeAmount
-} from "../purchase/utils";
+} from "@/libs/utils";
 
 const MigratePkgProps = {
     params: z.object({

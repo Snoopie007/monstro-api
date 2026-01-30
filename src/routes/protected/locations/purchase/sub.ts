@@ -9,7 +9,7 @@ import {
     calculateStripeFeePercentage,
     calculateStripeFeeAmount,
     calculateTax,
-} from "./utils";
+} from "@/libs/utils";
 
 
 
@@ -174,7 +174,7 @@ export function purchaseSubRoutes(app: Elysia) {
 
 
 
-                const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type);
+                const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type, true);
                 const feePercent = locationState?.usagePercent + stripeFeePercentage;
 
                 let cancelAt: Date | undefined = undefined;

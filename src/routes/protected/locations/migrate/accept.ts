@@ -3,7 +3,7 @@ import { memberPackages, memberSubscriptions, migrateMembers, memberLocations, m
 import type { PaymentType } from "@/types";
 import { Elysia, t } from "elysia";
 import { eq, sql } from "drizzle-orm";
-import { calculateThresholdDate } from "../purchase/utils";
+import { calculateThresholdDate } from "@/libs/utils";
 
 
 export function migrateAcceptRoutes(app: Elysia) {

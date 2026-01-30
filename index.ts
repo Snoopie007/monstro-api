@@ -2,7 +2,10 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { serverConfig } from "./src/config";
 import { RateLimitMiddleware } from "./src/middlewares";
-import { AuthRoutes, ProtectedRoutes, PublicRoutes, XRoutes } from "./src/routes";
+import {
+	AuthRoutes, ProtectedRoutes, PublicRoutes
+	, XRoutes, webhooksRoutes
+} from "./src/routes";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
 import "./src/workers/worker"; // Import worker to start processing
 
@@ -65,13 +68,14 @@ app.use(cors(CORS_CONFIG))
 		set.status = 204;
 		return "";
 	})
+
 	.group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes))
 	.group("/x", (app) => app.use(XRoutes))
 	.group("/api/realtime", (app) =>
 		app.use(realtimeRoutes).use(realtimeHealthRoutes)
 	)
 	.use(PublicRoutes)
-
+	.use(webhooksRoutes)
 	.listen({
 		hostname: "0.0.0.0",
 		port: serverConfig.port
