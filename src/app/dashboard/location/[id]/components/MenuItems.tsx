@@ -67,6 +67,10 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
             name: 'Contract Templates',
             path: 'contracts/templates',
         },
+        {
+            name: 'Promo Codes',
+            path: 'promos',
+        },
     ],
 },
 {

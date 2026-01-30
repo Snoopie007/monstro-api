@@ -411,6 +411,77 @@ class VendorStripePayments extends BaseStripePayments {
 		return await this._stripe.subscriptions.cancel(subscriptionId);
 	}
 
+	// ==================== COUPON & PROMOTION CODE METHODS ====================
+
+	async createCoupon(params: {
+		name: string;
+		percentOff?: number;
+		amountOff?: number;
+		currency?: string;
+		duration: 'once' | 'repeating' | 'forever';
+		durationInMonths?: number;
+		maxRedemptions?: number;
+		redeemBy?: Date;
+		metadata?: Record<string, any>;
+	}): Promise<Stripe.Coupon> {
+		const couponParams: Stripe.CouponCreateParams = {
+			name: params.name,
+			duration: params.duration,
+			...(params.percentOff !== undefined && { percent_off: params.percentOff }),
+			...(params.amountOff !== undefined && { 
+				amount_off: params.amountOff,
+				currency: params.currency || 'usd'
+			}),
+			...(params.durationInMonths && { duration_in_months: params.durationInMonths }),
+			...(params.maxRedemptions && { max_redemptions: params.maxRedemptions }),
+			...(params.redeemBy && { redeem_by: Math.floor(params.redeemBy.getTime() / 1000) }),
+			...(params.metadata && { metadata: params.metadata }),
+		};
+
+		return await this._stripe.coupons.create(couponParams);
+	}
+
+	async createPromotionCode(params: {
+		coupon: string;
+		code: string;
+		expiresAt?: Date;
+		maxRedemptions?: number;
+		restrictions?: {
+			firstTimeTransaction?: boolean;
+			minimumAmount?: number;
+			minimumAmountCurrency?: string;
+		};
+		metadata?: Record<string, any>;
+	}): Promise<Stripe.PromotionCode> {
+		const promoParams: Stripe.PromotionCodeCreateParams = {
+			promotion: {
+				type: 'coupon',
+				coupon: params.coupon,
+			},
+			code: params.code,
+			...(params.expiresAt && { expires_at: Math.floor(params.expiresAt.getTime() / 1000) }),
+			...(params.maxRedemptions && { max_redemptions: params.maxRedemptions }),
+			...(params.restrictions && {
+				restrictions: {
+					...(params.restrictions.firstTimeTransaction !== undefined && { 
+						first_time_transaction: params.restrictions.firstTimeTransaction 
+					}),
+					...(params.restrictions.minimumAmount && { 
+						minimum_amount: params.restrictions.minimumAmount,
+						minimum_amount_currency: params.restrictions.minimumAmountCurrency || 'usd'
+					}),
+				}
+			}),
+			...(params.metadata && { metadata: params.metadata }),
+		};
+
+		return await this._stripe.promotionCodes.create(promoParams);
+	}
+
+	async deleteCoupon(couponId: string): Promise<Stripe.DeletedCoupon> {
+		return await this._stripe.coupons.del(couponId);
+	}
+
 }
 class MemberStripePayments extends BaseStripePayments {
 	private _accountId: string | null;

@@ -15,6 +15,8 @@ export * from "./memories";
 export * from "./PaymentMethods";
 export * from "./permissions";
 export * from "./programs";
+export * from "./promos";
+export type { Promo } from "./promos";
 export * from "./reservations";
 export * from "./rewards";
 export * from "./sessions";
