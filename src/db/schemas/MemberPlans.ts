@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { contractTemplates } from "./ContractTemplates";
 import { planPrograms } from "./programs";
+import { promos } from "./promos";
 
 import { BillingCycleAnchorConfig } from "@/types";
 import {
@@ -71,6 +72,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
   parentId: text("parent_id"),
   memberPlanPricingId: text("member_plan_pricing_id").references(() => memberPlanPricing.id, { onDelete: "set null" }),
   memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
+  promoId: text("promo_id").references(() => promos.id, { onDelete: "set null" }),
   locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
   stripeSubscriptionId: text("stripe_subscription_id"),
   status: LocationStatusEnum("status").notNull().default("incomplete"),
@@ -104,6 +106,7 @@ export const memberPackages = pgTable("member_packages", {
   locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
   memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
   memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
+  promoId: text("promo_id").references(() => promos.id, { onDelete: "set null" }),
   stripePaymentId: text("stripe_payment_id"),
   parentId: text("parent_id"),
   startDate: timestamp("start_date", { withTimezone: true }).notNull(),

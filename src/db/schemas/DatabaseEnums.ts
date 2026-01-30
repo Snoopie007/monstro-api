@@ -43,3 +43,6 @@ export const ExceptionInitiatorEnum = pgEnum("exception_initiator", [
   "holiday",
   "maintenance"
 ]);
+
+export const PromoTypeEnum = pgEnum("promo_type", ["percentage", "fixed_amount"]);
+export const PromoDurationEnum = pgEnum("promo_duration", ["once", "repeating", "forever"]);
