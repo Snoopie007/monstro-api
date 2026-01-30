@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/stripe";
+import { triggerSignUp } from "@/libs/triggers";
 
 import { memberSubscriptions, memberInvoices, transactions } from "@/db/schemas";
 import { eq, sql } from "drizzle-orm";
@@ -44,7 +45,14 @@ const allowedEvents: Stripe.Event.Type[] = [
     "invoice.updated",
     "payment_intent.canceled",
     "payment_intent.succeeded",
-    // "charge.succeeded"
+    "coupon.created",
+    "coupon.updated",
+    "coupon.deleted",
+    "promotion_code.created",
+    "promotion_code.updated",
+    "customer.discount.created",
+    "customer.discount.updated",
+    "customer.discount.deleted",
 ];
 
 
@@ -126,6 +134,20 @@ async function processEvent(event: Stripe.Event) {
                 break;
             case "invoice.updated":
                 await handleInvoiceUpdated(event);
+                break;
+            case "coupon.created":
+            case "coupon.updated":
+            case "coupon.deleted":
+                await handleCouponEvent(event);
+                break;
+            case "promotion_code.created":
+            case "promotion_code.updated":
+                await handlePromotionCodeEvent(event);
+                break;
+            case "customer.discount.created":
+            case "customer.discount.updated":
+            case "customer.discount.deleted":
+                await handleDiscountEvent(event);
                 break;
             default:
                 console.warn(`[STRIPE WEBHOOK] Unhandled event type: ${event.type}`);
@@ -261,11 +283,11 @@ async function handleSubscriptionInvoicePayment(
         });
 
         if (subscription.pricing?.plan?.id) {
-            // await triggerSignUp({
-            //     mid: subscription.memberId,
-            //     lid: subscription.locationId,
-            //     pid: subscription.pricing.plan.id,
-            // });
+            await triggerSignUp({
+                mid: subscription.memberId,
+                lid: subscription.locationId,
+                pid: subscription.pricing.plan.id,
+            });
         }
 
 
@@ -650,7 +672,22 @@ async function handleInvoiceUpdated(event: Stripe.Event) {
 // 				metadata: {}
 // 			});
 // 		});
-// 	} catch (error) {
+//  	} catch (error) {
 // 		console.error("Error updating package", error);
 // 	}
 // }
+
+async function handleCouponEvent(event: Stripe.Event) {
+    const coupon = event.data.object as Stripe.Coupon;
+    console.log(`[STRIPE WEBHOOK] Coupon ${event.type}: ${coupon.id}`);
+}
+
+async function handlePromotionCodeEvent(event: Stripe.Event) {
+    const promoCode = event.data.object as Stripe.PromotionCode;
+    console.log(`[STRIPE WEBHOOK] Promotion code ${event.type}: ${promoCode.id}`);
+}
+
+async function handleDiscountEvent(event: Stripe.Event) {
+    const discount = event.data.object as Stripe.Discount;
+    console.log(`[STRIPE WEBHOOK] Discount ${event.type}: ${discount.id}`);
+}
