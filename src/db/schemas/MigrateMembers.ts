@@ -1,4 +1,4 @@
-import { boolean, pgTable, timestamp, text, uuid, jsonb } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, timestamp, text, uuid, jsonb, integer } from 'drizzle-orm/pg-core'
 import { locations } from './locations'
 import { relations, sql } from 'drizzle-orm'
 import { memberPlanPricing } from './MemberPlans'
@@ -23,6 +23,10 @@ export const migrateMembers = pgTable('migrate_members', {
     lastRenewalDay: timestamp('last_renewal_day', {
         withTimezone: true,
     }).notNull(),
+    classCredits: integer('class_credits'),
+    paymentTermsLeft: integer('payment_terms_left'),
+    backdateStartDate: timestamp('backdate_start_date', { withTimezone: true }),
+    termEndDate: timestamp('term_end_date', { withTimezone: true }),
     status: MigrateStatusEnum('status').notNull().default('pending'),
     created: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
