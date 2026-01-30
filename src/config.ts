@@ -1,8 +1,12 @@
 import { config } from 'dotenv'
 
 // Load environment variables based on BUN_ENV
-const env = process.env.BUN_ENV || 'development'
-
+// On Fly/Docker we run from /usr/src/app; BUN_ENV often isn't passed to the process
+const inProductionContainer = process.cwd() === '/usr/src/app'
+const env =
+    process.env.BUN_ENV === 'production' || inProductionContainer
+        ? 'production'
+        : (process.env.BUN_ENV || 'development')
 // Only load .env files in development/local environments
 if (env === 'development' || env === 'local') {
     config() // Load .env first

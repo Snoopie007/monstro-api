@@ -1,5 +1,5 @@
 # Use the official Bun image
-FROM oven/bun:1 AS base
+FROM oven/bun:latest AS base
 
 WORKDIR /usr/src/app
 
@@ -26,6 +26,9 @@ RUN bun run build
 # Start fresh from base image for the final image
 FROM base AS release
 WORKDIR /usr/src/app
+# Default to production; Fly [env] or secrets can override
+ENV BUN_ENV=production
+
 
 # Copy built application
 COPY --from=prerelease /usr/src/app/dist dist
@@ -41,5 +44,6 @@ USER bun
 # Expose the port
 EXPOSE 3000
 
-# Start the application
-CMD ["bun", "run", "dist/index.js"]
+# Start the application (no entrypoint so BUN_ENV is passed through)
+# ENTRYPOINT []
+CMD ["bun", "dist/index.js"]

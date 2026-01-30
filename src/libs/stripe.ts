@@ -99,6 +99,13 @@ abstract class BaseStripePayments {
         return c;
     }
 
+    async constructEventAsync(
+        body: Buffer,
+        sig: string,
+        key: string
+    ): Promise<Stripe.Event> {
+        return await this._stripe.webhooks.constructEventAsync(body, sig, key);
+    }
     async constructEvent(
         body: Buffer,
         sig: string,

@@ -8,7 +8,7 @@ import { db } from "@/db/db";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";;
-
+import { serverConfig } from "@/config";
 /**
  * Stripe Webhook Handler for Member Billing Events
  *
@@ -47,7 +47,7 @@ const allowedEvents: Stripe.Event.Type[] = [
     // "charge.succeeded"
 ];
 
-const isProduction = process.env.NODE_ENV === "production";
+
 const stripe = new MemberStripePayments();
 // Type extension for Stripe Invoice to include runtime properties
 type ExtendedStripeInvoice = Stripe.Invoice & {
@@ -72,7 +72,7 @@ export function stripeWebhookRoutes(app: Elysia) {
 
         let event: Stripe.Event;
         try {
-            if (isProduction) {
+            if (serverConfig.isProduction) {
                 const rawText = await request.text();
                 event = await stripe.constructEvent(
                     Buffer.from(rawText),
@@ -86,7 +86,6 @@ export function stripeWebhookRoutes(app: Elysia) {
             console.error("[STRIPE WEBHOOK] Failed to construct event:", err);
             return status(500, { error: "[STRIPE WEBHOOK] Failed to construct event" });
         }
-
         // Non-blocking: process in background; do not rethrow
         processEvent(event).catch(err => {
             console.error("[STRIPE WEBHOOK] Failed to process event:", err);
@@ -95,7 +94,8 @@ export function stripeWebhookRoutes(app: Elysia) {
     }, {
         headers: t.Object({
             "stripe-signature": t.String(),
-        })
+        }),
+        parse: 'none'
     });
     return app;
 }
@@ -104,6 +104,8 @@ async function processEvent(event: Stripe.Event) {
     if (!allowedEvents.includes(event.type)) {
         return;
     }
+
+    console.log('[STRIPE WEBHOOK] Processing event:', event.type);
 
     try {
         switch (event.type) {
@@ -315,8 +317,7 @@ async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
 
         await db.transaction(async (tx) => {
             // Update existing invoice status
-            await tx
-                .update(memberInvoices)
+            await tx.update(memberInvoices)
                 .set({
                     status: "paid",
                     paid: true,
@@ -337,19 +338,15 @@ async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
                 .where(eq(memberInvoices.id, existingInvoice.id));
 
             // Create transaction record
-            await createInvoiceTransaction(
-                tx,
-                {
-                    memberId: existingInvoice.memberId,
-                    locationId: existingInvoice.locationId,
-                    invoiceId: existingInvoice.id,
-                    amount: invoice.amount_paid,
-                    description: `Payment for ${existingInvoice.description}`,
-                    currency: invoice.currency,
-                    tax: tax,
-                },
-                invoice
-            );
+            await createInvoiceTransaction(tx, {
+                memberId: existingInvoice.memberId,
+                locationId: existingInvoice.locationId,
+                invoiceId: existingInvoice.id,
+                amount: invoice.amount_paid,
+                description: `Payment for ${existingInvoice.description}`,
+                currency: invoice.currency,
+                tax: tax,
+            }, invoice);
         });
     } catch (error) {
         console.error(

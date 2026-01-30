@@ -21,6 +21,7 @@ const app = new Elysia({
 	}
 });
 
+
 app.use(cors(CORS_CONFIG))
 	.onError(({ code, error, set }) => {
 		console.log(`❌ Error ${code}:`);
