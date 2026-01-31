@@ -82,7 +82,7 @@ export function stripeWebhookRoutes(app: Elysia) {
         try {
             if (serverConfig.isProduction) {
                 const rawText = await request.text();
-                event = await stripe.constructEvent(
+                event = await stripe.constructEventAsync(
                     Buffer.from(rawText),
                     signature,
                     process.env.STRIPE_WEBHOOK_SECRET

@@ -1,5 +1,5 @@
 import { config } from 'dotenv'
-
+console.log('[CONFIG] Loading environment variables', process.env.BUN_ENV)
 // Load environment variables based on BUN_ENV
 // On Fly/Docker we run from /usr/src/app; BUN_ENV often isn't passed to the process
 const inProductionContainer = process.cwd() === '/usr/src/app'

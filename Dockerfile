@@ -1,6 +1,6 @@
-# Use the official Bun image
-FROM oven/bun:latest AS base
-
+# use the official Bun image
+# see all versions at https://hub.docker.com/r/oven/bun/tags
+FROM oven/bun:1 AS base
 WORKDIR /usr/src/app
 
 # Install dependencies into temp directory
@@ -19,15 +19,15 @@ RUN cd /temp/prod && bun install --frozen-lockfile --production
 FROM base AS prerelease
 COPY --from=install /temp/prod/node_modules node_modules
 COPY . .
-
+# Default to production; Fly [env] or secrets can override
+ENV BUN_ENV=production
+ENV NODE_ENV=production
 # Build the application
 RUN bun run build
 
 # Start fresh from base image for the final image
 FROM base AS release
 WORKDIR /usr/src/app
-# Default to production; Fly [env] or secrets can override
-ENV BUN_ENV=production
 
 
 # Copy built application
