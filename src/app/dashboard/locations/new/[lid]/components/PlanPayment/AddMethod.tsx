@@ -34,7 +34,7 @@ export default function AddPaymentMethod() {
     const [validCard, setValidCard] = useState(false)
     const stripe = useStripe();
     const elements = useElements();
-    const { theme } = useTheme();
+    const { resolvedTheme } = useTheme();
 
     const form = useForm<z.infer<typeof VendorBillingSchema>>({
         resolver: zodResolver(VendorBillingSchema),
@@ -99,7 +99,7 @@ export default function AddPaymentMethod() {
                                         hidePostalCode: true,
                                         style: {
                                             base: {
-                                                color: theme === "dark" ? "white" : "black",
+                                                color: resolvedTheme === "dark" ? "white" : "black",
                                             },
                                         },
                                     }}
