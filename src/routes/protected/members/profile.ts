@@ -18,7 +18,7 @@ const MemberProfileProps = {
         lastName: t.Optional(t.String()),
         email: t.Optional(t.String()),
         phone: t.Optional(t.String()),
-        dob: t.Optional(t.Date()),
+        dob: t.Optional(t.Union([t.Null(), t.Date()])),
         gender: t.Optional(t.String()),
     }),
 };
