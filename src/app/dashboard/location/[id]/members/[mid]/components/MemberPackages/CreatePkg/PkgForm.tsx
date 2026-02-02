@@ -51,6 +51,7 @@ interface PkgFormProps {
 export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
     const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+    const [promoCode, setPromoCode] = useState("");
     const { mutate } = useMemberPackages(lid, mid)
     const { paymentMethods } = useMemberStatus()
 
@@ -91,6 +92,7 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                     ...v,
                     paymentType,
                     paymentMethod: paymentMethod,
+                    promoCode: promoCode || undefined,
                 })
             })
         )
@@ -170,6 +172,17 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                                             <FormMessage />
                                         </FormItem>
                                     )}
+                                />
+                            </fieldset>
+                        )}
+
+                        {selectedPlanId && pricingOptions.length > 0 && (
+                            <fieldset>
+                                <FormLabel size="tiny">Promo Code (Optional)</FormLabel>
+                                <Input
+                                    placeholder="Enter promo code"
+                                    value={promoCode}
+                                    onChange={(e) => setPromoCode(e.target.value)}
                                 />
                             </fieldset>
                         )}

@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions, memberPlanPricing } from "@/db/schemas";
+import { memberSubscriptions, memberPlanPricing, promos } from "@/db/schemas";
 import { NextResponse } from "next/server";
 import {
     addUserToGroup,
@@ -7,7 +7,7 @@ import {
     calculateExpiresAt,
     scheduleRecurringInvoiceReminders,
 } from "../../../utils";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 
 type Props = {
@@ -19,9 +19,29 @@ type Props = {
 
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
-    const { paymentMethod, paymentType, trialDays, pricingId, ...data } = await req.json();
+    const { paymentMethod, paymentType, trialDays, pricingId, promoCode, ...data } = await req.json();
     try {
-        // Validate pricingId is provided
+        let promoId: string | undefined;
+        if (promoCode) {
+            const promo = await db.query.promos.findFirst({
+                where: and(
+                    eq(promos.code, promoCode.toUpperCase()),
+                    eq(promos.locationId, id),
+                    eq(promos.isActive, true)
+                )
+            });
+
+            if (!promo) {
+                return NextResponse.json({ error: "Invalid promo code" }, { status: 400 });
+            }
+
+            if (promo.expiresAt && new Date() > promo.expiresAt) {
+                return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
+            }
+
+            promoId = promo.id;
+        }
+
         if (!pricingId) {
             return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
         }
@@ -104,6 +124,7 @@ export async function POST(req: Request, props: Props) {
             locationId: id,
             memberId: mid,
             memberPlanPricingId: pricing.id,
+            promoId,
             paymentType,
             status: "active",
             makeUpCredits: 0,

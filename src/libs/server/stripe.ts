@@ -44,7 +44,8 @@ type MemberSubscriptionSettings = BaseSettings & {
 	trialEnd?: Date | null,
 	taxRateId?: string;
 	startDate?: Date,
-	allowProration?: boolean
+	allowProration?: boolean,
+	coupon?: string;
 }
 const isProd = process.env.NODE_ENV === "production";
 
@@ -558,7 +559,7 @@ class MemberStripePayments extends BaseStripePayments {
 			throw new Error("Account ID not set");
 		}
 		const { startDate, trialEnd, paymentMethod, feePercent, allowProration, cancelAt,
-			taxRateId, ...rest } = settings;
+			taxRateId, coupon, ...rest } = settings;
 
 		if (!pricing.stripePriceId) {
 			throw new Error("Price not found");
@@ -575,6 +576,7 @@ class MemberStripePayments extends BaseStripePayments {
 		const options: Stripe.SubscriptionCreateParams = {
 			...rest,
 			... (taxRateId && { default_tax_rates: [taxRateId] }),
+			...(coupon && { discounts: [{ coupon }] }),
 			customer: this._customer,
 			transfer_data: {
 				destination: this._accountId,

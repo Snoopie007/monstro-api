@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { memberPackages, memberPlanPricing, transactions } from "@/db/schemas";
-import { eq } from "drizzle-orm";
+import { memberPackages, memberPlanPricing, transactions, promos } from "@/db/schemas";
+import { eq, and } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
@@ -18,9 +18,8 @@ export async function POST(req: NextRequest, props: Props) {
     const { id, mid } = await props.params;
     const body = await req.json();
 
-    const { trialDays, pricingId, ...data } = body;
+    const { trialDays, pricingId, promoCode, ...data } = body;
     try {
-        // Validate pricingId is provided
         if (!pricingId) {
             return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
         }
@@ -32,6 +31,33 @@ export async function POST(req: NextRequest, props: Props) {
 
         if (!pricing) {
             return NextResponse.json({ error: "Pricing option not found" }, { status: 404 });
+        }
+
+        let promoId: string | undefined;
+        let discountAmount = 0;
+        if (promoCode) {
+            const promo = await db.query.promos.findFirst({
+                where: and(
+                    eq(promos.code, promoCode.toUpperCase()),
+                    eq(promos.locationId, id),
+                    eq(promos.isActive, true)
+                )
+            });
+
+            if (!promo) {
+                return NextResponse.json({ error: "Invalid promo code" }, { status: 400 });
+            }
+
+            if (promo.expiresAt && new Date() > promo.expiresAt) {
+                return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
+            }
+
+            promoId = promo.id;
+            if (promo.type === "percentage") {
+                discountAmount = Math.floor(pricing.price * (promo.value / 100));
+            } else if (promo.type === "fixed_amount") {
+                discountAmount = Math.min(promo.value, pricing.price);
+            }
         }
 
         const plan = await db.query.memberPlans.findFirst({
@@ -86,9 +112,9 @@ export async function POST(req: NextRequest, props: Props) {
             expireDate = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
         }
 
-        // Use pricing.price instead of plan.price
-        const tax = calculateTax(pricing.price, taxRates);
-        let subTotal = pricing.price;
+        const discountedPrice = pricing.price - discountAmount;
+        const tax = calculateTax(discountedPrice, taxRates);
+        let subTotal = discountedPrice;
         let total = subTotal + tax;
 
 
@@ -105,6 +131,7 @@ export async function POST(req: NextRequest, props: Props) {
                 stripePaymentId: null,
                 memberPlanId: plan.id,
                 memberPlanPricingId: pricing.id,
+                promoId,
                 ...data,
                 status: "active",
                 startDate,
@@ -113,7 +140,6 @@ export async function POST(req: NextRequest, props: Props) {
                 allowMakeUpCarryOver: false,
             }).returning();
 
-            /** Create Transaction */
             await tx.insert(transactions).values({
                 description: `One time payment for ${plan.name} - ${pricing.name}`,
                 ...CommonData,
@@ -121,12 +147,12 @@ export async function POST(req: NextRequest, props: Props) {
                 type: "inbound",
                 items: [{
                     productId: plan.id,
-                    amount: pricing.price,
+                    amount: discountedPrice,
                     tax: tax,
                     quantity: 1,
                 }],
                 status: "paid",
-                subTotal: pricing.price,
+                subTotal: discountedPrice,
                 total,
                 currency: plan.currency,
                 metadata: {
