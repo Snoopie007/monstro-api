@@ -43,6 +43,7 @@ export const memberPlans = pgTable("member_plans", {
   makeUpCredits: integer("make_up_credits").notNull().default(0),
   groupId: text("group_id").references(() => groups.id, { onDelete: "set null" }),
   locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  stripeProductId: text("stripe_product_id"),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
