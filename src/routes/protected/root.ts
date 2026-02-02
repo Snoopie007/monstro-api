@@ -6,6 +6,7 @@ import {
     userFeedsRoutes,
     userMomentsRoutes,
     userChatsRoutes,
+    userSupportRoutes,
 } from './users';
 import { friendsRoutes } from './friends';
 import { mediaRoutes } from './medias';
@@ -37,6 +38,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(userNotificationRoutes)
     .use(groupRoutes)
     .group('/users/:uid', (app) => {
+        app.use(userSupportRoutes);
         app.use(userAccountsRoutes);
         app.use(userFeedsRoutes);
         app.use(userMomentsRoutes);
