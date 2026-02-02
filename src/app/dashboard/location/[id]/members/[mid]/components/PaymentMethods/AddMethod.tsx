@@ -54,7 +54,7 @@ export default function AddPaymentMethod({
 	const [loading, setLoading] = useState(false);
 	const [validCard, setValidCard] = useState(false);
 	const { setPaymentMethods } = useMemberStatus();
-	const { theme } = useTheme();
+	const { resolvedTheme } = useTheme();
 	const stripe = useStripe();
 	const elements = useElements();
 
@@ -236,18 +236,12 @@ export default function AddPaymentMethod({
 										className=" bg-background  rounded-lg  p-4 w-full"
 										options={{
 											...StripeCardOptions,
-											style: {
-												base: {
-													color:
-														theme === "dark" || theme === "system"
-															? "#fff"
-															: "#000",
-													iconColor:
-														theme === "dark" || theme === "system"
-															? "#fff"
-															: "#000",
-												},
-											},
+															style: {
+																base: {
+																	color: resolvedTheme === "dark" ? "#fff" : "#000",
+																	iconColor: resolvedTheme === "dark" ? "#fff" : "#000",
+																},
+															},
 											hidePostalCode: true,
 										}}
 										onChange={(e) => {

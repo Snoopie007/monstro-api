@@ -38,7 +38,7 @@ export function NewPlanPayment({ lid }: { lid: string }) {
 	const stripe = useStripe();
 	const elements = useElements();
 	const router = useRouter();
-	const { theme } = useTheme();
+	const { resolvedTheme } = useTheme();
 
 	const form = useForm<z.infer<typeof VendorBillingSchema>>({
 		resolver: zodResolver(VendorBillingSchema),
@@ -124,7 +124,7 @@ export function NewPlanPayment({ lid }: { lid: string }) {
 										hidePostalCode: true,
 										style: {
 											base: {
-												color: theme === "dark" ? "#fff" : "#000",
+												color: resolvedTheme === "dark" ? "#fff" : "#000",
 											},
 										},
 									}}

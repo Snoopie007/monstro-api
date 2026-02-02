@@ -35,7 +35,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [validCard, setValidCard] = useState(false)
-    const { theme } = useTheme();
+    const { resolvedTheme } = useTheme();
     const stripe = useStripe();
     const elements = useElements();
     const form = useForm<z.infer<typeof AddCreditCardSchema>>({
@@ -134,8 +134,8 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                             ...StripeCardOptions,
                                             style: {
                                                 base: {
-                                                    color: theme === "dark" ? "#fff" : "#000",
-                                                    iconColor: theme === "dark" ? "#fff" : "#000",
+                                                    color: resolvedTheme === "dark" ? "#fff" : "#000",
+                                                    iconColor: resolvedTheme === "dark" ? "#fff" : "#000",
                                                 }
                                             },
                                             hidePostalCode: true
