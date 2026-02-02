@@ -85,7 +85,7 @@ const UpdatePricingOptionSchema = z.object({
   name: z.string().min(1, { message: "Pricing name is required" }),
   price: z.number().min(100, { message: "Price must be at least $1" }),
   interval: z.enum(["day", "week", "month", "year"]).optional(),
-  intervalThreshold: z.number().min(1),
+  intervalThreshold: z.number().min(1).optional(),
   expireInterval: z.enum(["day", "week", "month", "year"]).optional().nullable(),
   expireThreshold: z.number().optional().nullable(),
   downpayment: z.number().min(0).optional(),

@@ -140,8 +140,6 @@ export function UpdatePkg({ lid, pkg, open, setOpen }: CreatePlanProps) {
   const hasMembers = memberCount !== null && memberCount > 0;
 
   async function onSubmit(v: z.infer<typeof UpdatePkgPlanSchema>) {
-    if (form.formState.isSubmitting) return;
-
     // Check if family limit is being decreased
     if (
       v.familyMemberLimit !== undefined &&
@@ -152,12 +150,22 @@ export function UpdatePkg({ lid, pkg, open, setOpen }: CreatePlanProps) {
     }
 
     try {
+      const {
+        pricingOptions: _pricingOptions,
+        contractId: _contractId,
+        intervalClassLimit: _intervalClassLimit,
+        makeUpCredits: _makeUpCredits,
+        totalClassLimit: _totalClassLimit,
+        currency: _currency,
+        ...allowedFields
+      } = v;
+
+      const updatePayload = hasMembers ? allowedFields : v;
+
       const { result, error } = await tryCatch(
         fetch(`/api/protected/loc/${lid}/plans/updates/${pkg.id}`, {
           method: "PUT",
-          body: JSON.stringify({
-            ...v,
-          }),
+          body: JSON.stringify(updatePayload),
         })
       );
 

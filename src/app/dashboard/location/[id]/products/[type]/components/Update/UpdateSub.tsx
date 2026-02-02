@@ -143,8 +143,6 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 	const hasMembers = memberCount !== null && memberCount > 0;
 
 	async function onSubmit(v: z.infer<typeof UpdateSubPlanSchema>) {
-		if (form.formState.isSubmitting) return;
-
 		// Check if family limit is being decreased
 		if (
 			v.familyMemberLimit !== undefined &&
@@ -155,12 +153,22 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 		}
 
 		try {
+			const {
+				pricingOptions: _pricingOptions,
+				contractId: _contractId,
+				intervalClassLimit: _intervalClassLimit,
+				makeUpCredits: _makeUpCredits,
+				currency: _currency,
+				billingAnchor: _billingAnchor,
+				...allowedFields
+			} = v;
+
+			const updatePayload = hasMembers ? allowedFields : v;
+
 			const { result, error } = await tryCatch(
 				fetch(`/api/protected/loc/${lid}/plans/updates/${sub.id}`, {
 					method: "PUT",
-					body: JSON.stringify({
-						...v,
-					}),
+					body: JSON.stringify(updatePayload),
 				})
 			);
 
