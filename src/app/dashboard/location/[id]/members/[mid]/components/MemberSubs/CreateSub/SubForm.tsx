@@ -45,6 +45,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
     const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
     const { paymentMethods } = useMemberStatus()
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+    const [promoCode, setPromoCode] = useState("");
 
     const form = useForm<z.infer<typeof NewSubscriptionSchema>>({
         resolver: zodResolver(NewSubscriptionSchema),
@@ -80,6 +81,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                 body: JSON.stringify({
                     ...v,
                     paymentMethod: paymentMethod,
+                    promoCode: promoCode || undefined,
                 })
             })
         )
@@ -161,6 +163,17 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                                             <FormMessage />
                                         </FormItem>
                                     )}
+                                />
+                            </fieldset>
+                        )}
+
+                        {selectedPlanId && pricingOptions.length > 0 && (
+                            <fieldset>
+                                <FormLabel size="tiny">Promo Code (Optional)</FormLabel>
+                                <Input
+                                    placeholder="Enter promo code"
+                                    value={promoCode}
+                                    onChange={(e) => setPromoCode(e.target.value)}
                                 />
                             </fieldset>
                         )}

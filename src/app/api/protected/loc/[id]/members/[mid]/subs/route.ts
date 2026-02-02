@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions, memberPlanPricing } from "@/db/schemas";
+import { memberSubscriptions, memberPlanPricing, promos } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -10,7 +10,7 @@ import {
     scheduleRecurringInvoiceReminders,
     calculateExpiresAt,
 } from "../../utils";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
 import { getTaxRateId } from "../../utils";
@@ -69,10 +69,32 @@ export async function GET(req: NextRequest, props: Props) {
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
     const body = await req.json();
-    const { paymentMethod, paymentType, trialDays, pricingId, ...data } = body;
+    const { paymentMethod, paymentType, trialDays, pricingId, promoCode, ...data } = body;
 
     try {
-        // Validate pricingId is provided
+        let promoId: string | undefined;
+        let stripeCouponId: string | undefined;
+        if (promoCode) {
+            const promo = await db.query.promos.findFirst({
+                where: and(
+                    eq(promos.code, promoCode.toUpperCase()),
+                    eq(promos.locationId, id),
+                    eq(promos.isActive, true)
+                )
+            });
+
+            if (!promo) {
+                return NextResponse.json({ error: "Invalid promo code" }, { status: 400 });
+            }
+
+            if (promo.expiresAt && new Date() > promo.expiresAt) {
+                return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
+            }
+
+            promoId = promo.id;
+            stripeCouponId = promo.stripeCouponId;
+        }
+
         if (!pricingId) {
             return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
         }
@@ -171,7 +193,6 @@ export async function POST(req: Request, props: Props) {
         const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type as PaymentType);
         const feePercent = location.locationState?.usagePercent + stripeFeePercentage;
 
-        // Pass both plan and pricing to createSubscription
         const stripeSubscription = await stripe.createSubscription(plan, pricing, {
             startDate,
             cancelAt: expiresAt || (data.cancelAt ? new Date(data.cancelAt) : undefined),
@@ -180,6 +201,7 @@ export async function POST(req: Request, props: Props) {
             allowProration: plan.allowProration,
             feePercent,
             taxRateId,
+            coupon: stripeCouponId,
             metadata: {
                 memberId: mid,
                 locationId: id,
@@ -197,6 +219,7 @@ export async function POST(req: Request, props: Props) {
             locationId: id,
             memberId: mid,
             memberPlanPricingId: pricing.id,
+            promoId,
             paymentType,
             status: "incomplete",
             makeUpCredits: 0,
