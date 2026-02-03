@@ -8,40 +8,18 @@ import {
 	Text,
 	Link,
 } from '@react-email/components';
+import { DummyData } from './_shared/DummyData';
+import EmailFooter from './_shared/EmailFooter';
+import { EmailStyles } from './_shared/SharedStyle';
 
 interface SimpleOTPEmailProps {
 	member: { firstName: string };
 	location: { name: string; email: string };
 	otp: { token: string };
-	monstro: { fullAddress: string };
 }
 
 const style: Record<string, React.CSSProperties> = {
-	main: {
-		backgroundColor: '#ffffff',
-		fontFamily: 'Helvetica, Arial, sans-serif',
-	},
-	container: {
-		maxWidth: '600px',
-		margin: '0 auto',
-		padding: '20px',
-	},
-	content: {
-		padding: '20px 0',
-	},
-	greeting: {
-		fontSize: '16px',
-		fontWeight: 'normal',
-		color: '#000000',
-		margin: '0 0 16px 0',
-		lineHeight: '1.5',
-	},
-	paragraph: {
-		fontSize: '16px',
-		color: '#000000',
-		margin: '0 0 20px 0',
-		lineHeight: '1.5',
-	},
+	...EmailStyles,
 	otpBox: {
 		backgroundColor: '#FAFAFA',
 		border: '1px solid #e5e7eb',
@@ -58,32 +36,13 @@ const style: Record<string, React.CSSProperties> = {
 		letterSpacing: '8px',
 		fontFamily: 'monospace',
 	},
-	legal: {
-		fontSize: '12px',
-		color: '#6B7280',
-		margin: '12px 0',
-		lineHeight: '1.5',
-	},
-	link: {
-		color: '#4338ca',
-		textDecoration: 'none',
-		fontWeight: 'bold',
-	},
-	footer: {
-		fontSize: '12px',
-		color: '#6B7280',
-		margin: '20px 0 0 0',
-		paddingTop: '20px',
-		borderTop: '1px solid #e5e7eb',
-		textAlign: 'center',
-	},
+
 };
 
 export default function SimpleOTPEmail({
 	member,
 	location,
 	otp,
-	monstro,
 }: SimpleOTPEmailProps) {
 	return (
 		<Html>
@@ -91,7 +50,7 @@ export default function SimpleOTPEmail({
 			<Body style={style.main}>
 				<Container style={style.container}>
 					<Section style={style.content}>
-						<Text style={style.greeting}>Hi {member.firstName},</Text>
+						<Text style={style.paragraph}>Hi {member.firstName},</Text>
 
 						<Text style={style.paragraph}>
 							An invite to set up a Monstro account was made by{' '}
@@ -111,20 +70,10 @@ export default function SimpleOTPEmail({
 							.
 						</Text>
 
-						<Text style={style.legal}>
-							You can opt out by clicking{' '}
-							<Link href="#" style={style.link}>
-								unsubscribe
-							</Link>
-							. See our{' '}
-							<Link href="#" style={style.link}>
-								Privacy Policy
-							</Link>{' '}
-							for details.
-						</Text>
-
-						<Text style={style.footer}>{monstro.fullAddress}</Text>
 					</Section>
+					<EmailFooter
+						social={true}
+					/>
 				</Container>
 			</Body>
 		</Html>
@@ -132,17 +81,8 @@ export default function SimpleOTPEmail({
 }
 
 SimpleOTPEmail.PreviewProps = {
-	member: {
-		firstName: 'John',
-	},
-	location: {
-		name: 'Fit Studio',
-		email: 'contact@fitstudio.com',
-	},
+	...DummyData,
 	otp: {
 		token: '650500',
 	},
-	monstro: {
-		fullAddress: 'PO Box 263, Culver City, CA 90232',
-	},
-} as SimpleOTPEmailProps;
+};

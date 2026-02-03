@@ -1,4 +1,5 @@
 import { MonstroData } from "@/constants/data";
+
 export const DummyData = {
     member: {
         firstName: 'John',
@@ -10,6 +11,6 @@ export const DummyData = {
         address: '123 Main St, Los Angeles, CA 90001',
         email: 'contact@fitstudio.com',
         phone: '(555) 123-4567',
-    },
-    monstro: MonstroData,
+    }
 }
+
