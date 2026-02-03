@@ -29,14 +29,15 @@ interface LocationInfoBoxProps {
     address?: string;
     email?: string;
     phone?: string;
+    regards?: string;
 }
 
 
-export default function LocationInfoBox({ name, address, email, phone }: LocationInfoBoxProps) {
+export function LocationInfoBox({ name, address, email, phone, regards = 'Best regards,' }: LocationInfoBoxProps) {
     return (
         <Section >
 
-            <Text style={styles.regards}>Best regards,</Text>
+            <Text style={styles.regards}>{regards}</Text>
 
             <Text style={styles.locationName}>{name}</Text>
             {address && <Text style={styles.locationAddress}>{address}</Text>}

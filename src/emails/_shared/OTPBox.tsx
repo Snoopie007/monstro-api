@@ -1,6 +1,6 @@
 import { Section, Text } from "@react-email/components"
 import * as React from 'react';
-export default function OTPBox({ token }: { token: string }) {
+export function OTPBox({ token }: { token: string }) {
     return (
         <Section style={styles.otpBox}>
             <Text style={styles.otpCode}>{token}</Text>

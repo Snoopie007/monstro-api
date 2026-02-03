@@ -8,8 +8,7 @@ import {
 	Text,
 	Button,
 } from '@react-email/components';
-import EmailHeader from './_shared/EmailHeader';
-import EmailFooter from './_shared/EmailFooter';
+import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
 

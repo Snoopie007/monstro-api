@@ -7,11 +7,9 @@ import {
 	Section,
 	Text,
 } from '@react-email/components';
-import EmailHeader from './_shared/EmailHeader';
-import EmailFooter from './_shared/EmailFooter';
+import { EmailHeader, EmailFooter, OTPBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
-import OTPBox from './_shared/OTPBox';
 
 interface UpdateEmailOTPEmailProps {
 	member: { firstName: string; lastName: string };

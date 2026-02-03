@@ -31,7 +31,7 @@ const SOCIAL_ICONS = [
 ]
 
 
-export default function EmailFooter({ social }: { social?: boolean }) {
+export function EmailFooter({ social }: { social?: boolean }) {
     return (
         <>
             <Hr style={styles.divider} />

@@ -7,13 +7,11 @@ import {
 	Section,
 	Text,
 	Button,
-	Hr,
 } from '@react-email/components';
 import { EmailStyles } from './_shared/SharedStyle';
-import EmailFooter from './_shared/EmailFooter';
 import { DummyData } from './_shared/DummyData';
 import { format } from 'date-fns';
-import LocationInfoBox from './_shared/LocationInfoBox';
+import { EmailFooter, LocationInfoBox, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel } from './_shared';
 
 interface SessionCancellationEmailProps {
 	member: { firstName: string; lastName?: string; email?: string };
@@ -32,48 +30,23 @@ interface SessionCancellationEmailProps {
 const styles: Record<string, React.CSSProperties> = {
 	...EmailStyles,
 
-	cancellationBox: {
-		backgroundColor: '#FEF2F2',
-		borderRadius: '12px',
-		padding: '24px',
-		marginBottom: '16px',
-	},
-	cancellationLabel: {
-		fontSize: '14px',
-		color: '#991B1B',
-		margin: '0 0 8px 0',
-		textTransform: 'uppercase',
-		fontWeight: 600,
-	},
+
 	className: {
 		fontSize: '16px',
 		margin: '0 0 10px 0',
 		fontWeight: 600,
 	},
 	classDateTime: {
-		fontSize: '16px',
-		margin: '0 0 6px 0',
+		fontSize: '15px',
+		margin: '10px 0 0 0',
 	},
 	instructor: {
-		fontSize: '16',
+		fontSize: '15px',
 		margin: '0',
 	},
-	reasonBox: {
-		backgroundColor: '#F3F4F6',
-		borderRadius: '12px',
-		padding: '24px',
-		marginBottom: '16px',
-	},
-	reasonLabel: {
-		fontSize: '14px',
-		color: '#6B7280',
-		margin: '0 0 4px 0',
-		textTransform: 'uppercase',
-		fontWeight: 600,
-		letterSpacing: '0.5px',
-	},
+
 	reasonText: {
-		fontSize: '16px',
+		fontSize: '15',
 		margin: '0',
 		lineHeight: '1.5',
 	},
@@ -105,23 +78,27 @@ export default function SessionCancellationEmail({
 							We're sorry to inform you that your upcoming class has been cancelled.
 						</Text>
 
-						<Section style={styles.cancellationBox}>
-							<Text style={styles.cancellationLabel}>Cancelled</Text>
-							<Text style={styles.className}>{session.className}</Text>
-							<Text style={styles.classDateTime}>{format(new Date(session.date), 'MMM d, yyyy')} - {session.time}</Text>
+						<EmailBox bgColor="#FEF2F2">
+							<EmailBoxLabel label="Cancelled" color="#991B1B" />
+							<EmailBoxTitle title={session.className} />
+							<EmailBoxContent>
+								<Text style={styles.classDateTime}>{format(new Date(session.date), 'MMM d, yyyy')} - {session.time}</Text>
 
-							{session.instructor && (
-								<Text style={styles.instructor}>
-									Instructor: {session.instructor.firstName} {session.instructor.lastName}
-								</Text>
-							)}
-						</Section>
+								{session.instructor && (
+									<Text style={styles.instructor}>
+										Instructor: {session.instructor.firstName} {session.instructor.lastName}
+									</Text>
+								)}
+							</EmailBoxContent>
+						</EmailBox>
 
 						{reason && (
-							<Section style={styles.reasonBox}>
-								<Text style={styles.reasonLabel}>Reason</Text>
-								<Text style={styles.reasonText}>{reason}</Text>
-							</Section>
+							<EmailBox bgColor="#F3F4F6">
+								<EmailBoxLabel label="Reason" color="#6B7280" />
+								<EmailBoxContent>
+									<Text style={styles.reasonText}>{reason}</Text>
+								</EmailBoxContent>
+							</EmailBox>
 						)}
 
 						<Text style={styles.paragraph}>

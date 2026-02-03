@@ -1,4 +1,3 @@
-
 export const EmailStyles: Record<string, React.CSSProperties> = {
     main: {
         backgroundColor: '#fff',
@@ -30,7 +29,7 @@ export const EmailStyles: Record<string, React.CSSProperties> = {
         fontSize: '16px',
         color: '#000',
         margin: '0 0 16px 0',
-        lineHeight: '2',
+        lineHeight: '1.8',
     },
 
     button: {
@@ -55,5 +54,11 @@ export const EmailStyles: Record<string, React.CSSProperties> = {
         borderWidth: '1px 0 0 0',
         margin: '24px 0',
     },
-
+    sectionTitle: {
+        fontSize: '16px',
+        color: '#6B7280',
+        margin: '0 0 12px 0',
+        fontWeight: '600',
+        letterSpacing: '0.5px',
+    },
 };

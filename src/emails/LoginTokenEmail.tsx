@@ -7,10 +7,9 @@ import {
 	Section,
 	Text,
 } from '@react-email/components';
-import OTPBox from './_shared/OTPBox';
+import { OTPBox, EmailFooter, EmailHeader } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
-import EmailFooter from './_shared/EmailFooter';
 
 interface LoginTokenEmailProps {
 	user: { name: string; email: string };
@@ -29,8 +28,9 @@ export default function LoginTokenEmail({
 			<Head />
 			<Body style={styles.main}>
 				<Container style={styles.container}>
+					<EmailHeader />
 					<Section style={styles.content}>
-						<Text style={styles.greeting}>Dear {user.name},</Text>
+						<Text style={styles.paragraph}>Hi {user.name},</Text>
 
 						<Text style={styles.paragraph}>
 							A request has been received to login to your Monstro Account,{' '}
@@ -55,7 +55,10 @@ export default function LoginTokenEmail({
 }
 
 LoginTokenEmail.PreviewProps = {
-	...DummyData,
+	user: {
+		name: `${DummyData.member.firstName} ${DummyData.member.lastName}`,
+		email: DummyData.member.email,
+	},
 	otp: {
 		token: '650500',
 	},

@@ -7,7 +7,7 @@ import {
   Section,
   Text,
 } from '@react-email/components';
-import EmailFooter from './_shared/EmailFooter';
+import { EmailFooter } from './_shared';
 import { DummyData } from './_shared/DummyData';
 import { EmailStyles } from './_shared/SharedStyle';
 

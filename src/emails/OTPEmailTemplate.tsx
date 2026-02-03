@@ -5,17 +5,12 @@ import {
 	Body,
 	Container,
 	Section,
-	Row,
-	Column,
 	Text,
 	Link,
-	Img,
 } from '@react-email/components';
-import EmailFooter from './_shared/EmailFooter';
+import { EmailFooter, EmailHeader, OTPBox } from './_shared';
 import { DummyData } from './_shared/DummyData';
-import OTPBox from './_shared/OTPBox';
 import { EmailStyles } from './_shared/SharedStyle';
-import EmailHeader from './_shared/EmailHeader';
 
 interface OTPEmailTemplateProps {
 	member: { firstName: string };

@@ -8,18 +8,23 @@ import {
     Text,
     Button,
 } from '@react-email/components';
-import EmailHeader from './_shared/EmailHeader';
-import EmailFooter from './_shared/EmailFooter';
+import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
 
 
 interface MemberInviteEmailProps {
-    member: { firstName: string };
-    location: { name: string, slug: string };
+    member: { firstName: string, id: string };
+    location: { name: string, id: string };
 }
 
-const styles: Record<string, React.CSSProperties> = EmailStyles;
+const styles: Record<string, React.CSSProperties> = {
+    ...EmailStyles,
+    buttonSection: {
+        textAlign: 'center',
+        margin: '12px 0',
+    },
+};
 export default function MemberInviteEmail({
     member,
     location,
@@ -39,7 +44,7 @@ export default function MemberInviteEmail({
                             button below.
                         </Text>
                         <Section style={styles.buttonSection}>
-                            <Button style={styles.button} href={`https://monstro-x.com/register?slug=${location.slug}`}>
+                            <Button style={styles.button} href={`https://monstro-x.com/register?slug=${location.id}memberId=${member.id}`}>
                                 Accept Invite
                             </Button>
                         </Section>

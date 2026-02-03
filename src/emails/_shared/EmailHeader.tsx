@@ -4,7 +4,7 @@ import * as React from 'react';
 
 export const MonstroLogoURL = "https://app.monstro-x.com/_next/image?url=%2Fimages%2Flogo.png&w=128&q=75"
 
-export default function EmailHeader() {
+export function EmailHeader() {
     return (
         <Section style={styles.headerSection}>
             <Img
