@@ -41,6 +41,7 @@ const displayFields = [
     { key: 'paymentTermsLeft', label: 'Terms', optional: true },
     { key: 'backdateStartDate', label: 'Backdate', optional: true },
     { key: 'termEndDate', label: 'Term End', optional: true },
+    { key: 'pricingPlanId', label: 'Plan ID', optional: true },
 ]
 
 export function PreviewStep({
@@ -61,7 +62,7 @@ export function PreviewStep({
     const [requirePayment, setRequirePayment] = useState(false)
     const [importSuccess, setImportSuccess] = useState(false)
     const [expandedAccordion, setExpandedAccordion] = useState<number | null>(null)
-    const { plans } = useMemberPlans(lid)
+    const { plans, isLoading: isLoadingPlans } = useMemberPlans(lid)
 
     // Validation
     const validationResult = useMemo(() => {
@@ -71,9 +72,11 @@ export function PreviewStep({
             customFields: [
                 ...existingCustomFields.map(f => ({ key: f.id, type: f.type })),
                 ...newCustomFields.filter(f => f.selected).map(f => ({ key: f.csvColumn, type: f.fieldType }))
-            ]
+            ],
+            plans: plans || [],
+            isLoadingPlans
         })
-    }, [fullData, fieldMapping, customFieldMapping, existingCustomFields, newCustomFields])
+    }, [fullData, fieldMapping, customFieldMapping, existingCustomFields, newCustomFields, plans, isLoadingPlans])
 
     const { totalRows, validRows, invalidRows, errorsByRow } = validationResult
 
@@ -123,10 +126,11 @@ export function PreviewStep({
         const formData = new FormData()
         formData.append('file', file)
         formData.append('fieldMapping', JSON.stringify(fieldMapping))
-        if (pricingId) {
+        // Only pass pricingId when pricingPlanId is NOT mapped (per-row assignment)
+        if (pricingId && !fieldMapping.pricingPlanId) {
             formData.append('pricingId', pricingId)
         }
-        if (selectedPlan?.type) {
+        if (selectedPlan?.type && !fieldMapping.pricingPlanId) {
             formData.append('planType', selectedPlan.type)
         }
         formData.append('requirePayment', requirePayment.toString())
@@ -461,55 +465,75 @@ export function PreviewStep({
             <div className='space-y-4 p-4 rounded-lg bg-foreground/5 border border-foreground/10'>
                 <div className='text-sm font-medium'>Import Options</div>
 
-                <div className='space-y-2'>
-                    <Label className='text-xs uppercase font-medium text-muted-foreground'>
-                        Assign to Plan (Optional)
-                    </Label>
-                    <Select
-                        value={selectedPlanId || ''}
-                        onValueChange={setSelectedPlanId}
-                    >
-                        <SelectTrigger className='border-foreground/10'>
-                            <SelectValue placeholder='Select a plan' />
-                        </SelectTrigger>
-                        <SelectContent className='border-foreground/10'>
-                            {(plans || [])
-                                .filter((p: MemberPlan) => p.id)
-                                .map((p: MemberPlan) => (
-                                    <SelectItem key={p.id} value={p.id}>
-                                        {p.name}
-                                    </SelectItem>
-                                ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                {/* Show plan/pricing selection only when pricingPlanId is NOT mapped */}
+                {!fieldMapping.pricingPlanId && (
+                    <>
+                        <div className='space-y-2'>
+                            <Label className='text-xs uppercase font-medium text-muted-foreground'>
+                                Assign to Plan (Optional)
+                            </Label>
+                            <Select
+                                value={selectedPlanId || ''}
+                                onValueChange={setSelectedPlanId}
+                            >
+                                <SelectTrigger className='border-foreground/10'>
+                                    <SelectValue placeholder='Select a plan' />
+                                </SelectTrigger>
+                                <SelectContent className='border-foreground/10'>
+                                    {(plans || [])
+                                        .filter((p: MemberPlan) => p.id)
+                                        .map((p: MemberPlan) => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                                {p.name}
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                {selectedPlanId && pricingOptions.length > 0 && (
-                    <div className='space-y-2'>
-                        <Label className='text-xs uppercase font-medium text-muted-foreground'>
-                            Select Pricing Option
-                        </Label>
-                        <Select
-                            value={pricingId || ''}
-                            onValueChange={setPricingId}
-                        >
-                            <SelectTrigger className='border-foreground/10'>
-                                <SelectValue placeholder='Select pricing' />
-                            </SelectTrigger>
-                            <SelectContent className='border-foreground/10'>
-                                {pricingOptions.map((pricing: MemberPlanPricing) => (
-                                    <SelectItem key={pricing.id} value={pricing.id}>
-                                        {pricing.name} - {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}/{pricing.interval || 'one-time'}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                        {selectedPlanId && pricingOptions.length > 0 && (
+                            <div className='space-y-2'>
+                                <Label className='text-xs uppercase font-medium text-muted-foreground'>
+                                    Select Pricing Option
+                                </Label>
+                                <Select
+                                    value={pricingId || ''}
+                                    onValueChange={setPricingId}
+                                >
+                                    <SelectTrigger className='border-foreground/10'>
+                                        <SelectValue placeholder='Select pricing' />
+                                    </SelectTrigger>
+                                    <SelectContent className='border-foreground/10'>
+                                        {pricingOptions.map((pricing: MemberPlanPricing) => (
+                                            <SelectItem key={pricing.id} value={pricing.id}>
+                                                {pricing.name} - {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}/{pricing.interval || 'one-time'}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        <p className='text-xs text-muted-foreground'>
+                            If no plan is selected, members will be added without a program or plan.
+                        </p>
+                    </>
                 )}
 
-                <p className='text-xs text-muted-foreground'>
-                    If no plan is selected, members will be added without a program or plan.
-                </p>
+                {/* Show info message when pricingPlanId is mapped */}
+                {fieldMapping.pricingPlanId && (
+                    <div className='p-3 rounded-lg bg-blue-500/5 border border-blue-500/20'>
+                        <div className='flex items-center gap-2'>
+                            <CheckCircle2 className='size-4 text-blue-500' />
+                            <p className='text-sm text-blue-600'>
+                                Plan assignment is controlled by the Pricing Plan ID column from your CSV.
+                            </p>
+                        </div>
+                        <p className='text-xs text-blue-500/70 mt-1 ml-6'>
+                            Each member will be assigned to the pricing option specified in their row.
+                        </p>
+                    </div>
+                )}
 
                 <div className='flex items-center justify-between'>
                     <div className='space-y-1'>
@@ -533,11 +557,20 @@ export function PreviewStep({
                 size='lg'
                 className='w-full'
                 onClick={handleImport}
-                disabled={isImporting || !file}
+                disabled={isImporting || !file || isLoadingPlans}
             >
-                Import {validRows} of {totalRows} Members
-                {invalidRows > 0 && ` (${invalidRows} skipped)`}
-                {totalCustomFieldsCount > 0 ? ` with ${totalCustomFieldsCount} custom field${totalCustomFieldsCount > 1 ? 's' : ''}` : ''}
+                {isLoadingPlans ? (
+                    <>
+                        <Loader2 className='size-4 animate-spin mr-2' />
+                        Loading plans...
+                    </>
+                ) : (
+                    <>
+                        Import {validRows} of {totalRows} Members
+                        {invalidRows > 0 && ` (${invalidRows} skipped)`}
+                        {totalCustomFieldsCount > 0 ? ` with ${totalCustomFieldsCount} custom field${totalCustomFieldsCount > 1 ? 's' : ''}` : ''}
+                    </>
+                )}
             </Button>
         </div>
     )

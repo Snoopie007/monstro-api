@@ -1,5 +1,5 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
-import { CustomFieldType } from '@/types';
+import { CustomFieldType, MemberPlan } from '@/types';
 
 /**
  * Represents a single validation error
@@ -179,6 +179,8 @@ export interface ValidateImportDataOptions {
   customFieldMapping?: Record<string, string>; // Maps fieldId -> csvColumnName
   customFields?: Array<{ key: string; type: CustomFieldType }>;
   allowEmptyOptionalFields?: boolean;
+  plans?: MemberPlan[];
+  isLoadingPlans?: boolean;
 }
 
 export function validateImportData(
@@ -193,6 +195,18 @@ export function validateImportData(
   const customFields = options.customFields || [];
   const fieldMapping = options.fieldMapping || {};
   const customFieldMapping = options.customFieldMapping || {};
+
+  // Extract all valid pricing option IDs from plans
+  const validPricingIds = new Set<string>();
+  if (options.plans) {
+    options.plans.forEach(plan => {
+      if (plan.pricingOptions) {
+        plan.pricingOptions.forEach(pricing => {
+          if (pricing.id) validPricingIds.add(pricing.id);
+        });
+      }
+    });
+  }
 
   data.forEach((row, rowIndex) => {
     const rowErrors: ValidationError[] = [];
@@ -263,7 +277,35 @@ export function validateImportData(
         errorsByColumn.get(csvColumn)!.push(error);
       }
     }
-    
+
+    // Validate pricingPlanId if mapped (only when plans are loaded)
+    const pricingPlanIdColumn = fieldMapping['pricingPlanId'];
+    if (pricingPlanIdColumn && !options.isLoadingPlans) {
+      const value = row[pricingPlanIdColumn];
+
+      if (value && value !== '') {
+        const pricingId = String(value).trim();
+
+        // Check if the pricing ID exists in valid options
+        if (!validPricingIds.has(pricingId)) {
+          const error: ValidationError = {
+            rowIndex,
+            column: pricingPlanIdColumn,
+            fieldKey: 'pricingPlanId',
+            value,
+            error: `Invalid Pricing Plan ID: "${pricingId}". This ID does not match any existing pricing option in your location.`,
+          };
+          rowErrors.push(error);
+          errors.push(error);
+
+          if (!errorsByColumn.has(pricingPlanIdColumn)) {
+            errorsByColumn.set(pricingPlanIdColumn, []);
+          }
+          errorsByColumn.get(pricingPlanIdColumn)!.push(error);
+        }
+      }
+    }
+
     // Validate custom fields
     for (const customField of customFields) {
       const value = row[customField.key];

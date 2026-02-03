@@ -34,17 +34,23 @@ const requiredFields = [
 ]
 
 const optionalFields = [
+    {
+        key: 'pricingPlanId',
+        label: 'Pricing Plan ID',
+        description: 'Auto-assign members to pricing options via CSV values (advanced)',
+        tooltip: 'When mapped, each member will be automatically assigned to the pricing option specified in this column. This disables manual plan selection in the next step. Values should be valid pricing option IDs from your existing plans.'
+    },
     { key: 'classCredits', label: 'Class Credits', description: 'Number of class credits (optional)' },
-    { 
-        key: 'paymentTermsLeft', 
-        label: 'Payment Terms Left', 
+    {
+        key: 'paymentTermsLeft',
+        label: 'Payment Terms Left',
         description: 'Remaining payment terms (optional)',
         tooltip: 'If Term End Date is also provided, it will take precedence over this value'
     },
     { key: 'backdateStartDate', label: 'Backdate Start Date', description: 'Original start date for backdating (YYYY-MM-DD, optional)' },
-    { 
-        key: 'termEndDate', 
-        label: 'Term End Date', 
+    {
+        key: 'termEndDate',
+        label: 'Term End Date',
         description: 'End date of current plan term (YYYY-MM-DD, optional)',
         tooltip: 'If provided, this will override the Payment Terms Left value'
     },

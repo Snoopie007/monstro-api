@@ -268,6 +268,7 @@ export const InteractiveStepperRoot = React.forwardRef<
                             {
                                 ...(child.props as IStepperItemProps),
                                 'data-step-index': index + 1,
+                                key: child.key || `stepper-item-${index}`,
                             }
                         )
                     )
