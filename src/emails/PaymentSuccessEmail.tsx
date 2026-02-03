@@ -26,6 +26,95 @@ interface PaymentSuccessEmailProps {
   };
 }
 
+// Combined all styles into a single object for easier management
+const styles: Record<string, React.CSSProperties> = {
+  main: {
+    backgroundColor: '#ffffff',
+    fontFamily: 'Helvetica, Arial, sans-serif',
+  },
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '20px',
+  },
+  content: {
+    padding: '20px 0',
+  },
+  greeting: {
+    fontSize: '16px',
+    fontWeight: 'normal',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  paragraph: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  receiptBox: {
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #86efac',
+    borderRadius: '8px',
+    padding: '20px',
+    margin: '20px 0',
+  },
+  receiptHeader: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#15803d',
+    margin: '0 0 16px 0',
+  },
+  receiptDetail: {
+    fontSize: '14px',
+    color: '#166534',
+    margin: '0 0 8px 0',
+    lineHeight: '1.5',
+  },
+  divider: {
+    borderColor: '#86efac',
+    borderStyle: 'solid',
+    borderWidth: '1px 0 0 0',
+    margin: '16px 0',
+  },
+  total: {
+    fontSize: '18px',
+    color: '#15803d',
+    margin: '16px 0 0 0',
+    fontWeight: 'bold',
+  },
+  locationInfo: {
+    fontSize: '14px',
+    color: '#374151',
+    margin: '20px 0',
+    lineHeight: '1.6',
+  },
+  signOff: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '24px 0 0 0',
+    lineHeight: '1.5',
+  },
+  legal: {
+    fontSize: '12px',
+    color: '#6B7280',
+    margin: '16px 0',
+    lineHeight: '1.5',
+  },
+  link: {
+    color: '#4338ca',
+    textDecoration: 'none',
+    fontWeight: 'bold',
+  },
+  footer: {
+    fontSize: '12px',
+    color: '#9CA3AF',
+    margin: '16px 0 0 0',
+    lineHeight: '1.4',
+  },
+};
+
 export default function PaymentSuccessEmail({
   member,
   invoice,
@@ -50,181 +139,81 @@ export default function PaymentSuccessEmail({
   return (
     <Html>
       <Head />
-      <Body style={mainStyle}>
-        <Container style={containerStyle}>
-          <Section style={contentStyle}>
-            <Text style={greetingStyle}>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Section style={styles.content}>
+            <Text style={styles.greeting}>
               Hi {member.firstName} {member.lastName},
             </Text>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               Thank you! We've received your payment for{' '}
               <strong>{invoice.description}</strong>.
             </Text>
 
-            <Section style={receiptBoxStyle}>
-              <Text style={receiptHeaderStyle}>Payment Receipt</Text>
-              
-              <Text style={receiptDetailStyle}>
+            <Section style={styles.receiptBox}>
+              <Text style={styles.receiptHeader}>Payment Receipt</Text>
+
+              <Text style={styles.receiptDetail}>
                 <strong>Invoice ID:</strong> {invoice.id}
               </Text>
-              
-              <Text style={receiptDetailStyle}>
+
+              <Text style={styles.receiptDetail}>
                 <strong>Description:</strong> {invoice.description}
               </Text>
-              
-              <Text style={receiptDetailStyle}>
+
+              <Text style={styles.receiptDetail}>
                 <strong>Payment Date:</strong> {formatDate(invoice.paidDate)}
               </Text>
-              
-              <Hr style={dividerStyle} />
-              
-              <Text style={totalStyle}>
+
+              <Hr style={styles.divider} />
+
+              <Text style={styles.total}>
                 <strong>Amount Paid:</strong> {formatCurrency(invoice.total)}
               </Text>
             </Section>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               Your payment has been successfully processed. If you have any
               questions about this payment, please contact{' '}
               <strong>{location.name}</strong>.
             </Text>
 
             {location.address && (
-              <Text style={locationInfoStyle}>
+              <Text style={styles.locationInfo}>
                 <strong>{location.name}</strong>
                 <br />
                 {location.address}
               </Text>
             )}
 
-            <Text style={signOffStyle}>
+            <Text style={styles.signOff}>
               Thank you for your business!
               <br />
               {location.name}
             </Text>
 
-            <Hr style={dividerStyle} />
+            <Hr style={styles.divider} />
 
-            <Text style={legalStyle}>
+            <Text style={styles.legal}>
               You can opt out of receiving future emails by clicking{' '}
-              <Link href={monstro.unsubscribeUrl} style={linkStyle}>
+              <Link href={monstro.unsubscribeUrl} style={styles.link}>
                 unsubscribe
               </Link>
               . For more information about how we process data, please see our{' '}
-              <Link href={monstro.privacyUrl} style={linkStyle}>
+              <Link href={monstro.privacyUrl} style={styles.link}>
                 Privacy Policy
               </Link>
               .
             </Text>
 
-            <Text style={footerStyle}>{monstro.fullAddress}</Text>
+            <Text style={styles.footer}>{monstro.fullAddress}</Text>
           </Section>
         </Container>
       </Body>
     </Html>
   );
 }
-
-const mainStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  fontFamily: 'Helvetica, Arial, sans-serif',
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: '600px',
-  margin: '0 auto',
-  padding: '20px',
-};
-
-const contentStyle: React.CSSProperties = {
-  padding: '20px 0',
-};
-
-const greetingStyle: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 'normal',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const paragraphStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const receiptBoxStyle: React.CSSProperties = {
-  backgroundColor: '#f0fdf4',
-  border: '1px solid #86efac',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '20px 0',
-};
-
-const receiptHeaderStyle: React.CSSProperties = {
-  fontSize: '18px',
-  fontWeight: 'bold',
-  color: '#15803d',
-  margin: '0 0 16px 0',
-};
-
-const receiptDetailStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#166534',
-  margin: '0 0 8px 0',
-  lineHeight: '1.5',
-};
-
-const dividerStyle: React.CSSProperties = {
-  borderColor: '#86efac',
-  borderStyle: 'solid',
-  borderWidth: '1px 0 0 0',
-  margin: '16px 0',
-};
-
-const totalStyle: React.CSSProperties = {
-  fontSize: '18px',
-  color: '#15803d',
-  margin: '16px 0 0 0',
-  fontWeight: 'bold',
-};
-
-const locationInfoStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#374151',
-  margin: '20px 0',
-  lineHeight: '1.6',
-};
-
-const signOffStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '24px 0 0 0',
-  lineHeight: '1.5',
-};
-
-const legalStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#6B7280',
-  margin: '16px 0',
-  lineHeight: '1.5',
-};
-
-const linkStyle: React.CSSProperties = {
-  color: '#4338ca',
-  textDecoration: 'none',
-  fontWeight: 'bold',
-};
-
-const footerStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#9CA3AF',
-  margin: '16px 0 0 0',
-  lineHeight: '1.4',
-};
 
 PaymentSuccessEmail.PreviewProps = {
   member: {

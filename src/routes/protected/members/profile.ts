@@ -5,7 +5,6 @@ import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/libs/utils";
-import { MonstroData } from "@/constants/data";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 const MemberProfileProps = {
@@ -156,24 +155,15 @@ export function memberProfile(app: Elysia) {
             const token = generateOtp();
             redis.set(RedisKey, `${token}::${email}::${Math.floor(Date.now() + 30 * 60 * 1000 / 1000)}`, { ex: expiresAt })
 
-
-
             await emailSender.send({
+                template: 'UpdateEmailOTP',
                 options: {
                     to: email,
                     subject: 'Verify your email address',
                 },
-                template: 'UpdateEmailOTP',
                 data: {
-                    member: {
-                        firstName: member?.firstName,
-                        lastName: member?.lastName,
-                    },
-                    update: {
-                        email,
-                        token,
-                    },
-                    monstro: MonstroData
+                    member: { firstName: member?.firstName, astName: member?.lastName },
+                    update: { email, token },
                 }
             });
 

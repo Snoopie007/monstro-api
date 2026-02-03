@@ -26,6 +26,90 @@ interface MissedClassEmailProps {
   };
 }
 
+// Combine all styles into a single object for easier management
+const styles: Record<string, React.CSSProperties> = {
+  main: {
+    backgroundColor: '#ffffff',
+    fontFamily: 'Helvetica, Arial, sans-serif',
+  },
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '20px',
+  },
+  content: {
+    padding: '20px 0',
+  },
+  greeting: {
+    fontSize: '16px',
+    fontWeight: 'normal',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  message: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '0 0 20px 0',
+    lineHeight: '1.6',
+  },
+  buttonContainer: {
+    textAlign: 'center',
+    margin: '32px 0',
+  },
+  button: {
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    padding: '12px 32px',
+    borderRadius: '6px',
+    textDecoration: 'none',
+    display: 'inline-block',
+    fontWeight: '600',
+    fontSize: '16px',
+  },
+  signOff: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '24px 0 8px 0',
+    fontWeight: 'normal',
+    lineHeight: '1.5',
+  },
+  location: {
+    fontSize: '16px',
+    color: '#1F2937',
+    margin: '0 0 4px 0',
+    fontWeight: 'normal',
+    lineHeight: '1.4',
+  },
+  address: {
+    fontSize: '14px',
+    color: '#6B7280',
+    margin: '0 0 32px 0',
+    lineHeight: '1.4',
+  },
+  footer: {
+    marginTop: '40px',
+    borderTop: '1px solid #E5E7EB',
+    paddingTop: '20px',
+  },
+  footerText: {
+    fontSize: '12px',
+    color: '#9CA3AF',
+    margin: '0 0 8px 0',
+    lineHeight: '1.4',
+  },
+  footerLinks: {
+    fontSize: '12px',
+    color: '#9CA3AF',
+    margin: '0',
+    lineHeight: '1.4',
+  },
+  link: {
+    color: '#9CA3AF',
+    textDecoration: 'underline',
+  },
+};
+
 export default function MissedClassEmail({
   member,
   class: classData,
@@ -54,49 +138,49 @@ export default function MissedClassEmail({
   return (
     <Html>
       <Head />
-      <Body style={mainStyle}>
-        <Container style={containerStyle}>
-          <Section style={contentStyle}>
-            <Text style={greetingStyle}>Hi {member.firstName},</Text>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Section style={styles.content}>
+            <Text style={styles.greeting}>Hi {member.firstName},</Text>
 
-            <Text style={messageStyle}>
+            <Text style={styles.message}>
               We noticed you missed your <strong>{classData.name}</strong>{' '}
               class scheduled for <strong>{classDate}</strong> at <strong>{classTime}</strong>.
             </Text>
 
-            <Text style={messageStyle}>
+            <Text style={styles.message}>
               We hope everything is okay! We'd love to see you at your next
               class.
             </Text>
 
-            <Section style={buttonContainerStyle}>
+            <Section style={styles.buttonContainer}>
               <Button
                 href={`https://app.monstro-x.com/schedule`}
-                style={buttonStyle}
+                style={styles.button}
               >
                 Book Your Next Class
               </Button>
             </Section>
 
-            <Text style={signOffStyle}>See you soon,</Text>
+            <Text style={styles.signOff}>See you soon,</Text>
 
-            <Text style={locationStyle}>{location.name}</Text>
-            <Text style={addressStyle}>{location.address}</Text>
+            <Text style={styles.location}>{location.name}</Text>
+            <Text style={styles.address}>{location.address}</Text>
 
             {monstro && (
-              <Section style={footerStyle}>
+              <Section style={styles.footer}>
                 {monstro.fullAddress && (
-                  <Text style={footerTextStyle}>{monstro.fullAddress}</Text>
+                  <Text style={styles.footerText}>{monstro.fullAddress}</Text>
                 )}
-                <Text style={footerLinksStyle}>
+                <Text style={styles.footerLinks}>
                   {monstro.privacyUrl && (
-                    <a href={monstro.privacyUrl} style={linkStyle}>
+                    <a href={monstro.privacyUrl} style={styles.link}>
                       Privacy Policy
                     </a>
                   )}
                   {monstro.privacyUrl && monstro.unsubscribeUrl && ' | '}
                   {monstro.unsubscribeUrl && (
-                    <a href={monstro.unsubscribeUrl} style={linkStyle}>
+                    <a href={monstro.unsubscribeUrl} style={styles.link}>
                       Unsubscribe
                     </a>
                   )}
@@ -109,100 +193,6 @@ export default function MissedClassEmail({
     </Html>
   );
 }
-
-const mainStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  fontFamily: 'Helvetica, Arial, sans-serif',
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: '600px',
-  margin: '0 auto',
-  padding: '20px',
-};
-
-const contentStyle: React.CSSProperties = {
-  padding: '20px 0',
-};
-
-const greetingStyle: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 'normal',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const messageStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '0 0 20px 0',
-  lineHeight: '1.6',
-};
-
-const buttonContainerStyle: React.CSSProperties = {
-  textAlign: 'center',
-  margin: '32px 0',
-};
-
-const buttonStyle: React.CSSProperties = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  padding: '12px 32px',
-  borderRadius: '6px',
-  textDecoration: 'none',
-  display: 'inline-block',
-  fontWeight: '600',
-  fontSize: '16px',
-};
-
-const signOffStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '24px 0 8px 0',
-  fontWeight: 'normal',
-  lineHeight: '1.5',
-};
-
-const locationStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#1F2937',
-  margin: '0 0 4px 0',
-  fontWeight: 'normal',
-  lineHeight: '1.4',
-};
-
-const addressStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#6B7280',
-  margin: '0 0 32px 0',
-  lineHeight: '1.4',
-};
-
-const footerStyle: React.CSSProperties = {
-  marginTop: '40px',
-  borderTop: '1px solid #E5E7EB',
-  paddingTop: '20px',
-};
-
-const footerTextStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#9CA3AF',
-  margin: '0 0 8px 0',
-  lineHeight: '1.4',
-};
-
-const footerLinksStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#9CA3AF',
-  margin: '0',
-  lineHeight: '1.4',
-};
-
-const linkStyle: React.CSSProperties = {
-  color: '#9CA3AF',
-  textDecoration: 'underline',
-};
 
 MissedClassEmail.PreviewProps = {
   member: {

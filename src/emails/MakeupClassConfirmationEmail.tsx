@@ -31,6 +31,162 @@ interface MakeupClassConfirmationEmailProps {
   };
 }
 
+// Combined styles in a single object for easier management
+const styles: Record<string, React.CSSProperties> = {
+  main: {
+    backgroundColor: '#ffffff',
+    fontFamily: 'Helvetica, Arial, sans-serif',
+  },
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '20px',
+  },
+  content: {
+    padding: '20px 0',
+  },
+  greeting: {
+    fontSize: '16px',
+    fontWeight: 'normal',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  message: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '0 0 20px 0',
+    lineHeight: '1.6',
+  },
+  confirmationBox: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: '8px',
+    padding: '16px',
+    marginBottom: '16px',
+    borderLeft: '4px solid #10B981',
+  },
+  confirmationLabel: {
+    fontSize: '12px',
+    color: '#047857',
+    margin: '0 0 8px 0',
+    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: '0.5px',
+  },
+  className: {
+    fontSize: '18px',
+    color: '#064E3B',
+    margin: '0 0 4px 0',
+    fontWeight: '600',
+  },
+  classDate: {
+    fontSize: '15px',
+    color: '#065F46',
+    margin: '0 0 2px 0',
+    fontWeight: '500',
+  },
+  classTime: {
+    fontSize: '14px',
+    color: '#047857',
+    margin: '0 0 8px 0',
+  },
+  instructor: {
+    fontSize: '13px',
+    color: '#059669',
+    margin: '0',
+  },
+  originalBox: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    marginBottom: '16px',
+  },
+  originalLabel: {
+    fontSize: '11px',
+    color: '#6B7280',
+    margin: '0 0 4px 0',
+    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: '0.5px',
+  },
+  originalClass: {
+    fontSize: '14px',
+    color: '#374151',
+    margin: '0 0 2px 0',
+    fontWeight: '500',
+  },
+  originalDetails: {
+    fontSize: '13px',
+    color: '#6B7280',
+    margin: '0',
+  },
+  creditsBox: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    marginBottom: '24px',
+  },
+  creditsLabel: {
+    fontSize: '11px',
+    color: '#3B82F6',
+    margin: '0 0 4px 0',
+    textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: '0.5px',
+  },
+  creditsValue: {
+    fontSize: '14px',
+    color: '#1D4ED8',
+    margin: '0',
+    fontWeight: '500',
+  },
+  separator: {
+    borderTop: '1px solid #E5E7EB',
+    margin: '24px 0',
+  },
+  signOff: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '24px 0 8px 0',
+    fontWeight: 'normal',
+    lineHeight: '1.5',
+  },
+  location: {
+    fontSize: '16px',
+    color: '#1F2937',
+    margin: '0 0 4px 0',
+    fontWeight: 'normal',
+    lineHeight: '1.4',
+  },
+  address: {
+    fontSize: '14px',
+    color: '#6B7280',
+    margin: '0 0 32px 0',
+    lineHeight: '1.4',
+  },
+  footer: {
+    marginTop: '40px',
+    borderTop: '1px solid #E5E7EB',
+    paddingTop: '20px',
+  },
+  footerText: {
+    fontSize: '12px',
+    color: '#9CA3AF',
+    margin: '0 0 8px 0',
+    lineHeight: '1.4',
+  },
+  footerLinks: {
+    fontSize: '12px',
+    color: '#9CA3AF',
+    margin: '0',
+    lineHeight: '1.4',
+  },
+  link: {
+    color: '#9CA3AF',
+    textDecoration: 'underline',
+  },
+};
+
 export default function MakeupClassConfirmationEmail({
   member,
   location,
@@ -51,69 +207,69 @@ export default function MakeupClassConfirmationEmail({
   return (
     <Html>
       <Head />
-      <Body style={mainStyle}>
-        <Container style={containerStyle}>
-          <Section style={contentStyle}>
-            <Text style={greetingStyle}>Hi {member.firstName},</Text>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Section style={styles.content}>
+            <Text style={styles.greeting}>Hi {member.firstName},</Text>
 
-            <Text style={messageStyle}>
+            <Text style={styles.message}>
               Great news! Your makeup class has been successfully scheduled.
             </Text>
 
-            <Section style={confirmationBoxStyle}>
-              <Text style={confirmationLabelStyle}>Confirmed</Text>
-              <Text style={classNameStyle}>{makeupClass.name}</Text>
-              <Text style={classDateStyle}>{formatDate(makeupClass.date)}</Text>
-              <Text style={classTimeStyle}>{makeupClass.time}</Text>
+            <Section style={styles.confirmationBox}>
+              <Text style={styles.confirmationLabel}>Confirmed</Text>
+              <Text style={styles.className}>{makeupClass.name}</Text>
+              <Text style={styles.classDate}>{formatDate(makeupClass.date)}</Text>
+              <Text style={styles.classTime}>{makeupClass.time}</Text>
               {makeupClass.instructor && (
-                <Text style={instructorStyle}>
+                <Text style={styles.instructor}>
                   Instructor: {makeupClass.instructor.firstName} {makeupClass.instructor.lastName}
                 </Text>
               )}
             </Section>
 
-            <Section style={originalBoxStyle}>
-              <Text style={originalLabelStyle}>Original Missed Class</Text>
-              <Text style={originalClassStyle}>{originalClass.name}</Text>
-              <Text style={originalDetailsStyle}>
+            <Section style={styles.originalBox}>
+              <Text style={styles.originalLabel}>Original Missed Class</Text>
+              <Text style={styles.originalClass}>{originalClass.name}</Text>
+              <Text style={styles.originalDetails}>
                 {formatDate(originalClass.date)} at {originalClass.time}
               </Text>
             </Section>
 
             {creditsRemaining !== undefined && (
-              <Section style={creditsBoxStyle}>
-                <Text style={creditsLabelStyle}>Makeup Credits</Text>
-                <Text style={creditsValueStyle}>
+              <Section style={styles.creditsBox}>
+                <Text style={styles.creditsLabel}>Makeup Credits</Text>
+                <Text style={styles.creditsValue}>
                   {creditsRemaining} credit{creditsRemaining !== 1 ? 's' : ''} remaining
                 </Text>
               </Section>
             )}
 
-            <Hr style={separatorStyle} />
+            <Hr style={styles.separator} />
 
-            <Text style={messageStyle}>
+            <Text style={styles.message}>
               Please arrive a few minutes early to check in. We look forward to seeing you!
             </Text>
 
-            <Text style={signOffStyle}>See you soon,</Text>
+            <Text style={styles.signOff}>See you soon,</Text>
 
-            <Text style={locationStyle}>{location.name}</Text>
-            {location.address && <Text style={addressStyle}>{location.address}</Text>}
+            <Text style={styles.location}>{location.name}</Text>
+            {location.address && <Text style={styles.address}>{location.address}</Text>}
 
             {monstro && (
-              <Section style={footerStyle}>
+              <Section style={styles.footer}>
                 {monstro.fullAddress && (
-                  <Text style={footerTextStyle}>{monstro.fullAddress}</Text>
+                  <Text style={styles.footerText}>{monstro.fullAddress}</Text>
                 )}
-                <Text style={footerLinksStyle}>
+                <Text style={styles.footerLinks}>
                   {monstro.privacyUrl && (
-                    <a href={monstro.privacyUrl} style={linkStyle}>
+                    <a href={monstro.privacyUrl} style={styles.link}>
                       Privacy Policy
                     </a>
                   )}
                   {monstro.privacyUrl && monstro.unsubscribeUrl && ' | '}
                   {monstro.unsubscribeUrl && (
-                    <a href={monstro.unsubscribeUrl} style={linkStyle}>
+                    <a href={monstro.unsubscribeUrl} style={styles.link}>
                       Unsubscribe
                     </a>
                   )}
@@ -126,184 +282,6 @@ export default function MakeupClassConfirmationEmail({
     </Html>
   );
 }
-
-const mainStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  fontFamily: 'Helvetica, Arial, sans-serif',
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: '600px',
-  margin: '0 auto',
-  padding: '20px',
-};
-
-const contentStyle: React.CSSProperties = {
-  padding: '20px 0',
-};
-
-const greetingStyle: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 'normal',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const messageStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '0 0 20px 0',
-  lineHeight: '1.6',
-};
-
-const confirmationBoxStyle: React.CSSProperties = {
-  backgroundColor: '#ECFDF5',
-  borderRadius: '8px',
-  padding: '16px',
-  marginBottom: '16px',
-  borderLeft: '4px solid #10B981',
-};
-
-const confirmationLabelStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#047857',
-  margin: '0 0 8px 0',
-  textTransform: 'uppercase',
-  fontWeight: '600',
-  letterSpacing: '0.5px',
-};
-
-const classNameStyle: React.CSSProperties = {
-  fontSize: '18px',
-  color: '#064E3B',
-  margin: '0 0 4px 0',
-  fontWeight: '600',
-};
-
-const classDateStyle: React.CSSProperties = {
-  fontSize: '15px',
-  color: '#065F46',
-  margin: '0 0 2px 0',
-  fontWeight: '500',
-};
-
-const classTimeStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#047857',
-  margin: '0 0 8px 0',
-};
-
-const instructorStyle: React.CSSProperties = {
-  fontSize: '13px',
-  color: '#059669',
-  margin: '0',
-};
-
-const originalBoxStyle: React.CSSProperties = {
-  backgroundColor: '#F3F4F6',
-  borderRadius: '8px',
-  padding: '12px 16px',
-  marginBottom: '16px',
-};
-
-const originalLabelStyle: React.CSSProperties = {
-  fontSize: '11px',
-  color: '#6B7280',
-  margin: '0 0 4px 0',
-  textTransform: 'uppercase',
-  fontWeight: '600',
-  letterSpacing: '0.5px',
-};
-
-const originalClassStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#374151',
-  margin: '0 0 2px 0',
-  fontWeight: '500',
-};
-
-const originalDetailsStyle: React.CSSProperties = {
-  fontSize: '13px',
-  color: '#6B7280',
-  margin: '0',
-};
-
-const creditsBoxStyle: React.CSSProperties = {
-  backgroundColor: '#EFF6FF',
-  borderRadius: '8px',
-  padding: '12px 16px',
-  marginBottom: '24px',
-};
-
-const creditsLabelStyle: React.CSSProperties = {
-  fontSize: '11px',
-  color: '#3B82F6',
-  margin: '0 0 4px 0',
-  textTransform: 'uppercase',
-  fontWeight: '600',
-  letterSpacing: '0.5px',
-};
-
-const creditsValueStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#1D4ED8',
-  margin: '0',
-  fontWeight: '500',
-};
-
-const separatorStyle: React.CSSProperties = {
-  borderTop: '1px solid #E5E7EB',
-  margin: '24px 0',
-};
-
-const signOffStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '24px 0 8px 0',
-  fontWeight: 'normal',
-  lineHeight: '1.5',
-};
-
-const locationStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#1F2937',
-  margin: '0 0 4px 0',
-  fontWeight: 'normal',
-  lineHeight: '1.4',
-};
-
-const addressStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#6B7280',
-  margin: '0 0 32px 0',
-  lineHeight: '1.4',
-};
-
-const footerStyle: React.CSSProperties = {
-  marginTop: '40px',
-  borderTop: '1px solid #E5E7EB',
-  paddingTop: '20px',
-};
-
-const footerTextStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#9CA3AF',
-  margin: '0 0 8px 0',
-  lineHeight: '1.4',
-};
-
-const footerLinksStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#9CA3AF',
-  margin: '0',
-  lineHeight: '1.4',
-};
-
-const linkStyle: React.CSSProperties = {
-  color: '#9CA3AF',
-  textDecoration: 'underline',
-};
 
 MakeupClassConfirmationEmail.PreviewProps = {
   member: {

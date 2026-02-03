@@ -1,7 +1,6 @@
 import { Worker } from "bullmq";
 import { redisConfig } from "@/config";
 import { EmailSender } from "@/libs/email";
-import { MonstroData } from "@/constants/data";
 import { shouldSendMissedClassEmail } from "@/libs/emailValidation";
 import { invoiceWorker } from "./invoices";
 import { classWorker } from "./classes";
@@ -20,10 +19,8 @@ const worker = new Worker('email', async (job) => {
         }
     }
 
-    // Merge metadata with MonstroData only if monstro is not already provided
     const templateData = {
         ...data.metadata,
-        monstro: data.metadata?.monstro || MonstroData,
     };
 
     try {

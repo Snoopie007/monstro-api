@@ -34,6 +34,118 @@ interface InvoiceReminderEmailProps {
   };
 }
 
+// Combine all styles into a single object for easier management
+const styles: Record<string, React.CSSProperties> = {
+  main: {
+    backgroundColor: '#ffffff',
+    fontFamily: 'Helvetica, Arial, sans-serif',
+  },
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '20px',
+  },
+  content: {
+    padding: '20px 0',
+  },
+  greeting: {
+    fontSize: '16px',
+    fontWeight: 'normal',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  paragraph: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  invoiceBox: {
+    backgroundColor: '#f9fafb',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    padding: '20px',
+    margin: '20px 0',
+  },
+  invoiceHeader: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#111827',
+    margin: '0 0 16px 0',
+  },
+  invoiceDetail: {
+    fontSize: '14px',
+    color: '#374151',
+    margin: '0 0 8px 0',
+    lineHeight: '1.5',
+  },
+  divider: {
+    borderColor: '#e5e7eb',
+    borderStyle: 'solid',
+    borderWidth: '1px 0 0 0',
+    margin: '16px 0',
+  },
+  itemsSection: {
+    margin: '16px 0',
+  },
+  itemsHeader: {
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#374151',
+    margin: '0 0 12px 0',
+  },
+  item: {
+    marginBottom: '12px',
+  },
+  itemName: {
+    fontSize: '14px',
+    color: '#111827',
+    margin: '0 0 4px 0',
+    fontWeight: '500',
+  },
+  itemDetail: {
+    fontSize: '13px',
+    color: '#6b7280',
+    margin: '0',
+  },
+  total: {
+    fontSize: '18px',
+    color: '#111827',
+    margin: '16px 0 0 0',
+    fontWeight: 'bold',
+  },
+  contact: {
+    fontSize: '14px',
+    color: '#374151',
+    margin: '0 0 8px 0',
+    lineHeight: '1.5',
+  },
+  signOff: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '24px 0 0 0',
+    lineHeight: '1.5',
+  },
+  legal: {
+    fontSize: '12px',
+    color: '#6B7280',
+    margin: '16px 0',
+    lineHeight: '1.5',
+  },
+  link: {
+    color: '#4338ca',
+    textDecoration: 'none',
+    fontWeight: 'bold',
+  },
+  footer: {
+    fontSize: '12px',
+    color: '#9CA3AF',
+    margin: '16px 0 0 0',
+    lineHeight: '1.4',
+  },
+};
+
 export default function InvoiceReminderEmail({
   member,
   invoice,
@@ -58,233 +170,105 @@ export default function InvoiceReminderEmail({
   return (
     <Html>
       <Head />
-      <Body style={mainStyle}>
-        <Container style={containerStyle}>
-          <Section style={contentStyle}>
-            <Text style={greetingStyle}>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Section style={styles.content}>
+            <Text style={styles.greeting}>
               Hi {member.firstName} {member.lastName},
             </Text>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               This is a reminder that you have an invoice due from{' '}
               <strong>{location.name}</strong>.
             </Text>
 
-            <Section style={invoiceBoxStyle}>
-              <Text style={invoiceHeaderStyle}>Invoice Details</Text>
+            <Section style={styles.invoiceBox}>
+              <Text style={styles.invoiceHeader}>Invoice Details</Text>
 
-              <Text style={invoiceDetailStyle}>
+              <Text style={styles.invoiceDetail}>
                 <strong>Invoice ID:</strong> {invoice.id}
               </Text>
 
-              <Text style={invoiceDetailStyle}>
+              <Text style={styles.invoiceDetail}>
                 <strong>Description:</strong> {invoice.description}
               </Text>
 
-              <Text style={invoiceDetailStyle}>
+              <Text style={styles.invoiceDetail}>
                 <strong>Due Date:</strong> {formatDate(invoice.dueDate)}
               </Text>
 
-              <Hr style={dividerStyle} />
+              <Hr style={styles.divider} />
 
-              <Section style={itemsSection}>
-                <Text style={itemsHeaderStyle}>Items:</Text>
+              <Section style={styles.itemsSection}>
+                <Text style={styles.itemsHeader}>Items:</Text>
                 {invoice.items.map((item, index) => (
-                  <Section key={index} style={itemStyle}>
-                    <Text style={itemNameStyle}>
+                  <Section key={index} style={styles.item}>
+                    <Text style={styles.itemName}>
                       {item.name} {item.description && `- ${item.description}`}
                     </Text>
-                    <Text style={itemDetailStyle}>
+                    <Text style={styles.itemDetail}>
                       Qty: {item.quantity} × {formatCurrency(item.price)} = {formatCurrency(item.quantity * item.price)}
                     </Text>
                   </Section>
                 ))}
               </Section>
 
-              <Hr style={dividerStyle} />
+              <Hr style={styles.divider} />
 
-              <Text style={totalStyle}>
+              <Text style={styles.total}>
                 <strong>Amount Due:</strong> {formatCurrency(invoice.total)}
               </Text>
             </Section>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               Please submit your payment to <strong>{location.name}</strong>.
             </Text>
 
             {location.phone && (
-              <Text style={contactStyle}>
+              <Text style={styles.contact}>
                 <strong>Phone:</strong> {location.phone}
               </Text>
             )}
 
             {location.email && (
-              <Text style={contactStyle}>
+              <Text style={styles.contact}>
                 <strong>Email:</strong> {location.email}
               </Text>
             )}
 
             {location.address && (
-              <Text style={contactStyle}>
+              <Text style={styles.contact}>
                 <strong>Address:</strong> {location.address}
               </Text>
             )}
 
-            <Text style={signOffStyle}>
+            <Text style={styles.signOff}>
               Thank you,
               <br />
               {location.name}
             </Text>
 
-            <Hr style={dividerStyle} />
+            <Hr style={styles.divider} />
 
-            <Text style={legalStyle}>
+            <Text style={styles.legal}>
               You can opt out of receiving future emails by clicking{' '}
-              <Link href={monstro.unsubscribeUrl} style={linkStyle}>
+              <Link href={monstro.unsubscribeUrl} style={styles.link}>
                 unsubscribe
               </Link>
               . For more information about how we process data, please see our{' '}
-              <Link href={monstro.privacyUrl} style={linkStyle}>
+              <Link href={monstro.privacyUrl} style={styles.link}>
                 Privacy Policy
               </Link>
               .
             </Text>
 
-            <Text style={footerStyle}>{monstro.fullAddress}</Text>
+            <Text style={styles.footer}>{monstro.fullAddress}</Text>
           </Section>
         </Container>
       </Body>
     </Html>
   );
 }
-
-const mainStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  fontFamily: 'Helvetica, Arial, sans-serif',
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: '600px',
-  margin: '0 auto',
-  padding: '20px',
-};
-
-const contentStyle: React.CSSProperties = {
-  padding: '20px 0',
-};
-
-const greetingStyle: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 'normal',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const paragraphStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const invoiceBoxStyle: React.CSSProperties = {
-  backgroundColor: '#f9fafb',
-  border: '1px solid #e5e7eb',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '20px 0',
-};
-
-const invoiceHeaderStyle: React.CSSProperties = {
-  fontSize: '18px',
-  fontWeight: 'bold',
-  color: '#111827',
-  margin: '0 0 16px 0',
-};
-
-const invoiceDetailStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#374151',
-  margin: '0 0 8px 0',
-  lineHeight: '1.5',
-};
-
-const dividerStyle: React.CSSProperties = {
-  borderColor: '#e5e7eb',
-  borderStyle: 'solid',
-  borderWidth: '1px 0 0 0',
-  margin: '16px 0',
-};
-
-const itemsSection: React.CSSProperties = {
-  margin: '16px 0',
-};
-
-const itemsHeaderStyle: React.CSSProperties = {
-  fontSize: '14px',
-  fontWeight: 'bold',
-  color: '#374151',
-  margin: '0 0 12px 0',
-};
-
-const itemStyle: React.CSSProperties = {
-  marginBottom: '12px',
-};
-
-const itemNameStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#111827',
-  margin: '0 0 4px 0',
-  fontWeight: '500',
-};
-
-const itemDetailStyle: React.CSSProperties = {
-  fontSize: '13px',
-  color: '#6b7280',
-  margin: '0',
-};
-
-const totalStyle: React.CSSProperties = {
-  fontSize: '18px',
-  color: '#111827',
-  margin: '16px 0 0 0',
-  fontWeight: 'bold',
-};
-
-const contactStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#374151',
-  margin: '0 0 8px 0',
-  lineHeight: '1.5',
-};
-
-const signOffStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '24px 0 0 0',
-  lineHeight: '1.5',
-};
-
-const legalStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#6B7280',
-  margin: '16px 0',
-  lineHeight: '1.5',
-};
-
-const linkStyle: React.CSSProperties = {
-  color: '#4338ca',
-  textDecoration: 'none',
-  fontWeight: 'bold',
-};
-
-const footerStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: '#9CA3AF',
-  margin: '16px 0 0 0',
-  lineHeight: '1.4',
-};
 
 InvoiceReminderEmail.PreviewProps = {
   member: {

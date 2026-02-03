@@ -1,17 +1,17 @@
 import sendgrid from '@sendgrid/mail';
 import { render } from '@react-email/render';
 import { renderToStaticMarkup } from 'react-dom/server';
-
+import { MonstroData } from '@/constants/data';
 import { EmailTemplates } from '@/emails';
 
 type EmailOptions = {
+    template: keyof typeof EmailTemplates;
+    data: Record<string, any>;
     options: {
         to: string;
         subject: string;
         headers?: Record<string, string>;
     },
-    template: keyof typeof EmailTemplates;
-    data: Record<string, any>;
 }
 
 export class EmailSender {
@@ -29,8 +29,11 @@ export class EmailSender {
 
     public async sendSupportEmail(props: EmailOptions) {
         const TemplateComponent = EmailTemplates[props.template] as any;
-        const html = await render(TemplateComponent(props.data));
-        
+        const html = await render(TemplateComponent({
+            ...props.data,
+            monstro: MonstroData,
+        }));
+
         await this._sender.send({
             ...props.options,
             from: {
@@ -45,7 +48,10 @@ export class EmailSender {
 
     public async send(props: EmailOptions) {
         const TemplateComponent = EmailTemplates[props.template] as any;
-        const html = '<!DOCTYPE html>' + renderToStaticMarkup(TemplateComponent(props.data));
+        const html = '<!DOCTYPE html>' + renderToStaticMarkup(TemplateComponent({
+            ...props.data,
+            monstro: MonstroData,
+        }));
 
         await this._sender.send({
             ...props.options,

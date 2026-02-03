@@ -1,6 +1,15 @@
-
-
-const MonstroData = {
+type MonstroDataType = {
+    fullAddress: string;
+    phone: string;
+    email: string;
+    url: string;
+    privacyUrl: string;
+    termsUrl: string;
+    supportUrl: string;
+    unsubscribeUrl: string;
+    logoUrl: string;
+}
+const MonstroData: MonstroDataType = {
     fullAddress: '7901 4th ST N STE 300 St Petersburg, FL 33702, USA',
     phone: '(786) 686-6079',
     email: 'support@mymonstro.com',
@@ -24,6 +33,8 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
 const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg'];
 const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+// Social icon map for Monstro communication channels
+
 
 
 export {
@@ -34,3 +45,5 @@ export {
     ALLOWED_AUDIO_TYPES,
     ALLOWED_DOCUMENT_TYPES
 }
+
+export type { MonstroDataType };

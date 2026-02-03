@@ -16,6 +16,62 @@ interface ResetPasswordEmailProps {
   monstro: { fullAddress: string };
 }
 
+// Combined all styles into a single object for easier management
+const styles: Record<string, React.CSSProperties> = {
+  main: {
+    backgroundColor: '#ffffff',
+    fontFamily: 'Helvetica, Arial, sans-serif',
+  },
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '20px',
+  },
+  content: {
+    padding: '20px 0',
+  },
+  greeting: {
+    fontSize: '16px',
+    fontWeight: 'normal',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  paragraph: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '0 0 20px 0',
+    lineHeight: '1.5',
+  },
+  buttonSection: {
+    textAlign: 'center',
+    margin: '24px 0',
+  },
+  button: {
+    backgroundColor: '#4338ca',
+    color: '#ffffff',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    borderRadius: '3px',
+    textDecoration: 'none',
+    display: 'inline-block',
+    padding: '10px 25px',
+  },
+  warning: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '20px 0',
+    lineHeight: '1.6',
+  },
+  footer: {
+    fontSize: '14px',
+    color: '#6B7280',
+    margin: '20px 0 0 0',
+    paddingTop: '20px',
+    borderTop: '1px solid #e5e7eb',
+  },
+};
+
 export default function ResetPasswordEmail({
   member,
   ui,
@@ -24,103 +80,42 @@ export default function ResetPasswordEmail({
   return (
     <Html>
       <Head />
-      <Body style={mainStyle}>
-        <Container style={containerStyle}>
-          <Section style={contentStyle}>
-            <Text style={greetingStyle}>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Section style={styles.content}>
+            <Text style={styles.greeting}>
               Dear {member.firstName} {member.lastName},
             </Text>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               A request to reset your password was made for your Monstro Account,{' '}
               <strong>{member.email}</strong>. To continue with this request, click
               the button below to reset your password. Your reset link will expire
               in 30 minutes:
             </Text>
 
-            <Section style={buttonSectionStyle}>
+            <Section style={styles.buttonSection}>
               <Button
-                style={buttonStyle}
+                style={styles.button}
                 href={ui.btnUrl}
               >
                 {ui.btnText}
               </Button>
             </Section>
 
-            <Text style={warningStyle}>
+            <Text style={styles.warning}>
               If you didn't make this change or you believe an unauthorized person
               has attempted to access your account, you can simply ignore this
               email.
             </Text>
 
-            <Text style={footerStyle}>{monstro.fullAddress}</Text>
+            <Text style={styles.footer}>{monstro.fullAddress}</Text>
           </Section>
         </Container>
       </Body>
     </Html>
   );
 }
-
-const mainStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  fontFamily: 'Helvetica, Arial, sans-serif',
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: '600px',
-  margin: '0 auto',
-  padding: '20px',
-};
-
-const contentStyle: React.CSSProperties = {
-  padding: '20px 0',
-};
-
-const greetingStyle: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 'normal',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const paragraphStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '0 0 20px 0',
-  lineHeight: '1.5',
-};
-
-const buttonSectionStyle: React.CSSProperties = {
-  textAlign: 'center',
-  margin: '24px 0',
-};
-
-const buttonStyle: React.CSSProperties = {
-  backgroundColor: '#4338ca',
-  color: '#ffffff',
-  fontSize: '16px',
-  fontWeight: 'bold',
-  borderRadius: '3px',
-  textDecoration: 'none',
-  display: 'inline-block',
-  padding: '10px 25px'
-};
-
-const warningStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '20px 0',
-  lineHeight: '1.6',
-};
-
-const footerStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#6B7280',
-  margin: '20px 0 0 0',
-  paddingTop: '20px',
-  borderTop: '1px solid #e5e7eb',
-};
 
 ResetPasswordEmail.PreviewProps = {
   member: {

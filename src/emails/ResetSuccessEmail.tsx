@@ -13,6 +13,48 @@ interface ResetSuccessEmailProps {
   monstro: { fullAddress: string };
 }
 
+// Combined all styles into a single object for easier management
+const styles: Record<string, React.CSSProperties> = {
+  main: {
+    backgroundColor: '#ffffff',
+    fontFamily: 'Helvetica, Arial, sans-serif',
+  },
+  container: {
+    maxWidth: '600px',
+    margin: '0 auto',
+    padding: '20px',
+  },
+  content: {
+    padding: '20px 0',
+  },
+  greeting: {
+    fontSize: '16px',
+    fontWeight: 'normal',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  paragraph: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '0 0 16px 0',
+    lineHeight: '1.5',
+  },
+  signOff: {
+    fontSize: '16px',
+    color: '#000000',
+    margin: '20px 0 0 0',
+    fontWeight: 'normal',
+  },
+  footer: {
+    fontSize: '14px',
+    color: '#6B7280',
+    margin: '20px 0 0 0',
+    paddingTop: '20px',
+    borderTop: '1px solid #e5e7eb',
+  },
+};
+
 export default function ResetSuccessEmail({
   member,
   monstro,
@@ -20,83 +62,38 @@ export default function ResetSuccessEmail({
   return (
     <Html>
       <Head />
-      <Body style={mainStyle}>
-        <Container style={containerStyle}>
-          <Section style={contentStyle}>
-            <Text style={greetingStyle}>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Section style={styles.content}>
+            <Text style={styles.greeting}>
               Dear {member.firstName} {member.lastName},
             </Text>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               The password for your Monstro account ({member.email}) has been
               successfully reset.
             </Text>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               If you didn't make this change or if you believe an unauthorized
               person has accessed your account, go to your Monstro App to reset
               your password immediately.
             </Text>
 
-            <Text style={paragraphStyle}>
+            <Text style={styles.paragraph}>
               If you need additional help, contact{' '}
               <strong>support@mymonstro.com</strong>
             </Text>
 
-            <Text style={signOffStyle}>Monstro Support</Text>
+            <Text style={styles.signOff}>Monstro Support</Text>
 
-            <Text style={footerStyle}>{monstro.fullAddress}</Text>
+            <Text style={styles.footer}>{monstro.fullAddress}</Text>
           </Section>
         </Container>
       </Body>
     </Html>
   );
 }
-
-const mainStyle: React.CSSProperties = {
-  backgroundColor: '#ffffff',
-  fontFamily: 'Helvetica, Arial, sans-serif',
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: '600px',
-  margin: '0 auto',
-  padding: '20px',
-};
-
-const contentStyle: React.CSSProperties = {
-  padding: '20px 0',
-};
-
-const greetingStyle: React.CSSProperties = {
-  fontSize: '16px',
-  fontWeight: 'normal',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const paragraphStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '0 0 16px 0',
-  lineHeight: '1.5',
-};
-
-const signOffStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#000000',
-  margin: '20px 0 0 0',
-  fontWeight: 'normal',
-};
-
-const footerStyle: React.CSSProperties = {
-  fontSize: '14px',
-  color: '#6B7280',
-  margin: '20px 0 0 0',
-  paddingTop: '20px',
-  borderTop: '1px solid #e5e7eb',
-};
 
 ResetSuccessEmail.PreviewProps = {
   member: {

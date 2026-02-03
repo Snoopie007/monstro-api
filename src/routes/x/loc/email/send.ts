@@ -1,7 +1,6 @@
 import type { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
 import type { EmailTemplates } from "@/emails";
-import { MonstroData } from "@/constants/data";
 
 type SendEmailBody = {
     recipient: string;
@@ -20,10 +19,9 @@ export async function xEmailSend(app: Elysia) {
             // Automatically inject Monstro data and default location if not provided
             const enrichedData = {
                 ...data,
-                monstro: data.monstro || MonstroData,
                 location: data.location || {
                     name: 'Monstro',
-                    email: MonstroData.email
+                    email: 'support@mymonstro.com'
                 }
             };
 
