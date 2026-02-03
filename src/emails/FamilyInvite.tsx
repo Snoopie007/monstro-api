@@ -7,37 +7,23 @@ import {
 	Section,
 	Text,
 	Button,
-	Img,
 } from '@react-email/components';
-import type { MonstroDataType } from '@/constants/data';
 import EmailHeader from './_shared/EmailHeader';
 import EmailFooter from './_shared/EmailFooter';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
 interface FamilyInviteEmailProps {
 	member: { firstName: string };
-	location: { name: string };
-	monstro: MonstroDataType;
+	familyId: string;
 }
 
-const styles: Record<string, React.CSSProperties> = {
-	...EmailStyles,
-
-
-
-	buttonSection: {
-		textAlign: 'left',
-		margin: '24px 0',
-	},
-
-
-};
+const styles: Record<string, React.CSSProperties> = EmailStyles;
+;
 
 
 export default function FamilyInviteEmail({
 	member,
-	location,
-	monstro,
+	familyId,
 }: FamilyInviteEmailProps) {
 	return (
 		<Html>
@@ -55,7 +41,7 @@ export default function FamilyInviteEmail({
 						<Section style={styles.buttonSection}>
 							<Button
 								style={styles.button}
-								href="https://monstro-x.com/accept-invite"
+								href={`https://monstro-x.com/register?familyId=${familyId}`}
 							>
 								Accept Invite
 							</Button>

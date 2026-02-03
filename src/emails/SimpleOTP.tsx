@@ -11,6 +11,7 @@ import {
 import { DummyData } from './_shared/DummyData';
 import EmailFooter from './_shared/EmailFooter';
 import { EmailStyles } from './_shared/SharedStyle';
+import OTPBox from './_shared/OTPBox';
 
 interface SimpleOTPEmailProps {
 	member: { firstName: string };
@@ -18,26 +19,7 @@ interface SimpleOTPEmailProps {
 	otp: { token: string };
 }
 
-const style: Record<string, React.CSSProperties> = {
-	...EmailStyles,
-	otpBox: {
-		backgroundColor: '#FAFAFA',
-		border: '1px solid #e5e7eb',
-		borderRadius: '8px',
-		padding: '20px',
-		margin: '24px 0',
-		textAlign: 'center',
-	},
-	otpCode: {
-		fontSize: '36px',
-		fontWeight: 'bold',
-		color: '#000000',
-		margin: '0',
-		letterSpacing: '8px',
-		fontFamily: 'monospace',
-	},
-
-};
+const style: Record<string, React.CSSProperties> = EmailStyles;
 
 export default function SimpleOTPEmail({
 	member,
@@ -58,22 +40,18 @@ export default function SimpleOTPEmail({
 							on the verification page:
 						</Text>
 
-						<Section style={style.otpBox}>
-							<Text style={style.otpCode}>{otp.token}</Text>
-						</Section>
+						<OTPBox token={otp.token} />
 
 						<Text style={style.paragraph}>
 							If you didn't make this change, ignore this email or contact{' '}
-							<Link href={`mailto:${location.email}`} style={style.link}>
-								{location.email}
+							<Link href={`mailto:support@mymonstro.com`} style={style.link}>
+								support@mymonstro.com
 							</Link>
 							.
 						</Text>
 
 					</Section>
-					<EmailFooter
-						social={true}
-					/>
+					<EmailFooter />
 				</Container>
 			</Body>
 		</Html>

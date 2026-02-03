@@ -8,6 +8,11 @@ type MonstroDataType = {
     supportUrl: string;
     unsubscribeUrl: string;
     logoUrl: string;
+    youtubeUrl: string;
+    linkedinUrl: string;
+    instagramUrl: string;
+    facebookUrl: string;
+    xUrl: string;
 }
 const MonstroData: MonstroDataType = {
     fullAddress: '7901 4th ST N STE 300 St Petersburg, FL 33702, USA',
@@ -19,6 +24,11 @@ const MonstroData: MonstroDataType = {
     supportUrl: 'https://monstro-x.com/support',
     unsubscribeUrl: 'https://monstro-x.com/unsubscribe',
     logoUrl: 'https://monstro-x.com/logo.png',
+    youtubeUrl: 'https://www.youtube.com/@monstro',
+    linkedinUrl: 'https://www.linkedin.com/company/monstro',
+    instagramUrl: 'https://www.instagram.com/monstro',
+    facebookUrl: 'https://www.facebook.com/monstro',
+    xUrl: 'https://x.com/monstro',
 }
 
 const PaymentMethods: string[] = [

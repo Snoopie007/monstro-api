@@ -4,27 +4,27 @@ import { MonstroData } from '@/constants/data';
 
 const SOCIAL_ICONS = [
     {
-        href: "https://twitter.com/monstro",
+        href: MonstroData.xUrl,
         src: "https://d15k2d11r6t6rl.cloudfront.net/public/users/Integrators/669d5713-9b6a-46bb-bd7e-c542cff6dd6a/8cb45ebcfb7c4c8189af4a5ff6ca1a98/twitter_icon-circle.png",
         alt: "Twitter",
     },
     {
-        href: "https://linkedin.com/company/monstro",
+        href: MonstroData.linkedinUrl,
         src: "https://d15k2d11r6t6rl.cloudfront.net/public/users/Integrators/669d5713-9b6a-46bb-bd7e-c542cff6dd6a/8cb45ebcfb7c4c8189af4a5ff6ca1a98/linkedin_icon-circle_1.png",
         alt: "LinkedIn",
     },
     {
-        href: "https://instagram.com/monstro",
+        href: MonstroData.instagramUrl,
         src: "https://d15k2d11r6t6rl.cloudfront.net/public/users/Integrators/669d5713-9b6a-46bb-bd7e-c542cff6dd6a/8cb45ebcfb7c4c8189af4a5ff6ca1a98/instagram_icon-circle_1.png",
         alt: "Instagram",
     },
     {
-        href: "https://facebook.com/monstro",
+        href: MonstroData.facebookUrl,
         src: "https://d15k2d11r6t6rl.cloudfront.net/public/users/Integrators/669d5713-9b6a-46bb-bd7e-c542cff6dd6a/8cb45ebcfb7c4c8189af4a5ff6ca1a98/facebook_icon-circle_1.png",
         alt: "Facebook",
     },
     {
-        href: "https://youtube.com/@monstro",
+        href: MonstroData.youtubeUrl,
         src: "https://d15k2d11r6t6rl.cloudfront.net/public/users/Integrators/669d5713-9b6a-46bb-bd7e-c542cff6dd6a/8cb45ebcfb7c4c8189af4a5ff6ca1a98/youtube_icon-circle_1.png",
         alt: "YouTube",
     },

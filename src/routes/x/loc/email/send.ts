@@ -1,37 +1,34 @@
 import type { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
-import type { EmailTemplates } from "@/emails";
+import { EmailTemplates } from "@/emails";
+import { z } from "zod";
 
-type SendEmailBody = {
-    recipient: string;
-    template: keyof typeof EmailTemplates;
-    subject: string;
-    data: Record<string, string | number | boolean | object | null | undefined>;
-}
-
+const SendEmailBody = z.object({
+    recipient: z.string(),
+    template: z.string(),
+    subject: z.string(),
+    data: z.record(z.string(), z.any()),
+})
+const emailSender = new EmailSender();
 export async function xEmailSend(app: Elysia) {
-    const emailSender = new EmailSender();
 
-    return app.post('/send', async ({ body, set }) => {
-        const { recipient, subject, template, data } = body as SendEmailBody;
 
+    return app.post('/send', async ({ body, set, status }) => {
+        const { recipient, subject, template, data } = body;
+
+
+        if (!Object.keys(EmailTemplates).includes(template)) {
+            return status(400, { error: "Invalid template" });
+        }
         try {
-            // Automatically inject Monstro data and default location if not provided
-            const enrichedData = {
-                ...data,
-                location: data.location || {
-                    name: 'Monstro',
-                    email: 'support@mymonstro.com'
-                }
-            };
 
             await emailSender.send({
                 options: {
                     to: recipient,
-                    subject: subject,
+                    subject,
                 },
-                template: template,
-                data: enrichedData
+                template: template as keyof typeof EmailTemplates,
+                data
             });
 
             console.log(`📧 Sent immediate email to ${recipient} using template ${template}`);
@@ -48,6 +45,6 @@ export async function xEmailSend(app: Elysia) {
                 error: `Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`
             }
         }
-    });
+    }, { body: SendEmailBody });
 }
 

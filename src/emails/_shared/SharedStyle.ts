@@ -30,8 +30,9 @@ export const EmailStyles: Record<string, React.CSSProperties> = {
         fontSize: '16px',
         color: '#000',
         margin: '0 0 16px 0',
-        lineHeight: '1.8',
+        lineHeight: '2',
     },
+
     button: {
         backgroundColor: '#4338ca',
         color: '#fff',

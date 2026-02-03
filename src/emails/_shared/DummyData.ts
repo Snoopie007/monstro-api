@@ -7,6 +7,7 @@ export const DummyData = {
         email: 'john@example.com',
     },
     location: {
+        slug: 'fitstudio',
         name: 'Fit Studio',
         address: '123 Main St, Los Angeles, CA 90001',
         email: 'contact@fitstudio.com',

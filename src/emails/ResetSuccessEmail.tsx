@@ -7,6 +7,9 @@ import {
   Section,
   Text,
 } from '@react-email/components';
+import EmailFooter from './_shared/EmailFooter';
+import { DummyData } from './_shared/DummyData';
+import { EmailStyles } from './_shared/SharedStyle';
 
 interface ResetSuccessEmailProps {
   member: { firstName: string; lastName: string; email: string };
@@ -14,50 +17,10 @@ interface ResetSuccessEmailProps {
 }
 
 // Combined all styles into a single object for easier management
-const styles: Record<string, React.CSSProperties> = {
-  main: {
-    backgroundColor: '#ffffff',
-    fontFamily: 'Helvetica, Arial, sans-serif',
-  },
-  container: {
-    maxWidth: '600px',
-    margin: '0 auto',
-    padding: '20px',
-  },
-  content: {
-    padding: '20px 0',
-  },
-  greeting: {
-    fontSize: '16px',
-    fontWeight: 'normal',
-    color: '#000000',
-    margin: '0 0 16px 0',
-    lineHeight: '1.5',
-  },
-  paragraph: {
-    fontSize: '16px',
-    color: '#000000',
-    margin: '0 0 16px 0',
-    lineHeight: '1.5',
-  },
-  signOff: {
-    fontSize: '16px',
-    color: '#000000',
-    margin: '20px 0 0 0',
-    fontWeight: 'normal',
-  },
-  footer: {
-    fontSize: '14px',
-    color: '#6B7280',
-    margin: '20px 0 0 0',
-    paddingTop: '20px',
-    borderTop: '1px solid #e5e7eb',
-  },
-};
+const styles: Record<string, React.CSSProperties> = EmailStyles
 
 export default function ResetSuccessEmail({
   member,
-  monstro,
 }: ResetSuccessEmailProps) {
   return (
     <Html>
@@ -65,7 +28,7 @@ export default function ResetSuccessEmail({
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.content}>
-            <Text style={styles.greeting}>
+            <Text style={styles.paragraph}>
               Dear {member.firstName} {member.lastName},
             </Text>
 
@@ -85,23 +48,13 @@ export default function ResetSuccessEmail({
               <strong>support@mymonstro.com</strong>
             </Text>
 
-            <Text style={styles.signOff}>Monstro Support</Text>
 
-            <Text style={styles.footer}>{monstro.fullAddress}</Text>
           </Section>
+          <EmailFooter />
         </Container>
       </Body>
     </Html>
   );
 }
 
-ResetSuccessEmail.PreviewProps = {
-  member: {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@example.com',
-  },
-  monstro: {
-    fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
-  },
-} as ResetSuccessEmailProps;
+ResetSuccessEmail.PreviewProps = DummyData

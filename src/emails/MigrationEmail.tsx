@@ -14,16 +14,18 @@ import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
 
 
-interface MemberInviteEmailProps {
+interface MigrationEmailProps {
     member: { firstName: string };
-    location: { name: string, slug: string };
+    location: { name: string };
+    migrateId: string;
 }
 
 const styles: Record<string, React.CSSProperties> = EmailStyles;
-export default function MemberInviteEmail({
+export default function MigrationEmail({
     member,
     location,
-}: MemberInviteEmailProps) {
+    migrateId,
+}: MigrationEmailProps) {
     return (
         <Html>
             <Head />
@@ -39,7 +41,7 @@ export default function MemberInviteEmail({
                             button below.
                         </Text>
                         <Section style={styles.buttonSection}>
-                            <Button style={styles.button} href={`https://monstro-x.com/register?slug=${location.slug}`}>
+                            <Button style={styles.button} href={`https://monstro-x.com/register?migrateId=${migrateId}`} >
                                 Accept Invite
                             </Button>
                         </Section>
@@ -51,4 +53,7 @@ export default function MemberInviteEmail({
     );
 }
 
-MemberInviteEmail.PreviewProps = DummyData;
+MigrationEmail.PreviewProps = {
+    ...DummyData,
+    migrateId: '1234567890',
+};
