@@ -8,7 +8,7 @@ import {
   Text,
   Button,
 } from '@react-email/components';
-import { EmailHeader, EmailFooter, LocationInfoBox } from './_shared';
+import { EmailFooter, LocationInfoBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
 import { format } from 'date-fns';

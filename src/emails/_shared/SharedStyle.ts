@@ -6,7 +6,7 @@ export const EmailStyles: Record<string, React.CSSProperties> = {
     container: {
         maxWidth: '600px',
         margin: '0 auto',
-        padding: '20px',
+        padding: '10px',
     },
     content: {
         padding: '20px 0',
