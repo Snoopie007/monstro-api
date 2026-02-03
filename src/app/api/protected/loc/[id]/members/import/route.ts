@@ -80,6 +80,10 @@ export async function POST(
 		});
 
 		const insertMembers: Array<typeof migrateMembers.$inferInsert> = [];
+
+		// Check if pricingPlanId is mapped for per-row assignment
+		const pricingPlanIdColumn = fieldMapping.pricingPlanId;
+
 		for (const record of records) {
 		const firstName = record[fieldMapping.firstName];
 		const lastName = record[fieldMapping.lastName];
@@ -146,6 +150,15 @@ export async function POST(
 				}
 			}
 
+			// Extract pricingId from CSV if mapped, otherwise use the global pricingId
+			let rowPricingId: string | null = null;
+			if (pricingPlanIdColumn) {
+				const csvValue = record[pricingPlanIdColumn];
+				rowPricingId = csvValue ? csvValue.trim() : null;
+			} else if (pricingId) {
+				rowPricingId = pricingId.toString();
+			}
+
 	insertMembers.push({
 		firstName,
 		lastName,
@@ -156,7 +169,7 @@ export async function POST(
 		paymentTermsLeft: validPaymentTermsLeft,
 		backdateStartDate: validBackdateStartDate,
 		termEndDate: validTermEndDate,
-		pricingId: pricingId ? pricingId.toString() : null,
+		pricingId: rowPricingId,
 		planType: planType || null,
 		locationId: params.id,
 		metadata: { customFieldValues },

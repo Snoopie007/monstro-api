@@ -130,6 +130,7 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
                     paymentTermsLeft: ['paymenttermsleft', 'payment_terms_left', 'terms_left', 'payments_remaining', 'terms remaining'],
                     backdateStartDate: ['backdate', 'backdate_start', 'backdate_start_date', 'original_start', 'start_date_backdate'],
                     termEndDate: ['term_end_date', 'termenddate', 'end_date', 'plan_end_date', 'membership_end'],
+                    pricingPlanId: ['pricing_plan_id', 'pricingplanid', 'plan_id', 'planid', 'pricing_id', 'pricingid', 'pricingoptionid', 'pricing_option_id'],
                 }
 
                 for (const [field, patterns] of Object.entries(fieldPatterns)) {
@@ -224,19 +225,19 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
                 orientation='horizontal'
                 className='flex-1 overflow-y-auto py-1'
             >
-                <InteractiveStepperItem>
+                <InteractiveStepperItem key="step-1">
                     <InteractiveStepperIndicator />
                     <InteractiveStepperTitle>Select Source</InteractiveStepperTitle>
                     <InteractiveStepperSeparator />
                 </InteractiveStepperItem>
 
-                <InteractiveStepperItem>
+                <InteractiveStepperItem key="step-2">
                     <InteractiveStepperIndicator />
                     <InteractiveStepperTitle>Map Fields</InteractiveStepperTitle>
                     <InteractiveStepperSeparator />
                 </InteractiveStepperItem>
 
-                <InteractiveStepperItem>
+                <InteractiveStepperItem key="step-3">
                     <InteractiveStepperIndicator />
                     <InteractiveStepperTitle>Preview & Import</InteractiveStepperTitle>
                 </InteractiveStepperItem>

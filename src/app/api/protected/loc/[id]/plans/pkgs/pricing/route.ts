@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { memberPlanPricing, memberPlans, memberPackages } from "@/db/schemas";
 import { eq, and, count, or } from "drizzle-orm";
+import { ACTIVE_PACKAGE_STATUSES } from "../../constants";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
-
-const ACTIVE_PACKAGE_STATUSES = ["active", "trialing"] as const;
 
 export async function GET(req: NextRequest, props: Props) {
   const { id } = await props.params;
