@@ -63,15 +63,12 @@ const styles: Record<string, React.CSSProperties> = {
         fontWeight: '400',
         padding: '4px 12px 4px 0',
         verticalAlign: 'top',
-        width: '1%',
         whiteSpace: 'nowrap' as const,
     },
     metaCellValue: {
-        color: '#000',
+        color: '#222',
         fontWeight: '600',
         padding: '4px 0',
-        textAlign: 'right' as const,
-        width: '99%',
     },
     payButton: {
         color: '#fff',
