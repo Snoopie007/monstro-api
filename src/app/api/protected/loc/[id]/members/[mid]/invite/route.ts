@@ -4,7 +4,6 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { memberLocations } from '@/db/schemas';
-import { migrateMembers } from '@/db/schemas/MigrateMembers';
 import { eq, and } from 'drizzle-orm';
 
 export async function POST(_req: NextRequest, props: { params: Promise<{ id: string, mid: string }> }) {
@@ -27,29 +26,19 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
 
         const { member, location } = ml
 
-        // Create migrateMembers record for invite tracking
-        const [migrateMember] = await db.insert(migrateMembers).values({
-            firstName: member.firstName || '',
-            lastName: member.lastName || '',
-            email: member.email,
-            phone: member.phone || '',
-            locationId: params.id,
-            memberId: member.id,
-            lastRenewalDay: new Date(),
-            payment: false,
-        }).returning();
-
         await sendEmailViaApi({
             recipient: member.email,
             template: 'MemberInviteEmail',
             subject: `Welcome to ${location.name}`,
             data: {
-                ui: {
-                    btnText: "Accept Invite",
-                    btnUrl: `https://m.monstro-x.com/register?migrateId=${migrateMember.id}`
+                location: {
+                    name: location.name,
+                    id: params.id,
                 },
-                location,
-                member
+                member: {
+                    firstName: member.firstName,
+                    id: params.mid,
+                },
             }
         });
         await db.update(memberLocations).set({
