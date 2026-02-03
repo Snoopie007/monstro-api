@@ -1,5 +1,27 @@
 import { z } from "zod";
 
+// Base schema for plan details (without pricing options)
+const BasePlanSchema = z.object({
+  type: z.enum(["recurring", "one-time"], { message: "Required" }),
+  name: z.string().min(2, { message: "Required" }),
+  description: z.string().min(2, { message: "Required" }),
+  family: z.boolean().optional(),
+  familyMemberLimit: z.number().optional(),
+  contractId: z.string().optional(),
+  intervalClassLimit: z.number().optional(),
+  makeUpCredits: z.number().min(0).optional(),
+  groupId: z.string().optional(),
+  programs: z.array(z.string())
+    .min(1, { message: "Select at least one program." }),
+  pkg: z.object({
+    totalClassLimit: z.number().optional(),
+  }),
+  sub: z.object({
+    allowProration: z.boolean(),
+    billingAnchor: z.number().optional(),
+  }),
+});
+
 // Schema for individual pricing option
 const PricingOptionSchema = z.object({
   name: z.string().min(1, { message: "Pricing name is required" }),
@@ -11,73 +33,53 @@ const PricingOptionSchema = z.object({
   downpayment: z.number().min(0).optional(),
 });
 
-const NewPlanSchema = z
-  .object({
-    type: z.enum(["recurring", "one-time"], { message: "Required" }),
-    name: z.string().min(2, { message: "Required" }),
-    description: z.string().min(2, { message: "Required" }),
-    pricingOptions: z.array(PricingOptionSchema).min(1, { message: "At least one pricing option is required" }),
-    family: z.boolean().optional(),
-    familyMemberLimit: z.number().optional(),
-    contractId: z.string().optional(),
-    intervalClassLimit: z.number().optional(),
-    makeUpCredits: z.number().min(0).optional(),
-    groupId: z.string().optional(),
-    programs: z.array(z.string())
-      .min(1, { message: "Select at least one program." }),
-    pkg: z.object({
-      totalClassLimit: z.number().optional(),
-    }),
-    sub: z.object({
-      allowProration: z.boolean(),
-      billingAnchor: z.number().optional(),
-    }),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === "one-time") {
-      if (!data.pkg.totalClassLimit || data.pkg.totalClassLimit < 1) {
+const NewPlanSchema = BasePlanSchema.extend({
+  pricingOptions: z.array(PricingOptionSchema).min(1, { message: "At least one pricing option is required" }),
+}).superRefine((data, ctx) => {
+  if (data.type === "one-time") {
+    if (!data.pkg.totalClassLimit || data.pkg.totalClassLimit < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Required",
+        path: ["pkg", "totalClassLimit"],
+      });
+    }
+  }
+  if (data.family) {
+    if (!data.familyMemberLimit) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Required",
+        path: ["familyMemberLimit"],
+      });
+    } else if (data.familyMemberLimit < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least 1 family member.",
+        path: ["familyMemberLimit"],
+      });
+    } else if (data.familyMemberLimit > 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Max 10 family members",
+        path: ["familyMemberLimit"],
+      });
+    }
+  }
+  // Validate pricing options based on plan type
+  if (data.type === "recurring") {
+    for (let i = 0; i < data.pricingOptions.length; i++) {
+      const option = data.pricingOptions[i];
+      if (!option.interval) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Required",
-          path: ["pkg", "totalClassLimit"],
+          message: "Billing interval is required for subscriptions",
+          path: ["pricingOptions", i, "interval"],
         });
       }
     }
-    if (data.family) {
-      if (!data.familyMemberLimit) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Required",
-          path: ["familyMemberLimit"],
-        });
-      } else if (data.familyMemberLimit < 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "At least 1 family member.",
-          path: ["familyMemberLimit"],
-        });
-      } else if (data.familyMemberLimit > 10) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Max 10 family members",
-          path: ["familyMemberLimit"],
-        });
-      }
-    }
-    // Validate pricing options based on plan type
-    if (data.type === "recurring") {
-      for (let i = 0; i < data.pricingOptions.length; i++) {
-        const option = data.pricingOptions[i];
-        if (!option.interval) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Billing interval is required for subscriptions",
-            path: ["pricingOptions", i, "interval"],
-          });
-        }
-      }
-    }
-  });
+  }
+});
 
 // Schema for updating pricing option (for full edit mode)
 const UpdatePricingOptionSchema = z.object({
@@ -181,59 +183,39 @@ const BillingAnchorConfigSchema = [
 ];
 
 // Schema for Step 1 of plan creation (plan details only, no pricing)
-const CreatePlanStep1Schema = z
-  .object({
-    type: z.enum(["recurring", "one-time"], { message: "Required" }),
-    name: z.string().min(2, { message: "Required" }),
-    description: z.string().min(2, { message: "Required" }),
-    family: z.boolean().optional(),
-    familyMemberLimit: z.number().optional(),
-    contractId: z.string().optional(),
-    intervalClassLimit: z.number().optional(),
-    makeUpCredits: z.number().min(0).optional(),
-    groupId: z.string().optional(),
-    programs: z.array(z.string())
-      .min(1, { message: "Select at least one program." }),
-    pkg: z.object({
-      totalClassLimit: z.number().optional(),
-    }),
-    sub: z.object({
-      allowProration: z.boolean(),
-      billingAnchor: z.number().optional(),
-    }),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === "one-time") {
-      if (!data.pkg.totalClassLimit || data.pkg.totalClassLimit < 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Required",
-          path: ["pkg", "totalClassLimit"],
-        });
-      }
+// This is the same as BasePlanSchema but we keep it separate for clarity
+const CreatePlanStep1Schema = BasePlanSchema.superRefine((data, ctx) => {
+  if (data.type === "one-time") {
+    if (!data.pkg.totalClassLimit || data.pkg.totalClassLimit < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Required",
+        path: ["pkg", "totalClassLimit"],
+      });
     }
-    if (data.family) {
-      if (!data.familyMemberLimit) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Required",
-          path: ["familyMemberLimit"],
-        });
-      } else if (data.familyMemberLimit < 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "At least 1 family member.",
-          path: ["familyMemberLimit"],
-        });
-      } else if (data.familyMemberLimit > 10) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Max 10 family members",
-          path: ["familyMemberLimit"],
-        });
-      }
+  }
+  if (data.family) {
+    if (!data.familyMemberLimit) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Required",
+        path: ["familyMemberLimit"],
+      });
+    } else if (data.familyMemberLimit < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least 1 family member.",
+        path: ["familyMemberLimit"],
+      });
+    } else if (data.familyMemberLimit > 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Max 10 family members",
+        path: ["familyMemberLimit"],
+      });
     }
-  });
+  }
+});
 
 export {
   BillingAnchorConfigSchema,
@@ -244,6 +226,7 @@ export {
   PricingOptionSchema,
   UpdatePkgPlanSchema,
   UpdateSubPlanSchema,
-  type PresetInterval
+  type PresetInterval,
+  type BasePlanSchema
 };
 

@@ -17,13 +17,13 @@ import {
   CollapsibleTrigger,
   Switch,
 } from "@/components/ui";
-import { NewPlanSchema } from "@/libs/FormSchemas";
+import { BasePlanSchema } from "@/libs/FormSchemas";
 import { cn } from "@/libs/utils";
 import { ChevronRight } from "lucide-react";
 import { SelectContract } from ".";
 
 interface SubFieldsProps {
-  form: UseFormReturn<z.infer<typeof NewPlanSchema>>;
+  form: UseFormReturn<z.infer<typeof BasePlanSchema>>;
   lid: string;
 }
 
