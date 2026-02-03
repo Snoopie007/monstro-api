@@ -1,4 +1,4 @@
-import { Button, Link, Section, Text } from '@react-email/components';
+import { Button, Hr, Link, Section, Text } from '@react-email/components';
 import * as React from 'react';
 
 type InvoiceItem = {
@@ -27,13 +27,13 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: '14px',
         lineHeight: '1.2',
         color: '#6b7280',
-        fontWeight: '600',
         margin: '0',
+        fontWeight: '600',
     },
     invoiceBoxDivider: {
         width: '75%',
-        margin: '12px 0',
-        borderColor: '#e5e7eb',
+        margin: '14px 0',
+        borderColor: 'rgba(0,0,0,0.1)',
         borderStyle: 'solid',
         borderWidth: '1px 0 0 0',
     },
@@ -70,6 +70,8 @@ const styles: Record<string, React.CSSProperties> = {
         color: '#000',
         fontWeight: '600',
         padding: '4px 0',
+        textAlign: 'right' as const,
+        width: '99%',
     },
     payButton: {
         color: '#fff',
@@ -96,7 +98,6 @@ const styles: Record<string, React.CSSProperties> = {
 
     itemRow: {
         borderBottom: '1px solid #e5e7eb',
-
     },
     itemCell: {
         verticalAlign: 'top',
@@ -122,6 +123,27 @@ const styles: Record<string, React.CSSProperties> = {
         margin: '0',
     },
 
+    receiptMetaTable: {
+        fontFamily: 'Helvetica, Arial, sans-serif',
+        fontSize: '14px',
+        width: '100%',
+        borderCollapse: 'collapse',
+    },
+    receiptMetaCellLabel: {
+        color: '#6b7280',
+        padding: '4px 12px 4px 0',
+        verticalAlign: 'top',
+        width: '1%',
+        fontWeight: '500',
+        whiteSpace: 'nowrap',
+    },
+    receiptMetaCellValue: {
+        color: '#000',
+        padding: '4px 0',
+        fontWeight: '500',
+        textAlign: 'right',
+        width: '99%',
+    },
 
 
 
@@ -129,17 +151,30 @@ const styles: Record<string, React.CSSProperties> = {
 
 interface EmailInvoiceBoxProps extends React.HTMLAttributes<HTMLElement> {
     children: React.ReactNode;
+    style?: React.CSSProperties;
 }
 
-export const EmailInvoiceBox = React.forwardRef<HTMLElement, EmailInvoiceBoxProps>(({ children, ...props }, ref) => {
+export const EmailInvoiceBox = React.forwardRef<HTMLElement, EmailInvoiceBoxProps>(({ children, style, ...props }, ref) => {
     return (
-        <Section ref={ref as React.RefObject<HTMLElement>} style={styles.invoiceBox} {...props}>
+        <Section ref={ref as React.RefObject<HTMLElement>} style={{ ...styles.invoiceBox, ...style }} {...props}>
             {children}
         </Section>
     );
 });
 
 EmailInvoiceBox.displayName = 'EmailInvoiceBox';
+
+
+interface EmailInvoiceBoxDividerProps {
+    borderColor?: string;
+}
+export const EmailInvoiceBoxDivider = React.forwardRef<HTMLHRElement, EmailInvoiceBoxDividerProps>(({ borderColor }, ref) => {
+    return (
+        <Hr ref={ref} style={{ ...styles.invoiceBoxDivider, borderColor }} />
+    );
+});
+
+EmailInvoiceBoxDivider.displayName = 'EmailInvoiceBoxDivider';
 
 
 interface EmailInvoiceBoxMetaDataProps {
@@ -248,6 +283,24 @@ export const EmailInvoiceItemsTable = React.forwardRef<HTMLTableElement, EmailIn
                         <span style={styles.itemValue}>{formatCurrency(total)}</span>
                     </td>
                 </tr>
+            </tbody>
+        </table>
+    );
+});
+
+interface EmailInvoiceReceiptMetaProps {
+    MetaData: { label: string; value: string }[];
+}
+export const EmailInvoiceReceiptMeta = React.forwardRef<HTMLTableElement, EmailInvoiceReceiptMetaProps>(({ MetaData }, ref) => {
+    return (
+        <table cellPadding={0} cellSpacing={0} style={styles.receiptMetaTable}>
+            <tbody>
+                {MetaData.map((meta, idx) => (
+                    <tr key={idx}>
+                        <td style={styles.receiptMetaCellLabel}>{meta.label}</td>
+                        <td style={styles.receiptMetaCellValue}>{meta.value}</td>
+                    </tr>
+                ))}
             </tbody>
         </table>
     );

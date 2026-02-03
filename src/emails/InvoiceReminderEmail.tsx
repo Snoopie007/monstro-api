@@ -10,7 +10,11 @@ import {
   Button,
   Link,
 } from '@react-email/components';
-import { EmailFooter, EmailInvoiceAmount, EmailInvoiceBox, EmailInvoiceBoxMetaData, EmailInvoiceDownloadLink, EmailInvoiceItemsTable, EmailInvoiceLabel, EmailInvoicePayButton } from './_shared';
+import {
+  EmailFooter, EmailInvoiceAmount, EmailInvoiceBox,
+  EmailInvoiceBoxMetaData, EmailInvoiceDownloadLink, EmailInvoiceItemsTable,
+  EmailInvoiceLabel, EmailInvoicePayButton, EmailInvoiceBoxDivider
+} from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/DummyData';
 import { format, formatDistanceStrict } from 'date-fns';
@@ -78,7 +82,7 @@ export default function InvoiceReminderEmail({
               <EmailInvoiceLabel label={`Invoice from ${location.name}`} />
               <EmailInvoiceAmount amount={invoice.total} />
               <EmailInvoiceLabel label={`Due ${format(new Date(invoice.dueDate), 'MMM d, yyyy')}`} />
-              <Hr style={styles.invoiceBoxDivider} />
+              <EmailInvoiceBoxDivider />
               {downloadInvoiceUrl && (
                 <EmailInvoiceDownloadLink href={downloadInvoiceUrl} />
               )}
