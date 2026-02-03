@@ -644,6 +644,45 @@ class MemberStripePayments extends BaseStripePayments {
 		});
 	}
 
+	/**
+	 * Create a Stripe product without a default price.
+	 * Used in two-step plan creation: product created first, prices added separately.
+	 */
+	async createStripeProductOnly(
+		data: Pick<StripePricingData, "name" | "description">,
+		metadata: Record<string, any>
+	): Promise<Stripe.Product> {
+		return this._stripe.products.create({
+			name: data.name,
+			description: data.description || "",
+			active: true,
+			metadata,
+		});
+	}
+
+	/**
+	 * Create a Stripe price for an existing product.
+	 * Used for subscription pricing options where the product already exists.
+	 */
+	async createStripePrice(
+		productId: string,
+		data: StripePricingData,
+		metadata: Record<string, any>
+	): Promise<Stripe.Price> {
+		const { interval, price, intervalThreshold, currency } = data;
+
+		return this._stripe.prices.create({
+			product: productId,
+			currency: currency || "usd",
+			unit_amount: price,
+			recurring: interval ? {
+				interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
+				interval_count: intervalThreshold || 1,
+			} : undefined,
+			metadata,
+		});
+	}
+
 	// async retrieveTaxSettings() {
 	// 	return await this._stripe.tax.settings.retrieve();
 
