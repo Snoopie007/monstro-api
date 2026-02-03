@@ -190,21 +190,20 @@ export async function POST(
 			insertedRecords.map((record, index) => {
 				const m = insertMembers[index];
 				const subject = `You've been invited to join ${location.name} on Monstro`;
-				return sendEmailViaApi({
-					recipient: m.email,
-					template: "MemberInviteEmail",
-					subject,
-					data: {
-						location: {
-							name: location.name,
-						},
-						member: m,
-						ui: {
-							btnText: "Accept Invite",
-							btnUrl: `https://m.monstro-x.com/register?migrateId=${record.id}`,
-						}
-					}
-				});
+			return sendEmailViaApi({
+				recipient: m.email,
+				template: "MigrationEmail",
+				subject,
+				data: {
+					location: {
+						name: location.name,
+					},
+					member: {
+						firstName: m.firstName,
+					},
+					migrateId: record.id,
+				}
+			});
 			})
 		);
 

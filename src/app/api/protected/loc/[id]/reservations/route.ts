@@ -195,6 +195,20 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
               const upcomingReminderTime = subDays(startOn, 3);
               const missedClassTime = addHours(endOn, 1);
 
+              // Fetch instructor data if available
+              let instructor = null;
+              if (session.staffId) {
+                const staff = await db.query.staffs.findFirst({
+                  where: (s, { eq }) => eq(s.id, session.staffId as string),
+                });
+                if (staff) {
+                  instructor = {
+                    firstName: staff.firstName,
+                    lastName: staff.lastName,
+                  };
+                }
+              }
+
               const emailData = {
                 member: {
                   firstName: member.firstName || '',
@@ -208,22 +222,29 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
                   name: location.name || '',
                   address: location.address || '',
                 },
-                monstro: {
-                  fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
-                  privacyUrl: 'https://mymonstro.com/privacy',
-                  unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
-                },
               };
 
-              // For missed class email validation
+              // For missed class email - updated to match new template interface
               const missedClassEmailData = {
-                ...emailData,
-                session: {
-                  ...emailData.session,
+                member: {
+                  id: member.id,
+                  firstName: member.firstName || '',
+                  lastName: member.lastName || '',
+                  email: member.email || '',
+                },
+                class: {
+                  name: program.name,
+                  description: program.description || undefined,
                   startTime: startOn.toISOString(),
                   endTime: endOn.toISOString(),
-                  reservationId: reservation.id,
-                  recurringId: null,
+                  instructor,
+                },
+                location: {
+                  id: location.id,
+                  name: location.name || '',
+                  address: location.address || '',
+                  email: location.email || undefined,
+                  phone: location.phone || undefined,
                 },
               };
 

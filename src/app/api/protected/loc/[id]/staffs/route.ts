@@ -4,6 +4,7 @@ import {
 	staffs,
 	staffLocations,
 	staffsLocationRoles,
+	locations,
 } from "@/db/schemas";
 import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -62,6 +63,15 @@ export async function POST(
 		return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
 	}
 
+	// Fetch location data
+	const location = await db.query.locations.findFirst({
+		where: (locations, { eq }) => eq(locations.id, params.id),
+	});
+
+	if (!location) {
+		return NextResponse.json({ error: "Location not found" }, { status: 404 });
+	}
+
 	// Validate role exists
 	const role = await db.query.roles.findFirst({
 		where: (roles, { eq }) => eq(roles.id, data.role), // Changed from data.roleId to data.role
@@ -79,6 +89,7 @@ export async function POST(
 
 	if (existingUser) {
 		// Check if staff record already exists for this user
+		let staffId: string;
 		const existingStaff = await db.query.staffs.findFirst({
 			where: (staffs, { eq }) => eq(staffs.userId, existingUser.id),
 		});
@@ -95,6 +106,8 @@ export async function POST(
 					userId: existingUser.id,
 				})
 				.returning();
+			
+			staffId = newStaff.id;
 
 			// Create staff-location relationship
 			const [staffLocation] = await db
@@ -111,6 +124,8 @@ export async function POST(
 				roleId: data.role,
 			});
 		} else {
+			staffId = existingStaff.id;
+			
 			// Check if staff-location relationship exists
 			const existingStaffLocation = await db.query.staffLocations.findFirst({
 				where: (staffLocations, { and, eq }) =>
@@ -153,9 +168,14 @@ export async function POST(
 				template: "MemberInviteEmail",
 				subject: "Welcome to Monstro",
 				data: {
-					ui: { button: "Join the team." },
-					location: { name: staffName },
-					member: { name: staffName },
+					location: {
+						name: location.name,
+						id: params.id,
+					},
+					member: {
+						firstName: data.firstName,
+						id: staffId,
+					},
 				}
 			});
 			return NextResponse.json({ success: true }, { status: 200 });
@@ -210,12 +230,17 @@ export async function POST(
 		try {
 			await sendEmailViaApi({
 				recipient: data.email,
-				template: "MemberInvite",
+				template: "MemberInviteEmail",
 				subject: "Welcome to Monstro",
 				data: {
-					ui: { button: "Join the team." },
-					location: { name: staffName },
-					member: { name: staffName },
+					location: {
+						name: location.name,
+						id: params.id,
+					},
+					member: {
+						firstName: data.firstName,
+						id: newStaff.id,
+					},
 				}
 			});
 
