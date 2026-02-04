@@ -137,7 +137,7 @@ export async function POST(req: Request, props: Props) {
 			locationId: id,
 			isDefault: false,
 		}).onConflictDoNothing({
-			target: [memberPaymentMethods.paymentMethodId, memberPaymentMethods.memberId, memberPaymentMethods.locationId],
+			target: [memberPaymentMethods.locationId, memberPaymentMethods.memberId, memberPaymentMethods.paymentMethodId],
 		});
 
 		return NextResponse.json({
