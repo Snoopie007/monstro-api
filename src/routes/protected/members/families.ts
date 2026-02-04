@@ -311,15 +311,14 @@ export async function memberFamilies(app: Elysia) {
 
 
                 if (email) {
-                    console.log('Sending email to', email);
                     const firstName = 'John';
-                    await emailSender.sendWithTemplate({
+                    emailSender.send({
                         html: renderToStaticMarkup(FamilyInviteEmail({
                             member: { firstName },
                             familyId: familyMember.id,
                         })),
                         to: email,
-                        subject: `${firstName} has invited you to join their family on Monstro X`,
+                        subject: `${firstName} has invited you to join Monstro X`,
                     });
                     /// TODO: Send email to the new family member
                 } else if (phone) {
@@ -333,7 +332,7 @@ export async function memberFamilies(app: Elysia) {
 
                 return status(200, {
                     ...familyMember,
-                    member: existingMember,
+                    relatedMember: existingMember,
                 });
             } catch (error) {
                 console.error(error);

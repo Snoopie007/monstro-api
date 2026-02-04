@@ -7,6 +7,8 @@ import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/libs/utils";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { renderToStaticMarkup } from "react-dom/server";
+import UpdateEmailOTP from "@/emails/UpdateEmailOTP";
 const MemberProfileProps = {
     params: t.Object({
         mid: t.String(),
@@ -155,16 +157,14 @@ export function memberProfile(app: Elysia) {
             const token = generateOtp();
             redis.set(RedisKey, `${token}::${email}::${Math.floor(Date.now() + 30 * 60 * 1000 / 1000)}`, { ex: expiresAt })
 
-            await emailSender.send({
-                template: 'UpdateEmailOTP',
-                options: {
-                    to: email,
-                    subject: 'Verify your email address',
-                },
-                data: {
-                    member: { firstName: member?.firstName, astName: member?.lastName },
+            await emailSender.sendAsync({
+                html: renderToStaticMarkup(UpdateEmailOTP({
+                    member: { firstName: member?.firstName ?? '', lastName: member?.lastName ?? '' },
                     update: { email, token },
-                }
+                })),
+
+                to: email,
+                subject: 'Verify your email address',
             });
 
 

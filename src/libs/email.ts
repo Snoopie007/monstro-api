@@ -9,13 +9,13 @@ type EmailOptions = {
     subject: string;
     headers?: Record<string, string>;
 }
-type SendProps = {
+type SendWithTemplateProps = {
     template: keyof typeof EmailTemplates;
     data: Record<string, any>;
     options: EmailOptions,
 }
 
-type SendWithTemplateProps = {
+type SendProps = {
     to: string;
     subject: string;
     html: string;
@@ -37,7 +37,7 @@ export class EmailSender {
         this._fromEmail = 'no-reply@mymonstro.com';
     }
 
-    public async sendSupportEmail(props: SendProps) {
+    public async sendSupportEmail(props: SendWithTemplateProps) {
         const TemplateComponent = EmailTemplates[props.template] as any;
         const html = await render(TemplateComponent(props.data));
 
@@ -52,22 +52,26 @@ export class EmailSender {
         });
     }
 
-
-    public async send(props: SendProps) {
-        const TemplateComponent = EmailTemplates[props.template] as any;
-        const html = '<!DOCTYPE html>' + renderToStaticMarkup(TemplateComponent(props.data));
-
-        await this._sender.send({
-            ...props.options,
+    public send(props: SendProps) {
+        const { html, to, subject, options } = props;
+        const htmlRendered = '<!DOCTYPE html>' + html;
+        this._sender.send({
+            ...options,
             from: {
                 email: this._fromEmail,
                 name: 'Monstro X'
             },
-            html
+            to,
+            subject,
+            html: htmlRendered
+        }).catch(error => {
+            console.error('Error sending email:', error);
+            throw error;
         });
     }
 
-    public async sendWithTemplate(props: SendWithTemplateProps) {
+
+    public async sendAsync(props: SendProps) {
         const { html, to, subject, options } = props;
         const htmlRendered = '<!DOCTYPE html>' + html;
         await this._sender.send({
@@ -81,7 +85,25 @@ export class EmailSender {
             html: htmlRendered
         });
     }
-    public async sendText(email: string, subject: string, text: string) {
+
+
+
+    public async sendWithTemplate(props: SendWithTemplateProps) {
+
+        const TemplateComponent = EmailTemplates[props.template] as any;
+        const html = '<!DOCTYPE html>' + renderToStaticMarkup(TemplateComponent(props.data));
+
+        await this._sender.send({
+            ...props.options,
+            from: {
+                email: this._fromEmail,
+                name: 'Monstro X'
+            },
+            html
+        });
+
+    }
+    public async sendPlainText(email: string, subject: string, text: string) {
         await this._sender.send({
             to: email,
             from: this._fromEmail,

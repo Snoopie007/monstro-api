@@ -25,7 +25,7 @@ const worker = new Worker('email', async (job) => {
 
     try {
         console.log(`📧 Sending email to ${data.to}...`);
-        await emailSender.send({
+        await emailSender.sendWithTemplate({
             options: {
                 to: data.to,
                 subject: data.subject,

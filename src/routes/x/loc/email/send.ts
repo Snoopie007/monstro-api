@@ -22,7 +22,7 @@ export async function xEmailSend(app: Elysia) {
         }
         try {
 
-            await emailSender.send({
+            await emailSender.sendWithTemplate({
                 options: {
                     to: recipient,
                     subject,
