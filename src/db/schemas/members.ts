@@ -109,7 +109,6 @@ export const familyMembers = pgTable('family_members', {
     status: FamilyMemberStatusEnum('status').notNull().default('pending'),
     contact: text('contact'),
     created: timestamp('created', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated', { withTimezone: true }),
 })
 
 export const memberTags = pgTable('member_tags', {
