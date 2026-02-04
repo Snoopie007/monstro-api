@@ -120,9 +120,9 @@ export async function POST(req: Request, props: Props) {
 					last4: us_bank_account.last4,
 				} : null,
 				memberId: mid,
-			}).onConflictDoNothing({
-				target: [paymentMethods.fingerprint],
-			}).returning();
+}).onConflictDoNothing({
+			target: [paymentMethods.fingerprint, paymentMethods.memberId],
+		}).returning();
 
 			pm = newPaymentMethod;
 		}
