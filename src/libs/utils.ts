@@ -2,7 +2,7 @@ import type { PaymentType, ProgramSession, RecurringReservation, Reservation, Ta
 import { addDays, addYears, addMonths, addWeeks, isBefore, isSameDay } from "date-fns";
 import { JWT } from "google-auth-library";
 import { db } from "@/db/db";
-import { migrateMembers } from "@/db/schemas";
+import { familyMembers, migrateMembers } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import type { Member } from "@/types/member";
 import type { AuthAdditionalData } from "@/types/auth";
@@ -306,9 +306,9 @@ function generateDiscriminator(): number {
 async function handleAdditionalData(
     additionalData: AuthAdditionalData,
     member: Member,
-    options: { blocking?: boolean; delay?: number } = {}
+    options: { delay?: number } = {}
 ): Promise<void> {
-    const { blocking = false, delay = 1000 } = options;
+    const { delay = 1000 } = options;
     const today = new Date();
 
     const updateMigrateMember = async () => {
@@ -325,12 +325,9 @@ async function handleAdditionalData(
         }
     };
 
-    if (blocking) {
-        // Blocking mode: wait for the update
-        await updateMigrateMember();
-    } else {
-        // Non-blocking mode: fire-and-forget with optional delay
-        setTimeout(updateMigrateMember, delay);
+
+    if (additionalData.migrateId) {
+        setTimeout(() => updateMigrateMember(), delay);
     }
 }
 

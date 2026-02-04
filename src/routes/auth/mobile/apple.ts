@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts } from "@/db/schemas";
+import { users, members, accounts, memberLocations } from "@/db/schemas";
 import { generateDiscriminator, generateReferralCode, generateUsername, handleAdditionalData } from "@/libs/utils";
 import { z } from "zod";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";
@@ -172,5 +172,47 @@ export async function mobileAppleLogin(app: Elysia) {
             return status(500, { message: errorMessage });
         }
     }, ApplAccountSchema);
+    app.post('/apple/exising', async ({ body, status }) => {
+        const { token, memberId, lid } = body;
+        if (!token) {
+            return status(400, { message: "Token is required" });
+        }
+        const decodedToken = await jwtVerify(token, APPLE_JWKS, {
+            issuer: "https://appleid.apple.com",
+            audience: process.env.APPLE_CLIENT_ID,
+        });
+        const { payload } = decodedToken;
+
+
+        const existingMember = await db.query.members.findFirst({
+            where: (member, { eq }) => eq(member.id, memberId),
+            columns: {
+                id: true,
+                userId: true,
+            },
+        });
+
+        if (!existingMember) {
+            return status(400, { message: "Member not found" });
+        }
+
+        await db.insert(accounts).values({
+            userId: existingMember.userId,
+            provider: "apple",
+            type: "oidc",
+            accountId: `${payload.sub}`,
+            expires: payload.exp ? new Date(payload.exp * 1000) : null,
+            tokenType: "bearer",
+            scope: "openid",
+            idToken: token
+        })
+        return status(200, { success: true });
+    }, {
+        body: z.object({
+            token: z.string(),
+            memberId: z.string(),
+            lid: z.string(),
+        }),
+    });
     return app;
 }

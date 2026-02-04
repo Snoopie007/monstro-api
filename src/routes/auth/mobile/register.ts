@@ -7,6 +7,9 @@ import type { Member } from "@/types/member";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { z } from "zod";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";
+import { eq } from "drizzle-orm";
+
+
 export async function mobileRegister(app: Elysia) {
     app.post('/register', async ({ status, body }) => {
         const { password, firstName, lastName, email, phone, additionalData } = body;
@@ -113,6 +116,50 @@ export async function mobileRegister(app: Elysia) {
             email: z.string(),
             phone: z.string().optional(),
             additionalData: AuthAdditionalDataSchema.optional(),
+        }),
+    });
+    app.post('/register/existing', async ({ body, status }) => {
+        const { email, password, memberId } = body;
+        if (!email || !password || !memberId) {
+            return status(400, { message: "Email and password are required" });
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const member = await db.query.members.findFirst({
+            where: (member, { eq }) => eq(member.id, memberId),
+            columns: {
+                id: true,
+                userId: true,
+                email: true,
+            },
+        });
+        if (!member) {
+            return status(400, { message: "Member not found" });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await db.transaction(async (tx) => {
+            await tx.insert(accounts).values({
+                userId: member.userId,
+                provider: "credential",
+                type: 'email',
+                accountId: normalizedEmail,
+                password: hashedPassword,
+            })
+            if (member.email !== normalizedEmail) {
+                await tx.update(members).set({
+                    email: normalizedEmail,
+                }).where(eq(members.id, memberId));
+                await tx.update(users).set({
+                    email: normalizedEmail,
+                }).where(eq(users.id, member.userId));
+            }
+        });
+        return status(200, { success: true });
+    }, {
+        body: z.object({
+            email: z.string(),
+            password: z.string(),
+            memberId: z.string()
         }),
     });
     return app;
