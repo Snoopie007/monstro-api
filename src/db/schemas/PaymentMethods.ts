@@ -17,7 +17,7 @@ export const paymentMethods = pgTable('payment_methods', {
     metadata: jsonb('metadata').$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-}, t => [unique('stripe_id_unique').on(t.stripeId), unique('fingerprint_unique').on(t.fingerprint)])
+}, t => [unique('stripe_id_unique').on(t.stripeId), unique('fingerprint_member_unique').on(t.fingerprint, t.memberId)])
 
 export const memberPaymentMethods = pgTable('member_payment_methods', {
 
