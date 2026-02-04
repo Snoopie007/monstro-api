@@ -45,7 +45,7 @@ export default function FamilyInviteEmail({
 						<Section style={styles.buttonSection}>
 							<Button
 								style={styles.button}
-								href={`https://monstro-x.com/register?familyId=${familyId}`}
+								href={`https://m.monstro-x.com/register?familyId=${familyId}`}
 							>
 								Accept Invite
 							</Button>

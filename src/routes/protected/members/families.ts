@@ -1,10 +1,13 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { accounts, familyMembers, members, users } from "@/db/schemas";
-import type { FamilyMember, Member, User } from "@/types";
+import type { FamilyMember } from "@/types";
 import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
+import { EmailSender } from "@/libs/email";
+import { renderToStaticMarkup } from "react-dom/server";
+import FamilyInviteEmail from "@/emails/FamilyInvite";
 
 
 
@@ -14,7 +17,6 @@ const MemberFamiliesProps = {
     }),
 };
 
-// Shared column selections
 const userColumns = {
     id: true,
     name: true,
@@ -25,6 +27,8 @@ const memberColumns = {
     firstName: true,
     lastName: true,
 };
+
+const emailSender = new EmailSender();
 
 export async function memberFamilies(app: Elysia) {
     app.group("/families", (app) => {
@@ -305,7 +309,18 @@ export async function memberFamilies(app: Elysia) {
                     return status(500, { error: "Failed to invite family member" });
                 }
 
+
                 if (email) {
+                    console.log('Sending email to', email);
+                    const firstName = 'John';
+                    await emailSender.sendWithTemplate({
+                        html: renderToStaticMarkup(FamilyInviteEmail({
+                            member: { firstName },
+                            familyId: familyMember.id,
+                        })),
+                        to: email,
+                        subject: `${firstName} has invited you to join their family on Monstro X`,
+                    });
                     /// TODO: Send email to the new family member
                 } else if (phone) {
                     /// TODO: Send SMS to the new family member

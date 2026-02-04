@@ -60,7 +60,7 @@ export default function MissedClassEmail({
 
             <Section style={styles.buttonContainer}>
               <Button
-                href={`https://app.monstro-x.com/location/${location.id}/${member.id}/sessions`}
+                href={`https://m.monstro-x.com/location/${location.id}/${member.id}/sessions`}
                 style={styles.button}
               >
                 Book Your Next Class

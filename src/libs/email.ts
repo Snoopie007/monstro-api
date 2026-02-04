@@ -3,14 +3,25 @@ import { render } from '@react-email/render';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { EmailTemplates } from '@/emails';
 
+
 type EmailOptions = {
+    to: string;
+    subject: string;
+    headers?: Record<string, string>;
+}
+type SendProps = {
     template: keyof typeof EmailTemplates;
     data: Record<string, any>;
-    options: {
-        to: string;
-        subject: string;
+    options: EmailOptions,
+}
+
+type SendWithTemplateProps = {
+    to: string;
+    subject: string;
+    html: string;
+    options?: {
         headers?: Record<string, string>;
-    },
+    }
 }
 
 export class EmailSender {
@@ -26,7 +37,7 @@ export class EmailSender {
         this._fromEmail = 'no-reply@mymonstro.com';
     }
 
-    public async sendSupportEmail(props: EmailOptions) {
+    public async sendSupportEmail(props: SendProps) {
         const TemplateComponent = EmailTemplates[props.template] as any;
         const html = await render(TemplateComponent(props.data));
 
@@ -42,7 +53,7 @@ export class EmailSender {
     }
 
 
-    public async send(props: EmailOptions) {
+    public async send(props: SendProps) {
         const TemplateComponent = EmailTemplates[props.template] as any;
         const html = '<!DOCTYPE html>' + renderToStaticMarkup(TemplateComponent(props.data));
 
@@ -50,12 +61,26 @@ export class EmailSender {
             ...props.options,
             from: {
                 email: this._fromEmail,
-                name: 'Monstro'
+                name: 'Monstro X'
             },
             html
         });
     }
 
+    public async sendWithTemplate(props: SendWithTemplateProps) {
+        const { html, to, subject, options } = props;
+        const htmlRendered = '<!DOCTYPE html>' + html;
+        await this._sender.send({
+            ...options,
+            from: {
+                email: this._fromEmail,
+                name: 'Monstro X'
+            },
+            to,
+            subject,
+            html: htmlRendered
+        });
+    }
     public async sendText(email: string, subject: string, text: string) {
         await this._sender.send({
             to: email,

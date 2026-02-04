@@ -46,7 +46,7 @@ export default function MigrationEmail({
                             button below.
                         </Text>
                         <Section style={styles.buttonSection}>
-                            <Button style={styles.button} href={`https://monstro-x.com/register?migrateId=${migrateId}`} >
+                            <Button style={styles.button} href={`https://m.monstro-x.com/register?migrateId=${migrateId}`} >
                                 Accept Invite
                             </Button>
                         </Section>
