@@ -66,14 +66,14 @@ export async function PUT(req: NextRequest) {
         if (type === "email") {
             await sendEmailViaApi({
                 recipient: user.email,
-                template: 'SimpleOTPEmail',
+                template: 'LoginTokenEmail',
                 subject: 'Verify your email address',
                 data: {
-                    member: {
-                        firstName: user.name?.split(' ')[0] || 'there'
+                    user: {
+                        name: user.name?.split(' ')[0] || 'there',
+                        email: user.email
                     },
                     otp: { token }
-                    // monstro and location are auto-injected by API
                 }
             });
         } else if (type === "sms") {
