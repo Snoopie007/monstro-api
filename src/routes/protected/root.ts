@@ -16,6 +16,7 @@ import { groupRoutes } from './groups';
 import { locationsRoutes } from './locations';
 import { userAccountsRoutes } from './users/accounts';
 import { searchRoutes } from './search';
+import { familyRoutes } from './family';
 import {
     memberAvatar,
     memberFamilies,
@@ -61,3 +62,4 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     })
     .use(locationsRoutes)
     .use(commentRoutes)
+    .use(familyRoutes)

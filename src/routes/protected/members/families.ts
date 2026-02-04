@@ -351,54 +351,7 @@ export async function memberFamilies(app: Elysia) {
                 unqiueUsername: t.Optional(t.String()),
             }),
         });
-        app.patch('/:familyId', async ({ status, params, body }) => {
-            const { familyId, mid } = params;
-            const { updates } = body;
-            try {
 
-                const member = await db.query.members.findFirst({
-                    where: (m, { eq }) => eq(m.id, mid),
-                    columns: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                        phone: true,
-                        userId: true,
-                    },
-                });
-                if (!member) {
-                    return status(400, { error: "Member not found" });
-                }
-
-
-                const [familyMember] = await db.update(familyMembers).set({
-                    memberId: mid,
-                    ...updates,
-                    updated: new Date(),
-                }).where(eq(familyMembers.id, familyId)).returning();
-                if (!familyMember) {
-                    return status(500, { error: "Failed to update family member" });
-                }
-                return status(200, {
-                    ...familyMember,
-                    member: member,
-                });
-            } catch (error) {
-                console.error(error);
-                return status(500, { error: "Failed to accept family member" });
-            }
-        }, {
-            params: t.Object({
-                familyId: t.String(),
-                mid: t.String(),
-            }),
-            body: t.Object({
-                updates: t.Object({
-                    status: t.Union([t.Literal("accepted"), t.Literal("declined")]),
-                }),
-            }),
-        });
         return app;
     })
 

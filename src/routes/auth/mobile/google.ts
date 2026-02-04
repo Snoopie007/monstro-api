@@ -182,7 +182,7 @@ export async function mobileGoogleLogin(app: Elysia) {
         }
     }, GoogleAccountSchema);
     app.post('/google/existing', async ({ body, status }) => {
-        const { token, memberId, lid } = body;
+        const { token, memberId, accessToken } = body;
         if (!token) {
             return status(400, { message: "Token is required" });
         }
@@ -206,6 +206,7 @@ export async function mobileGoogleLogin(app: Elysia) {
             provider: "google",
             type: "oidc",
             accountId: `${payload.sub}`,
+            accessToken: accessToken,
             expires: payload.exp ? new Date(payload.exp * 1000) : null,
             tokenType: "bearer",
             scope: "openid",
@@ -216,7 +217,7 @@ export async function mobileGoogleLogin(app: Elysia) {
         body: z.object({
             token: z.string(),
             memberId: z.string(),
-            lid: z.string(),
+            accessToken: z.string(),
         }),
     });
     return app;

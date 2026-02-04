@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { memberLocations, memberSubscriptions } from "@/db/schemas";
 import { and } from "drizzle-orm";
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { z } from "zod";
 
 
@@ -151,8 +151,8 @@ export function memberPlansSubRoutes(app: Elysia) {
             return status(500, { error: "An error occurred" });
         }
     }, MemberPlansSubProps).patch('/sub', async ({ status, params, body }) => {
-        const { pid } = params;
-        const data = body as Record<string, any>;
+        const { pid, mid } = params;
+        const data = body;
 
         if (data.status === "active") {
             const sub = await db.query.memberSubscriptions.findFirst({
@@ -187,5 +187,14 @@ export function memberPlansSubRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "An error occurred" });
         }
-    }, MemberPlansSubProps)
+    }, {
+        params: t.Object({
+            mid: t.String(),
+            pid: t.String(),
+        }),
+        body: t.Object({
+            status: t.Union([t.Literal("paused"), t.Literal("active")]),
+            parentId: t.String(),
+        }),
+    })
 }

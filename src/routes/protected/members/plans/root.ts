@@ -93,8 +93,8 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
                 return status(500, { error: "An error occurred" });
             }
         }, MemberPlansRootProps)
-            .use(memberPlansPkgRoutes)
-            .use(memberPlansSubRoutes)
+        app.use(memberPlansPkgRoutes)
+        app.use(memberPlansSubRoutes)
         return app;
 
     })

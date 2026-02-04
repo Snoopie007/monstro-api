@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts, memberLocations } from "@/db/schemas";
+import { users, members, accounts } from "@/db/schemas";
 import { generateDiscriminator, generateReferralCode, generateUsername, handleAdditionalData } from "@/libs/utils";
 import { z } from "zod";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";
@@ -173,7 +173,7 @@ export async function mobileAppleLogin(app: Elysia) {
         }
     }, ApplAccountSchema);
     app.post('/apple/exising', async ({ body, status }) => {
-        const { token, memberId, lid } = body;
+        const { token, memberId } = body;
         if (!token) {
             return status(400, { message: "Token is required" });
         }
@@ -211,7 +211,6 @@ export async function mobileAppleLogin(app: Elysia) {
         body: z.object({
             token: z.string(),
             memberId: z.string(),
-            lid: z.string(),
         }),
     });
     return app;
