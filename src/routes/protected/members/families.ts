@@ -9,6 +9,7 @@ import { EmailSender } from "@/libs/email";
 import { renderToStaticMarkup } from "react-dom/server";
 import FamilyInviteEmail from "@/emails/FamilyInvite";
 import { eq } from "drizzle-orm";
+import ChildFamilyEmail from "@/emails/ChildFamilyEmail";
 
 
 
@@ -201,6 +202,20 @@ export async function memberFamilies(app: Elysia) {
                             target: [familyMembers.memberId, familyMembers.relatedMemberId],
                         });
 
+                        if (temporaryPassword) {
+                            emailSender.send({
+                                html: renderToStaticMarkup(ChildFamilyEmail({
+                                    member: {
+                                        firstName: member.firstName,
+                                    },
+                                    childName: `${firstName} ${lastName}`,
+                                    email: normalizedEmail,
+                                    password: temporaryPassword,
+                                })),
+                                to: member.email,
+                                subject: `Here is your child's account details to Monstro X`,
+                            });
+                        }
 
 
                         return {

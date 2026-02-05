@@ -15,6 +15,7 @@ import SessionCancellationEmail from "./SessionCancellationEmail";
 import SimpleOTPEmail from "./SimpleOTP";
 import UpdateEmailOTP from "./UpdateEmailOTP";
 import MigrationEmail from "./MigrationEmail";
+import ChildFamilyEmail from "./ChildFamilyEmail";
 
 export const EmailTemplates = {
     ClassReminderEmail,
@@ -24,6 +25,7 @@ export const EmailTemplates = {
     MakeupClassConfirmationEmail,
     FamilyInviteEmail,
     MemberInviteEmail,
+    ChildFamilyEmail,
     MigrationEmail,
     MissedClassEmail,
     OTPEmailTemplate,
