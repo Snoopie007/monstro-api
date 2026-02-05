@@ -85,36 +85,38 @@ export async function POST(
       ),
     });
 
-    if (!integration?.accountId) {
-      return NextResponse.json(
-        { error: "Location has no Stripe Connect account" },
-        { status: 400 }
-      );
+    let stripeCouponId: string | undefined;
+    let stripePromoId: string | undefined;
+
+    // Only create Stripe coupon/promotion if location has Stripe integration
+    if (integration?.accountId) {
+      const stripe = new VendorStripePayments();
+
+      const coupon = await stripe.createCoupon({
+        name: code,
+        ...(type === "percentage" ? { percentOff: value } : { amountOff: value, currency: "usd" }),
+        duration,
+        ...(duration === "repeating" && durationInMonths && { durationInMonths }),
+        ...(maxRedemptions && { maxRedemptions }),
+        ...(expiresAt && { redeemBy: new Date(expiresAt) }),
+        metadata: { locationId: lid },
+      });
+
+      const promotionCode = await stripe.createPromotionCode({
+        coupon: coupon.id,
+        code,
+        ...(expiresAt && { expiresAt: new Date(expiresAt) }),
+        ...(maxRedemptions && { maxRedemptions }),
+      });
+
+      stripeCouponId = coupon.id;
+      stripePromoId = promotionCode.id;
     }
-
-    const stripe = new VendorStripePayments();
-
-    const coupon = await stripe.createCoupon({
-      name: code,
-      ...(type === "percentage" ? { percentOff: value } : { amountOff: value, currency: "usd" }),
-      duration,
-      ...(duration === "repeating" && durationInMonths && { durationInMonths }),
-      ...(maxRedemptions && { maxRedemptions }),
-      ...(expiresAt && { redeemBy: new Date(expiresAt) }),
-      metadata: { locationId: lid },
-    });
-
-    const promotionCode = await stripe.createPromotionCode({
-      coupon: coupon.id,
-      code,
-      ...(expiresAt && { expiresAt: new Date(expiresAt) }),
-      ...(maxRedemptions && { maxRedemptions }),
-    });
 
     const [newPromo] = await db.insert(promos).values({
       locationId: lid,
-      stripeCouponId: coupon.id,
-      stripePromoId: promotionCode.id,
+      ...(stripeCouponId && { stripeCouponId }),
+      ...(stripePromoId && { stripePromoId }),
       code,
       type,
       value,

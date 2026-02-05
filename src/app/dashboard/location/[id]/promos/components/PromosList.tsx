@@ -94,8 +94,16 @@ export function PromosList({ promos, lid }: PromosListProps) {
       cell: (info) => formatDuration(info.row.original),
     }),
     columnHelper.accessor("maxRedemptions", {
-      header: "Max Redemptions",
-      cell: (info) => info.getValue() || "Unlimited",
+      header: "Redemptions",
+      cell: (info) => {
+        const promo = info.row.original
+        const max = promo.maxRedemptions
+        const used = promo.redemptionCount || 0
+        if (max) {
+          return `${used} / ${max}`
+        }
+        return `${used} / Unlimited`
+      },
     }),
     columnHelper.accessor("isActive", {
       header: "Status",
