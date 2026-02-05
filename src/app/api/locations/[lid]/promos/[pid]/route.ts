@@ -108,8 +108,11 @@ export async function DELETE(
       );
     }
 
-    const stripe = new VendorStripePayments();
-    await stripe.deleteCoupon(promo.stripeCouponId);
+    // Only delete from Stripe if promo was synced with Stripe
+    if (promo.stripeCouponId) {
+      const stripe = new VendorStripePayments();
+      await stripe.deleteCoupon(promo.stripeCouponId);
+    }
 
     const [archived] = await db.update(promos)
       .set({ isActive: false, updated: new Date() })

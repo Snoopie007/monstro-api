@@ -7,7 +7,7 @@ import {
     calculateExpiresAt,
     scheduleRecurringInvoiceReminders,
 } from "../../../utils";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 
 type Props = {
@@ -22,6 +22,7 @@ export async function POST(req: Request, props: Props) {
     const { paymentMethod, paymentType, trialDays, pricingId, promoCode, ...data } = await req.json();
     try {
         let promoId: string | undefined;
+        let discountAmount = 0;
         if (promoCode) {
             const promo = await db.query.promos.findFirst({
                 where: and(
@@ -37,6 +38,24 @@ export async function POST(req: Request, props: Props) {
 
             if (promo.expiresAt && new Date() > promo.expiresAt) {
                 return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
+            }
+
+            // Check max redemptions
+            if (promo.maxRedemptions && promo.redemptionCount >= promo.maxRedemptions) {
+                return NextResponse.json({ error: "Promo code redemption limit reached" }, { status: 400 });
+            }
+
+            // Check "once" duration - has this member already used this promo?
+            if (promo.duration === "once") {
+                const existingUsage = await db.query.memberSubscriptions.findFirst({
+                    where: and(
+                        eq(memberSubscriptions.promoId, promo.id),
+                        eq(memberSubscriptions.memberId, mid)
+                    )
+                });
+                if (existingUsage) {
+                    return NextResponse.json({ error: "This promo has already been used by this member" }, { status: 400 });
+                }
             }
 
             promoId = promo.id;
@@ -68,6 +87,19 @@ export async function POST(req: Request, props: Props) {
             return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
         }
 
+        // Calculate discount amount now that we have pricing
+        if (promoId) {
+            const promo = await db.query.promos.findFirst({
+                where: eq(promos.id, promoId)
+            });
+            if (promo) {
+                if (promo.type === "percentage") {
+                    discountAmount = Math.floor(pricing.price * (promo.value / 100));
+                } else if (promo.type === "fixed_amount") {
+                    discountAmount = Math.min(promo.value, pricing.price);
+                }
+            }
+        }
 
         const ml = await db.query.memberLocations.findFirst({
             where: (memberLocation, { eq, and }) => and(
@@ -131,9 +163,22 @@ export async function POST(req: Request, props: Props) {
             allowMakeUpCarryOver: false,
             metadata: {
                 memberId: mid,
-                locationId: id
+                locationId: id,
+                ...(promoId && {
+                    promoId,
+                    originalPrice: pricing.price,
+                    discountAmount,
+                    discountedPrice: pricing.price - discountAmount
+                })
             }
         }).returning()
+
+        // Increment redemption count if promo was used
+        if (promoId) {
+            await db.update(promos)
+                .set({ redemptionCount: sql`${promos.redemptionCount} + 1` })
+                .where(eq(promos.id, promoId));
+        }
 
         // Add user to group if plan has a groupId
         if (plan.groupId && member.userId) {

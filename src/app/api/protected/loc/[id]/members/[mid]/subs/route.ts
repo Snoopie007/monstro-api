@@ -10,7 +10,7 @@ import {
     scheduleRecurringInvoiceReminders,
     calculateExpiresAt,
 } from "../../utils";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
 import { getTaxRateId } from "../../utils";
@@ -89,6 +89,24 @@ export async function POST(req: Request, props: Props) {
 
             if (promo.expiresAt && new Date() > promo.expiresAt) {
                 return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
+            }
+
+            // Check max redemptions
+            if (promo.maxRedemptions && promo.redemptionCount >= promo.maxRedemptions) {
+                return NextResponse.json({ error: "Promo code redemption limit reached" }, { status: 400 });
+            }
+
+            // Check "once" duration - has this member already used this promo?
+            if (promo.duration === "once") {
+                const existingUsage = await db.query.memberSubscriptions.findFirst({
+                    where: and(
+                        eq(memberSubscriptions.promoId, promo.id),
+                        eq(memberSubscriptions.memberId, mid)
+                    )
+                });
+                if (existingUsage) {
+                    return NextResponse.json({ error: "This promo has already been used by this member" }, { status: 400 });
+                }
             }
 
             promoId = promo.id;
@@ -230,6 +248,13 @@ export async function POST(req: Request, props: Props) {
                 locationId: id
             }
         }).returning()
+
+        // Increment redemption count if promo was used
+        if (promoId) {
+            await db.update(promos)
+                .set({ redemptionCount: sql`${promos.redemptionCount} + 1` })
+                .where(eq(promos.id, promoId));
+        }
 
         // Add user to group if plan has a groupId
         if (plan.groupId && member.userId) {

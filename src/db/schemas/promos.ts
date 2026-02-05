@@ -16,14 +16,15 @@ export const promos = pgTable("promos", {
   locationId: text("location_id")
     .notNull()
     .references(() => locations.id, { onDelete: "cascade" }),
-  stripeCouponId: text("stripe_coupon_id").notNull(),
-  stripePromoId: text("stripe_promo_id").notNull(),
+  stripeCouponId: text("stripe_coupon_id"),
+  stripePromoId: text("stripe_promo_id"),
   code: text("code").notNull(),
   type: PromoTypeEnum("type").notNull(),
   value: integer("value").notNull(),
   duration: PromoDurationEnum("duration").notNull(),
   durationInMonths: integer("duration_in_months"),
   maxRedemptions: integer("max_redemptions"),
+  redemptionCount: integer("redemption_count").notNull().default(0),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
