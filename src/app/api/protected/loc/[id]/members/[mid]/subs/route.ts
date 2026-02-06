@@ -110,7 +110,7 @@ export async function POST(req: Request, props: Props) {
             }
 
             promoId = promo.id;
-            stripeCouponId = promo.stripeCouponId;
+            stripeCouponId = promo.stripeCouponId ?? undefined;
         }
 
         if (!pricingId) {
