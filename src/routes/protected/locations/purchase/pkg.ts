@@ -197,8 +197,7 @@ export function purchasePkgRoutes(app: Elysia) {
                         const { value, redemptionCount, maxRedemptions, type, allowedPlans } = promo;
                         const isWithinRedemption = !maxRedemptions || redemptionCount < maxRedemptions;
                         const isAllowedPlan = allowedPlans ? allowedPlans.includes(pricing.id) : true;
-                        console.log('isWithinRedemption', isWithinRedemption);
-                        console.log('isAllowedPlan', isAllowedPlan);
+
                         if (isWithinRedemption && isAllowedPlan) {
 
                             if (type === "fixed_amount") {
