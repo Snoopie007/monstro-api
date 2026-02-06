@@ -90,7 +90,7 @@ export function MapFieldsStep({
 
     // Get available headers for a specific field (current value + unmapped)
     const getAvailableHeaders = (currentValue: string | undefined) => {
-        return headers.filter(h => h === currentValue || !mappedColumns.has(h))
+        return headers.filter(h => h && (h === currentValue || !mappedColumns.has(h)))
     }
 
     return (

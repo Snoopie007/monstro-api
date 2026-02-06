@@ -107,7 +107,7 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
-                const headers = results.meta.fields || []
+                const headers = (results.meta.fields || []).filter(h => h)
                 const allData = results.data as Record<string, string>[]
                 const previewData = allData.slice(0, 10)
 
