@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectContent,
   SelectItem,
+  InputTags,
 } from "@/components/forms"
 import {
   Tooltip,
@@ -25,9 +26,15 @@ import { HelpCircle } from "lucide-react"
 import CurrencyInput from "react-currency-input-field"
 import { UseFormReturn } from "react-hook-form"
 
+interface PricingOption {
+  id: string
+  label: string
+}
+
 interface PromoFormProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
+  pricingOptions: PricingOption[]
 }
 
 const durationOptions = [
@@ -36,9 +43,24 @@ const durationOptions = [
   { value: "forever", label: "Forever", description: "Discount applies to all payments indefinitely" },
 ]
 
-export function PromoForm({ form }: PromoFormProps) {
+export function PromoForm({ form, pricingOptions }: PromoFormProps) {
   const watchType = form.watch("type")
   const watchDuration = form.watch("duration")
+
+  // Map labels to pricing IDs for form handling
+  const pricingMap = new Map(pricingOptions.map(p => [p.label, p.id]))
+  const pricingLabels = pricingOptions.map(p => p.label)
+  
+  // Convert IDs (stored in form) to labels (displayed in InputTags)
+  const getLabelsFromIds = (ids: string[] | undefined): string[] => {
+    if (!ids) return []
+    return ids.map(id => pricingOptions.find(p => p.id === id)?.label).filter((label): label is string => !!label)
+  }
+  
+  // Convert labels (from InputTags) back to IDs (for form storage)
+  const getIdsFromLabels = (labels: string[]): string[] => {
+    return labels.map(label => pricingMap.get(label)).filter((id): id is string => !!id)
+  }
 
   return (
     <Form {...form}>
@@ -244,6 +266,44 @@ export function PromoForm({ form }: PromoFormProps) {
             )}
           />
         </fieldset>
+
+        {pricingOptions.length > 0 && (
+          <fieldset>
+            <FormField
+              control={form.control}
+              name="allowedPlans"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel size="tiny">
+                    <div className="flex items-center gap-1">
+                      Allowed Pricing Options (Optional)
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger type="button">
+                            <HelpCircle className="size-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>Leave empty to allow this promo on all pricing options. Select specific options to restrict usage.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </FormLabel>
+                  <FormControl>
+                    <InputTags
+                      list={pricingLabels}
+                      value={getLabelsFromIds(field.value)}
+                      onChange={(labels) => field.onChange(getIdsFromLabels(labels))}
+                      placeholder="Type to search pricing options..."
+                      className="border-foreground/10"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </fieldset>
+        )}
       </form>
     </Form>
   )

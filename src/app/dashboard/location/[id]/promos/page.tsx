@@ -1,5 +1,7 @@
 import { db } from '@/db/db'
+import { memberPlans, memberPlanPricing } from '@/db/schemas'
 import { PromosList, CreatePromo } from './components'
+import { eq, and } from 'drizzle-orm'
 
 async function fetchPromos(lid: string) {
   try {
@@ -14,16 +16,34 @@ async function fetchPromos(lid: string) {
   }
 }
 
+async function fetchPlans(lid: string) {
+  try {
+    const plans = await db.query.memberPlans.findMany({
+      where: (p, { eq, and }) => and(
+        eq(p.locationId, lid),
+        eq(p.archived, false)
+      ),
+      with: {
+        pricingOptions: true,
+      },
+    })
+    return plans
+  } catch (error) {
+    console.error('Error fetching plans:', error)
+    return []
+  }
+}
+
 export default async function PromosPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   const lid = params.id
-  const promos = await fetchPromos(lid)
+  const [promos, plans] = await Promise.all([fetchPromos(lid), fetchPlans(lid)])
 
   return (
     <div className='max-w-6xl mx-auto py-4 space-y-4'>
       <div className='flex flex-row items-center justify-between'>
         <h2 className='text-xl font-semibold'>Promo Codes</h2>
-        <CreatePromo lid={lid} />
+        <CreatePromo lid={lid} plans={plans} />
       </div>
       <div className='border border-foreground/10 rounded-lg'>
         <PromosList promos={promos} lid={lid} />

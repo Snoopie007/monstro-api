@@ -118,6 +118,18 @@ export async function POST(req: NextRequest, props: Props) {
 			throw new Error("Plan not found")
 		}
 
+		// Check if promo is restricted to specific pricing options
+		if (promoId) {
+			const promo = await db.query.promos.findFirst({
+				where: eq(promos.id, promoId)
+			});
+			if (promo && promo.allowedPlans && promo.allowedPlans.length > 0) {
+				if (!promo.allowedPlans.includes(pricingId)) {
+					return NextResponse.json({ error: "This promo code is not valid for this pricing option" }, { status: 400 });
+				}
+			}
+		}
+
 		if (pricing.memberPlanId !== plan.id) {
 			return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
 		}
@@ -176,7 +188,7 @@ export async function POST(req: NextRequest, props: Props) {
 			expireDate = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
 		}
 
-		const discountedPrice = pricing.price - discountAmount;
+		const discountedPrice = Math.max(0, pricing.price - discountAmount);
 		const tax = calculateTax(discountedPrice, taxRates);
 		let subTotal = discountedPrice;
 		let total = subTotal + tax;

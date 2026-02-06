@@ -87,7 +87,15 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
         )
 
         await sleep(1000)
-        if (error || !result || !result?.ok) return;
+        if (error || !result || !result?.ok) {
+            if (result) {
+                const data = await result.json()
+                toast.error(data.error || "Failed to create subscription")
+            } else {
+                toast.error("Failed to create subscription")
+            }
+            return;
+        }
         form.reset()
         const data = await result.json()
         toast.success("Subscription created successfully")

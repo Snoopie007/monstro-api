@@ -87,12 +87,17 @@ export async function POST(req: Request, props: Props) {
             return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
         }
 
-        // Calculate discount amount now that we have pricing
+        // Check if promo is restricted to specific pricing options
         if (promoId) {
             const promo = await db.query.promos.findFirst({
                 where: eq(promos.id, promoId)
             });
             if (promo) {
+                if (promo.allowedPlans && promo.allowedPlans.length > 0) {
+                    if (!promo.allowedPlans.includes(pricingId)) {
+                        return NextResponse.json({ error: "This promo code is not valid for this pricing option" }, { status: 400 });
+                    }
+                }
                 if (promo.type === "percentage") {
                     discountAmount = Math.floor(pricing.price * (promo.value / 100));
                 } else if (promo.type === "fixed_amount") {
@@ -168,7 +173,7 @@ export async function POST(req: Request, props: Props) {
                     promoId,
                     originalPrice: pricing.price,
                     discountAmount,
-                    discountedPrice: pricing.price - discountAmount
+                    discountedPrice: Math.max(0, pricing.price - discountAmount)
                 })
             }
         }).returning()
