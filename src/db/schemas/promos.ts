@@ -25,6 +25,7 @@ export const promos = pgTable("promos", {
   durationInMonths: integer("duration_in_months"),
   maxRedemptions: integer("max_redemptions"),
   redemptionCount: integer("redemption_count").notNull().default(0),
+  allowedPlans: text("allowed_plans").array(),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectContent,
   SelectItem,
+  InputTags,
 } from "@/components/forms"
 import {
   Tooltip,
@@ -25,9 +26,15 @@ import { HelpCircle } from "lucide-react"
 import CurrencyInput from "react-currency-input-field"
 import { UseFormReturn } from "react-hook-form"
 
+interface PlanOption {
+  id: string
+  name: string
+}
+
 interface PromoFormProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
+  plans: PlanOption[]
 }
 
 const durationOptions = [
@@ -36,9 +43,24 @@ const durationOptions = [
   { value: "forever", label: "Forever", description: "Discount applies to all payments indefinitely" },
 ]
 
-export function PromoForm({ form }: PromoFormProps) {
+export function PromoForm({ form, plans }: PromoFormProps) {
   const watchType = form.watch("type")
   const watchDuration = form.watch("duration")
+
+  // Map plan names to IDs for form handling
+  const planMap = new Map(plans.map(p => [p.name, p.id]))
+  const planNames = plans.map(p => p.name)
+  
+  // Convert IDs (stored in form) to names (displayed in InputTags)
+  const getPlanNamesFromIds = (ids: string[] | undefined): string[] => {
+    if (!ids) return []
+    return ids.map(id => plans.find(p => p.id === id)?.name).filter((name): name is string => !!name)
+  }
+  
+  // Convert names (from InputTags) back to IDs (for form storage)
+  const getPlanIdsFromNames = (names: string[]): string[] => {
+    return names.map(name => planMap.get(name)).filter((id): id is string => !!id)
+  }
 
   return (
     <Form {...form}>
@@ -244,6 +266,44 @@ export function PromoForm({ form }: PromoFormProps) {
             )}
           />
         </fieldset>
+
+        {plans.length > 0 && (
+          <fieldset>
+            <FormField
+              control={form.control}
+              name="allowedPlans"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel size="tiny">
+                    <div className="flex items-center gap-1">
+                      Allowed Plans (Optional)
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger type="button">
+                            <HelpCircle className="size-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>Leave empty to allow this promo on all plans. Select specific plans to restrict usage.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </FormLabel>
+                  <FormControl>
+                    <InputTags
+                      list={planNames}
+                      value={getPlanNamesFromIds(field.value)}
+                      onChange={(names) => field.onChange(getPlanIdsFromNames(names))}
+                      placeholder="Type to search plans..."
+                      className="border-foreground/10"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </fieldset>
+        )}
       </form>
     </Form>
   )

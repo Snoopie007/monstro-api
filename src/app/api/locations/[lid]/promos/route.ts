@@ -44,6 +44,7 @@ export async function POST(
       durationInMonths: z.number().int().optional(),
       maxRedemptions: z.number().int().optional(),
       expiresAt: z.string().datetime().optional(),
+      allowedPlans: z.array(z.string()).optional(),
     });
 
     const result = schema.safeParse(body);
@@ -62,6 +63,7 @@ export async function POST(
       durationInMonths,
       maxRedemptions,
       expiresAt,
+      allowedPlans,
     } = result.data;
 
     const existing = await db.query.promos.findFirst({
@@ -124,6 +126,7 @@ export async function POST(
       ...(durationInMonths && { durationInMonths }),
       ...(maxRedemptions && { maxRedemptions }),
       ...(expiresAt && { expiresAt: new Date(expiresAt) }),
+      ...(allowedPlans && allowedPlans.length > 0 && { allowedPlans }),
     }).returning();
 
     return NextResponse.json({ promo: newPromo }, { status: 201 });

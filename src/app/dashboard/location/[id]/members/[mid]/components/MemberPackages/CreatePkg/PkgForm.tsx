@@ -97,7 +97,15 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
             })
         )
 
-        if (error || !result?.ok) return;
+        if (error || !result?.ok) {
+            if (result) {
+                const data = await result.json()
+                toast.error(data.error || "Failed to create package")
+            } else {
+                toast.error("Failed to create package")
+            }
+            return;
+        }
 
         form.reset()
         const data = await result.json()
