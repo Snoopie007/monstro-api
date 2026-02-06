@@ -27,7 +27,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "react-toastify"
 import { Loader2 } from "lucide-react"
 import { VisuallyHidden } from "@react-aria/visually-hidden"
-import { memberPlans, memberPlanPricing } from "@/db/schemas"
 
 const PromoSchema = z.object({
   code: z.string().min(1).max(50),
@@ -51,10 +50,16 @@ const PromoSchema = z.object({
   }
 )
 
+interface PricingOption {
+  id: string
+  name: string
+  price: number
+}
+
 interface PlanWithPricing {
   id: string
   name: string
-  pricingOptions: { price: number }[]
+  pricingOptions: PricingOption[]
 }
 
 interface CreatePromoProps {
@@ -66,6 +71,15 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
   const [open, setOpen] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [pendingSubmission, setPendingSubmission] = useState<z.infer<typeof PromoSchema> | null>(null)
+  
+  // Flatten plans into pricing-level options
+  const pricingOptions = plans.flatMap(plan => 
+    plan.pricingOptions.map(pricing => ({
+      id: pricing.id,
+      label: `${plan.name} - ${pricing.name}`,
+      price: pricing.price
+    }))
+  )
   
   const form = useForm<z.infer<typeof PromoSchema>>({
     resolver: zodResolver(PromoSchema),
@@ -79,24 +93,23 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
     mode: "onChange",
   })
 
-  // Find plans that would become $0 with this fixed amount discount
-  const getPlansWithZeroPrice = (value: number, allowedPlanIds: string[] | undefined): string[] => {
-    if (!allowedPlanIds || allowedPlanIds.length === 0) return []
+  // Find pricing options that would become $0 with this fixed amount discount
+  const getPricingWithZeroPrice = (value: number, allowedPricingIds: string[] | undefined): string[] => {
+    if (!allowedPricingIds || allowedPricingIds.length === 0) return []
     
-    const zeroPricePlanNames: string[] = []
+    const zeroPriceLabels: string[] = []
     
-    for (const planId of allowedPlanIds) {
-      const plan = plans.find(p => p.id === planId)
-      if (!plan) continue
+    for (const pricingId of allowedPricingIds) {
+      const pricing = pricingOptions.find(p => p.id === pricingId)
+      if (!pricing) continue
       
-      // Check if any pricing option has price <= discount value
-      const hasZeroPriceOption = plan.pricingOptions.some(pricing => pricing.price <= value)
-      if (hasZeroPriceOption) {
-        zeroPricePlanNames.push(plan.name)
+      // Check if price <= discount value
+      if (pricing.price <= value) {
+        zeroPriceLabels.push(pricing.label)
       }
     }
     
-    return zeroPricePlanNames
+    return zeroPriceLabels
   }
 
   const handleConfirmSubmit = () => {
@@ -147,9 +160,9 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
   async function onSubmit(v: z.infer<typeof PromoSchema>) {
     // Check if we need to show confirmation dialog for fixed_amount promos
     if (v.type === "fixed_amount" && v.allowedPlans && v.allowedPlans.length > 0) {
-      const zeroPricePlans = getPlansWithZeroPrice(v.value, v.allowedPlans)
+      const zeroPriceOptions = getPricingWithZeroPrice(v.value, v.allowedPlans)
       
-      if (zeroPricePlans.length > 0) {
+      if (zeroPriceOptions.length > 0) {
         setPendingSubmission(v)
         setShowConfirmDialog(true)
         return
@@ -160,9 +173,9 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
     await submitPromo(v)
   }
 
-  // Get the names of plans that would have $0 price for the confirmation dialog
-  const zeroPricePlanNames = pendingSubmission 
-    ? getPlansWithZeroPrice(pendingSubmission.value, pendingSubmission.allowedPlans)
+  // Get the labels of pricing options that would have $0 price for the confirmation dialog
+  const zeroPriceLabels = pendingSubmission 
+    ? getPricingWithZeroPrice(pendingSubmission.value, pendingSubmission.allowedPlans)
     : []
 
   return (
@@ -176,7 +189,7 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
             <DialogTitle>Create Promo Code</DialogTitle>
           </VisuallyHidden>
 
-          <PromoForm form={form} plans={plans.map(p => ({ id: p.id, name: p.name }))} />
+          <PromoForm form={form} pricingOptions={pricingOptions} />
           
           <DialogFooter className="p-4 flex flex-row sm:justify-between">
             <DialogClose asChild>
@@ -204,14 +217,14 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
             <AlertDialogTitle>Promo May Result in $0 Price</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                This fixed amount promo (${((pendingSubmission?.value || 0) / 100).toFixed(2)}) is larger than or equal to the price of some selected plans.
+                This fixed amount promo (${((pendingSubmission?.value || 0) / 100).toFixed(2)}) is larger than or equal to the price of some selected pricing options.
               </p>
               <p>
-                The following plans will have a <strong>$0 price</strong> when this promo is applied:
+                The following pricing options will have a <strong>$0 price</strong> when this promo is applied:
               </p>
               <ul className="list-disc pl-5 space-y-1">
-                {zeroPricePlanNames.map((name) => (
-                  <li key={name} className="text-foreground font-medium">{name}</li>
+                {zeroPriceLabels.map((label) => (
+                  <li key={label} className="text-foreground font-medium">{label}</li>
                 ))}
               </ul>
               <p>Do you want to continue creating this promo?</p>

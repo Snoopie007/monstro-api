@@ -87,15 +87,15 @@ export async function POST(req: Request, props: Props) {
             return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
         }
 
-        // Check if promo is restricted to specific plans
+        // Check if promo is restricted to specific pricing options
         if (promoId) {
             const promo = await db.query.promos.findFirst({
                 where: eq(promos.id, promoId)
             });
             if (promo) {
                 if (promo.allowedPlans && promo.allowedPlans.length > 0) {
-                    if (!promo.allowedPlans.includes(plan.id)) {
-                        return NextResponse.json({ error: "This promo code is not valid for this plan" }, { status: 400 });
+                    if (!promo.allowedPlans.includes(pricingId)) {
+                        return NextResponse.json({ error: "This promo code is not valid for this pricing option" }, { status: 400 });
                     }
                 }
                 if (promo.type === "percentage") {
