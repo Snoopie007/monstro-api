@@ -4,6 +4,8 @@ import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import type { Promo } from "@/types";
+
 import {
     calculateThresholdDate,
     calculateTax,
@@ -11,6 +13,7 @@ import {
 } from "@/libs/utils";
 
 import Stripe from "stripe";
+import { isAfter } from "date-fns";
 
 const PurchasePkgProps = {
     params: z.object({
@@ -86,53 +89,52 @@ export function purchasePkgRoutes(app: Elysia) {
         })
         app.post('/stripe', async ({ params, status, body }) => {
             const { lid } = params;
-            const {
-                paymentMethodId, mid, priceId,
-                memberPlanId
-            } = body;
+            const { paymentMethodId, mid, priceId, memberPlanId, promoId } = body;
 
             try {
 
-                const member = await db.query.members.findFirst({
-                    where: (member, { eq }) => eq(member.id, mid),
-                });
+                const [member, location, pricing] = await Promise.all([
+                    db.query.members.findFirst({
+                        where: (member, { eq }) => eq(member.id, mid),
+                    }),
+                    db.query.locations.findFirst({
+                        where: (location, { eq }) => eq(location.id, lid),
+                        with: {
+                            taxRates: true,
+                            locationState: true,
+                            integrations: {
+                                where: (integration, { eq }) => eq(integration.service, "stripe"),
+                                columns: {
+                                    accountId: true,
+                                    service: true,
+                                },
+                            },
+                        },
+                    }),
+                    db.query.memberPlanPricing.findFirst({
+                        where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
+                        with: {
+                            plan: true,
+                        },
+                    })
+                ]);
+
 
 
                 if (!member || !member.stripeCustomerId) {
                     return status(404, { error: "Member or Stripe customer not found" });
                 }
 
-                const location = await db.query.locations.findFirst({
-                    where: (location, { eq }) => eq(location.id, lid),
-                    with: {
-                        taxRates: true,
-                        locationState: true,
-                        integrations: {
-                            where: (integration, { eq }) => eq(integration.service, "stripe"),
-                            columns: {
-                                accountId: true,
-                                service: true,
-                            },
-                        },
-                    },
-                });
-
 
                 if (!location) {
                     return status(404, { error: "Location not found" });
                 }
 
-                const pricing = await db.query.memberPlanPricing.findFirst({
-                    where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
-                    with: {
-                        plan: true,
-                    },
-                });
-
 
                 if (!pricing) {
                     return status(404, { error: "Pricing not found" });
                 }
+
 
 
                 const { taxRates, locationState, integrations } = location;
@@ -171,18 +173,57 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 stripe.setCustomer(member.stripeCustomerId);
 
+                let discount: number = 0;
+                if (promoId) {
+                    const promo = await db.query.promos.findFirst({
+                        where: (promo, { eq, and, gt, isNull, or }) => and(
+                            eq(promo.id, promoId),
+                            eq(promo.isActive, true),
+                            or(
+                                isNull(promo.expiresAt),
+                                gt(promo.expiresAt, new Date())
+                            )
+                        ),
+                        columns: {
+                            type: true,
+                            value: true,
+                            redemptionCount: true,
+                            maxRedemptions: true,
+                            allowedPlans: true,
+                        },
+                    });
+
+                    if (promo) {
+                        const { value, redemptionCount, maxRedemptions, type, allowedPlans } = promo;
+                        const isWithinRedemption = !maxRedemptions || redemptionCount < maxRedemptions;
+                        const isAllowedPlan = allowedPlans ? allowedPlans.includes(pricing.id) : true;
+                        console.log('isWithinRedemption', isWithinRedemption);
+                        console.log('isAllowedPlan', isAllowedPlan);
+                        if (isWithinRedemption && isAllowedPlan) {
+
+                            if (type === "fixed_amount") {
+                                discount = Math.round(value);
+                            } else {
+                                discount = Math.round(pricing.price * (value / 100));
+                            }
+                        }
+                    }
+                }
                 const today = new Date();
                 const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
-                const tax = calculateTax(pricing.price, taxRate);
+
                 let subTotal = pricing.price;
-                let total = subTotal + tax;
+                const priceAfterDiscount = Math.max(0, pricing.price - discount);
+                const tax = calculateTax(priceAfterDiscount, taxRate);
+                let total = priceAfterDiscount + tax;
+
                 const monstroFee = Math.floor(subTotal * (locationState.usagePercent / 100));
+
                 const stripeFee = calculateStripeFeeAmount((
                     locationState.settings.passOnFees ? total : total + monstroFee
                 ), paymentMethod.type);
 
                 const applicationFeeAmount = monstroFee + stripeFee;
-
                 if (locationState.settings.passOnFees) {
                     total += applicationFeeAmount;
                     subTotal += applicationFeeAmount;
@@ -200,6 +241,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     productName: planName,
                     unitCost: subTotal,
                     tax: tax,
+                    discount,
                     metadata: {
                         pricingId: pricing.id,
                         planId: pricing.plan.id,
@@ -216,10 +258,10 @@ export function purchasePkgRoutes(app: Elysia) {
                     }).where(eq(memberPackages.id, memberPlanId));
                     await tx.insert(transactions).values({
                         description: `Payment for ${planName}`,
-                        items: [{ name: planName, quantity: 1, price: pricing.price }],
+                        items: [{ name: planName, quantity: 1, price: subTotal, discount }],
                         type: "inbound",
-                        total: pricing.price + tax,
-                        subTotal: pricing.price,
+                        total,
+                        subTotal,
                         totalTax: tax,
                         status: "paid",
                         locationId: lid,
@@ -234,7 +276,7 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 return status(200, { status: "active" });
             } catch (error) {
-
+                console.error(error);
                 if (error instanceof Stripe.errors.StripeError) {
                     console.error('Stripe error', error.message);
                     return status(500, { error: error.message });
@@ -247,7 +289,8 @@ export function purchasePkgRoutes(app: Elysia) {
                 paymentMethodId: t.String(),
                 priceId: t.String(),
                 memberPlanId: t.String(),
-                mid: t.String()
+                mid: t.String(),
+                promoId: t.Optional(t.String()),
             }),
         });
 

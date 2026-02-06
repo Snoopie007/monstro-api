@@ -16,6 +16,9 @@ export const ProgramStatusEnum = pgEnum("program_status", ["active", "inactive",
 export const MigrateStatusEnum = pgEnum("migrate_status", ["pending", "completed"]);
 export const CustomFieldTypeEnum = pgEnum("custom_field_type", ["text", "number", "date", "boolean", "select", "multi-select"]);
 export const FamilyMemberStatusEnum = pgEnum("family_member_status", ["pending", "accepted", "declined", "cancelled"]);
+export const PromoTypeEnum = pgEnum("promo_type", ["percentage", "fixed_amount"]);
+export const PromoDurationEnum = pgEnum("promo_duration", ["once", "repeating", "forever"]);
+
 // Reservation and Exception Enums
 export const ReservationStatusEnum = pgEnum("reservation_status", [
   "confirmed",

@@ -62,8 +62,6 @@ export async function memberFamilies(app: Elysia) {
             const { mid } = params;
             const { firstName, lastName, phone, dod, gender } = body;
 
-
-
             let phoneNumber: string | null = null;
             if (phone) {
                 const parsedPhoneNumber = parsePhoneNumberFromString(phone, "US");

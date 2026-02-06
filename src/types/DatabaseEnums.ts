@@ -21,3 +21,5 @@ export type TriggerType = "keyword" | "intent" | "condition";
 export type BotModel = "gpt" | "anthropic" | "gemini";
 export type OwnerType = "post" | "message" | "moment";
 export type FileType = "image" | "video" | "audio" | "document" | "other";
+export type PromoType = "percentage" | "fixed_amount";
+export type PromoDuration = "once" | "repeating" | "forever";

@@ -94,12 +94,13 @@ export function purchaseSubRoutes(app: Elysia) {
                 paymentMethodId,
                 mid,
                 priceId,
-                memberPlanId
+                memberPlanId,
+                promoId
             } = body;
 
             try {
 
-                const [member, location, pricing, paymentMethod] = await Promise.all([
+                const [member, location, pricing] = await Promise.all([
                     db.query.members.findFirst({
                         where: (member, { eq }) => eq(member.id, mid),
                         columns: {
@@ -125,10 +126,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         with: {
                             plan: true,
                         },
-                    }),
-                    db.query.paymentMethods.findFirst({
-                        where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
-                    }),
+                    })
                 ]);
 
 
@@ -139,9 +137,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 if (!location) {
                     return status(404, { error: "Location not found" });
                 }
-                if (!paymentMethod) {
-                    return status(404, { error: "Payment method not found" });
-                }
+
 
                 if (!pricing) {
                     return status(404, { error: "Pricing not found" });
@@ -163,6 +159,18 @@ export function purchaseSubRoutes(app: Elysia) {
                 const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
 
 
+                const paymentMethod = await db.query.paymentMethods.findFirst({
+                    where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
+                    columns: {
+                        stripeId: true,
+                        type: true,
+                    },
+                });
+
+                if (!paymentMethod) {
+                    return status(404, { error: "Payment method not found" });
+                }
+
                 const metadata = {
                     locationId: lid,
                     memberId: mid,
@@ -171,8 +179,34 @@ export function purchaseSubRoutes(app: Elysia) {
                 const today = new Date();
                 let startDate: Date = today;
 
+                let stripeCouponId: string | null = null;
 
-
+                if (promoId) {
+                    const promo = await db.query.promos.findFirst({
+                        where: (promo, { eq, and, gt, isNull, or }) => and(
+                            eq(promo.id, promoId),
+                            eq(promo.isActive, true),
+                            or(
+                                isNull(promo.expiresAt),
+                                gt(promo.expiresAt, new Date())
+                            )
+                        ),
+                        columns: {
+                            stripeCouponId: true,
+                            redemptionCount: true,
+                            maxRedemptions: true,
+                            allowedPlans: true,
+                        },
+                    });
+                    if (promo) {
+                        const { redemptionCount, maxRedemptions, allowedPlans } = promo;
+                        const isWithinRedemption = !maxRedemptions || redemptionCount < maxRedemptions;
+                        const isAllowedPlan = allowedPlans && allowedPlans.includes(pricing.id);
+                        if (isWithinRedemption && isAllowedPlan) {
+                            stripeCouponId = promo.stripeCouponId;
+                        }
+                    }
+                }
 
                 const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type, true);
                 const feePercent = locationState?.usagePercent + stripeFeePercentage;
@@ -191,6 +225,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     paymentMethodId: paymentMethod.stripeId,
                     feePercent: feePercent,
                     startDate: startDate,
+                    ...(stripeCouponId && { stripeCouponId }),
                     description: `Subscription to ${pricing.plan.name}/${pricing.name}`,
                     currency: pricing.plan.currency || "usd",
                     taxRateId: taxRate?.stripeRateId || undefined,
@@ -272,6 +307,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 priceId: t.String(),
                 memberPlanId: t.String(),
                 mid: t.String(),
+                promoId: t.Optional(t.String()),
             }),
         });
 

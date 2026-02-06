@@ -1,8 +1,8 @@
-import type { PaymentType, ProgramSession, RecurringReservation, Reservation, TaxRate } from "@/types";
-import { addDays, addYears, addMonths, addWeeks, isBefore, isSameDay } from "date-fns";
+import type { PaymentType, RecurringReservation, Reservation, TaxRate } from "@/types";
+import { addDays, addYears, addMonths, addWeeks, isSameDay } from "date-fns";
 import { JWT } from "google-auth-library";
 import { db } from "@/db/db";
-import { familyMembers, migrateMembers } from "@/db/schemas";
+import { migrateMembers } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import type { Member } from "@/types/member";
 import type { AuthAdditionalData } from "@/types/auth";
@@ -344,15 +344,22 @@ function calculateStripeFeePercentage(amount: number, paymentType: PaymentType, 
         return STRIPE_BANK_FEE;
     }
     const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
-    console.log(additionalPercentage)
     const finalPercentage = isRecurring ? (STRIPE_BILLING_FEE + STRIPE_FEE_PERCENT) : STRIPE_FEE_PERCENT;
-    console.log(finalPercentage)
     return Number((additionalPercentage + finalPercentage).toFixed(2))
 }
 
 function calculateStripeFeeAmount(amount: number, paymentType: PaymentType, isRecurring?: boolean) {
-    const stripeFeePercentage = calculateStripeFeePercentage(amount, paymentType, isRecurring);
-    return Math.floor(amount * (stripeFeePercentage / 100));
+    if (amount <= 0) return 0;
+
+    if (paymentType === 'us_bank_account') {
+        return Math.ceil(amount * (STRIPE_BANK_FEE / 100));
+    }
+    const percentage = isRecurring ? (STRIPE_BILLING_FEE + STRIPE_FEE_PERCENT) : STRIPE_FEE_PERCENT;
+
+    const fees = Math.ceil(amount * (percentage / 100)) + (STRIPE_FEE_AMOUNT * 100);
+    const feeOnStripeFees = Math.ceil(fees * (percentage / 100));
+
+    return fees + feeOnStripeFees;
 }
 
 

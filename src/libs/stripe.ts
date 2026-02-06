@@ -20,6 +20,7 @@ interface MemberPaymentOptions {
     taxRateId?: string,
     description?: string,
     productName?: string,
+    discount?: number,
     quantity?: number,
     currency?: string,
     tax?: number,
@@ -35,6 +36,7 @@ type MemberSubscriptionOptions = {
     startDate: Date,
     currency?: string,
     backdateStartDate?: Date | null,
+    stripeCouponId?: string,
     cancelAt?: Date | null,
     trialEnd?: Date | null,
     taxRateId?: string;
@@ -483,7 +485,7 @@ class MemberStripePayments extends BaseStripePayments {
             throw new Error("Account ID not set");
         }
 
-        const { description, unitCost, tax, metadata,
+        const { description, unitCost, tax, metadata, discount,
             returnUrl, authorizeOnly, productName, currency,
             amount, applicationFeeAmount, paymentMethodId
         } = options || {};
@@ -498,6 +500,7 @@ class MemberStripePayments extends BaseStripePayments {
                     product_name: productName || "",
                     quantity: 1,
                     unit_cost: unitCost || 0,
+                    ...(discount && { discount_amount: discount }),
                     tax: {
                         total_tax_amount: tax || 0,
                     },
@@ -570,6 +573,7 @@ class MemberStripePayments extends BaseStripePayments {
             feePercent,
             startDate,
             trialEnd,
+            stripeCouponId,
             cancelAt,
             taxRateId,
             isAllowProration,
@@ -603,7 +607,7 @@ class MemberStripePayments extends BaseStripePayments {
                 }
             },
             description,
-            items: [{ price: stripePriceId }],
+            items: [{ price: stripePriceId, ...(stripeCouponId && { discounts: [{ coupon: stripeCouponId }] }) }],
             collection_method: "charge_automatically",
             default_payment_method: paymentMethodId || undefined,
             application_fee_percent: feePercent || 0,
