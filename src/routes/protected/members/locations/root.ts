@@ -9,7 +9,7 @@ import { mlRewardsRoutes } from './rewards';
 import { mlSupportRoutes } from './support';
 import { mlPointsRoutes } from './points';
 import { memberLocations } from '@/db/schemas';
-
+import { mlPaymentMethods } from './methods';
 
 const GeMLProps = {
     params: t.Object({
@@ -108,6 +108,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         app.use(mlReferralsRoutes)
         app.use(mlSupportRoutes)
         app.use(mlPointsRoutes)
+        app.use(mlPaymentMethods)
         return app;
 
     })
