@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
 import { z } from "zod";
-import type { ReactionCounts } from "@/types/reactions";
-import { groupPosts, reactionCounts } from "@/db/schemas";
+import type { ReactionCounts } from "@subtrees/types/";
+import { groupPosts, reactionCounts } from "@subtrees/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 
 const GetGroupProps = {

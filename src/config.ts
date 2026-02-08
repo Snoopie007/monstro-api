@@ -1,12 +1,16 @@
 import { config } from 'dotenv'
-console.log('[CONFIG] Loading environment variables', process.env.BUN_ENV)
+
+
+if (!process.env.BUN_ENV) {
+    throw new Error('BUN_ENV must be set in the environment');
+}
+
+
+
 // Load environment variables based on BUN_ENV
 // On Fly/Docker we run from /usr/src/app; BUN_ENV often isn't passed to the process
 const inProductionContainer = process.cwd() === '/usr/src/app'
-const env =
-    process.env.BUN_ENV === 'production' || inProductionContainer
-        ? 'production'
-        : (process.env.BUN_ENV || 'development')
+const env = process.env.BUN_ENV === 'production' || inProductionContainer ? 'production' : (process.env.BUN_ENV || 'development')
 // Only load .env files in development/local environments
 if (env === 'development' || env === 'local') {
     config() // Load .env first
@@ -30,9 +34,9 @@ for (const ev of RequireEnv) {
 
 // Redis configuration
 export const redisConfig = {
-    host: process.env.UPSTASH_REDIS_HOST || 'localhost',
-    port: parseInt(process.env.UPSTASH_REDIS_PORT || '6379'),
-    password: process.env.UPSTASH_REDIS_PASSWORD || undefined,
+    host: process.env.UPSTASH_REDIS_HOST,
+    port: parseInt(process.env.UPSTASH_REDIS_PORT ?? '6379'),
+    password: process.env.UPSTASH_REDIS_PASSWORD,
     tls: {},
     // Retry strategy to prevent negative timeout warnings
     // First retry must be at least 1 second to avoid negative timeout calculations

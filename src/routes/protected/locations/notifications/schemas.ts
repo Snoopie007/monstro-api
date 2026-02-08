@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const AffectedMemberSchema = z.object({
     memberId: z.string(),
-    email: z.string().email(),
+    email: z.email(),
     firstName: z.string(),
     lastName: z.string().optional(),
     reservations: z.array(z.object({

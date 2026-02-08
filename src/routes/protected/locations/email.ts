@@ -1,5 +1,5 @@
 import { EmailTemplates } from "@/emails";
-import { emailQueue } from "@/libs/queues";
+import { emailQueue } from "@/workers/queues";
 import type { Elysia } from "elysia";
 import { z } from "zod";
 const LocationEmailProps = {

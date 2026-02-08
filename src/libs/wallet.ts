@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { VendorStripePayments } from "./stripe";
-import type { Location } from "@/types/location";
-import { wallets, walletUsages } from "@/db/schemas/locations";
+import type { Location } from "@subtrees/types";
+import { wallets, walletUsages } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 async function checkWalletBalance(location: Location) {

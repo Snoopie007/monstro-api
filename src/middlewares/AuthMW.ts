@@ -1,4 +1,4 @@
-import type { ExtendedVendorUser } from '@/types/auth';
+import type { ExtendedVendorUser } from '@subtrees/types/auth';
 import { Elysia } from 'elysia';
 import { errors, jwtVerify } from 'jose';
 

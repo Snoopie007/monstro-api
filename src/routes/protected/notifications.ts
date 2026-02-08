@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import type { Elysia, Context } from "elysia";
 import { z } from "zod";
-import { userNotifications } from "@/db/schemas";
+import { userNotifications } from "subtrees/schemas";
 
 
 export async function userNotificationRoutes(app: Elysia) {

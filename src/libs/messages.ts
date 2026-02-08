@@ -1,8 +1,8 @@
 import { db } from '@/db/db';
-import { chatMembers } from '@/db/schemas';
+import { chatMembers } from '@subtrees/schemas';
 import { createClient } from '@supabase/supabase-js';
 import { eq } from 'drizzle-orm';
-import type { Message } from '@/types';
+import type { Message } from '@subtrees/types';
 
 
 

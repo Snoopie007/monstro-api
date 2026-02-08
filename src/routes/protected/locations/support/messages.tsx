@@ -1,11 +1,14 @@
 import { db } from "@/db/db";
-import { supportConversations, supportMessages } from "@/db/schemas";
+import { supportConversations, supportMessages } from "@subtrees/schemas";
 import { calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory, getModel } from "@/libs/ai";
 import { ToolFunctions } from "@/libs/ai/FNHandler";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { broadcastSupportMessage, formatSupportMessagePayload } from "@/libs/support-broadcast";
 import { chargeWallet, checkWalletBalance } from "@/libs/wallet";
-import type { MemberLocation, NewSupportMessage, SupportConversation, SupportMessage } from "@/types";
+import type {
+    MemberLocation, NewSupportMessage,
+    SupportConversation, SupportMessage
+} from "@subtrees/types";
 import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
 import { Runnable } from "@langchain/core/runnables";

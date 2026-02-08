@@ -2,12 +2,12 @@ import { db } from "@/db/db";
 import {
     attendances, memberPackages, reservations,
     recurringReservations, programSessions
-} from "@/db/schemas";
-import type { Reservation } from "@/types/attendance";
+} from "@subtrees/schemas";
+import type { Reservation } from "@subtrees/types";
 import { isSameHour } from "date-fns";
 import Elysia from "elysia";
 import { eq } from "drizzle-orm";
-import { classQueue } from "@/libs/queues";
+import { classQueue } from "@/workers/queues";
 import { z } from "zod";
 
 

@@ -7,14 +7,14 @@ import {
     memberLocations,
     members,
     memberTags,
-} from "@/db/schemas";
+} from "subtrees/schemas";
 import { and, asc, desc, eq, exists, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import type {
     LocationMembersQuery,
     MemberCustomFieldValue,
     MemberSortableField,
     MemberTagRef,
-} from "@/types/member";
+} from "subtrees/types/member";
 
 const sortColumns = {
     created: members.created,

@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import {
     migrateMembers, memberLocations, memberPackages,
     memberPaymentMethods
-} from "@/db/schemas";
+} from "@subtrees/schemas";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";

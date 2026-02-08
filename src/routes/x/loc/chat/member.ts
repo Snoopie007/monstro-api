@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { chatMembers, chats, locations } from "@/db/schemas";
+import { chatMembers, chats, locations } from "@subtrees/schemas";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Context, Elysia } from "elysia";
 import { z } from "zod";

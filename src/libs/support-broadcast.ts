@@ -1,4 +1,4 @@
-import type { SupportConversation, SupportMessage } from '@/types';
+import type { SupportConversation, SupportMessage } from '@subtrees/types';
 import { createClient } from '@supabase/supabase-js';
 
 /**

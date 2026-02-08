@@ -1,9 +1,9 @@
-import { emailQueue, invoiceQueue } from "@/libs/queues";
+import { invoiceQueue } from "@/workers/queues";
 import type Elysia from "elysia";
 
 
 export async function oneOffInvoiceRoutes(app: Elysia) {
-    return app.post('/reminder', async ({body}) => {
+    return app.post('/reminder', async ({ body }) => {
         const { invoiceId, sendAt } = body as {
             invoiceId: string;
             sendAt: string;
@@ -12,7 +12,7 @@ export async function oneOffInvoiceRoutes(app: Elysia) {
         try {
             const delay = Math.max(0, new Date(sendAt).getTime() - Date.now());
             const jobId = `one-off-invoice-reminder-${invoiceId}`;
-            
+
             // Add to INVOICE queue, not email queue
             await invoiceQueue.add('send-one-off-invoice-reminder', {
                 invoiceId,
@@ -36,19 +36,19 @@ export async function oneOffInvoiceRoutes(app: Elysia) {
             throw new Error(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     })
-    .delete('/reminder/:invoiceId', async ({ params }) => {
-        const { invoiceId } = params;
-        const jobId = `one-off-invoice-reminder-${invoiceId}`;
-        
-        try {
-            const job = await invoiceQueue.getJob(jobId);
-            if (!job) {
-                return { success: false, message: 'Job not found' };
+        .delete('/reminder/:invoiceId', async ({ params }) => {
+            const { invoiceId } = params;
+            const jobId = `one-off-invoice-reminder-${invoiceId}`;
+
+            try {
+                const job = await invoiceQueue.getJob(jobId);
+                if (!job) {
+                    return { success: false, message: 'Job not found' };
+                }
+                await job.remove();
+                return { success: true, message: 'Reminder cancelled' };
+            } catch (error) {
+                throw new Error('Failed to cancel reminder');
             }
-            await job.remove();
-            return { success: true, message: 'Reminder cancelled' };
-        } catch (error) {
-            throw new Error('Failed to cancel reminder');
-        }
-    });
+        });
 }

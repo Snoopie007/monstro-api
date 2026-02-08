@@ -1,10 +1,9 @@
 import { addDays, addMinutes } from "date-fns";
 import {
     calculateNextPeriodEnd, fetchInvoiceData, fetchLocationData,
-
     fetchMemberData, fetchPricingData, fetchSubscriptionData
 } from "../utils";
-import { emailQueue, invoiceQueue } from "@/libs/queues";
+import { emailQueue, invoiceQueue } from "../queues";
 
 export async function processRecurringInvoice(data: {
     jobId: string;

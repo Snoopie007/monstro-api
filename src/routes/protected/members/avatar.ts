@@ -1,9 +1,9 @@
 import { Elysia } from "elysia";
 import S3Bucket from "@/libs/s3";
 import { db } from "@/db/db";
-import { users } from "@/db/schemas";
+import { users } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
-import { members } from "@/db/schemas";
+import { members } from "@subtrees/schemas";
 import { z } from "zod";
 const s3 = new S3Bucket();
 

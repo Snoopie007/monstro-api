@@ -1,4 +1,4 @@
-import { classQueue } from "@/libs/queues";
+import { classQueue } from "@/workers/queues";
 import type Elysia from "elysia";
 
 type ScheduleClassReminderBody = {
@@ -40,29 +40,29 @@ export async function classReminderRoutes(app: Elysia) {
             throw new Error(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     })
-    .delete('/reminder/:reservationId', async ({ params }: { params: CancelClassReminderParams }) => {
-        const { reservationId } = params;
+        .delete('/reminder/:reservationId', async ({ params }: { params: CancelClassReminderParams }) => {
+            const { reservationId } = params;
 
-        try {
-            const jobId = `class-reminder-${reservationId}`;
-            const job = await classQueue.getJob(jobId);
-            
-            if (job) {
-                await job.remove();
+            try {
+                const jobId = `class-reminder-${reservationId}`;
+                const job = await classQueue.getJob(jobId);
+
+                if (job) {
+                    await job.remove();
+                    return {
+                        success: true,
+                        message: `Cancelled class reminder for reservation ${reservationId}`
+                    };
+                }
+
                 return {
-                    success: true,
-                    message: `Cancelled class reminder for reservation ${reservationId}`
+                    success: false,
+                    message: `No reminder job found for reservation ${reservationId}`
                 };
+            } catch (error) {
+                console.error('Error cancelling class reminder:', error);
+                throw new Error(`Failed to cancel: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
-
-            return {
-                success: false,
-                message: `No reminder job found for reservation ${reservationId}`
-            };
-        } catch (error) {
-            console.error('Error cancelling class reminder:', error);
-            throw new Error(`Failed to cancel: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    });
+        });
 }
 

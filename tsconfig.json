@@ -9,7 +9,8 @@
     "allowJs": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@subtrees/*": ["./subtrees/*"]
     },
 
     // Bundler mode

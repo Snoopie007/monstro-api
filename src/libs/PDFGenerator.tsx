@@ -7,7 +7,7 @@ import {
 	StyleSheet,
 	pdf,
 } from "@react-pdf/renderer";
-import type { Contract } from "@/types/contract";
+import type { Contract } from "@subtrees/types/contract";
 import { parseHTMLContent } from "./PDFParser";
 
 interface PDFTemplateProps {

@@ -4,8 +4,8 @@ import { EmailSender } from "@/libs/email";
 import { shouldSendMissedClassEmail } from "@/libs/emailValidation";
 import { invoiceWorker } from "./invoices";
 import { classWorker } from "./classes";
-
-
+import { subscriptionWorker } from "./subs";
+console.log('Worker started');
 const emailSender = new EmailSender();
 const worker = new Worker('email', async (job) => {
     const { name, data } = job;
@@ -44,6 +44,9 @@ const worker = new Worker('email', async (job) => {
     connection: redisConfig
 });
 
+subscriptionWorker.on('failed', (job, err) => {
+    console.error(`❌ Subscription job ${job?.id} failed:`, err);
+});
 worker.on('failed', (job, err) => {
     console.error(`❌ Job ${job?.id} failed:`, err);
 });

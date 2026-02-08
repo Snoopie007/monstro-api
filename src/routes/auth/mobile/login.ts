@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
-import { db } from "../../../db/db";
+import { db } from "@/db/db";
 import bcrypt from "bcryptjs";
-import { generateMobileToken } from "../../../libs/auth";
+import { generateMobileToken } from "@/libs/auth";
 
 const MobileLoginSchema = {
     body: t.Object({

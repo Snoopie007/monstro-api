@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import type { MemberPackage, MemberSubscription, ProgramSession } from "@/types";
+import type { MemberPackage, MemberSubscription } from "@subtrees/types";
 import { startOfWeek, endOfWeek } from "date-fns";
 import { sql } from "drizzle-orm";
-import { reservations } from "@/db/schemas";
+import { reservations } from "@subtrees/schemas";
 import { and, eq, gte, lte } from "drizzle-orm";
 
 export async function getMemberPlan(memberPlanId: string): Promise<MemberPackage | MemberSubscription> {

@@ -1,9 +1,8 @@
 
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
-import { supportConversations } from '@/db/schemas';
-import type { SupportConversation } from '@/types';
-import type { MemberLocation } from '@/types/member';
+import { supportConversations } from '@subtrees/schemas';
+import type { SupportConversation, MemberLocation } from '@subtrees/types';
 import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/support-broadcast';
 
 type ToolCall = {

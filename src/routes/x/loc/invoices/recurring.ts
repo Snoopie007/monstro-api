@@ -1,4 +1,4 @@
-import { invoiceQueue } from "@/libs/queues";
+import { invoiceQueue } from "@/workers/queues";
 import type Elysia from "elysia";
 import { z } from "zod";
 

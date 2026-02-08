@@ -1,11 +1,13 @@
-import type { PaymentType, RecurringReservation, Reservation, TaxRate } from "@/types";
+import type {
+    PaymentType, RecurringReservation, Reservation, TaxRate,
+    Member
+} from "@subtrees/types";
 import { addDays, addYears, addMonths, addWeeks, isSameDay } from "date-fns";
 import { JWT } from "google-auth-library";
 import { db } from "@/db/db";
-import { migrateMembers } from "@/db/schemas";
+import { migrateMembers } from "subtrees/schemas";
 import { eq } from "drizzle-orm";
-import type { Member } from "@/types/member";
-import type { AuthAdditionalData } from "@/types/auth";
+import type { AuthAdditionalData } from "@subtrees/types/auth";
 
 
 async function tryCatch<T, E = Error>(

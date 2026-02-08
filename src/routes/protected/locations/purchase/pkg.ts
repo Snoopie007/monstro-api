@@ -1,10 +1,12 @@
 import { db } from "@/db/db";
-import { memberLocations, memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
+import {
+    memberLocations, memberPackages,
+    memberPaymentMethods, transactions
+} from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import type { Promo } from "@/types";
 
 import {
     calculateThresholdDate,

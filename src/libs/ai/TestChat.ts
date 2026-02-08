@@ -1,7 +1,6 @@
-import type { SupportConversation } from "@/types";
+import type { SupportConversation, SupportAssistant, MemberLocation } from "@subtrees/types";
 import { ToolFunctions } from "./FNHandler";
 import { BaseMessage, ToolMessage, trimMessages } from "@langchain/core/messages";
-import type { SupportAssistant, MemberLocation } from "@/types";
 import type { ChatOpenAI } from "@langchain/openai";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { ChatGoogleGenerativeAI } from "@langchain/google-genai";

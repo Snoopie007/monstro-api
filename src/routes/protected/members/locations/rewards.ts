@@ -1,5 +1,5 @@
 import { db } from "@/db/db"
-import { memberLocations, memberRewards } from "@/db/schemas"
+import { memberLocations, memberRewards } from "@subtrees/schemas"
 import { and, eq, sql } from "drizzle-orm"
 import { Elysia } from "elysia"
 import { z } from "zod";

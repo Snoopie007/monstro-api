@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import type { ExtendedProgramSession } from "@/types/program";
+import type { ExtendedProgramSession } from "@subtrees/types";
 import { addDays, addMinutes } from "date-fns";
 import { Elysia, t } from "elysia";
 import { generateVRs } from "@/libs/utils";

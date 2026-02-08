@@ -3,8 +3,8 @@ import {
     memberAchievements,
     memberPointsHistory,
     memberLocations,
-} from '@/db/schemas'
-import type { NewMemberPointsHistory } from '@/types/achievement'
+} from '@subtrees/schemas'
+import type { NewMemberPointsHistory } from '@subtrees/types'
 import { and, eq, inArray, SQL, sql } from 'drizzle-orm'
 
 const AchievementTriggers = [

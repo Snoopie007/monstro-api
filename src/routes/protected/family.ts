@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { familyMembers } from "@/db/schemas";
+import { familyMembers } from "subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 export function familyRoutes(app: Elysia) {

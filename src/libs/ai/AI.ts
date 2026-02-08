@@ -6,7 +6,7 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import type {
 	BotModel,
 	SupportMessage
-} from '@/types';
+} from 'subtrees/types';
 import { HumanMessage, ToolMessage, AIMessage, BaseMessage, SystemMessage, AIMessageChunk } from "@langchain/core/messages";
 
 

@@ -1,6 +1,6 @@
 import { drizzle, PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "./schemas";
+import * as schema from "@subtrees/schemas";
 import * as adminSchema from "./admin";
 
 declare global {

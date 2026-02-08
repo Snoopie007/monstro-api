@@ -1,4 +1,4 @@
-import type { MemberLocation, SupportAssistant } from "@/types";
+import type { MemberLocation, SupportAssistant } from "@subtrees/types";
 import { PromptTemplate } from "@langchain/core/prompts";
 
 

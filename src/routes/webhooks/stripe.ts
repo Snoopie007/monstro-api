@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/stripe";
 import { triggerSignUp } from "@/libs/triggers";
 
-import { memberSubscriptions, memberInvoices, transactions } from "@/db/schemas";
+import { memberSubscriptions, memberInvoices, transactions } from "subtrees/schemas";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/db";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
@@ -451,8 +451,8 @@ function calculateTaxFromInvoice(invoice: ExtendedStripeInvoice): number {
 // Helper function to create transaction record for paid invoice
 async function createInvoiceTransaction(tx: PgTransaction<
     PostgresJsQueryResultHKT,
-    typeof import("@/db/schemas"),
-    ExtractTablesWithRelations<typeof import("@/db/schemas")>
+    typeof import("subtrees/schemas"),
+    ExtractTablesWithRelations<typeof import("subtrees/schemas")>
 >,
     transactionData: {
         memberId: string;

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import Elysia from "elysia";
-import type { ReactionEmoji } from "@/types";
+import type { ReactionEmoji } from "@subtrees/types";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 const ReactionProps = {

@@ -1,7 +1,10 @@
 import { db } from "@/db/db";
-import { supportConversations } from "@/db/schemas";
-import { broadcastSupportConversation, formatSupportConversationPayload } from "@/libs/support-broadcast";
-import type { SupportConversation } from "@/types/support";
+import { supportConversations } from "@subtrees/schemas";
+import {
+    broadcastSupportConversation,
+    formatSupportConversationPayload
+} from "@/libs/support-broadcast";
+import type { SupportConversation } from "@subtrees/types";
 import { eq } from "drizzle-orm";
 import type { Elysia } from "elysia";
 import { OpenAI } from "openai";

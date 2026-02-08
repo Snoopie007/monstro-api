@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { groups } from "@/db/schemas";
+import { groups } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 

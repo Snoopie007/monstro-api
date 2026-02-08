@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
-import { Elysia, type Context } from "elysia";
+import type { Elysia } from "elysia";
 import { z } from "zod";
-import type { UserFeed } from "@/types/feeds";
+import type { UserFeed } from "@subtrees/types";
 
 const UserFeedsProps = {
 

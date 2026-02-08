@@ -1,8 +1,7 @@
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
-import { memberLocations, memberSubscriptions } from "@/db/schemas";
-import { and } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
+import { memberLocations, memberSubscriptions } from "@subtrees/schemas";
+
 import { Elysia, t } from "elysia";
 import { z } from "zod";
 

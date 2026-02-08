@@ -2,8 +2,8 @@ import { VendorStripePayments } from "@/libs/stripe";
 import Elysia from "elysia";
 import { db } from "@/db/db";
 import { z } from "zod";
-import { memberPaymentMethods, members, paymentMethods } from "@/db/schemas";
-import type { PaymentType } from "@/types/DatabaseEnums";
+import { memberPaymentMethods, members, paymentMethods } from "subtrees/schemas";
+import type { PaymentType } from "subtrees/types/DatabaseEnums";
 import type Stripe from "stripe";
 import { eq } from "drizzle-orm";
 

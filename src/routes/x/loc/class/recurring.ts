@@ -1,4 +1,4 @@
-import { classQueue } from "@/libs/queues";
+import { classQueue } from "@/workers/queues";
 import type Elysia from "elysia";
 
 type ScheduleRecurringClassReminderBody = {
@@ -41,40 +41,40 @@ export async function recurringClassReminderRoutes(app: Elysia) {
             throw new Error(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     })
-    .delete('/recurring/:recurringReservationId', async ({ params }: { params: CancelRecurringClassReminderParams }) => {
-        const { recurringReservationId } = params;
+        .delete('/recurring/:recurringReservationId', async ({ params }: { params: CancelRecurringClassReminderParams }) => {
+            const { recurringReservationId } = params;
 
-        try {
-            // Remove all reminder jobs for this recurring reservation (including numbered reminders)
-            let removedCount = 0;
+            try {
+                // Remove all reminder jobs for this recurring reservation (including numbered reminders)
+                let removedCount = 0;
 
-            // Try to remove the main job
-            const mainJobId = `recurring-class-reminder-${recurringReservationId}`;
-            const mainJob = await classQueue.getJob(mainJobId);
-            if (mainJob) {
-                await mainJob.remove();
-                removedCount++;
-            }
-
-            // Remove all numbered reminder jobs
-            for (let i = 0; i < 100; i++) { // Max 100 reminders (should be enough for any recurring schedule)
-                const reminderJobId = `recurring-class-reminder-${recurringReservationId}-reminder-${i}`;
-                const reminderJob = await classQueue.getJob(reminderJobId);
-                if (reminderJob) {
-                    await reminderJob.remove();
+                // Try to remove the main job
+                const mainJobId = `recurring-class-reminder-${recurringReservationId}`;
+                const mainJob = await classQueue.getJob(mainJobId);
+                if (mainJob) {
+                    await mainJob.remove();
                     removedCount++;
                 }
-            }
 
-            return {
-                success: true,
-                message: `Cancelled ${removedCount} recurring class reminder(s) for recurring reservation ${recurringReservationId}`,
-                removedCount
-            };
-        } catch (error) {
-            console.error('Error cancelling recurring class reminder:', error);
-            throw new Error(`Failed to cancel: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    });
+                // Remove all numbered reminder jobs
+                for (let i = 0; i < 100; i++) { // Max 100 reminders (should be enough for any recurring schedule)
+                    const reminderJobId = `recurring-class-reminder-${recurringReservationId}-reminder-${i}`;
+                    const reminderJob = await classQueue.getJob(reminderJobId);
+                    if (reminderJob) {
+                        await reminderJob.remove();
+                        removedCount++;
+                    }
+                }
+
+                return {
+                    success: true,
+                    message: `Cancelled ${removedCount} recurring class reminder(s) for recurring reservation ${recurringReservationId}`,
+                    removedCount
+                };
+            } catch (error) {
+                console.error('Error cancelling recurring class reminder:', error);
+                throw new Error(`Failed to cancel: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        });
 }
 

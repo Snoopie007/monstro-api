@@ -1,5 +1,5 @@
 import { db } from '@/db/db';
-import { accounts, users } from '@/db/schemas';
+import { accounts } from '@subtrees/schemas';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import Elysia from 'elysia';

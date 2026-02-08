@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
-import { moments, userFeeds } from "@/db/schemas";
+import { moments, userFeeds } from "@subtrees/schemas";
 import { z } from "zod";
 
 const GetMomentsProps = {

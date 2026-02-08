@@ -1,7 +1,10 @@
 node_modules
 npm-debug.log
+.cursor
 .git
 .gitignore
+fixtures
+_keys
 README.md
 .env
 .env.local

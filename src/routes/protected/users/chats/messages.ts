@@ -1,7 +1,16 @@
 import { db } from "@/db/db";
-import { chatMembers, chats, media, messages, reactionCounts } from "@/db/schemas";
-import { broadcastMessage, broadcastMessageUpdate, broadcastMessageDelete } from "@/libs/messages";
-import type { Media, Message, ReactionCounts, MessageReply } from "@/types";
+import {
+    chatMembers, chats, media,
+    messages, reactionCounts
+} from "@subtrees/schemas";
+import {
+    broadcastMessage,
+    broadcastMessageUpdate, broadcastMessageDelete
+} from "@/libs/messages";
+import type {
+    Media, Message,
+    ReactionCounts, MessageReply
+} from "@subtrees/types";
 import { and, eq, inArray } from "drizzle-orm";
 import { Elysia, t, type Context } from "elysia";
 import { ALLOWED_IMAGE_TYPES } from "@/constants/data";

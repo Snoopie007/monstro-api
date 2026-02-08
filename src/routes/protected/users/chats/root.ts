@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { chatMembers, chats } from "@/db/schemas";
+import { chatMembers, chats } from "subtrees/schemas";
 import { messageRoute } from "./messages";
 const UserChatsProps = {
     params: t.Object({

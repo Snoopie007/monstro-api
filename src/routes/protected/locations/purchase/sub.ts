@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions } from "@/db/schemas";
+import { memberLocations, memberSubscriptions } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";

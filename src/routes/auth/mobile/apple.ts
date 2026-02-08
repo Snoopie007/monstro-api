@@ -2,8 +2,11 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts } from "@/db/schemas";
-import { generateDiscriminator, generateReferralCode, generateUsername, handleAdditionalData } from "@/libs/utils";
+import { users, members, accounts } from "@subtrees/schemas";
+import {
+    generateDiscriminator, generateReferralCode,
+    generateUsername, handleAdditionalData
+} from "@/libs/utils";
 import { z } from "zod";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";
 const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));

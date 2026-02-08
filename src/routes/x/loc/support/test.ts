@@ -1,12 +1,12 @@
 import { db } from "@/db/db";
-import { supportAssistants } from "@/db/schemas";
+import { supportAssistants } from "subtrees/schemas";
 import { calculateAICost, chunkedStream, getModel } from "@/libs/ai";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { createMockConversation, invokeTestBot } from "@/libs/ai/TestChat";
 import { getRedisClient } from "@/libs/redis";
 import type {
     SupportConversation,
-} from "@/types";
+} from "subtrees/types";
 import { toUIMessageStream } from '@ai-sdk/langchain';
 import { UpstashRedisChatMessageHistory } from "@langchain/community/stores/message/upstash_redis";
 import { BaseMessage } from "@langchain/core/messages";

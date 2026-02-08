@@ -8,7 +8,7 @@ import {
   Text,
   Link,
 } from '@react-email/components';
-import type { InvoiceItem } from '@/types/invoices';
+import type { InvoiceItem } from 'subtrees/types/invoices';
 import { EmailStyles } from './_shared/SharedStyle';
 import {
   EmailFooter, EmailInvoiceBox, EmailInvoiceLabel,

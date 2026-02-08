@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { members, users } from "@/db/schemas";
+import { members, users } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";

@@ -1,6 +1,9 @@
 import { createClient, RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { db } from "@/db/db";
-import { groupMembers, chatMembers, users, groupPosts, groups, staffsLocations } from "@/db/schemas";
+import {
+	groupMembers, chatMembers, users, groupPosts,
+	groups, staffsLocations
+} from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import {
 	notifyUsersNewGroupPost,

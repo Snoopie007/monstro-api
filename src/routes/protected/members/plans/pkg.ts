@@ -1,11 +1,9 @@
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
-import { memberLocations, memberPackages } from "@/db/schemas";
+import { memberLocations, memberPackages } from "@subtrees/schemas";
 import { and } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { EmailSender } from "@/libs/email";
-
 
 
 export function memberPlansPkgRoutes(app: Elysia) {

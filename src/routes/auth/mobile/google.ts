@@ -2,8 +2,11 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts, memberLocations } from "@/db/schemas";
-import { generateDiscriminator, generateReferralCode, generateUsername, handleAdditionalData } from "@/libs/utils";
+import { users, members, accounts } from "@subtrees/schemas";
+import {
+    generateDiscriminator, generateReferralCode,
+    generateUsername, handleAdditionalData
+} from "@/libs/utils";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";

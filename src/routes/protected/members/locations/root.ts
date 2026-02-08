@@ -8,7 +8,7 @@ import { mlReferralsRoutes } from './referrals';
 import { mlRewardsRoutes } from './rewards';
 import { mlSupportRoutes } from './support';
 import { mlPointsRoutes } from './points';
-import { memberLocations } from '@/db/schemas';
+import { memberLocations } from '@subtrees/schemas';
 import { mlPaymentMethods } from './methods';
 
 const GeMLProps = {

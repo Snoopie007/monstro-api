@@ -1,6 +1,6 @@
 import { addDays } from "date-fns";
 import { fetchReservationData, fetchRecurringReservationData, calculateNextClassOccurrence } from "../utils";
-import { emailQueue, classQueue } from "@/libs/queues";
+import { emailQueue, classQueue } from "../queues";
 import { db } from "@/db/db";
 
 export async function processClassReminder(data: {

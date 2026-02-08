@@ -4,8 +4,8 @@ import {
 	memberLocations,
 	memberPackages,
 	memberSubscriptions,
-} from "@/db/schemas";
-import type { Contract, Member, MemberPlanPricing } from "@/types";
+} from "subtrees/schemas";
+import type { Contract, Member, MemberPlanPricing } from "subtrees/types";
 import S3Bucket from "@/libs/s3";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";

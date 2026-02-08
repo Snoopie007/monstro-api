@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { memberPaymentMethods } from "@/db/schemas"; // Fix naming
+import { memberPaymentMethods } from "@subtrees/schemas"; // Fix naming
 import { eq, and } from "drizzle-orm"; // Assume drizzle-orm for query helpers
 
 const GetMLPProps = {

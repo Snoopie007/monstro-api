@@ -6,9 +6,9 @@ import {
     memberPlanPricing,
     memberPlans,
     memberSubscriptions,
-} from "@/db/schemas"
+} from "subtrees/schemas"
 import { and, eq, } from "drizzle-orm"
-import type { Program } from "@/types/program"
+import type { Program } from "subtrees/types/program"
 
 const MemberPlansProps = {
     params: t.Object({
