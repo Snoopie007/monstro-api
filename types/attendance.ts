@@ -19,16 +19,31 @@ export type ExtendedAttendance = Attendance & {
 
 export type InsertReservation = typeof reservations.$inferInsert;
 
-export type Reservation = typeof reservations.$inferSelect & {
-  isRecurring?: boolean;
-  recurringId?: string;
-  session?: ProgramSession | null;
-  member?: Member;
-  exceptions?: ReservationException[];
-  memberSubscription?: MemberSubscription | null;
-  memberPackage?: MemberPackage | null;
-  attendance?: Attendance;
+// Base reservation fields that are always required
+export type ReservationBase = {
+  id: string;
+  sessionId: string | null;
+  memberId: string;
+  memberSubscriptionId: string | null;
+  memberPackageId: string | null;
+  locationId: string;
+  startOn: Date;
+  endOn: Date;
+  created: Date;
 };
+
+// Full reservation type - combines base fields with optional schema fields
+export type Reservation = ReservationBase & 
+  Partial<Omit<typeof reservations.$inferSelect, keyof ReservationBase>> & {
+    isRecurring?: boolean;
+    recurringId?: string;
+    session?: ProgramSession | null;
+    member?: Member;
+    exceptions?: ReservationException[];
+    memberSubscription?: MemberSubscription | null;
+    memberPackage?: MemberPackage | null;
+    attendance?: Attendance;
+  };
 
 export type RecurringReservation = typeof recurringReservations.$inferSelect & {
   session?: ProgramSession | null;
