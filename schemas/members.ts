@@ -10,7 +10,7 @@ import {
 	InvoiceStatusEnum, MemberRelationshipEnum, CustomFieldTypeEnum,
 	PaymentTypeEnum, FamilyMemberStatusEnum
 } from './DatabaseEnums'
-import type { InvoiceItem } from 'subtrees/types'
+import type { InvoiceItem } from '../types'
 
 
 
@@ -86,7 +86,7 @@ export const memberInvoices = pgTable('member_invoices', {
 	locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
 	memberSubscriptionId: text('member_subscription_id').references(() => memberSubscriptions.id, { onDelete: 'cascade' }),
 	description: text('description'),
-	items: jsonb('items').$type<InvoiceItem[]>().array().default(sql`'{}'::jsonb[]`),
+	items: jsonb('items').array().$type<InvoiceItem[]>().default(sql`'{}'::jsonb[]`),
 	paid: boolean('paid').notNull().default(false),
 	tax: integer('tax').notNull().default(0),
 	total: integer('total').notNull().default(0),
