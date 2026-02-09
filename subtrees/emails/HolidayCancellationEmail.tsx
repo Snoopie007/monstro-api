@@ -7,7 +7,6 @@ import {
 	Section,
 	Text,
 	Button,
-	Hr,
 } from '@react-email/components';
 import { EmailStyles } from './_shared/SharedStyle';
 import { format } from 'date-fns';
@@ -21,7 +20,7 @@ interface CancelledReservation {
 
 interface HolidayCancellationEmailProps {
 	member: { firstName: string; lastName?: string; email?: string };
-	location: { name: string; address?: string; email?: string; phone?: string };
+	location: { name: string; address: string | null; email: string | null; phone: string | null };
 	holiday: {
 		name: string;
 		date: string;

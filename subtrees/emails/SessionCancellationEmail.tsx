@@ -15,7 +15,7 @@ import { EmailFooter, LocationInfoBox, EmailBoxTitle, EmailBoxContent, EmailBox,
 
 interface SessionCancellationEmailProps {
 	member: { firstName: string; lastName?: string; email?: string };
-	location: { name: string; address?: string; email?: string; phone?: string };
+	location: { name: string; address: string | null; email: string | null; phone: string | null };
 	session: {
 		className: string;
 		date: string;

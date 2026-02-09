@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 
 interface MakeupClassConfirmationEmailProps {
   member: { firstName: string; lastName?: string; email?: string };
-  location: { name: string; address?: string; email?: string; phone?: string };
+  location: { name: string; address: string | null; email: string | null; phone: string | null };
   originalClass: {
     name: string;
     date: string;
@@ -121,15 +121,7 @@ export default function MakeupClassConfirmationEmail({
 }
 
 MakeupClassConfirmationEmail.PreviewProps = {
-  member: {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@example.com',
-  },
-  location: {
-    name: 'Monstro Studio',
-    address: '123 Main St, Los Angeles, CA 90001',
-  },
+  ...DummyData,
   originalClass: {
     name: 'Morning Yoga',
     date: '2026-12-20',
@@ -145,9 +137,5 @@ MakeupClassConfirmationEmail.PreviewProps = {
     },
   },
   creditsRemaining: 2,
-  monstro: {
-    fullAddress: 'PO Box 123, City, State 12345\nCopyright 2026 Monstro',
-    privacyUrl: 'https://monstro-x.com/privacy',
-    unsubscribeUrl: 'https://monstro-x.com/unsubscribe',
-  },
+
 } as MakeupClassConfirmationEmailProps;
