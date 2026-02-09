@@ -1,47 +1,23 @@
-# fly.toml app configuration file generated for bun on 2024-01-01T00:00:00Z
+# fly.toml app configuration file generated for mworker-test on 2026-02-09T23:24:23Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "monstro-api"
-# Primary region where the app will be deployed (sjc = San Jose, West Coast)
-primary_region = "sjc"
+app = 'mworker-test'
+primary_region = 'ams'
 
 [build]
-  dockerfile = "Dockerfile"
 
-[env]
-  PORT = "3000"
-  BUN_ENV = "production"
-
-[[vm]]
-  memory = "512mb"
-  cpu_kind = "shared"
-  cpus = 1
-  
 [http_service]
-  internal_port = 3000
+  internal_port = 8080
   force_https = true
-  auto_stop_machines = "off"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["api"]
+  processes = ['app']
 
-  # Add allowed hosts for domain validation
-  [[http_service.allowed_hosts]]
-    name = "monstro-api.fly.dev"
-  
-  # Add your custom domain
-  [[http_service.allowed_hosts]]
-    name = "api.mymonstro-x.com"
-
-[[http_service.checks]]
-  grace_period = "120s"
-  interval = "12h"
-  method = "GET"
-  timeout = "30s"
-  path = "/healthcheck"
-  protocol = "http"
-  tls_skip_verify = false
-
-[processes]
-  api = "bun dist/index.js"
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256
