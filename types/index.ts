@@ -1,5 +1,6 @@
 export * from "./other";
 export * from "./location";
+export * from "./attendance";
 export * from "./program";
 export * from "./member";
 export * from "./user";
