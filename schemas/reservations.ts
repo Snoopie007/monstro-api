@@ -94,9 +94,8 @@ export const reservationExceptions = pgTable("reservation_exceptions", {
 });
 
 export const reservationsRelations = relations(reservations, ({ one, many }) => ({
-	attendance: one(attendances, {
-		fields: [reservations.id],
-		references: [attendances.reservationId],
+	attendances: many(attendances, {
+		relationName: "reservationAttendances",
 	}),
 	session: one(programSessions, {
 		fields: [reservations.sessionId],
