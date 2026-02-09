@@ -1,7 +1,6 @@
 import { Worker } from "bullmq";
 import { redisConfig } from "@/config";
 import { EmailSender } from "@/libs/email";
-import { shouldSendMissedClassEmail } from "@/libs/emailValidation";
 import { invoiceWorker } from "./invoices";
 import { classWorker } from "./classes";
 import { subscriptionWorker } from "./subs";
@@ -9,15 +8,6 @@ console.log('Worker started');
 const emailSender = new EmailSender();
 const worker = new Worker('email', async (job) => {
     const { name, data } = job;
-    // pull
-    // Check if this is a missed class email that should be validated
-    if (data.template === 'MissedClassEmail') {
-        const shouldSend = await shouldSendMissedClassEmail(data.metadata);
-        if (!shouldSend) {
-            console.log(`⏭️ Skipping missed class email - member attended or validation failed`);
-            return; // Job completes successfully without sending
-        }
-    }
 
     const templateData = {
         ...data.metadata,

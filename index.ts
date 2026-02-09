@@ -7,7 +7,6 @@ import {
 	, XRoutes, webhooksRoutes
 } from "./src/routes";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
-import "./src/workers/worker"; // Import worker to start processing
 
 const CORS_CONFIG = {
 	origin: "*",
