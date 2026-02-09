@@ -1,6 +1,6 @@
 import type { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
-import { EmailTemplates } from "@/emails";
+import { EmailTemplates } from "@subtrees/emails";
 import { z } from "zod";
 
 const SendEmailBody = z.object({

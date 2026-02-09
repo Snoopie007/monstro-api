@@ -60,7 +60,7 @@ export async function locationCheckin(app: Elysia) {
                 reservation = await db.query.reservations.findFirst({
                     where: (r, { eq }) => eq(r.id, reservationId),
                     with: {
-                        attendance: true,
+                        attendances: true,
                     },
                 });
             }

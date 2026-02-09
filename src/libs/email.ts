@@ -1,7 +1,7 @@
 import sendgrid from '@sendgrid/mail';
 import { render } from '@react-email/render';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { EmailTemplates } from '@/emails';
+import { EmailTemplates } from '@subtrees/emails';
 
 
 type EmailOptions = {

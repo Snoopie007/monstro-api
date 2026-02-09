@@ -15,10 +15,10 @@ export async function classReminderRoutes(app: Elysia) {
         const { reservationId, locationId } = body as ScheduleClassReminderBody;
 
         try {
-            const jobId = `class-reminder-${reservationId}`;
+            const jobId = `class:reminder:${reservationId}`;
 
             // Job will fetch reservation data and calculate timing
-            await classQueue.add('send-class-reminder', {
+            await classQueue.add('class:reminder', {
                 reservationId,
                 locationId,
             }, {
@@ -44,7 +44,7 @@ export async function classReminderRoutes(app: Elysia) {
             const { reservationId } = params;
 
             try {
-                const jobId = `class-reminder-${reservationId}`;
+                const jobId = `class:reminder:${reservationId}`;
                 const job = await classQueue.getJob(jobId);
 
                 if (job) {

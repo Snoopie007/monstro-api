@@ -13,7 +13,7 @@ import type {
 } from "@subtrees/types";
 import { and, eq, inArray } from "drizzle-orm";
 import { Elysia, t, type Context } from "elysia";
-import { ALLOWED_IMAGE_TYPES } from "@/constants/data";
+import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
 
 const MessageProps = {
     params: t.Object({

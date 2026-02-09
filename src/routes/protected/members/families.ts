@@ -7,8 +7,8 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 import { EmailSender } from "@/libs/email";
 import { renderToStaticMarkup } from "react-dom/server";
-import FamilyInviteEmail from "@/emails/FamilyInvite";
-import ChildFamilyEmail from "@/emails/ChildFamilyEmail";
+import FamilyInviteEmail from "@subtrees/emails/FamilyInvite";
+import ChildFamilyEmail from "@subtrees/emails/ChildFamilyEmail";
 
 
 

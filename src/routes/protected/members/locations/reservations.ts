@@ -30,7 +30,7 @@ export function mlReservationsRoutes(app: Elysia) {
                 ),
                 limit,
                 with: {
-                    attendance: true,
+                    attendances: true,
                     session: {
                         with: {
                             program: true,
@@ -87,7 +87,7 @@ export function mlReservationsRoutes(app: Elysia) {
                     gte(reservations.startOn, startDate)
                 ),
                 with: {
-                    attendance: true,
+                    attendances: true,
                     session: {
                         with: {
                             program: true,

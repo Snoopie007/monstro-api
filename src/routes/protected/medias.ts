@@ -1,5 +1,5 @@
 import type { Elysia, Context } from "elysia";
-import { ALLOWED_IMAGE_TYPES } from "@/constants/data";
+import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
 import { z } from "zod";
 import S3Bucket from "@/libs/s3";
 const s3 = new S3Bucket();

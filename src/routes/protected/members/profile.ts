@@ -8,7 +8,7 @@ import { generateOtp } from "@/libs/utils";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { renderToStaticMarkup } from "react-dom/server";
-import UpdateEmailOTP from "@/emails/UpdateEmailOTP";
+import UpdateEmailOTP from "@subtrees/emails/UpdateEmailOTP";
 const MemberProfileProps = {
     params: t.Object({
         mid: t.String(),
