@@ -44,7 +44,7 @@ export async function missedClassCheckRoutes(app: Elysia) {
             const { reservationId } = params;
 
             try {
-                const jobId = `missed-class-${reservationId}`;
+                const jobId = `missed:class:${reservationId}`;
                 const job = await classQueue.getJob(jobId);
 
                 if (job) {

@@ -134,14 +134,14 @@ export async function locationReservations(app: Elysia) {
                     }
                     if (locationState?.planId && locationState.planId >= 2) {
                         // Single reservation - schedule class reminder and missed check
-                        await classQueue.add('send-class-reminder', ids, {
-                            jobId: `class-reminder-${reservation.id}`,
+                        await classQueue.add('class:reminder', ids, {
+                            jobId: `class:reminder:${reservation.id}`,
                             attempts: 3,
                             backoff: { type: 'exponential', delay: 5000 }
                         });
 
-                        await classQueue.add('check-missed-class', ids, {
-                            jobId: `missed-class-${reservation.id}`,
+                        await classQueue.add('missed:class:check', ids, {
+                            jobId: `missed:class:${reservation.id}`,
                             attempts: 3,
                             backoff: { type: 'exponential', delay: 5000 }
                         });

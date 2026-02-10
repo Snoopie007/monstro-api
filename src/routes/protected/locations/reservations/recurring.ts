@@ -9,7 +9,7 @@ import {
 } from "@subtrees/schemas";
 import { getMemberPlan, getSessionState } from "./utils";
 import { eq } from "drizzle-orm";
-import { emailQueue, classQueue } from "@/workers/queues";
+import { classQueue } from "@/workers/queues";
 import { z } from "zod";
 import { addMinutes } from "date-fns";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
@@ -112,7 +112,7 @@ export async function recurringReservationRoutes(app: Elysia) {
                 const locationState = location.locationState;
 
                 if (locationState?.planId && locationState.planId >= 2) {
-                    await classQueue.add('process-recurring-class-reminder', {
+                    await classQueue.add('recurring:class:reminder', {
                         recurringReservationId: recurringReservation.id,
                         locationId: lid,
                         reminderCount: 0,
@@ -201,8 +201,8 @@ async function removeQueueJobs(rid: string) {
     // Cancel scheduled reminder emails for this specific occurrence
     // Note: For recurring reservations, we use the full rid (including date) for job IDs
     try {
-        const classReminderJob = await emailQueue.getJob(`class-reminder-${rid}`);
-        const missedClassJob = await emailQueue.getJob(`missed-class-${rid}`);
+        const classReminderJob = await classQueue.getJob(`class:reminder:${rid}`);
+        const missedClassJob = await classQueue.getJob(`missed:class:${rid}`);
 
         await Promise.allSettled([
             classReminderJob?.remove(),
