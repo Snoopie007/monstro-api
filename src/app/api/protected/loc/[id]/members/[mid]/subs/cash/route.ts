@@ -159,7 +159,7 @@ export async function POST(req: Request, props: Props) {
             startDate: startDate,
             currentPeriodStart: startDate,
             currentPeriodEnd: periodEnd,
-            expiresAt: expiresAt,
+            cancelAt: expiresAt || (data.cancelAt ? new Date(data.cancelAt) : null),
             locationId: id,
             memberId: mid,
             memberPlanPricingId: pricing.id,

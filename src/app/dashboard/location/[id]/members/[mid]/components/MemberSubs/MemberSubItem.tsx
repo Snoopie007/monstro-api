@@ -171,7 +171,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     </div>
                 )}
 
-                {(sub.cancelAt || sub.expiresAt) && (
+                {sub.cancelAt && (
                     <div className="grid grid-cols-3 items-center">
                         {sub.cancelAt && sub.cancelAtPeriodEnd && (
                             <InfoField label="Cancels at">
@@ -180,10 +180,10 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                                 </span>
                             </InfoField>
                         )}
-                        {sub.expiresAt && (
-                            <InfoField label="Expires at">
+                        {!sub.cancelAtPeriodEnd && (
+                            <InfoField label="Ends at">
                                 <span className="flex items-center gap-1">
-                                    <Clock4Icon size={14} /> {format(sub.expiresAt, "MMM d, yyyy")}
+                                    <Clock4Icon size={14} /> {format(sub.cancelAt, "MMM d, yyyy")}
                                 </span>
                             </InfoField>
                         )}
