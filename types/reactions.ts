@@ -1,4 +1,4 @@
-import type { reactions } from "subtrees/schemas/chat";
+import type { reactions } from "../schemas/chat";
 import type { User } from "./user";
 
 

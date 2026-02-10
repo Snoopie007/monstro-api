@@ -1,4 +1,4 @@
-import { vendors } from "subtrees/schemas/vendors";
+import { vendors } from "../schemas/vendors";
 
 
 export type Vendor = typeof vendors.$inferSelect
