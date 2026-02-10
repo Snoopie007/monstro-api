@@ -1,4 +1,4 @@
-import { achievements, memberAchievements, memberPointsHistory } from "subtrees/schemas";
+import { achievements, memberAchievements, memberPointsHistory } from "../schemas";
 import type { Member } from "./member";
 import type { Location } from "./location";
 

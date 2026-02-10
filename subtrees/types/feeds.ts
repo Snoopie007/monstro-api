@@ -1,4 +1,4 @@
-import { userFeeds } from "subtrees/schemas/chat/moments";
+import { userFeeds } from "../schemas/chat/moments";
 
 import type { GroupPost } from "./group";
 import type { Group } from "./group";

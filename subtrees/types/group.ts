@@ -1,4 +1,4 @@
-import { comments, groupMembers, groupPosts, groups } from "subtrees/schemas";
+import { comments, groupMembers, groupPosts, groups } from "../schemas/chat";
 import type { Location } from "./location";
 import type { User } from "./user";
 import type { Media } from "./medias";

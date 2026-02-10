@@ -3,7 +3,7 @@ import type {
     supportTriggers,
     supportConversations,
     supportMessages,
-} from "subtrees/schemas";
+} from "../schemas";
 import type { Member } from "./member";
 import type { KnowledgeBase } from "./KnowledgeBase";
 // Settings UI Types

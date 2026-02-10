@@ -10,7 +10,7 @@ import {
 import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData, } from './_shared/data';
-import type { Member } from '@subtrees/types';
+import type { Member } from '../types';
 
 
 

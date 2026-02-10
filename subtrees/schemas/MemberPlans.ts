@@ -12,7 +12,7 @@ import {
 import { contractTemplates } from "./contracts";
 import { planPrograms } from "./programs";
 
-import type { BillingCycleAnchorConfig } from "subtrees/types";
+import type { BillingCycleAnchorConfig } from "../types";
 import { groups } from "./chat/groups";
 import {
 	IntervalType,

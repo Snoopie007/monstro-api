@@ -11,7 +11,7 @@ import { EmailFooter, LocationInfoBox, EmailHeader } from './_shared';
 import { DummyData } from './_shared/data';
 import { EmailStyles } from './_shared/SharedStyle';
 import { format } from 'date-fns';
-import type { Location, Member, Staff } from '@subtrees/types';
+import type { Location, Member, Staff } from '../types';
 
 
 interface ClassReminderEmailProps {
