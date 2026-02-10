@@ -1,5 +1,9 @@
 
 
+export const BASE_MONSTRO_X_URL = 'https://m.monstro-x.com';
+export const BASE_MONSTRO_URL = 'https://mymonstro.com';
+
+
 export const DummyData = {
     user: {
         id: '123',

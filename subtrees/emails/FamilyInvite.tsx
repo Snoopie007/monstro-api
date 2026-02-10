@@ -10,9 +10,10 @@ import {
 } from '@react-email/components';
 import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData, BASE_MONSTRO_X_URL, } from './_shared/data';
+import type { Member } from '@subtrees/types';
 interface FamilyInviteEmailProps {
-	member: { firstName: string };
+	member: Pick<Member, 'firstName'>;
 	familyId: string;
 }
 
@@ -45,7 +46,7 @@ export default function FamilyInviteEmail({
 						<Section style={styles.buttonSection}>
 							<Button
 								style={styles.button}
-								href={`https://m.monstro-x.com/register?familyId=${familyId}`}
+								href={`${BASE_MONSTRO_X_URL}/register?familyId=${familyId}`}
 							>
 								Accept Invite
 							</Button>

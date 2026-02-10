@@ -9,16 +9,15 @@ import {
 } from '@react-email/components';
 import { EmailHeader, EmailFooter, OTPBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
-
+import { DummyData } from './_shared/data';
+import type { Member } from '@subtrees/types';
 interface UpdateEmailOTPEmailProps {
-	member: { firstName: string; lastName: string };
+	member: Pick<Member, 'firstName' | 'lastName'>;
 	update: { email: string; token: string };
 }
 
 const styles: Record<string, React.CSSProperties> = {
 	...EmailStyles,
-
 	warning: {
 		fontSize: '16px',
 		color: '#000000',

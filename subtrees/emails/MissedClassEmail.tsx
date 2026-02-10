@@ -10,17 +10,19 @@ import {
 } from '@react-email/components';
 import { EmailFooter, LocationInfoBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData, BASE_MONSTRO_X_URL } from './_shared/data';
 import { format } from 'date-fns';
+import type { Member, Location } from '@subtrees/types';
+
 interface MissedClassEmailProps {
-  member: { id: string; firstName: string; lastName: string | null; email: string };
+  member: Pick<Member, 'id' | 'firstName'>;
   class: {
     name: string;
     startTime: Date;
     endTime: Date;
     instructor?: { firstName: string; lastName: string | null } | null;
   };
-  location: { id: string; name: string; address: string | null; email: string | null; phone: string | null };
+  location: Pick<Location, 'id' | 'name' | 'address' | 'email' | 'phone'>;
 
 }
 
@@ -59,7 +61,7 @@ export default function MissedClassEmail({
 
             <Section style={styles.buttonContainer}>
               <Button
-                href={`https://m.monstro-x.com/location/${location.id}/${member.id}/sessions`}
+                href={`${BASE_MONSTRO_X_URL}/location/${location.id}/${member.id}/sessions`}
                 style={styles.button}
               >
                 Book Your Next Class
