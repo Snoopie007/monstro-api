@@ -6,8 +6,6 @@ import {
   Container,
   Section,
   Text,
-  Hr,
-  Link,
 } from '@react-email/components';
 import { EmailStyles } from './_shared/SharedStyle';
 import {
@@ -16,7 +14,7 @@ import {
 } from './_shared';
 import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
-import type { Member, Location } from '@subtrees/types';
+import type { Member, Location } from '../types';
 interface PaymentSuccessEmailProps {
   member: Pick<Member, 'firstName' | 'lastName'>;
   invoice: {

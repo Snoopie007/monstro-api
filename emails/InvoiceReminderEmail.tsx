@@ -16,7 +16,7 @@ import {
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
 import { format, formatDistanceStrict } from 'date-fns';
-import type { Member, Location } from '@subtrees/types';
+import type { Member, Location } from '../types';
 type InvoiceItem = {
 	name: string;
 	quantity: number;
