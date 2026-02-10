@@ -10,10 +10,10 @@ import {
 } from '@react-email/components';
 import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
-
+import { DummyData } from './_shared/data';
+import type { Member } from '@subtrees/types';
 interface ResetPasswordEmailProps {
-	member: { firstName: string; lastName: string; email: string };
+	member: Pick<Member, 'firstName' | 'lastName' | 'email'>;
 	url: string;
 }
 

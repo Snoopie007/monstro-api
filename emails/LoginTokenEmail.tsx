@@ -9,10 +9,11 @@ import {
 } from '@react-email/components';
 import { OTPBox, EmailFooter, EmailHeader } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData, } from './_shared/data';
+import type { User } from '@subtrees/types';
 
 interface LoginTokenEmailProps {
-	user: { name: string; email: string };
+	user: Pick<User, 'name' | 'email'>;
 	otp: { token: string };
 }
 

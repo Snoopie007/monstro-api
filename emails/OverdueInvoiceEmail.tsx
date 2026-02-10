@@ -8,17 +8,18 @@ import {
   Text,
   Link,
 } from '@react-email/components';
-import type { InvoiceItem } from 'subtrees/types/invoices';
 import { EmailStyles } from './_shared/SharedStyle';
 import {
   EmailFooter, EmailInvoiceBox, EmailInvoiceLabel,
   EmailInvoiceAmount, EmailInvoiceBoxMetaData, EmailInvoiceItemsTable, EmailInvoiceBoxDivider
 } from './_shared';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
+import type { Member, Location, InvoiceItem } from '@subtrees/types';
+
 
 interface OverdueInvoiceEmailProps {
-  member: { firstName: string; lastName: string | null; email: string };
+  member: Pick<Member, 'firstName' | 'lastName' | 'email'>;
   invoice: {
     id: string;
     total: number;
@@ -27,7 +28,7 @@ interface OverdueInvoiceEmailProps {
     description: string | null;
     items: InvoiceItem[];
   };
-  location: { name: string; email: string | null; phone: string | null };
+  location: Pick<Location, 'name' | 'email' | 'phone'>;
 
 }
 

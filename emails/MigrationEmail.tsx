@@ -10,12 +10,12 @@ import {
 } from '@react-email/components';
 import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
-
+import { DummyData } from './_shared/data';
+import type { Member, Location } from '@subtrees/types';
 
 interface MigrationEmailProps {
-    member: { firstName: string };
-    location: { name: string };
+    member: Pick<Member, 'firstName'>;
+    location: Pick<Location, 'name'>;
     migrateId: string;
 }
 
