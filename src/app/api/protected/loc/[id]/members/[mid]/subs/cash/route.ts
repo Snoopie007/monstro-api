@@ -8,6 +8,7 @@ import {
     scheduleRecurringInvoiceReminders,
 } from "../../../utils";
 import { eq, and, sql } from "drizzle-orm";
+import { PaymentType } from "@/types";
 
 
 type Props = {
@@ -20,6 +21,7 @@ type Props = {
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
     const { paymentMethod, paymentType, trialDays, pricingId, promoCode, ...data } = await req.json();
+    const resolvedPaymentType: PaymentType = "cash";
     try {
         let promoId: string | undefined;
         let discountAmount = 0;
@@ -162,7 +164,7 @@ export async function POST(req: Request, props: Props) {
             memberId: mid,
             memberPlanPricingId: pricing.id,
             promoId,
-            paymentType,
+            paymentType: resolvedPaymentType,
             status: "active",
             makeUpCredits: 0,
             allowMakeUpCarryOver: false,
