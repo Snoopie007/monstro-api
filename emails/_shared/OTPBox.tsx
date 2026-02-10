@@ -1,3 +1,4 @@
+
 import { Section, Text } from "@react-email/components"
 import * as React from 'react';
 export function OTPBox({ token }: { token: string }) {

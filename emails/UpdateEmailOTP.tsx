@@ -10,7 +10,7 @@ import {
 import { EmailHeader, EmailFooter, OTPBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
-import type { Member } from '@subtrees/types';
+import type { Member } from '../types';
 interface UpdateEmailOTPEmailProps {
 	member: Pick<Member, 'firstName' | 'lastName'>;
 	update: { email: string; token: string };

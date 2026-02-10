@@ -12,7 +12,7 @@ import { EmailFooter, LocationInfoBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData, BASE_MONSTRO_X_URL } from './_shared/data';
 import { format } from 'date-fns';
-import type { Member, Location } from '@subtrees/types';
+import type { Member, Location } from '../types';
 
 interface MissedClassEmailProps {
   member: Pick<Member, 'id' | 'firstName'>;

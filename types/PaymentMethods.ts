@@ -1,4 +1,4 @@
-import { memberPaymentMethods, paymentMethods } from "subtrees/schemas"
+import { memberPaymentMethods, paymentMethods } from "../schemas/PaymentMethods"
 import type { PaymentType } from "./DatabaseEnums"
 import type { Member } from "./member"
 import type { Location } from "./location"

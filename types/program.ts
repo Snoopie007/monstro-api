@@ -1,7 +1,7 @@
 import type { RecurringReservation, Reservation } from "./attendance";
 import type { MemberPlan } from "./member";
 import type { ProgramStatus } from "./DatabaseEnums";
-import { planPrograms, programs, programSessions } from "subtrees/schemas/programs";
+import { planPrograms, programs, programSessions } from "../schemas/programs";
 
 export type Program = typeof programs.$inferSelect & {
   programPlans?: PlanProgram[];

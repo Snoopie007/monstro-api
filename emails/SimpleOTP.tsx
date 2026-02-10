@@ -11,7 +11,7 @@ import {
 import { DummyData } from './_shared/data';
 import { EmailStyles } from './_shared/SharedStyle';
 import { OTPBox, EmailFooter } from './_shared';
-import type { Member, Location } from '@subtrees/types';
+import type { Member, Location } from '../types';
 interface SimpleOTPEmailProps {
 	member: Pick<Member, 'firstName'>;
 	location: Pick<Location, 'name'>;

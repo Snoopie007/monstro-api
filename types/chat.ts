@@ -1,4 +1,4 @@
-import { chatMembers, chats, messages } from "subtrees/schemas";
+import { chatMembers, chats, messages } from "../schemas/chat";
 import type { Media } from "./medias";
 import type { User } from "./user";
 
