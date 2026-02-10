@@ -15,10 +15,10 @@ export async function recurringClassReminderRoutes(app: Elysia) {
         const { recurringReservationId, locationId } = body as ScheduleRecurringClassReminderBody;
 
         try {
-            const jobId = `recurring:class:reminder:${recurringReservationId}`;
+            const jobId = `recurring:reminder:${recurringReservationId}`;
 
             // Job will fetch data and handle recursive scheduling
-            await classQueue.add('recurring:class:reminder', {
+            await classQueue.add('recurring:reminder', {
                 recurringReservationId,
                 locationId,
                 reminderCount: 0,
@@ -49,7 +49,7 @@ export async function recurringClassReminderRoutes(app: Elysia) {
                 let removedCount = 0;
 
                 // Try to remove the main job
-                const mainJobId = `recurring:class:reminder:${recurringReservationId}`;
+                const mainJobId = `recurring:reminder:${recurringReservationId}`;
                 const mainJob = await classQueue.getJob(mainJobId);
                 if (mainJob) {
                     await mainJob.remove();
@@ -58,7 +58,7 @@ export async function recurringClassReminderRoutes(app: Elysia) {
 
                 // Remove all numbered reminder jobs
                 for (let i = 0; i < 100; i++) { // Max 100 reminders (should be enough for any recurring schedule)
-                    const reminderJobId = `recurring:class:reminder:${recurringReservationId}:reminder:${i}`;
+                    const reminderJobId = `recurring:reminder:${recurringReservationId}:reminder:${i}`;
                     const reminderJob = await classQueue.getJob(reminderJobId);
                     if (reminderJob) {
                         await reminderJob.remove();

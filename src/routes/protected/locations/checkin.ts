@@ -159,7 +159,7 @@ export async function locationCheckin(app: Elysia) {
             // Cancel the missed class check job since member checked in
             try {
                 const reservationIdToCancel = reservation.isRecurring ? recurringId : reservationId;
-                const jobId = `missed:class:${reservationIdToCancel}`;
+                const jobId = `missed:${reservationIdToCancel}`;
 
                 const job = await classQueue.getJob(jobId);
                 if (job) {

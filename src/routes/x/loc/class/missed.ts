@@ -15,10 +15,10 @@ export async function missedClassCheckRoutes(app: Elysia) {
         const { reservationId, locationId } = body as ScheduleMissedClassCheckBody;
 
         try {
-            const jobId = `missed:class:${reservationId}`;
+            const jobId = `missed:${reservationId}`;
 
             // Job will fetch data and determine check timing
-            await classQueue.add('missed:class:check', {
+            await classQueue.add('missed', {
                 reservationId,
                 locationId,
             }, {
@@ -44,7 +44,7 @@ export async function missedClassCheckRoutes(app: Elysia) {
             const { reservationId } = params;
 
             try {
-                const jobId = `missed:class:${reservationId}`;
+                const jobId = `missed:${reservationId}`;
                 const job = await classQueue.getJob(jobId);
 
                 if (job) {

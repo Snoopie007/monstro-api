@@ -20,9 +20,9 @@ export async function overdueInvoiceRoutes(app: Elysia) {
 
         try {
             const delay = Math.max(0, new Date(sendAt).getTime() - Date.now());
-            const jobId = `invoice:overdue:${invoiceId}`;
+            const jobId = `overdue:${invoiceId}`;
 
-            await invoiceQueue.add('invoice:overdue', {
+            await invoiceQueue.add('overdue', {
                 invoiceId,
                 reminderCount: 0, // Start at 0
             }, {
@@ -52,7 +52,7 @@ export async function overdueInvoiceRoutes(app: Elysia) {
             let removedCount = 0;
 
             // Try to remove the main job
-            const mainJobId = `invoice:overdue:${invoiceId}`;
+            const mainJobId = `overdue:${invoiceId}`;
             const mainJob = await invoiceQueue.getJob(mainJobId);
             if (mainJob) {
                 await mainJob.remove();
@@ -61,7 +61,7 @@ export async function overdueInvoiceRoutes(app: Elysia) {
 
             // Remove all numbered reminder jobs
             for (let i = 0; i < 10; i++) { // Max 10 reminders
-                const reminderJobId = `invoice:overdue:${invoiceId}:reminder:${i}`;
+                const reminderJobId = `overdue:${invoiceId}:reminder:${i}`;
                 const reminderJob = await invoiceQueue.getJob(reminderJobId);
                 if (reminderJob) {
                     await reminderJob.remove();

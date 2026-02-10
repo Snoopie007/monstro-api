@@ -11,10 +11,10 @@ export async function oneOffInvoiceRoutes(app: Elysia) {
 
         try {
             const delay = Math.max(0, new Date(sendAt).getTime() - Date.now());
-            const jobId = `invoice:reminder:${invoiceId}`;
+            const jobId = `reminder:${invoiceId}`;
 
             // Add to INVOICE queue, not email queue
-            await invoiceQueue.add('invoice:reminder', {
+            await invoiceQueue.add('reminder', {
                 invoiceId,
             }, {
                 jobId,
@@ -38,7 +38,7 @@ export async function oneOffInvoiceRoutes(app: Elysia) {
     })
         .delete('/reminder/:invoiceId', async ({ params }) => {
             const { invoiceId } = params;
-            const jobId = `invoice:reminder:${invoiceId}`;
+            const jobId = `reminder:${invoiceId}`;
 
             try {
                 const job = await invoiceQueue.getJob(jobId);

@@ -34,10 +34,9 @@ export async function locationDocs(app: Elysia) {
 
             // Validate file existence by checking if we can generate a head object command
             const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
-            const s3Client = (s3 as any).s3Client; // Access the underlying S3 client
 
             try {
-                await s3Client.send(new HeadObjectCommand({
+                await s3.client.send(new HeadObjectCommand({
                     Bucket: process.env.AWS_S3_BUCKET_NAME || "monstro-bucket",
                     Key: fileKey,
                 }));

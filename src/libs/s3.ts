@@ -28,6 +28,9 @@ export default class S3Bucket {
 		});
 	}
 
+	public get client(): S3Client {
+		return this.s3Client;
+	}
 	/**
 	 * Determines content type from file extension
 	 * @param key - The S3 key/path of the file
