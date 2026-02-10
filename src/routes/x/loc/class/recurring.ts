@@ -1,4 +1,5 @@
 import { classQueue } from "@/workers/queues";
+import { db } from "@/db/db";
 import type Elysia from "elysia";
 
 type ScheduleRecurringClassReminderBody = {
@@ -11,17 +12,77 @@ type CancelRecurringClassReminderParams = {
 }
 
 export async function recurringClassReminderRoutes(app: Elysia) {
-    return app.post('/recurring', async ({ body }) => {
+    return app.post('/recurring', async ({ body, params, status }) => {
         const { recurringReservationId, locationId } = body as ScheduleRecurringClassReminderBody;
+        const { lid } = params as { lid: string };
 
         try {
+            if (locationId !== lid) {
+                return status(400, {
+                    success: false,
+                    message: `locationId in body (${locationId}) does not match route lid (${lid})`
+                });
+            }
+
+            const recurringReservation = await db.query.recurringReservations.findFirst({
+                where: (rr, { and, eq }) => and(
+                    eq(rr.id, recurringReservationId),
+                    eq(rr.locationId, locationId),
+                ),
+                with: {
+                    member: true,
+                    location: true,
+                    staff: true,
+                },
+            });
+
+            if (!recurringReservation) {
+                return status(404, {
+                    success: false,
+                    message: `Recurring reservation ${recurringReservationId} not found for location ${locationId}`,
+                });
+            }
+
+            if (!recurringReservation.member || !recurringReservation.location) {
+                return status(422, {
+                    success: false,
+                    message: `Recurring reservation ${recurringReservationId} is missing member/location context`,
+                });
+            }
+
             const jobId = `recurring:reminder:${recurringReservationId}`;
+            const classStart = recurringReservation.startDate;
+            const duration = recurringReservation.sessionDuration ?? 60;
+            const classEnd = new Date(classStart.getTime() + duration * 60 * 1000);
 
             // Job will fetch data and handle recursive scheduling
             await classQueue.add('recurring:reminder', {
                 recurringReservationId,
                 locationId,
                 reminderCount: 0,
+                data: {
+                    member: {
+                        firstName: recurringReservation.member.firstName,
+                        lastName: recurringReservation.member.lastName,
+                        email: recurringReservation.member.email,
+                    },
+                    location: {
+                        name: recurringReservation.location.name,
+                        email: recurringReservation.location.email,
+                        phone: recurringReservation.location.phone,
+                        address: recurringReservation.location.address,
+                    },
+                    class: {
+                        name: recurringReservation.programName || 'Scheduled Class',
+                        startTime: classStart,
+                        endTime: classEnd,
+                        duration,
+                        instructor: recurringReservation.staff ? {
+                            firstName: recurringReservation.staff.firstName,
+                            lastName: recurringReservation.staff.lastName,
+                        } : null,
+                    },
+                },
             }, {
                 jobId,
                 attempts: 3,
@@ -56,9 +117,9 @@ export async function recurringClassReminderRoutes(app: Elysia) {
                     removedCount++;
                 }
 
-                // Remove all numbered reminder jobs
-                for (let i = 0; i < 100; i++) { // Max 100 reminders (should be enough for any recurring schedule)
-                    const reminderJobId = `recurring:reminder:${recurringReservationId}:reminder:${i}`;
+                // Remove numbered reminder jobs created by recurring processor.
+                for (let i = 0; i < 100; i++) {
+                    const reminderJobId = `recurring-class-reminder-${recurringReservationId}-reminder-${i}`;
                     const reminderJob = await classQueue.getJob(reminderJobId);
                     if (reminderJob) {
                         await reminderJob.remove();
@@ -77,4 +138,3 @@ export async function recurringClassReminderRoutes(app: Elysia) {
             }
         });
 }
-
