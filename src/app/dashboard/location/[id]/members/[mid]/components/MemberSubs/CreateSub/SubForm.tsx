@@ -80,6 +80,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
+                    paymentType,
                     paymentMethod: paymentMethod,
                     promoCode: promoCode || undefined,
                 })
@@ -287,4 +288,3 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
         </>
     )
 }
-

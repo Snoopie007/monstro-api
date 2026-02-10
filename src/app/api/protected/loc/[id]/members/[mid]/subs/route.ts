@@ -70,6 +70,10 @@ export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
     const body = await req.json();
     const { paymentMethod, paymentType, trialDays, pricingId, promoCode, ...data } = body;
+    const resolvedPaymentType: PaymentType =
+        (paymentType as PaymentType | undefined) ||
+        (paymentMethod?.type as PaymentType | undefined) ||
+        "card";
 
     try {
         let promoId: string | undefined;
@@ -250,7 +254,7 @@ export async function POST(req: Request, props: Props) {
             memberId: mid,
             memberPlanPricingId: pricing.id,
             promoId,
-            paymentType,
+            paymentType: resolvedPaymentType,
             status: stripeSubscription.status,
             makeUpCredits: 0,
             allowMakeUpCarryOver: false,
@@ -309,6 +313,5 @@ export async function POST(req: Request, props: Props) {
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
-
 
 
