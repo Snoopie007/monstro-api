@@ -2,6 +2,8 @@ import type { BillingCycleAnchorConfig, MemberPlanPricing, PaymentType } from "@
 import type { AddressParam } from "@stripe/stripe-js";
 import { isSameDay, addMonths, isAfter } from "date-fns";
 import Stripe from "stripe";
+import { calculateStripeFeeAmount } from "./utils";
+import { BASE_MONSTRO_X_URL } from "@subtrees/emails/_shared/data";
 
 type Customer = {
     firstName: string;
@@ -11,22 +13,33 @@ type Customer = {
     address?: AddressParam;
 };
 
+interface VendorPaymentIntentOptions {
+    authorizeOnly?: boolean;
+    statement?: string;
+    description?: string;
+    metadata?: Record<string, any>;
+}
+
+interface VendorPaymentIntentResponse {
+    clientSecret: string;
+    paymentIntent: Stripe.PaymentIntent;
+}
+
 
 interface MemberPaymentOptions {
     amount: number,
+    passOnFees: boolean;
     paymentMethodId: string,
-    applicationFeeAmount: number,
+    usagePercent: number;
+    paymentType: PaymentType;
     authorizeOnly?: boolean,
-    taxRateId?: string,
+    taxRate?: number;
     description?: string,
     productName?: string,
     discount?: number,
     quantity?: number,
     currency?: string,
-    tax?: number,
-    unitCost?: number,
     metadata?: Record<string, any>;
-    returnUrl?: string;
 }
 
 type MemberSubscriptionOptions = {
@@ -44,9 +57,10 @@ type MemberSubscriptionOptions = {
     description?: string;
     metadata?: Record<string, any>;
     billingAnchorConfig?: BillingCycleAnchorConfig
-
 }
-const isProd = process.env.NODE_ENV === "production";
+
+
+const isProd = process.env.BUN_ENV === "production";
 const STRIPE_API_VERSION = "2025-12-15.clover";
 
 
@@ -312,23 +326,6 @@ abstract class BaseStripePayments {
         });
     }
 
-    async calculateTax(amount: number, quantity: number, reference: string) {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-        const res = await this._stripe.tax.calculations.create({
-            currency: "usd",
-            customer: this._customer,
-            line_items: [
-                {
-                    amount,
-                    quantity,
-                    reference,
-                },
-            ],
-        });
-        return res;
-    }
 
 
     async attachPaymentMethod(paymentMethodId: string) {
@@ -348,18 +345,6 @@ abstract class BaseStripePayments {
             paymentMethodId
         );
     }
-}
-
-interface VendorPaymentIntentOptions {
-    authorizeOnly?: boolean;
-    statement?: string;
-    description?: string;
-    metadata?: Record<string, any>;
-}
-
-interface VendorPaymentIntentResponse {
-    clientSecret: string;
-    paymentIntent: Stripe.PaymentIntent;
 }
 
 class VendorStripePayments extends BaseStripePayments {
@@ -476,7 +461,7 @@ class MemberStripePayments extends BaseStripePayments {
         return res.data;
     }
 
-    async createPaymentIntent(options: MemberPaymentOptions) {
+    async processPayment(options: MemberPaymentOptions) {
 
         if (!this._customer) {
             throw new Error("Customer not set");
@@ -485,11 +470,30 @@ class MemberStripePayments extends BaseStripePayments {
             throw new Error("Account ID not set");
         }
 
-        const { description, unitCost, tax, metadata, discount,
-            returnUrl, authorizeOnly, productName, currency,
-            amount, applicationFeeAmount, paymentMethodId
+
+        const { description, taxRate, metadata, discount,
+            authorizeOnly, productName, currency,
+            amount, paymentMethodId, passOnFees, usagePercent, paymentType
         } = options || {};
 
+
+        let price = Math.max(0, amount - (discount || 0));
+        const tax = Math.floor(price * (taxRate || 0) / 100);
+        let total = price + tax;
+        const monstroFee = Math.floor(price * (usagePercent / 100));
+
+        const stripeFee = calculateStripeFeeAmount((
+            passOnFees ? total : total + monstroFee
+        ), paymentType);
+
+        const applicationFeeAmount = monstroFee + stripeFee;
+
+        if (passOnFees) {
+            total += applicationFeeAmount;
+            price += applicationFeeAmount;
+        }
+
+        const url = `${BASE_MONSTRO_X_URL}/account/location/${metadata?.lid}/purchase/confirm`;
         const option: Stripe.PaymentIntentCreateParams = {
             payment_method_types: ['card', 'us_bank_account'],
             customer: this._customer,
@@ -499,10 +503,10 @@ class MemberStripePayments extends BaseStripePayments {
                 line_items: [{
                     product_name: productName || "",
                     quantity: 1,
-                    unit_cost: unitCost || 0,
+                    unit_cost: price,
                     ...(discount && { discount_amount: discount }),
                     tax: {
-                        total_tax_amount: tax || 0,
+                        total_tax_amount: tax,
                     },
                 }],
             },
@@ -514,14 +518,25 @@ class MemberStripePayments extends BaseStripePayments {
             application_fee_amount: applicationFeeAmount,
             payment_method: paymentMethodId || undefined,
             capture_method: authorizeOnly ? "manual" : "automatic",
-            return_url: returnUrl || "https://unknown.com",
+            return_url: url,
             expand: ["payment_method"],
+            statement_descriptor: description || "",
             metadata: metadata || undefined
         }
 
         const { client_secret, payment_method, latest_charge } = await this._stripe.paymentIntents.create(option);
-        return { clientSecret: client_secret as string, paymentMethod: payment_method as Stripe.PaymentMethod, chargeId: latest_charge };
+        return {
+            clientSecret: client_secret,
+            paymentMethod: payment_method,
+            chargeId: latest_charge,
+            chargeDetails: {
+                total,
+                subTotal: price,
+                tax
+            }
+        };
     }
+
 
 
     async createCheckoutSession() {
@@ -560,106 +575,106 @@ class MemberStripePayments extends BaseStripePayments {
         return this._stripe.checkout.sessions.create(option);
     }
 
-    async createSubscription(options: MemberSubscriptionOptions) {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-        if (!this._accountId) {
-            throw new Error("Account ID not set");
-        }
-        const {
-            stripePriceId,
-            paymentMethodId,
-            feePercent,
-            startDate,
-            trialEnd,
-            stripeCouponId,
-            cancelAt,
-            taxRateId,
-            isAllowProration,
-            description,
-            currency,
-            billingAnchorConfig,
-            backdateStartDate,
-        } = options;
+    // async createSubscription(options: MemberSubscriptionOptions) {
+    //     if (!this._customer) {
+    //         throw new Error("Customer not set");
+    //     }
+    //     if (!this._accountId) {
+    //         throw new Error("Account ID not set");
+    //     }
+    //     const {
+    //         stripePriceId,
+    //         paymentMethodId,
+    //         feePercent,
+    //         startDate,
+    //         trialEnd,
+    //         stripeCouponId,
+    //         cancelAt,
+    //         taxRateId,
+    //         isAllowProration,
+    //         description,
+    //         currency,
+    //         billingAnchorConfig,
+    //         backdateStartDate,
+    //     } = options;
 
 
 
-        const option: Stripe.SubscriptionCreateParams = {
-            customer: this._customer,
-            transfer_data: {
-                destination: this._accountId,
-            },
-            on_behalf_of: this._accountId,
-            automatic_tax: {
-                enabled: taxRateId ? true : false,
-                ...(taxRateId && {
-                    liability: {
-                        type: "account",
-                    }
-                }),
-            },
-            currency: currency || "usd",
-            invoice_settings: {
-                issuer: {
-                    type: "account" as const,
-                    account: this._accountId
-                }
-            },
-            description,
-            items: [{ price: stripePriceId, ...(stripeCouponId && { discounts: [{ coupon: stripeCouponId }] }) }],
-            collection_method: "charge_automatically",
-            default_payment_method: paymentMethodId || undefined,
-            application_fee_percent: feePercent || 0,
-            cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
-            trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
-        };
+    //     const option: Stripe.SubscriptionCreateParams = {
+    //         customer: this._customer,
+    //         transfer_data: {
+    //             destination: this._accountId,
+    //         },
+    //         on_behalf_of: this._accountId,
+    //         automatic_tax: {
+    //             enabled: taxRateId ? true : false,
+    //             ...(taxRateId && {
+    //                 liability: {
+    //                     type: "account",
+    //                 }
+    //             }),
+    //         },
+    //         currency: currency || "usd",
+    //         invoice_settings: {
+    //             issuer: {
+    //                 type: "account" as const,
+    //                 account: this._accountId
+    //             }
+    //         },
+    //         description,
+    //         items: [{ price: stripePriceId, ...(stripeCouponId && { discounts: [{ coupon: stripeCouponId }] }) }],
+    //         collection_method: "charge_automatically",
+    //         default_payment_method: paymentMethodId || undefined,
+    //         application_fee_percent: feePercent || 0,
+    //         cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
+    //         trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
+    //     };
 
-        if (taxRateId) {
-            option.default_tax_rates = [taxRateId];
-        }
+    //     if (taxRateId) {
+    //         option.default_tax_rates = [taxRateId];
+    //     }
 
-        if (billingAnchorConfig && Object.keys(billingAnchorConfig).length > 0) {
-            option.billing_cycle_anchor_config = billingAnchorConfig;
-        }
+    //     if (billingAnchorConfig && Object.keys(billingAnchorConfig).length > 0) {
+    //         option.billing_cycle_anchor_config = billingAnchorConfig;
+    //     }
 
-        if (startDate && isAfter(startDate, new Date())) {
-            option.proration_behavior = isAllowProration ? "create_prorations" : "none";
-            option.billing_cycle_anchor = Math.floor(startDate.getTime() / 1000);
-        }
-        if (backdateStartDate) {
-            option.backdate_start_date = Math.floor(backdateStartDate.getTime() / 1000);
-        }
+    //     if (startDate && isAfter(startDate, new Date())) {
+    //         option.proration_behavior = isAllowProration ? "create_prorations" : "none";
+    //         option.billing_cycle_anchor = Math.floor(startDate.getTime() / 1000);
+    //     }
+    //     if (backdateStartDate) {
+    //         option.backdate_start_date = Math.floor(backdateStartDate.getTime() / 1000);
+    //     }
 
-        return this._stripe.subscriptions.create(option);
-    }
+    //     return this._stripe.subscriptions.create(option);
+    // }
 
 
 
-    async createStripeProduct(
-        data: MemberPlanPricing,
-        metadata: Record<string, any>
-    ): Promise<Stripe.Price> {
-        const { interval, price, intervalThreshold } = data;
-        const product = await this._stripe.products.create({
-            name: data.name,
-            description: metadata.description,
-            active: true,
-            default_price_data: {
-                currency: "usd",
-                recurring: {
-                    interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
-                    interval_count: intervalThreshold || 1,
-                },
-                unit_amount: price,
-                metadata,
-            },
-            metadata,
-            expand: ["default_price"],
-        });
+    // async createStripeProduct(
+    //     data: MemberPlanPricing,
+    //     metadata: Record<string, any>
+    // ): Promise<Stripe.Price> {
+    //     const { interval, price, intervalThreshold } = data;
+    //     const product = await this._stripe.products.create({
+    //         name: data.name,
+    //         description: metadata.description,
+    //         active: true,
+    //         default_price_data: {
+    //             currency: "usd",
+    //             recurring: {
+    //                 interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
+    //                 interval_count: intervalThreshold || 1,
+    //             },
+    //             unit_amount: price,
+    //             metadata,
+    //         },
+    //         metadata,
+    //         expand: ["default_price"],
+    //     });
 
-        return product.default_price as Stripe.Price;
-    }
+    //     return product.default_price as Stripe.Price;
+    // }
 
 
     async createTaxRate(data: Stripe.TaxRateCreateParams) {
@@ -677,34 +692,34 @@ class MemberStripePayments extends BaseStripePayments {
     }
 
 
-    async updateSubscription(
-        sid: string,
-        updates: Partial<Stripe.SubscriptionUpdateParams>
-    ): Promise<Stripe.Subscription> {
-        const commonPhaseOptions: Stripe.SubscriptionUpdateParams = {
-            ...updates,
-        };
+    // async updateSubscription(
+    //     sid: string,
+    //     updates: Partial<Stripe.SubscriptionUpdateParams>
+    // ): Promise<Stripe.Subscription> {
+    //     const commonPhaseOptions: Stripe.SubscriptionUpdateParams = {
+    //         ...updates,
+    //     };
 
-        return this._stripe.subscriptions.update(sid, commonPhaseOptions);
-    }
+    //     return this._stripe.subscriptions.update(sid, commonPhaseOptions);
+    // }
 
-    async cancelSubscription(
-        subscriptionId: string,
-        endOfPeriod: boolean,
-        cancelDate?: Date
-    ) {
-        const today = new Date();
-        if (cancelDate && isSameDay(cancelDate, today)) {
-            return this._stripe.subscriptions.cancel(subscriptionId);
-        } else {
-            return this._stripe.subscriptions.update(subscriptionId, {
-                cancel_at_period_end: endOfPeriod,
-                ...(!endOfPeriod && {
-                    cancel_at: cancelDate ? cancelDate.getTime() / 1000 : undefined,
-                }),
-            });
-        }
-    }
+    // async cancelSubscription(
+    //     subscriptionId: string,
+    //     endOfPeriod: boolean,
+    //     cancelDate?: Date
+    // ) {
+    //     const today = new Date();
+    //     if (cancelDate && isSameDay(cancelDate, today)) {
+    //         return this._stripe.subscriptions.cancel(subscriptionId);
+    //     } else {
+    //         return this._stripe.subscriptions.update(subscriptionId, {
+    //             cancel_at_period_end: endOfPeriod,
+    //             ...(!endOfPeriod && {
+    //                 cancel_at: cancelDate ? cancelDate.getTime() / 1000 : undefined,
+    //             }),
+    //         });
+    //     }
+    // }
 
     async createRefund(params: {
         payment_intent?: string;
@@ -815,105 +830,105 @@ class MemberStripePayments extends BaseStripePayments {
         return await this._stripe.invoiceItems.del(invoiceItemId);
     }
 
-    // Create recurring invoice using subscription schedules with custom items
-    async createRecurringInvoiceSchedule(
-        customerId: string,
-        items: Array<{
-            price_data: {
-                currency: string;
-                product_data: {
-                    name: string;
-                    description?: string;
-                };
-                unit_amount: number;
-                recurring: {
-                    interval: "month" | "year" | "week" | "day";
-                    interval_count?: number;
-                };
-            };
-            quantity: number;
-        }>,
-        startDate: Date,
-        endDate?: Date
-    ): Promise<Stripe.SubscriptionSchedule> {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-        if (!this._accountId) {
-            throw new Error("Account ID not set");
-        }
+    // // Create recurring invoice using subscription schedules with custom items
+    // async createRecurringInvoiceSchedule(
+    //     customerId: string,
+    //     items: Array<{
+    //         price_data: {
+    //             currency: string;
+    //             product_data: {
+    //                 name: string;
+    //                 description?: string;
+    //             };
+    //             unit_amount: number;
+    //             recurring: {
+    //                 interval: "month" | "year" | "week" | "day";
+    //                 interval_count?: number;
+    //             };
+    //         };
+    //         quantity: number;
+    //     }>,
+    //     startDate: Date,
+    //     endDate?: Date
+    // ): Promise<Stripe.SubscriptionSchedule> {
+    //     if (!this._customer) {
+    //         throw new Error("Customer not set");
+    //     }
+    //     if (!this._accountId) {
+    //         throw new Error("Account ID not set");
+    //     }
 
-        const accountDestination = {
-            type: "account" as const,
-            account: this._accountId,
-        };
+    //     const accountDestination = {
+    //         type: "account" as const,
+    //         account: this._accountId,
+    //     };
 
-        // Create prices for each item first, then use them in the schedule
-        const scheduleItems: Array<{ price: string; quantity: number }> = [];
-        for (const item of items) {
-            // Create product for this item
-            const productData: any = {
-                name: item.price_data.product_data.name,
-            };
+    //     // Create prices for each item first, then use them in the schedule
+    //     const scheduleItems: Array<{ price: string; quantity: number }> = [];
+    //     for (const item of items) {
+    //         // Create product for this item
+    //         const productData: any = {
+    //             name: item.price_data.product_data.name,
+    //         };
 
-            // Only include description if it's not empty
-            if (
-                item.price_data.product_data.description &&
-                item.price_data.product_data.description.trim() !== ""
-            ) {
-                productData.description = item.price_data.product_data.description;
-            }
+    //         // Only include description if it's not empty
+    //         if (
+    //             item.price_data.product_data.description &&
+    //             item.price_data.product_data.description.trim() !== ""
+    //         ) {
+    //             productData.description = item.price_data.product_data.description;
+    //         }
 
-            const product = await this._stripe.products.create(productData);
+    //         const product = await this._stripe.products.create(productData);
 
-            // Create the price
-            const price = await this._stripe.prices.create({
-                currency: item.price_data.currency,
-                product: product.id,
-                unit_amount: item.price_data.unit_amount,
-                recurring: {
-                    interval: item.price_data.recurring.interval,
-                    interval_count: item.price_data.recurring.interval_count || 1,
-                },
-            });
+    //         // Create the price
+    //         const price = await this._stripe.prices.create({
+    //             currency: item.price_data.currency,
+    //             product: product.id,
+    //             unit_amount: item.price_data.unit_amount,
+    //             recurring: {
+    //                 interval: item.price_data.recurring.interval,
+    //                 interval_count: item.price_data.recurring.interval_count || 1,
+    //             },
+    //         });
 
-            scheduleItems.push({
-                price: price.id,
-                quantity: item.quantity,
-            });
-        }
+    //         scheduleItems.push({
+    //             price: price.id,
+    //             quantity: item.quantity,
+    //         });
+    //     }
 
-        const options: Stripe.SubscriptionScheduleCreateParams = {
-            customer: customerId,
-            start_date: Math.floor(startDate.getTime() / 1000),
-            end_behavior: "cancel",
-            phases: [
-                {
-                    items: scheduleItems,
-                    transfer_data: {
-                        destination: this._accountId,
-                    },
-                    invoice_settings: { issuer: accountDestination },
-                    billing_cycle_anchor: "automatic",
-                    collection_method: "charge_automatically",
-                    ...(endDate && { end_date: Math.floor(endDate.getTime() / 1000) }),
-                },
-            ],
-        };
+    //     const options: Stripe.SubscriptionScheduleCreateParams = {
+    //         customer: customerId,
+    //         start_date: Math.floor(startDate.getTime() / 1000),
+    //         end_behavior: "cancel",
+    //         phases: [
+    //             {
+    //                 items: scheduleItems,
+    //                 transfer_data: {
+    //                     destination: this._accountId,
+    //                 },
+    //                 invoice_settings: { issuer: accountDestination },
+    //                 billing_cycle_anchor: "automatic",
+    //                 collection_method: "charge_automatically",
+    //                 ...(endDate && { end_date: Math.floor(endDate.getTime() / 1000) }),
+    //             },
+    //         ],
+    //     };
 
-        return await this._stripe.subscriptionSchedules.create(options);
-    }
+    //     return await this._stripe.subscriptionSchedules.create(options);
+    // }
 
-    // Release a subscription schedule to activate it
-    async releaseSubscriptionSchedule(
-        scheduleId: string
-    ): Promise<Stripe.SubscriptionSchedule> {
-        if (!this._accountId) {
-            throw new Error("Account ID not set");
-        }
+    // // Release a subscription schedule to activate it
+    // async releaseSubscriptionSchedule(
+    //     scheduleId: string
+    // ): Promise<Stripe.SubscriptionSchedule> {
+    //     if (!this._accountId) {
+    //         throw new Error("Account ID not set");
+    //     }
 
-        return await this._stripe.subscriptionSchedules.release(scheduleId);
-    }
+    //     return await this._stripe.subscriptionSchedules.release(scheduleId);
+    // }
 }
 
 

@@ -10,12 +10,10 @@ import { z } from "zod";
 
 import {
     calculateThresholdDate,
-    calculateTax,
     calculateStripeFeeAmount
 } from "@/libs/utils";
 
 import Stripe from "stripe";
-import { isAfter } from "date-fns";
 
 const PurchasePkgProps = {
     params: z.object({
@@ -213,35 +211,20 @@ export function purchasePkgRoutes(app: Elysia) {
                 const today = new Date();
                 const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
 
-                let subTotal = pricing.price;
-                const priceAfterDiscount = Math.max(0, pricing.price - discount);
-                const tax = calculateTax(priceAfterDiscount, taxRate);
-                let total = priceAfterDiscount + tax;
-
-                const monstroFee = Math.floor(subTotal * (locationState.usagePercent / 100));
-
-                const stripeFee = calculateStripeFeeAmount((
-                    locationState.settings.passOnFees ? total : total + monstroFee
-                ), paymentMethod.type);
-
-                const applicationFeeAmount = monstroFee + stripeFee;
-                if (locationState.settings.passOnFees) {
-                    total += applicationFeeAmount;
-                    subTotal += applicationFeeAmount;
-                }
 
 
                 const planName = `${pricing.plan.name}/${pricing.name}`;
 
-                await stripe.createPaymentIntent({
-                    amount: total,
-                    applicationFeeAmount: applicationFeeAmount,
+                const { clientSecret, chargeId, chargeDetails } = await stripe.processPayment({
+                    amount: pricing.price,
                     paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.plan.currency,
+                    passOnFees: locationState.settings.passOnFees,
+                    usagePercent: locationState.usagePercent,
+                    paymentType: paymentMethod.type,
                     description: `Payment for ${planName}`,
                     productName: planName,
-                    unitCost: subTotal,
-                    tax: tax,
+                    taxRate: taxRate?.percentage,
                     discount,
                     metadata: {
                         pricingId: pricing.id,
@@ -259,11 +242,11 @@ export function purchasePkgRoutes(app: Elysia) {
                     }).where(eq(memberPackages.id, memberPlanId));
                     await tx.insert(transactions).values({
                         description: `Payment for ${planName}`,
-                        items: [{ name: planName, quantity: 1, price: subTotal, discount }],
+                        items: [{ name: planName, quantity: 1, price: pricing.price, discount }],
                         type: "inbound",
-                        total,
-                        subTotal,
-                        totalTax: tax,
+                        total: chargeDetails.total,
+                        subTotal: chargeDetails.subTotal,
+                        totalTax: chargeDetails.tax,
                         status: "paid",
                         locationId: lid,
                         memberId: mid,

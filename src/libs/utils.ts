@@ -366,11 +366,6 @@ function calculateStripeFeeAmount(amount: number, paymentType: PaymentType, isRe
 
 
 
-function calculateTax(price: number, taxRate: TaxRate | undefined) {
-    if (!taxRate) return 0;
-    const tax = Math.floor(price * (taxRate.percentage || 0) / 100);
-    return tax;
-}
 
 interface EndDateParams {
     startDate: Date,
@@ -406,6 +401,5 @@ export {
     handleAdditionalData,
     calculateStripeFeePercentage,
     calculateStripeFeeAmount,
-    calculateTax,
     calculateThresholdDate,
 };

@@ -6,10 +6,9 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
-    calculateStripeFeePercentage,
     calculateStripeFeeAmount,
-    calculateTax,
 } from "@/libs/utils";
+import type { MemberPlanPricing, PaymentType } from "@subtrees/types";
 
 
 
@@ -58,6 +57,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     currentPeriodEnd,
                     locationId: lid,
                     memberId: mid,
+
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentType,
                     classCredits,
@@ -138,7 +138,6 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(404, { error: "Location not found" });
                 }
 
-
                 if (!pricing) {
                     return status(404, { error: "Pricing not found" });
                 }
@@ -179,8 +178,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 const today = new Date();
                 let startDate: Date = today;
 
-                let stripeCouponId: string | null = null;
-
+                let discount: number = 0;
                 if (promoId) {
                     const promo = await db.query.promos.findFirst({
                         where: (promo, { eq, and, gt, isNull, or }) => and(
@@ -192,10 +190,11 @@ export function purchaseSubRoutes(app: Elysia) {
                             )
                         ),
                         columns: {
-                            stripeCouponId: true,
                             redemptionCount: true,
                             maxRedemptions: true,
                             allowedPlans: true,
+                            type: true,
+                            value: true,
                         },
                     });
                     if (promo) {
@@ -203,13 +202,15 @@ export function purchaseSubRoutes(app: Elysia) {
                         const isWithinRedemption = !maxRedemptions || redemptionCount < maxRedemptions;
                         const isAllowedPlan = allowedPlans && allowedPlans.includes(pricing.id);
                         if (isWithinRedemption && isAllowedPlan) {
-                            stripeCouponId = promo.stripeCouponId;
+                            if (promo.type === "fixed_amount") {
+                                discount = Math.round(promo.value);
+                            } else {
+                                discount = Math.round(pricing.price * (promo.value / 100));
+                            }
                         }
                     }
                 }
 
-                const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type, true);
-                const feePercent = locationState?.usagePercent + stripeFeePercentage;
 
                 let cancelAt: Date | undefined = undefined;
                 if (pricing.expireThreshold && pricing.expireInterval) {
@@ -220,19 +221,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     });
                 }
 
-                const sub = await stripe.createSubscription({
-                    stripePriceId: pricing.stripePriceId,
-                    paymentMethodId: paymentMethod.stripeId,
-                    feePercent: feePercent,
-                    startDate: startDate,
-                    ...(stripeCouponId && { stripeCouponId }),
-                    description: `Subscription to ${pricing.plan.name}/${pricing.name}`,
-                    currency: pricing.plan.currency || "usd",
-                    taxRateId: taxRate?.stripeRateId || undefined,
-                    isAllowProration: pricing.plan.allowProration,
-                    cancelAt,
-                    metadata,
-                });
+
 
                 let hasPaidDownpayment = false;
                 if (pricing.downpayment) {
@@ -242,48 +231,30 @@ export function purchaseSubRoutes(app: Elysia) {
                         threshold: pricing.intervalThreshold,
                         interval: pricing.interval,
                     });
-
-                    const tax = calculateTax(pricing.downpayment, taxRate);
-                    let subTotal = pricing.downpayment;
-                    let total = subTotal + tax;
-                    const monstroFee = Math.floor(subTotal * (locationState.usagePercent / 100));
-                    const stripeFee = calculateStripeFeeAmount((
-                        locationState.settings.passOnFees ? total : total + monstroFee
-                    ), paymentMethod.type);
-
-                    const applicationFeeAmount = monstroFee + stripeFee;
-
-                    if (locationState.settings.passOnFees) {
-                        total += applicationFeeAmount;
-                        subTotal += applicationFeeAmount;
-                    }
-
-
-                    const planName = `${pricing.plan.name}/${pricing.name}`;
-
-                    // charge for downpayment
-                    await stripe.createPaymentIntent({
-                        amount: total,
-                        applicationFeeAmount: applicationFeeAmount,
-                        paymentMethodId: paymentMethod.stripeId,
+                    await stripe.processPayment({
+                        amount: pricing.downpayment,
+                        paymentMethodId: paymentMethodId,
+                        passOnFees: locationState.settings.passOnFees,
+                        usagePercent: locationState.usagePercent,
+                        paymentType: paymentMethod.type,
+                        metadata: metadata,
+                        discount,
+                        taxRate: taxRate?.percentage,
+                        productName: `${pricing.plan.name}/${pricing.name}`,
+                        description: `Downpayment for ${pricing.plan.name}/${pricing.name}`,
                         currency: pricing.plan.currency,
-                        description: `Downpayment for ${planName}`,
-                        productName: planName,
-                        unitCost: subTotal,
-                        tax: tax,
-                        metadata: {
-                            pricingId: pricing.id,
-                            planId: pricing.plan.id,
-                            ...metadata,
-                        },
                     });
                     hasPaidDownpayment = true;
+
+                } else {
+
                 }
 
                 await db.transaction(async (tx) => {
                     await tx.update(memberSubscriptions).set({
-                        status: sub.status,
-                        stripeSubscriptionId: sub.id,
+                        status: 'active',
+                        cancelAt,
+                        stripeSubscriptionId: paymentMethod.stripeId,
                         metadata: {
                             hasPaidDownpayment,
                             stripePaymentMethodId: paymentMethodId,
@@ -295,7 +266,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 });
 
 
-                return status(200, { status: sub.status });
+                return status(200, { status: 'active' });
             } catch (error) {
                 console.error(error);
                 return status(500, { error: "Failed to checkout" });
