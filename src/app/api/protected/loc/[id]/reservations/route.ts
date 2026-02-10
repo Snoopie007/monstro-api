@@ -3,7 +3,6 @@ import { reservations } from "@/db/schemas/reservations";
 import { NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { serviceApiClient } from "@/libs/api/server";
-import { format, subDays, addHours } from "date-fns";
 
 type Params = {
   id: string;
@@ -164,130 +163,20 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
       });
 
       if (locationState?.planId && locationState.planId >= 2) {
-        // Fetch location details and session program info
-        const location = await db.query.locations.findFirst({
-          where: (l, { eq }) => eq(l.id, id)
-        });
+        const apiClient = serviceApiClient();
 
-        const program = await db.query.programs.findFirst({
-          where: (p, { eq }) => eq(p.id, session.programId)
-        });
+        for (const reservation of createdReservations) {
+          await apiClient.post(`/x/loc/${id}/class/reminder`, {
+            reservationId: reservation.id,
+            locationId: id,
+          });
 
-        if (location && program) {
-          const apiClient = serviceApiClient();
+          await apiClient.post(`/x/loc/${id}/class/missed`, {
+            reservationId: reservation.id,
+            locationId: id,
+          });
 
-          // Schedule emails for each created reservation
-          for (const reservation of createdReservations) {
-            // Fetch member details
-            const member = await db.query.members.findFirst({
-              where: (m, { eq }) => eq(m.id, reservation.memberId)
-            });
-
-            if (member) {
-              const startOn = reservation.startOn;
-              const endOn = reservation.endOn;
-              const now = new Date();
-              
-              // Format the day and time for display
-              const dayTime = format(startOn, "EEEE, MMMM d 'at' h:mm a");
-
-              // Calculate when to send emails
-              const upcomingReminderTime = subDays(startOn, 3);
-              const missedClassTime = addHours(endOn, 1);
-
-              // Fetch instructor data if available
-              let instructor = null;
-              if (session.staffId) {
-                const staff = await db.query.staffs.findFirst({
-                  where: (s, { eq }) => eq(s.id, session.staffId as string),
-                });
-                if (staff) {
-                  instructor = {
-                    firstName: staff.firstName,
-                    lastName: staff.lastName,
-                  };
-                }
-              }
-
-              const emailData = {
-                member: {
-                  firstName: member.firstName || '',
-                  lastName: member.lastName || '',
-                },
-                session: {
-                  programName: program.name,
-                  dayTime,
-                },
-                location: {
-                  name: location.name || '',
-                  address: location.address || '',
-                },
-              };
-
-              // For missed class email - updated to match new template interface
-              const missedClassEmailData = {
-                member: {
-                  id: member.id,
-                  firstName: member.firstName || '',
-                  lastName: member.lastName || '',
-                  email: member.email || '',
-                },
-                class: {
-                  name: program.name,
-                  description: program.description || undefined,
-                  startTime: startOn.toISOString(),
-                  endTime: endOn.toISOString(),
-                  instructor,
-                },
-                location: {
-                  id: location.id,
-                  name: location.name || '',
-                  address: location.address || '',
-                  email: location.email || undefined,
-                  phone: location.phone || undefined,
-                },
-              };
-
-              // Schedule upcoming class reminder
-              if (startOn > now) {
-                // Class is in the future
-                let reminderSendTime: Date;
-                
-                if (upcomingReminderTime > now) {
-                  // Class is 3+ days away - schedule for 3 days before
-                  reminderSendTime = upcomingReminderTime;
-                  console.log(`📧 Scheduled upcoming class reminder for 3 days before ${dayTime}`);
-                } else {
-                  // Class is < 3 days away - send immediately
-                  reminderSendTime = now;
-                  console.log(`📧 Sending upcoming class reminder immediately (class is < 3 days away)`);
-                }
-
-                await apiClient.post('/protected/locations/email', {
-                  recipient: member.email,
-                  subject: `Reminder: ${program.name} class coming up`,
-                  template: 'ClassReminderEmail',
-                  data: emailData,
-                  sendAt: reminderSendTime.toISOString(),
-                  jobId: `class-reminder-${reservation.id}`,
-                });
-              } else {
-                console.log(`⏭️ Skipping upcoming reminder - class is in the past`);
-              }
-
-              // Schedule missed class email (1 hour after class ends)
-              await apiClient.post('/protected/locations/email', {
-                recipient: member.email,
-                subject: `We missed you at ${program.name}`,
-                template: 'MissedClassEmail',
-                data: missedClassEmailData,
-                sendAt: missedClassTime.toISOString(),
-                jobId: `missed-class-${reservation.id}`,
-              });
-
-              console.log(`📧 Scheduled class reminder emails for reservation ${reservation.id}`);
-            }
-          }
+          console.log(`📧 Scheduled class queue jobs for reservation ${reservation.id}`);
         }
       }
     } catch (error) {

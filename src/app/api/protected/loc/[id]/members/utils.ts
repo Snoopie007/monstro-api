@@ -3,7 +3,7 @@ import {
 	TaxRate,
 } from "@/types";
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
-import { serversideApiClient } from "@/libs/api/server";
+import { serversideApiClient, ApiClientError } from "@/libs/api/server";
 import { db } from "@/db/db";
 import { groupMembers } from "@/db/schemas";
 
@@ -133,6 +133,14 @@ async function scheduleRecurringInvoiceReminders(params: {
 
 		return {success: true};
 	} catch (error) {
+		if (error instanceof ApiClientError && error.status === 404) {
+			console.warn('Skipping recurring invoice reminder scheduling: no invoice found yet for subscription', {
+				subscriptionId: params.subscriptionId,
+				locationId: params.locationId,
+				details: error.body,
+			});
+			return { success: false, skipped: true, reason: 'invoice_not_found' };
+		}
 		console.error('Failed to schedule recurring invoice reminders:', error);
 		throw error;
 	}

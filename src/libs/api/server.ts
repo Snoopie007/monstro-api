@@ -13,6 +13,40 @@ export interface ApiClient {
     delete: (url: string) => Promise<unknown>;
 }
 
+export class ApiClientError extends Error {
+    status: number;
+    endpoint: string;
+    body: unknown;
+
+    constructor(message: string, status: number, endpoint: string, body: unknown) {
+        super(message);
+        this.name = 'ApiClientError';
+        this.status = status;
+        this.endpoint = endpoint;
+        this.body = body;
+    }
+}
+
+async function parseErrorBody(response: Response): Promise<unknown> {
+    const text = await response.text();
+    if (!text) return null;
+    try {
+        return JSON.parse(text);
+    } catch {
+        return text;
+    }
+}
+
+async function throwApiError(response: Response, endpoint: string): Promise<never> {
+    const body = await parseErrorBody(response);
+    throw new ApiClientError(
+        `API Error ${response.status} on ${endpoint}`,
+        response.status,
+        endpoint,
+        body,
+    );
+}
+
 export const serversideApiClient = (): ApiClient => {
     const baseUrl = process.env.MONSTRO_API_URL || 'http://localhost:3000'
 
@@ -36,7 +70,7 @@ export const serversideApiClient = (): ApiClient => {
 
             const response = await fetch(url.toString())
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`)
+                await throwApiError(response, endpoint)
             }
             return response.json()
         },
@@ -68,7 +102,7 @@ export const serversideApiClient = (): ApiClient => {
             })
 
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`)
+                await throwApiError(response, endpoint)
             }
             return response.json()
         },
@@ -102,7 +136,7 @@ export const serversideApiClient = (): ApiClient => {
             })
 
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`)
+                await throwApiError(response, endpoint)
             }
             return response.json()
         }
@@ -144,7 +178,7 @@ export const serviceApiClient = (): ApiClient => {
                 headers: getHeaders()
             })
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`)
+                await throwApiError(response, endpoint)
             }
             return response.json()
         },
@@ -159,7 +193,7 @@ export const serviceApiClient = (): ApiClient => {
             })
 
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`)
+                await throwApiError(response, endpoint)
             }
             return response.json()
         },
@@ -173,10 +207,9 @@ export const serviceApiClient = (): ApiClient => {
             })
 
             if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`)
+                await throwApiError(response, endpoint)
             }
             return response.json()
         }
     }
 }
-
