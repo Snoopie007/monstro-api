@@ -26,3 +26,4 @@ export * from "./chat";
 export * from "./PaymentMethods";
 export * from "./tax";
 export * from "./promos";
+export * from "./verifications";
