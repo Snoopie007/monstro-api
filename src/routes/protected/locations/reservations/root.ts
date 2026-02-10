@@ -2,18 +2,17 @@
 import type { Elysia } from "elysia";
 import { db } from "@/db/db";
 import type {
-    RecurringReservation, Reservation, MemberPackage,
-    MemberSubscription, ProgramSession
+    Reservation, MemberPackage,
+    MemberSubscription,
 } from "subtrees/types";
 import {
     memberPackages, memberSubscriptions,
-    recurringReservations, reservationExceptions,
     reservations
 } from "subtrees/schemas";
 import { eq, sql } from "drizzle-orm";
-import { emailQueue, classQueue } from "@/workers/queues";
+import { classQueue } from "@/workers/queues";
 import { z } from "zod";
-import { addMinutes, startOfWeek, endOfWeek } from "date-fns";
+import { addMinutes } from "date-fns";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { getMemberPlan, getSessionState, checkClassLimit } from "./utils";
 import { recurringReservationRoutes } from "./recurring";
