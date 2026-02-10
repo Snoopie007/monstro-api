@@ -11,7 +11,7 @@ import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionItem, TransactionMetadata } from "subtrees/types";
+import type { TransactionItem, TransactionMetadata } from "../types";
 
 export const transactions = pgTable("transactions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
