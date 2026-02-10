@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions, memberPlanPricing, promos } from "@/db/schemas";
+import { memberLocations, memberSubscriptions, memberPlanPricing, promos } from "@/db/schemas";
 import { NextResponse } from "next/server";
 import {
     addUserToGroup,
@@ -185,6 +185,19 @@ export async function POST(req: Request, props: Props) {
                 .where(eq(promos.id, promoId));
         }
 
+        await db
+            .update(memberLocations)
+            .set({
+                status: "active",
+                updated: new Date(),
+            })
+            .where(
+                and(
+                    eq(memberLocations.memberId, mid),
+                    eq(memberLocations.locationId, id)
+                )
+            );
+
         // Add user to group if plan has a groupId
         if (plan.groupId && member.userId) {
             await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
@@ -205,4 +218,3 @@ export async function POST(req: Request, props: Props) {
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
-
