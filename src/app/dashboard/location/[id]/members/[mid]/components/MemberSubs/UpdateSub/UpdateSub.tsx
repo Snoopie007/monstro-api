@@ -53,8 +53,8 @@ export function UpdateSub({ sub, open, onOpenChange }: UpdateSubProps) {
 	const paymentMethods = ml.memberPaymentMethods;
 	const params = useParams();
 
-	// Use expiresAt (term-based) or cancelAt (manual cancellation) for the end date
-	const rawEndDate = sub.expiresAt || sub.cancelAt;
+	// Use cancelAt for the scheduled end date
+	const rawEndDate = sub.cancelAt;
 	const effectiveEndDate = rawEndDate ? new Date(rawEndDate) : null;
 
 	const form = useForm<z.infer<typeof UpdateSubSchema>>({
