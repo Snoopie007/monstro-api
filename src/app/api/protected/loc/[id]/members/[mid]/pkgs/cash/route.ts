@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberPackages, memberPlanPricing, transactions, promos } from "@/db/schemas";
+import { memberLocations, memberPackages, memberPlanPricing, transactions, promos } from "@/db/schemas";
 import { eq, and, sql } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
@@ -190,6 +190,19 @@ export async function POST(req: NextRequest, props: Props) {
                     pricingId: pricing.id,
                 },
             });
+
+            await tx
+                .update(memberLocations)
+                .set({
+                    status: "active",
+                    updated: new Date(),
+                })
+                .where(
+                    and(
+                        eq(memberLocations.memberId, mid),
+                        eq(memberLocations.locationId, id)
+                    )
+                );
             return pkg;
         });
 

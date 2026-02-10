@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions, memberPlanPricing, promos } from "@/db/schemas";
+import { memberLocations, memberSubscriptions, memberPlanPricing, promos } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -251,7 +251,7 @@ export async function POST(req: Request, props: Props) {
             memberPlanPricingId: pricing.id,
             promoId,
             paymentType,
-            status: "incomplete",
+            status: stripeSubscription.status,
             makeUpCredits: 0,
             allowMakeUpCarryOver: false,
             metadata: {
@@ -267,6 +267,23 @@ export async function POST(req: Request, props: Props) {
                 .set({ redemptionCount: sql`${promos.redemptionCount} + 1` })
                 .where(eq(promos.id, promoId));
         }
+
+        const shouldActivateLocation =
+            stripeSubscription.status === "active" ||
+            stripeSubscription.status === "trialing";
+
+        await db
+            .update(memberLocations)
+            .set({
+                status: shouldActivateLocation ? "active" : "incomplete",
+                updated: new Date(),
+            })
+            .where(
+                and(
+                    eq(memberLocations.memberId, mid),
+                    eq(memberLocations.locationId, id)
+                )
+            );
 
         // Add user to group if plan has a groupId
         if (plan.groupId && member.userId) {
@@ -292,7 +309,6 @@ export async function POST(req: Request, props: Props) {
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
-
 
 
 
