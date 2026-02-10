@@ -1,4 +1,3 @@
-import { z } from "zod";
 
 export type BaseUser = {
   id: string; // UUID from database
@@ -19,4 +18,10 @@ export type ExtendedUser = BaseUser & {
 
 export type ExtendedVendorUser = ExtendedUser & {
   vendorId: string;
+};
+
+export type AuthAdditionalData = {
+  migrateId?: string | null;
+  ref?: string | null;
+  lid?: string | null;
 };
