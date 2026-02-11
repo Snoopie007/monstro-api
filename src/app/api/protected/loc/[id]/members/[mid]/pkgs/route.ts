@@ -5,7 +5,7 @@ import { eq, and, sql } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
-import { addUserToGroup, calculateExpiresAt, calculateStripeFeeAmount, calculateTax } from "../../utils";
+import { addUserToGroup, calculateExpiresAt, calculateStripeFeeAmount, calculateTax, validatePromoForCheckout } from "../../utils";
 
 type Props = {
 	params: Promise<{
@@ -67,48 +67,7 @@ export async function POST(req: NextRequest, props: Props) {
 
 		let promoId: string | undefined;
 		let discountAmount = 0;
-		if (promoCode) {
-			const promo = await db.query.promos.findFirst({
-				where: and(
-					eq(promos.code, promoCode.toUpperCase()),
-					eq(promos.locationId, id),
-					eq(promos.isActive, true)
-				)
-			});
 
-			if (!promo) {
-				return NextResponse.json({ error: "Invalid promo code" }, { status: 400 });
-			}
-
-		if (promo.expiresAt && new Date() > promo.expiresAt) {
-			return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
-		}
-
-		// Check max redemptions
-		if (promo.maxRedemptions && promo.redemptionCount >= promo.maxRedemptions) {
-			return NextResponse.json({ error: "Promo code redemption limit reached" }, { status: 400 });
-		}
-
-		// Check "once" duration - has this member already used this promo?
-		if (promo.duration === "once") {
-			const existingUsage = await db.query.memberPackages.findFirst({
-				where: and(
-					eq(memberPackages.promoId, promo.id),
-					eq(memberPackages.memberId, mid)
-				)
-			});
-			if (existingUsage) {
-				return NextResponse.json({ error: "This promo has already been used by this member" }, { status: 400 });
-			}
-		}
-
-		promoId = promo.id;
-			if (promo.type === "percentage") {
-				discountAmount = Math.floor(pricing.price * (promo.value / 100));
-			} else if (promo.type === "fixed_amount") {
-				discountAmount = Math.min(promo.value, pricing.price);
-			}
-		}
 
 		const plan = await db.query.memberPlans.findFirst({
 			where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
@@ -118,21 +77,28 @@ export async function POST(req: NextRequest, props: Props) {
 			throw new Error("Plan not found")
 		}
 
-		// Check if promo is restricted to specific pricing options
-		if (promoId) {
-			const promo = await db.query.promos.findFirst({
-				where: eq(promos.id, promoId)
-			});
-			if (promo && promo.allowedPlans && promo.allowedPlans.length > 0) {
-				if (!promo.allowedPlans.includes(pricingId)) {
-					return NextResponse.json({ error: "This promo code is not valid for this pricing option" }, { status: 400 });
-				}
-			}
-		}
-
 		if (pricing.memberPlanId !== plan.id) {
 			return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
 		}
+
+		const promoValidation = await validatePromoForCheckout({
+			locationId: id,
+			memberId: mid,
+			pricingId,
+			pricingPrice: pricing.price,
+			promoCode,
+			usageType: "package",
+		});
+
+		if (!promoValidation.ok) {
+			return NextResponse.json(
+				{ error: promoValidation.message, code: promoValidation.code },
+				{ status: promoValidation.status }
+			);
+		}
+
+		promoId = promoValidation.promoId;
+		discountAmount = promoValidation.discountAmount || 0;
 
 		const ml = await db.query.memberLocations.findFirst({
 			where: (memberLocation, { eq, and }) => and(

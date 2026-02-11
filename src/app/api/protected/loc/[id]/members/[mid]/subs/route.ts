@@ -9,11 +9,12 @@ import {
     calculateTrialEnd,
     scheduleRecurringInvoiceReminders,
     calculateExpiresAt,
+    getTaxRateId,
+    validatePromoForCheckout,
 } from "../../utils";
 import { eq, and, sql } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
-import { getTaxRateId } from "../../utils";
 
 
 type Props = {
@@ -78,44 +79,6 @@ export async function POST(req: Request, props: Props) {
     try {
         let promoId: string | undefined;
         let stripeCouponId: string | undefined;
-        if (promoCode) {
-            const promo = await db.query.promos.findFirst({
-                where: and(
-                    eq(promos.code, promoCode.toUpperCase()),
-                    eq(promos.locationId, id),
-                    eq(promos.isActive, true)
-                )
-            });
-
-            if (!promo) {
-                return NextResponse.json({ error: "Invalid promo code" }, { status: 400 });
-            }
-
-            if (promo.expiresAt && new Date() > promo.expiresAt) {
-                return NextResponse.json({ error: "Promo code has expired" }, { status: 400 });
-            }
-
-            // Check max redemptions
-            if (promo.maxRedemptions && promo.redemptionCount >= promo.maxRedemptions) {
-                return NextResponse.json({ error: "Promo code redemption limit reached" }, { status: 400 });
-            }
-
-            // Check "once" duration - has this member already used this promo?
-            if (promo.duration === "once") {
-                const existingUsage = await db.query.memberSubscriptions.findFirst({
-                    where: and(
-                        eq(memberSubscriptions.promoId, promo.id),
-                        eq(memberSubscriptions.memberId, mid)
-                    )
-                });
-                if (existingUsage) {
-                    return NextResponse.json({ error: "This promo has already been used by this member" }, { status: 400 });
-                }
-            }
-
-            promoId = promo.id;
-            stripeCouponId = promo.stripeCouponId ?? undefined;
-        }
 
         if (!pricingId) {
             return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
@@ -143,17 +106,24 @@ export async function POST(req: Request, props: Props) {
             return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
         }
 
-        // Check if promo is restricted to specific pricing options
-        if (promoId) {
-            const promo = await db.query.promos.findFirst({
-                where: eq(promos.id, promoId)
-            });
-            if (promo && promo.allowedPlans && promo.allowedPlans.length > 0) {
-                if (!promo.allowedPlans.includes(pricingId)) {
-                    return NextResponse.json({ error: "This promo code is not valid for this pricing option" }, { status: 400 });
-                }
-            }
+        const promoValidation = await validatePromoForCheckout({
+            locationId: id,
+            memberId: mid,
+            pricingId,
+            pricingPrice: pricing.price,
+            promoCode,
+            usageType: "subscription",
+        });
+
+        if (!promoValidation.ok) {
+            return NextResponse.json(
+                { error: promoValidation.message, code: promoValidation.code },
+                { status: promoValidation.status }
+            );
         }
+
+        promoId = promoValidation.promoId;
+        stripeCouponId = promoValidation.stripeCouponId;
 
 
         const ml = await db.query.memberLocations.findFirst({
@@ -313,4 +283,3 @@ export async function POST(req: Request, props: Props) {
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
-
