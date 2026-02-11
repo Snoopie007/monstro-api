@@ -24,6 +24,7 @@ import {
 import { locations } from "./locations";
 import { memberContracts, memberInvoices, members } from "./members";
 import { recurringReservations, reservations } from "./reservations";
+import { paymentMethods } from "./PaymentMethods";
 
 export const memberPlans = pgTable("member_plans", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -69,7 +70,6 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	memberPlanPricingId: text("member_plan_pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "set null" }),
 	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	stripeSubscriptionId: text("stripe_subscription_id"),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
 	startDate: timestamp("start_date", { withTimezone: true }).notNull(),
 	currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),

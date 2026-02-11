@@ -10,15 +10,19 @@ import {
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
+import { paymentMethods } from "./PaymentMethods";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionItem, TransactionMetadata } from "../types";
+import type { TransactionItem, TransactionMetadata, TransactionFees } from "../types";
 
 export const transactions = pgTable("transactions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	description: text("description"),
 	items: jsonb("items").$type<TransactionItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
+	fees: jsonb("fees").$type<TransactionFees>(),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
+	paymentMethodId: text("payment_method_id").references(() => paymentMethods.stripeId, { onDelete: "set null" }),
+	paymentIntentId: text("payment_intent_id").unique(),
 	total: integer("total").notNull().default(0),
 	subTotal: integer("sub_total").notNull().default(0),
 	status: TransactionStatusEnum("status").notNull().default("incomplete"),
