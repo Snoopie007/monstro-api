@@ -195,7 +195,7 @@ export type MemberListItem = {
     firstName: string
     lastName: string | null
     email: string
-    phone: string
+    phone: string | null
     avatar: string | null
     created: string
     updated: string | null

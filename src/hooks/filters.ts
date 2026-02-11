@@ -20,7 +20,7 @@ export function filterBySearch(
         m.firstName.toLowerCase().includes(lowerQuery) ||
         (m.lastName?.toLowerCase().includes(lowerQuery)) ||
         m.email.toLowerCase().includes(lowerQuery) ||
-        m.phone.includes(query)
+        (m.phone ?? '').includes(query)
     )
 }
 
@@ -59,7 +59,7 @@ export function filterByColumnFilters(
                 case 'email':
                     return member.email.toLowerCase().includes(value)
                 case 'phone':
-                    return member.phone.includes(value)
+                    return (member.phone ?? '').includes(value)
                 case 'gender':
                     return member.gender?.toLowerCase() === value
                 case 'status':
