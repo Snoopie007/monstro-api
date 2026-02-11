@@ -2,10 +2,10 @@ import {
   recurringReservations,
   reservationExceptions,
   reservations,
-} from "subtrees/schemas/reservations";
-import type { ProgramSession } from "subtrees/types/program";
+} from "../schemas/reservations";
+import type { ProgramSession } from "./program";
 import type { Member, MemberPackage, MemberSubscription } from "./member";
-import { attendances } from "subtrees/schemas/attendances";
+import { attendances } from "../schemas/attendances";
 import type { Location } from "./location";
 
 export type Attendance = typeof attendances.$inferSelect & {
@@ -33,7 +33,7 @@ export type ReservationBase = {
 };
 
 // Full reservation type - combines base fields with optional schema fields
-export type Reservation = ReservationBase & 
+export type Reservation = ReservationBase &
   Partial<Omit<typeof reservations.$inferSelect, keyof ReservationBase>> & {
     isRecurring?: boolean;
     recurringId?: string;

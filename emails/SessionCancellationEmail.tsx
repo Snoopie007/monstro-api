@@ -12,7 +12,7 @@ import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
 import { EmailFooter, LocationInfoBox, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel } from './_shared';
-import type { Member, Location, Staff } from '@subtrees/types';
+import type { Member, Location, Staff } from '../types';
 interface SessionCancellationEmailProps {
 	member: Pick<Member, 'firstName' | 'lastName' | 'email'>;
 	location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;

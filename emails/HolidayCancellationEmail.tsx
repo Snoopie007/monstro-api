@@ -12,7 +12,7 @@ import { EmailStyles } from './_shared/SharedStyle';
 import { format } from 'date-fns';
 import { EmailFooter, LocationInfoBox, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel } from './_shared';
 import { DummyData, } from './_shared/data';
-import type { Member, Location } from '@subtrees/types';
+import type { Member, Location } from '../types';
 interface CancelledReservation {
 	className: string;
 	originalDate: string;

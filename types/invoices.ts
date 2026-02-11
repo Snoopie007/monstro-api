@@ -1,4 +1,4 @@
-import { memberInvoices } from "subtrees/schemas";
+import { memberInvoices } from "../schemas/members";
 import type { Member, MemberSubscription } from "./member";
 import type { Location } from "./location";
 
