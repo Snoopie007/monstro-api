@@ -5,7 +5,9 @@ import {
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { serversideApiClient, ApiClientError } from "@/libs/api/server";
 import { db } from "@/db/db";
-import { groupMembers } from "@/db/schemas";
+import { groupMembers, integrations, memberPackages, memberSubscriptions, promos } from "@/db/schemas";
+import { and, eq } from "drizzle-orm";
+import Stripe from "stripe";
 
 
 const STRIPE_FEE_PERCENT = 2.9
@@ -332,6 +334,178 @@ function generateDiscriminator(): number {
     return Math.floor(Math.random() * 10000);
 }
 
+type PromoUsageType = "subscription" | "package";
+
+type PromoValidationResult = {
+	ok: boolean;
+	status: number;
+	code?: string;
+	message?: string;
+	promoId?: string;
+	stripeCouponId?: string;
+	discountAmount?: number;
+};
+
+function promoError(status: number, code: string, message: string): PromoValidationResult {
+	return {
+		ok: false,
+		status,
+		code,
+		message,
+	};
+}
+
+async function validatePromoForCheckout(params: {
+	locationId: string;
+	memberId: string;
+	pricingId: string;
+	pricingPrice: number;
+	promoCode?: string;
+	usageType: PromoUsageType;
+}): Promise<PromoValidationResult> {
+	const { locationId, memberId, pricingId, pricingPrice, promoCode, usageType } = params;
+
+	if (!promoCode) {
+		return { ok: true, status: 200 };
+	}
+
+	const normalizedPromoCode = promoCode.trim().toUpperCase();
+	if (!normalizedPromoCode) {
+		return promoError(400, "PROMO_NOT_FOUND", "Invalid promo code");
+	}
+
+	const promo = await db.query.promos.findFirst({
+		where: and(
+			eq(promos.code, normalizedPromoCode),
+			eq(promos.locationId, locationId),
+			eq(promos.isActive, true)
+		)
+	});
+
+	if (!promo) {
+		return promoError(400, "PROMO_NOT_FOUND", "Invalid promo code");
+	}
+
+	if (promo.expiresAt && new Date() > promo.expiresAt) {
+		return promoError(400, "PROMO_EXPIRED", "Promo code has expired");
+	}
+
+	if (promo.maxRedemptions && promo.redemptionCount >= promo.maxRedemptions) {
+		return promoError(400, "PROMO_REDEMPTION_LIMIT_REACHED", "Promo code redemption limit reached");
+	}
+
+	if (promo.duration === "once") {
+		const existingUsage = usageType === "subscription"
+			? await db.query.memberSubscriptions.findFirst({
+				where: and(
+					eq(memberSubscriptions.promoId, promo.id),
+					eq(memberSubscriptions.memberId, memberId)
+				)
+			})
+			: await db.query.memberPackages.findFirst({
+				where: and(
+					eq(memberPackages.promoId, promo.id),
+					eq(memberPackages.memberId, memberId)
+				)
+			});
+
+		if (existingUsage) {
+			return promoError(400, "PROMO_ALREADY_USED", "This promo has already been used by this member");
+		}
+	}
+
+	if (promo.allowedPlans && promo.allowedPlans.length > 0 && !promo.allowedPlans.includes(pricingId)) {
+		return promoError(400, "PROMO_NOT_ALLOWED_FOR_PRICING", "This promo code is not valid for this pricing option");
+	}
+
+	const integration = await db.query.integrations.findFirst({
+		where: (integration, { eq, and }) => and(
+			eq(integration.locationId, locationId),
+			eq(integration.service, "stripe")
+		),
+		columns: {
+			id: true,
+		},
+	});
+
+	if (integration) {
+		if (!promo.stripeCouponId || !promo.stripePromoId) {
+			return promoError(
+				400,
+				"PROMO_STRIPE_IDS_MISSING",
+				"Promo is missing Stripe coupon or promotion code mapping"
+			);
+		}
+
+		if (!process.env.STRIPE_SECRET_KEY) {
+			return promoError(500, "STRIPE_CONFIG_MISSING", "Stripe platform key is not configured");
+		}
+
+		const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+			apiVersion: "2025-10-29.clover",
+			appInfo: {
+				name: "My Monstro",
+				url: "https://monstro-x.com",
+			},
+		});
+
+		try {
+			const [coupon, promoCodeObject] = await Promise.all([
+				stripe.coupons.retrieve(promo.stripeCouponId),
+				stripe.promotionCodes.retrieve(promo.stripePromoId),
+			]);
+
+			if ("deleted" in coupon && coupon.deleted) {
+				return promoError(400, "PROMO_COUPON_NOT_FOUND_IN_STRIPE", "Promo coupon no longer exists in Stripe");
+			}
+
+			const linkedCouponId =
+				(promoCodeObject as unknown as { coupon?: { id?: string } | string }).coupon &&
+				typeof (promoCodeObject as unknown as { coupon?: { id?: string } | string }).coupon === "string"
+					? (promoCodeObject as unknown as { coupon?: string }).coupon
+					: (promoCodeObject as unknown as { coupon?: { id?: string } }).coupon?.id;
+
+			if (!linkedCouponId) {
+				return promoError(400, "PROMO_STRIPE_MAPPING_INVALID", "Promotion code is not linked to a Stripe coupon");
+			}
+
+			if (linkedCouponId !== promo.stripeCouponId) {
+				return promoError(400, "PROMO_STRIPE_MAPPING_INVALID", "Promotion code does not match mapped Stripe coupon");
+			}
+		} catch (error) {
+			if (error instanceof Stripe.errors.StripeError && error.code === "resource_missing") {
+				if (error.param === "discounts[0][coupon]" || error.message.includes("No such coupon")) {
+					return promoError(400, "PROMO_COUPON_NOT_FOUND_IN_STRIPE", "Promo coupon no longer exists in Stripe");
+				}
+				return promoError(400, "PROMO_CODE_NOT_FOUND_IN_STRIPE", "Promo code no longer exists in Stripe");
+			}
+			console.error("Promo Stripe validation failed", {
+				locationId,
+				promoId: promo.id,
+				stripeCouponId: promo.stripeCouponId,
+				stripePromoId: promo.stripePromoId,
+				error,
+			});
+			return promoError(500, "PROMO_STRIPE_VALIDATION_FAILED", "Failed to validate promo against Stripe");
+		}
+	}
+
+	let discountAmount = 0;
+	if (promo.type === "percentage") {
+		discountAmount = Math.floor(pricingPrice * (promo.value / 100));
+	} else if (promo.type === "fixed_amount") {
+		discountAmount = Math.min(promo.value, pricingPrice);
+	}
+
+	return {
+		ok: true,
+		status: 200,
+		promoId: promo.id,
+		stripeCouponId: promo.stripeCouponId || undefined,
+		discountAmount,
+	};
+}
+
 export {
 	calculatePeriodEnd,
 	calculateTax,
@@ -351,5 +525,6 @@ export {
 	cancelRecurringClassReminders,
 	addUserToGroup,
 	generateUsername,
-	generateDiscriminator
+	generateDiscriminator,
+	validatePromoForCheckout,
 };
