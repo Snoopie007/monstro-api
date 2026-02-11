@@ -12,8 +12,8 @@ import { supportConversations } from './SupportConversations'
 import { supportTriggers } from './SupportTriggers'
 import { assistantStatusEnum, botModelEnum } from './SupportBotEnums'
 
-import type { SupportPersona } from 'subtrees/types'
-import type { KnowledgeBase } from 'subtrees/types/KnowledgeBase'
+import type { SupportPersona } from '../types'
+import type { KnowledgeBase } from '../types/KnowledgeBase'
 
 // Single support bot per location
 export const supportAssistants = pgTable(

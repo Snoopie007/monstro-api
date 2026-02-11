@@ -26,3 +26,4 @@ export * from "./achievement";
 export * from "./promos";
 export * from "./feeds";
 export * from "./staff";
+export * from "./MigrateMember";

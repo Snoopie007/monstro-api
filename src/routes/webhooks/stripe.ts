@@ -3,8 +3,8 @@ import Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/stripe";
 import { triggerSignUp } from "@/libs/triggers";
 
-import { memberSubscriptions, memberInvoices, transactions } from "subtrees/schemas";
-import { eq, sql } from "drizzle-orm";
+import { memberLocations, memberSubscriptions, memberInvoices, transactions } from "subtrees/schemas";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/db";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
@@ -261,6 +261,28 @@ async function handleSubscriptionInvoicePayment(
                 tx.rollback();
                 return
             }
+
+            await tx
+                .update(memberSubscriptions)
+                .set({
+                    status: "active",
+                    updated: new Date(),
+                })
+                .where(eq(memberSubscriptions.id, subscription.id));
+
+            await tx
+                .update(memberLocations)
+                .set({
+                    status: "active",
+                    updated: new Date(),
+                })
+                .where(
+                    and(
+                        eq(memberLocations.memberId, subscription.memberId),
+                        eq(memberLocations.locationId, subscription.locationId)
+                    )
+                );
+
             await createInvoiceTransaction(tx, {
                 ...CommonFields,
                 subscriptionId: subscription.id,
@@ -278,7 +300,7 @@ async function handleSubscriptionInvoicePayment(
                         makeUpCredits: 0,
                         updated: new Date(),
                     })
-                    .where(eq(memberSubscriptions.id, subscription.id));
+                .where(eq(memberSubscriptions.id, subscription.id));
             }
         });
 
@@ -491,9 +513,13 @@ async function updateSubscriptionStatus(event: Stripe.Event) {
     console.log('[STRIPE WEBHOOK] Updating subscription status:', event.id);
     const subscription = event.data.object as Stripe.Subscription;
 
-    await db.update(memberSubscriptions).set({
-        status: subscription.status,
-    }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id));
+    await db
+        .update(memberSubscriptions)
+        .set({
+            status: subscription.status,
+            updated: new Date(),
+        })
+        .where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id));
 }
 
 async function handleInvoicePaymentFailed(event: Stripe.Event) {

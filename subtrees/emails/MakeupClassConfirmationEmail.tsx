@@ -11,7 +11,7 @@ import { EmailFooter, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel, L
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
-import type { Member, Location } from '@subtrees/types';
+import type { Member, Location } from '../types';
 
 
 interface MakeupClassConfirmationEmailProps {

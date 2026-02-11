@@ -94,7 +94,7 @@ export function migrateAcceptRoutes(app: Elysia) {
                             return status(400, { error: "Invalid pricing for subscription plan." });
                         }
 
-                        const expiresAt = migrate?.endDate ? new Date(migrate?.endDate) : undefined;
+                        const cancelAt = migrate?.endDate ? new Date(migrate?.endDate) : undefined;
 
                         const currentPeriodStart = migrate?.lastRenewalDay ? new Date(migrate?.lastRenewalDay) : today;
                         const currentPeriodEnd = calculateThresholdDate({
@@ -107,7 +107,7 @@ export function migrateAcceptRoutes(app: Elysia) {
                             startDate,
                             currentPeriodStart,
                             currentPeriodEnd,
-                            expiresAt,
+                            cancelAt,
                             classCredits: migrate?.classCredits || 0,
                         });
                     } else {
@@ -183,5 +183,4 @@ export function migrateAcceptRoutes(app: Elysia) {
     });
     return app;
 }
-
 

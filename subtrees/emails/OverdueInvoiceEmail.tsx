@@ -15,7 +15,7 @@ import {
 } from './_shared';
 import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
-import type { Member, Location, InvoiceItem } from '@subtrees/types';
+import type { Member, Location, InvoiceItem } from '../types';
 
 
 interface OverdueInvoiceEmailProps {

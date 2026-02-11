@@ -10,7 +10,7 @@ import {
 import { EmailFooter } from './_shared';
 import { DummyData } from './_shared/data';
 import { EmailStyles } from './_shared/SharedStyle';
-import type { Member } from '@subtrees/types';
+import type { Member } from '../types';
 interface ResetSuccessEmailProps {
   member: Pick<Member, 'firstName' | 'lastName' | 'email'>;
   monstro: { fullAddress: string };

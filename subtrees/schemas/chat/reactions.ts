@@ -1,5 +1,5 @@
 // schema/reactions.ts
-import type { ReactionEmoji } from 'subtrees/types';
+import type { ReactionEmoji } from '../../types';
 import { relations, sql } from 'drizzle-orm';
 import { check, index, jsonb, pgTable, pgView, text, timestamp, unique, integer } from 'drizzle-orm/pg-core';
 import { messages } from './chats';

@@ -253,9 +253,19 @@ export function purchasePkgRoutes(app: Elysia) {
                         paymentType: paymentMethod.type,
                         chargeDate: today,
                     });
-                    await tx.update(memberLocations).set({
-                        status: "active",
-                    }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
+
+                    await tx
+                        .update(memberLocations)
+                        .set({
+                            status: "active",
+                            updated: new Date(),
+                        })
+                        .where(
+                            and(
+                                eq(memberLocations.memberId, mid),
+                                eq(memberLocations.locationId, lid)
+                            )
+                        );
                 });
 
                 return status(200, { status: "active" });

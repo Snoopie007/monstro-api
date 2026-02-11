@@ -1,4 +1,4 @@
-import { taxRates } from "subtrees/schemas/tax";
+import { taxRates } from "../schemas";
 import type { Location } from "./location";
 export type TaxRate = typeof taxRates.$inferSelect & {
     location?: Location;

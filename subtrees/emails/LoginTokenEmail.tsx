@@ -10,7 +10,7 @@ import {
 import { OTPBox, EmailFooter, EmailHeader } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData, } from './_shared/data';
-import type { User } from '@subtrees/types';
+import type { User } from '../types';
 
 interface LoginTokenEmailProps {
 	user: Pick<User, 'name' | 'email'>;

@@ -260,9 +260,19 @@ export function purchaseSubRoutes(app: Elysia) {
                             stripePaymentMethodId: paymentMethodId,
                         },
                     }).where(eq(memberSubscriptions.id, memberPlanId));
-                    await tx.update(memberLocations).set({
-                        status: "active",
-                    }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
+
+                    await tx
+                        .update(memberLocations)
+                        .set({
+                            status: "active",
+                            updated: new Date(),
+                        })
+                        .where(
+                            and(
+                                eq(memberLocations.memberId, mid),
+                                eq(memberLocations.locationId, lid)
+                            )
+                        );
                 });
 
 

@@ -11,7 +11,7 @@ import {
 import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData, BASE_MONSTRO_X_URL, } from './_shared/data';
-import type { Member } from '@subtrees/types';
+import type { Member } from '../types';
 interface FamilyInviteEmailProps {
 	member: Pick<Member, 'firstName'>;
 	familyId: string;
