@@ -36,7 +36,7 @@ export function migrateAcceptRoutes(app: Elysia) {
             const hasPayment = migrate?.payment;
             const state = hasPlan && hasPayment ? "incomplete" : "active";
 
-            await db.insert(memberLocations).values({
+            const [ml] = await db.insert(memberLocations).values({
                 memberId: mid,
                 locationId: lid,
                 status: state,
@@ -46,7 +46,7 @@ export function migrateAcceptRoutes(app: Elysia) {
                     updated: today,
                     status: state,
                 },
-            });
+            }).returning();
 
             // Transfer custom field values if they exist
             const customFieldValues = migrate?.metadata?.customFieldValues;
@@ -107,7 +107,8 @@ export function migrateAcceptRoutes(app: Elysia) {
                             startDate,
                             currentPeriodStart,
                             currentPeriodEnd,
-                            expiresAt,
+                            cancelAt: expiresAt,
+                            endedAt: expiresAt,
                             classCredits: migrate?.classCredits || 0,
                         });
                     } else {
@@ -139,7 +140,7 @@ export function migrateAcceptRoutes(app: Elysia) {
                 updated: today,
             }).where(eq(migrateMembers.id, migrateId));
 
-            return status(200, { success: true });
+            return status(200, ml);
         } catch (error) {
             console.error(error);
             return status(500, { error: "Failed to accept migrate" });

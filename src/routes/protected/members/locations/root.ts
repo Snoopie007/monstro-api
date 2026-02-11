@@ -56,7 +56,6 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                 },
             });
 
-
             return status(200, {
                 memberLocations: mls,
                 migrations,
