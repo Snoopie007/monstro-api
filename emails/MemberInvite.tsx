@@ -10,12 +10,12 @@ import {
 } from '@react-email/components';
 import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
-
+import { DummyData, BASE_MONSTRO_X_URL } from './_shared/data';
+import type { Member, Location } from '../types';
 
 interface MemberInviteEmailProps {
-    member: { firstName: string, id: string };
-    location: { name: string, id: string };
+    member: Pick<Member, 'id' | 'firstName'>;
+    location: Pick<Location, 'id' | 'name' | 'address' | 'email' | 'phone'>;
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -44,7 +44,7 @@ export default function MemberInviteEmail({
                             button below.
                         </Text>
                         <Section style={styles.buttonSection}>
-                            <Button style={styles.button} href={`https://m.monstro-x.com/register?slug=${location.id}memberId=${member.id}`}>
+                            <Button style={styles.button} href={`${BASE_MONSTRO_X_URL}/register?lid=${location.id}memberId=${member.id}`}>
                                 Accept Invite
                             </Button>
                         </Section>

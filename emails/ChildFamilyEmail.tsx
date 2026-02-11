@@ -9,13 +9,16 @@ import {
 } from '@react-email/components';
 import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData, } from './_shared/data';
+import type { Member } from '../types';
+
+
 
 interface ChildFamilyEmailProps {
-    member: { firstName: string };
+    member: Pick<Member, 'firstName'>;
     childName: string;
     password: string;
-    email: string;
+    email: string | null;
 }
 
 const styles: Record<string, React.CSSProperties> = {

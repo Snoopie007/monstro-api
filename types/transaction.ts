@@ -1,4 +1,4 @@
-import { transactions } from "subtrees/schemas";
+import { transactions } from "../schemas";
 import type { PaymentType, TransactionStatus, TransactionType } from "./DatabaseEnums";
 import type { Member, MemberInvoice } from "./member";
 

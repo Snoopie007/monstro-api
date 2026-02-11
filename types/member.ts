@@ -3,7 +3,6 @@ import type { FamilyMember } from './FamilyMember'
 import type { Location } from './location'
 import type { PlanProgram } from './program'
 import {
-  migrateMembers,
   memberInvoices,
   memberLocations,
   memberPackages,
@@ -14,7 +13,7 @@ import {
   memberSubscriptions,
   memberFields,
   memberCustomFields,
-} from 'subtrees/schemas'
+} from '../schemas'
 import type { PaymentType } from './DatabaseEnums'
 import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { User } from './user'
@@ -69,7 +68,7 @@ export type MemberPlan = typeof memberPlans.$inferSelect & {
   contract?: Contract | null
   billingAnchorConfig: BillingCycleAnchorConfig | null
   planPrograms?: PlanProgram[]
-  pricingOptions?: MemberPlanPricing[]
+  pricings?: MemberPlanPricing[]
   member?: Member
 }
 
@@ -107,11 +106,7 @@ export type FamilyPlan = {
   packageId?: number
 }
 
-export type MigrateMember = typeof migrateMembers.$inferSelect & {
-  pricing?: MemberPlanPricing | null
-  member?: Member
-  location?: Location
-}
+
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
   member?: Member

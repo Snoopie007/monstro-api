@@ -7,12 +7,12 @@ import {
 	Section,
 	Text,
 	Button,
-	Hr,
 } from '@react-email/components';
 import { EmailStyles } from './_shared/SharedStyle';
 import { format } from 'date-fns';
 import { EmailFooter, LocationInfoBox, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel } from './_shared';
-import { DummyData } from './_shared/DummyData';
+import { DummyData, } from './_shared/data';
+import type { Member, Location } from '../types';
 interface CancelledReservation {
 	className: string;
 	originalDate: string;
@@ -20,8 +20,8 @@ interface CancelledReservation {
 }
 
 interface HolidayCancellationEmailProps {
-	member: { firstName: string; lastName?: string; email?: string };
-	location: { name: string; address?: string; email?: string; phone?: string };
+	member: Pick<Member, 'firstName'>;
+	location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
 	holiday: {
 		name: string;
 		date: string;

@@ -9,18 +9,18 @@ import {
 	Button,
 } from '@react-email/components';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
 import { EmailFooter, LocationInfoBox, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel } from './_shared';
-
+import type { Member, Location, Staff } from '../types';
 interface SessionCancellationEmailProps {
-	member: { firstName: string; lastName?: string; email?: string };
-	location: { name: string; address?: string; email?: string; phone?: string };
+	member: Pick<Member, 'firstName' | 'lastName' | 'email'>;
+	location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
 	session: {
 		className: string;
 		date: string;
 		time: string;
-		instructor?: { firstName: string; lastName: string } | null;
+		instructor?: Pick<Staff, 'firstName' | 'lastName'> | null;
 	};
 	reason?: string;
 	makeupUrl?: string;

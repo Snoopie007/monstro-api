@@ -1,5 +1,5 @@
-import { contractTemplates } from "subtrees/schemas/contracts";
-import { memberContracts } from "subtrees/schemas/members";
+import { contractTemplates } from "../schemas/contracts";
+import { memberContracts } from "../schemas/members";
 import type { Location } from "./location";
 import type { MemberSubscription, MemberPackage, Member } from "./member";
 

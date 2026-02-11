@@ -8,13 +8,13 @@ import {
 	Text,
 	Link,
 } from '@react-email/components';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { EmailStyles } from './_shared/SharedStyle';
 import { OTPBox, EmailFooter } from './_shared';
-
+import type { Member, Location } from '../types';
 interface SimpleOTPEmailProps {
-	member: { firstName: string };
-	location: { name: string; email: string };
+	member: Pick<Member, 'firstName'>;
+	location: Pick<Location, 'name'>;
 	otp: { token: string };
 }
 

@@ -6,16 +6,17 @@ import {
   Container,
   Section,
   Text,
-  Hr,
 } from '@react-email/components';
-import { EmailHeader, EmailFooter, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel, LocationInfoBox } from './_shared';
+import { EmailFooter, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel, LocationInfoBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
+import type { Member, Location } from '../types';
+
 
 interface MakeupClassConfirmationEmailProps {
-  member: { firstName: string; lastName?: string; email?: string };
-  location: { name: string; address?: string; email?: string; phone?: string };
+  member: Pick<Member, 'firstName' | 'lastName'>;
+  location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
   originalClass: {
     name: string;
     date: string;
@@ -121,15 +122,7 @@ export default function MakeupClassConfirmationEmail({
 }
 
 MakeupClassConfirmationEmail.PreviewProps = {
-  member: {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@example.com',
-  },
-  location: {
-    name: 'Monstro Studio',
-    address: '123 Main St, Los Angeles, CA 90001',
-  },
+  ...DummyData,
   originalClass: {
     name: 'Morning Yoga',
     date: '2026-12-20',
@@ -145,9 +138,5 @@ MakeupClassConfirmationEmail.PreviewProps = {
     },
   },
   creditsRemaining: 2,
-  monstro: {
-    fullAddress: 'PO Box 123, City, State 12345\nCopyright 2026 Monstro',
-    privacyUrl: 'https://monstro-x.com/privacy',
-    unsubscribeUrl: 'https://monstro-x.com/unsubscribe',
-  },
+
 } as MakeupClassConfirmationEmailProps;
