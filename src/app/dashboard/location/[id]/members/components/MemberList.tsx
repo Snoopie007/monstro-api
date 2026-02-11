@@ -16,7 +16,6 @@ import { MemberTable } from './MemberTable'
 
 import { Button, ScrollArea, Separator } from '@/components/ui'
 import { usePermission } from '@/hooks/usePermissions'
-import { debounce } from '@tiptap-pro/extension-table-of-contents'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { MembersTabState } from '../../../../../../hooks/userMembers'
 import { FilterPopover, SortPopover } from './FilterAndSort'
@@ -128,23 +127,6 @@ export function MemberList({
         // Note: manualPagination and manualFiltering removed - filtering now happens client-side in the hook
     })
 
-    const handleSearch = useMemo(
-        () =>
-            debounce((value: string) => {
-                handleChangeParam({
-                    id: tabId,
-                    page: 0,
-                    pageSize,
-                    searchQuery: value,
-                    selectedTags,
-                    columnFilters,
-                    tagOperator,
-                    sorting,
-                })
-            }, 300), // Wait 300ms after typing stops
-        [tabId, pageSize, selectedTags, columnFilters, tagOperator, sorting, handleChangeParam]
-    )
-
     const handleSortChange = (
         sort: { id: string; direction: 'asc' | 'desc' }[]
     ) => {
@@ -178,7 +160,7 @@ export function MemberList({
             return <AddMember lid={params.id} stripeKey={stripeKey} />
         }
         return null
-    }, [canAddMember])
+    }, [canAddMember, params.id, stripeKey])
 
 
     return (
@@ -196,8 +178,18 @@ export function MemberList({
                 />
 
                 <Input placeholder="Find a member..."
+                    value={searchQuery}
                     onChange={(event) => {
-                        handleSearch(event.target.value)
+                        handleChangeParam({
+                            id: tabId,
+                            page: 0,
+                            pageSize,
+                            searchQuery: event.target.value,
+                            selectedTags,
+                            columnFilters,
+                            tagOperator,
+                            sorting,
+                        })
                     }}
                     className='h-9'
                     variant="search"
