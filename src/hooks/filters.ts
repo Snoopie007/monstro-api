@@ -15,13 +15,23 @@ export function filterBySearch(
     query: string
 ): MemberListItem[] {
     if (!query?.trim()) return members
-    const lowerQuery = query.toLowerCase()
-    return members.filter(m =>
-        m.firstName.toLowerCase().includes(lowerQuery) ||
-        (m.lastName?.toLowerCase().includes(lowerQuery)) ||
-        m.email.toLowerCase().includes(lowerQuery) ||
-        (m.phone ?? '').includes(query)
-    )
+    const lowerQuery = query.trim().toLowerCase()
+    const compactQuery = lowerQuery.replace(/\s+/g, '')
+
+    return members.filter(m => {
+        const firstName = m.firstName.toLowerCase()
+        const lastName = (m.lastName ?? '').toLowerCase()
+        const fullName = `${firstName} ${lastName}`.trim()
+
+        return (
+            firstName.includes(lowerQuery) ||
+            lastName.includes(lowerQuery) ||
+            fullName.includes(lowerQuery) ||
+            `${firstName}${lastName}`.includes(compactQuery) ||
+            m.email.toLowerCase().includes(lowerQuery) ||
+            (m.phone ?? '').includes(query)
+        )
+    })
 }
 
 export function filterByTags(
