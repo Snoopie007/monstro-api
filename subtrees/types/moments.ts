@@ -1,4 +1,4 @@
-import { momentLikes, moments } from "subtrees/schemas";
+import { momentLikes, moments } from "../schemas/chat/moments";
 import type { User } from "./user";
 import type { Comment } from "./group";
 

@@ -6,16 +6,17 @@ import {
   Container,
   Section,
   Text,
-  Hr,
 } from '@react-email/components';
-import { EmailHeader, EmailFooter, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel, LocationInfoBox } from './_shared';
+import { EmailFooter, EmailBoxTitle, EmailBoxContent, EmailBox, EmailBoxLabel, LocationInfoBox } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
+import type { Member, Location } from '../types';
+
 
 interface MakeupClassConfirmationEmailProps {
-  member: { firstName: string; lastName?: string; email?: string };
-  location: { name: string; address: string | null; email: string | null; phone: string | null };
+  member: Pick<Member, 'firstName' | 'lastName'>;
+  location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
   originalClass: {
     name: string;
     date: string;

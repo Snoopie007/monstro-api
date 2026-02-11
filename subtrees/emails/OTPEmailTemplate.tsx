@@ -9,12 +9,12 @@ import {
 	Link,
 } from '@react-email/components';
 import { EmailFooter, EmailHeader, OTPBox } from './_shared';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { EmailStyles } from './_shared/SharedStyle';
-
+import type { Member, Location } from '../types';
 interface OTPEmailTemplateProps {
-	member: { firstName: string };
-	location: { name: string; email: string };
+	member: Pick<Member, 'firstName'>;
+	location: Pick<Location, 'name' | 'email'>;
 	otp: { token: string };
 }
 

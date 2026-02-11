@@ -21,9 +21,9 @@ import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import type { MemberLocationProfile } from "subtrees/types/member";
+import type { MemberLocationProfile } from "../types/member";
 import { attendances } from "./attendances";
-import type { LocationSettings } from "subtrees/types";
+import type { LocationSettings } from "../types";
 import { taxRates } from "./tax";
 import { memberPaymentMethods } from "./PaymentMethods";
 

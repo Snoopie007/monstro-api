@@ -3,7 +3,7 @@ import { pgTable, text, jsonb, timestamp, primaryKey, boolean, unique } from 'dr
 import { members } from './members'
 import { locations, memberLocations } from './locations'
 import { relations, sql } from 'drizzle-orm'
-import type { CardPaymentMethod, UsBankAccountPaymentMethod, PaymentType } from 'subtrees/types'
+import type { CardPaymentMethod, UsBankAccountPaymentMethod, PaymentType } from '../types'
 
 
 export const paymentMethods = pgTable('payment_methods', {

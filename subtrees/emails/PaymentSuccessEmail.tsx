@@ -6,19 +6,17 @@ import {
   Container,
   Section,
   Text,
-  Hr,
-  Link,
 } from '@react-email/components';
 import { EmailStyles } from './_shared/SharedStyle';
 import {
   EmailFooter, EmailInvoiceBox, EmailInvoiceDownloadLink,
   EmailInvoiceLabel, EmailInvoiceAmount, EmailInvoiceReceiptMeta, EmailInvoiceBoxDivider
 } from './_shared';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
-
+import type { Member, Location } from '../types';
 interface PaymentSuccessEmailProps {
-  member: { firstName: string; lastName: string };
+  member: Pick<Member, 'firstName' | 'lastName'>;
   invoice: {
     id: string;
     total: number;
@@ -30,7 +28,7 @@ interface PaymentSuccessEmailProps {
       last4: string;
     };
   };
-  location: { name: string; address: string; email?: string; phone?: string };
+  location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
   downloadInvoiceUrl?: string;
 
 }

@@ -8,11 +8,11 @@ import {
   Text,
 } from '@react-email/components';
 import { EmailFooter } from './_shared';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { EmailStyles } from './_shared/SharedStyle';
-
+import type { Member } from '../types';
 interface ResetSuccessEmailProps {
-  member: { firstName: string; lastName: string; email: string };
+  member: Pick<Member, 'firstName' | 'lastName' | 'email'>;
   monstro: { fullAddress: string };
 }
 

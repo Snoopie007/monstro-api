@@ -14,9 +14,9 @@ import {
 	EmailInvoiceLabel, EmailInvoicePayButton, EmailInvoiceBoxDivider
 } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { format, formatDistanceStrict } from 'date-fns';
-
+import type { Member, Location } from '../types';
 type InvoiceItem = {
 	name: string;
 	quantity: number;
@@ -25,7 +25,7 @@ type InvoiceItem = {
 }
 
 interface InvoiceReminderEmailProps {
-	member: { firstName: string; lastName: string | null; email: string };
+	member: Pick<Member, 'firstName' | 'lastName'>;
 	invoice: {
 		id: string;
 		total: number;
@@ -33,7 +33,7 @@ interface InvoiceReminderEmailProps {
 		description: string | null;
 		items: InvoiceItem[];
 	};
-	location: { name: string; email: string | null; phone: string | null };
+	location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
 	payInvoiceUrl?: string;
 	downloadInvoiceUrl?: string;
 }

@@ -8,25 +8,22 @@ import {
 	Text,
 } from '@react-email/components';
 import { EmailFooter, LocationInfoBox, EmailHeader } from './_shared';
-import { DummyData } from './_shared/DummyData';
+import { DummyData } from './_shared/data';
 import { EmailStyles } from './_shared/SharedStyle';
 import { format } from 'date-fns';
+import type { Location, Member, Staff } from '../types';
+
 
 interface ClassReminderEmailProps {
-	member: { firstName: string; lastName: string | null; email: string };
+	member: Pick<Member, 'firstName' | 'lastName'>;
 	class: {
 		name: string;
 		startTime: Date;
 		duration: number;
 		endTime: Date;
-		instructor?: { firstName: string; lastName: string | null } | null;
+		instructor?: Pick<Staff, 'firstName' | 'lastName'> | null;
 	};
-	location: {
-		name: string;
-		address: string | null;
-		email: string | null;
-		phone: string | null
-	};
+	location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
 }
 
 // Combined all styles into a single object similar to other emails in the codebase.
