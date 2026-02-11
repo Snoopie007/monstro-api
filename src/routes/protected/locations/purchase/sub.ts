@@ -238,11 +238,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 let hasPaidDownpayment = false;
                 if (pricing.downpayment) {
                     // Move start date to the next billing date
-                    startDate = calculateThresholdDate({
-                        startDate: today,
-                        threshold: pricing.intervalThreshold,
-                        interval: pricing.interval,
-                    });
+
                     await stripe.processPayment({
                         ...commonOptions,
                         amount: pricing.downpayment,
@@ -259,10 +255,16 @@ export function purchaseSubRoutes(app: Elysia) {
                     });
                 }
 
+
+
+
+
+
                 await db.transaction(async (tx) => {
                     await tx.update(memberSubscriptions).set({
                         status: 'active',
                         cancelAt,
+
                         stripeSubscriptionId: paymentMethod.stripeId,
                         metadata: {
                             hasPaidDownpayment,
@@ -274,20 +276,41 @@ export function purchaseSubRoutes(app: Elysia) {
                     }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
                 });
 
-                const dayOfTheMonth = startDate.getDate();
-                await subQueue.upsertJobScheduler(`renewal:${memberPlanId}`, {
-                    pattern: `${dayOfTheMonth} * * *`,
-                }, {
-                    name: `renewal:${memberPlanId}`,
-                    data: {
-                        sid: memberPlanId,
-                        lid: lid,
-                    },
-                    opts: {
-                        attempts: 3,
-                        removeOnComplete: true,
+
+                // Schedule renewal
+
+                if (pricing.interval && pricing.intervalThreshold) {
+                    if (pricing.interval === "month" || pricing.interval === "year") {
+                        const payload: SubscriptionRenewalData = {
+                            sid: memberPlanId,
+                            lid: lid,
+                            taxRate: taxRate?.percentage || 0,
+                            stripeCustomerId: member.stripeCustomerId,
+                            pricing: {
+                                id: pricing.id,
+                                name: pricing.name,
+                                price: pricing.price,
+                                currency: pricing.currency,
+                                interval: pricing.interval,
+                            },
+
+                        };
+                        if (pricing.intervalThreshold === 1) {
+                            scheduleCronBasedRenewal({
+                                startDate,
+                                interval: pricing.interval,
+                                data: payload,
+                            });
+                        } else {
+                            scheduleRecursiveRenewal({
+                                startDate,
+                                data: payload,
+                            });
+                        }
+
                     }
-                });
+                }
+
                 return status(200, { status: 'active' });
             } catch (error) {
                 console.error(error);
@@ -308,5 +331,88 @@ export function purchaseSubRoutes(app: Elysia) {
     });
 
     return app
+
+}
+
+
+type SubscriptionRenewalData = {
+    sid: string;
+    lid: string;
+    taxRate: number;
+    stripeCustomerId: string;
+    pricing: {
+        id: string;
+        name: string;
+        price: number;
+        currency: string;
+        interval: "day" | "week" | "month" | "year";
+    };
+    discount?: {
+        amount: number;
+        duration: number;
+        durationInMonths: number;
+    }
+}
+
+
+
+type ScheduleRenewalProps = {
+    startDate: Date;
+    interval: "day" | "week" | "month" | "year";
+    data: SubscriptionRenewalData;
+}
+
+
+
+
+async function scheduleCronBasedRenewal({
+    startDate,
+    interval,
+    data,
+}: ScheduleRenewalProps) {
+    const { sid } = data;
+    const UTCDate = startDate.getUTCDate();
+    const UTCHour = startDate.getUTCHours();
+    const UTCMinute = startDate.getUTCMinutes();
+
+    let pattern: string | undefined = undefined;
+    if (interval === "month") {
+        pattern = `${UTCMinute} ${UTCHour} ${UTCDate} * *`;
+    } else if (interval === "year") {
+        pattern = `${UTCMinute} ${UTCHour} ${UTCDate} * *`;
+    }
+    await subQueue.upsertJobScheduler(`renewal:static${sid}`, {
+        pattern,
+        utc: true,
+        startDate: startDate,
+    }, {
+        name: `renewal:static:${sid}`,
+        data: data,
+        opts: {
+            attempts: 3,
+            removeOnComplete: true,
+        }
+    });
+}
+
+async function scheduleRecursiveRenewal({
+    startDate,
+    data,
+}: {
+    startDate: Date;
+    data: SubscriptionRenewalData;
+}) {
+    const { sid } = data;
+    await subQueue.add('renewal:recursive', data, {
+        jobId: `renewal:recursive:${sid}`,
+        attempts: 6,
+        delay: Math.max(0, startDate.getTime() - Date.now()),
+        removeOnComplete: true,
+        removeOnFail: false,
+        backoff: {
+            type: 'exponential',
+            delay: 24 * 60 * 60 * 1000,
+        }
+    });
 
 }
