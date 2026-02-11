@@ -101,6 +101,7 @@ export async function GET(
         // Combine members with their tags and custom fields
         const membersWithData = membersResult.map((member) => ({
             ...member,
+            phone: member.phone ?? '',
             created: String(member.created),
             updated: member.updated ? String(member.updated) : null,
             dob: member.dob ? String(member.dob) : null,
@@ -134,4 +135,3 @@ export async function GET(
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
-
