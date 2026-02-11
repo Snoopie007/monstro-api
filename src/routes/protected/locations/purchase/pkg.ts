@@ -139,7 +139,7 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 const { taxRates, locationState, integrations } = location;
 
-                const integration = integrations?.find((i) => i.service === "stripe");
+                const integration = integrations[0];
                 if (!integration || !integration.accountId) {
                     throw new Error("Stripe integration not found");
                 }
@@ -211,11 +211,9 @@ export function purchasePkgRoutes(app: Elysia) {
                 const today = new Date();
                 const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
 
-
-
                 const planName = `${pricing.plan.name}/${pricing.name}`;
 
-                const { clientSecret, chargeId, chargeDetails } = await stripe.processPayment({
+                const { clientSecret, chargeDetails } = await stripe.processPayment({
                     amount: pricing.price,
                     paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.plan.currency,

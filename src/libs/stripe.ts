@@ -27,6 +27,7 @@ interface VendorPaymentIntentResponse {
 
 
 interface MemberPaymentOptions {
+    isRecurring?: boolean;
     amount: number,
     passOnFees: boolean;
     paymentMethodId: string,
@@ -471,20 +472,24 @@ class MemberStripePayments extends BaseStripePayments {
         }
 
 
-        const { description, taxRate, metadata, discount,
+        const {
+            description, taxRate, metadata, discount,
             authorizeOnly, productName, currency,
-            amount, paymentMethodId, passOnFees, usagePercent, paymentType
+            isRecurring, amount, paymentMethodId,
+            passOnFees, usagePercent, paymentType
         } = options || {};
 
 
         let price = Math.max(0, amount - (discount || 0));
+
         const tax = Math.floor(price * (taxRate || 0) / 100);
+
         let total = price + tax;
         const monstroFee = Math.floor(price * (usagePercent / 100));
 
         const stripeFee = calculateStripeFeeAmount((
             passOnFees ? total : total + monstroFee
-        ), paymentType);
+        ), paymentType, isRecurring || false);
 
         const applicationFeeAmount = monstroFee + stripeFee;
 
@@ -497,7 +502,7 @@ class MemberStripePayments extends BaseStripePayments {
         const option: Stripe.PaymentIntentCreateParams = {
             payment_method_types: ['card', 'us_bank_account'],
             customer: this._customer,
-            amount,
+            amount: total,
             currency: currency || "usd",
             amount_details: {
                 line_items: [{
@@ -520,7 +525,6 @@ class MemberStripePayments extends BaseStripePayments {
             capture_method: authorizeOnly ? "manual" : "automatic",
             return_url: url,
             expand: ["payment_method"],
-            statement_descriptor: description || "",
             metadata: metadata || undefined
         }
 

@@ -9,6 +9,7 @@ import {
     calculateStripeFeeAmount,
 } from "@/libs/utils";
 import type { MemberPlanPricing, PaymentType } from "@subtrees/types";
+import { subQueue } from "@/workers/queues";
 
 
 
@@ -222,6 +223,17 @@ export function purchaseSubRoutes(app: Elysia) {
                 }
 
 
+                const commonOptions = {
+                    paymentMethodId: paymentMethod.stripeId,
+                    passOnFees: locationState.settings.passOnFees || false,
+                    usagePercent: locationState.usagePercent || 0,
+                    paymentType: paymentMethod.type,
+                    metadata: metadata,
+                    discount,
+                    taxRate: taxRate?.percentage,
+                    productName: `${pricing.plan.name}/${pricing.name}`,
+                    currency: pricing.plan.currency,
+                }
 
                 let hasPaidDownpayment = false;
                 if (pricing.downpayment) {
@@ -232,22 +244,19 @@ export function purchaseSubRoutes(app: Elysia) {
                         interval: pricing.interval,
                     });
                     await stripe.processPayment({
+                        ...commonOptions,
                         amount: pricing.downpayment,
-                        paymentMethodId: paymentMethodId,
-                        passOnFees: locationState.settings.passOnFees,
-                        usagePercent: locationState.usagePercent,
-                        paymentType: paymentMethod.type,
-                        metadata: metadata,
-                        discount,
-                        taxRate: taxRate?.percentage,
-                        productName: `${pricing.plan.name}/${pricing.name}`,
                         description: `Downpayment for ${pricing.plan.name}/${pricing.name}`,
-                        currency: pricing.plan.currency,
                     });
                     hasPaidDownpayment = true;
 
                 } else {
-
+                    await stripe.processPayment({
+                        ...commonOptions,
+                        isRecurring: true,
+                        description: `Payment for ${pricing.plan.name}/${pricing.name}`,
+                        amount: pricing.price,
+                    });
                 }
 
                 await db.transaction(async (tx) => {
@@ -265,7 +274,20 @@ export function purchaseSubRoutes(app: Elysia) {
                     }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
                 });
 
-
+                const dayOfTheMonth = startDate.getDate();
+                await subQueue.upsertJobScheduler(`renewal:${memberPlanId}`, {
+                    pattern: `${dayOfTheMonth} * * *`,
+                }, {
+                    name: `renewal:${memberPlanId}`,
+                    data: {
+                        sid: memberPlanId,
+                        lid: lid,
+                    },
+                    opts: {
+                        attempts: 3,
+                        removeOnComplete: true,
+                    }
+                });
                 return status(200, { status: 'active' });
             } catch (error) {
                 console.error(error);

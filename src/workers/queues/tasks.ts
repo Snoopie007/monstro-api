@@ -1,6 +1,13 @@
 import { Queue } from "bullmq";
 import { redisConfig, queueConfig } from "@/config";
 
+export const testQueue = new Queue('test', {
+    connection: redisConfig,
+    defaultJobOptions: queueConfig.defaultJobOptions
+});
+
+
+
 export const emailQueue = new Queue('email', {
     connection: redisConfig,
     defaultJobOptions: queueConfig.defaultJobOptions
