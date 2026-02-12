@@ -9,6 +9,7 @@ export type Program = typeof programs.$inferSelect & {
   status: ProgramStatus;
   sessions?: ProgramSession[];
   instructor?: Staff;
+  color?: number;
 };
 
 export type PlanProgram = typeof planPrograms.$inferSelect & {
@@ -24,6 +25,7 @@ export type ProgramSession = typeof programSessions.$inferSelect & {
   reservations?: Reservation[]
   reservationsCount?: number | null
   staff?: Staff;
+  canceled?: boolean;
 }
 
 

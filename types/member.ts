@@ -46,6 +46,7 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
     member?: Member
     paymentType: PaymentType
     location?: Location
+    stripeSubscriptionId?: string | null
   }
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
@@ -71,6 +72,8 @@ export type MemberPlan = typeof memberPlans.$inferSelect & {
     billingAnchorConfig: BillingCycleAnchorConfig | null
     planPrograms?: PlanProgram[]
     pricings?: MemberPlanPricing[]
+    pricingOptions?: MemberPlanPricing[]
+    stripeProductId?: string | null
     member?: Member
 }
 
