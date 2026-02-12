@@ -168,10 +168,10 @@ export async function POST(
 		classCredits: validClassCredits,
 		paymentTermsLeft: validPaymentTermsLeft,
 		backdateStartDate: validBackdateStartDate,
-		termEndDate: validTermEndDate,
-		pricingId: rowPricingId,
-		planType: planType || null,
+		priceId: rowPricingId,
+		planType: planType || "recurring",
 		locationId: params.id,
+		endDate: validTermEndDate,
 		metadata: { customFieldValues },
 		payment: requirePayment,
 	});

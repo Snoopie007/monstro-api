@@ -264,7 +264,7 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
                 const programs = ['Boxing', 'Muay Thai', 'CrossFit', 'Yoga']
 
                 attendances.push({
-                    id: String(weekIndex * 10 + dayIndex + 1),
+                    id: weekIndex * 10 + dayIndex + 1,
                     memberId: 'mbr_BpT7jEb3Q16nOPL3vo7qlw',
                     locationId: '',
                     reservationId: null,
@@ -280,6 +280,7 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
                     lat: null,
                     lng: null,
                     created: new Date(),
+                    updated: null,
                 })
             }
         })

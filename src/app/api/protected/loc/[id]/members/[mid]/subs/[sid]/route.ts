@@ -55,9 +55,11 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
 
         const stripe = new MemberStripePayments(integration.accountId);
         stripe.setCustomer(member.stripeCustomerId);
-        if (pause) {
+        const stripeSubscriptionId = sub.stripePaymentId;
 
-            await stripe.updateSubscription(sub.stripeSubscriptionId!, {
+        if (pause && stripeSubscriptionId) {
+
+            await stripe.updateSubscription(stripeSubscriptionId, {
                 pause_collection: {
                     behavior: "void",
                     resumes_at: resumeDate ? Math.floor(new Date(resumeDate).getTime() / 1000) : undefined
@@ -71,9 +73,9 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
 
         }
 
-        if (resume) {
+        if (resume && stripeSubscriptionId) {
             //TODO: Resume subscription
-            await stripe.updateSubscription(sub.stripeSubscriptionId!, {
+            await stripe.updateSubscription(stripeSubscriptionId, {
                 pause_collection: ''
             });
             await db.update(memberSubscriptions).set({
@@ -142,9 +144,9 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
         const trialEnd = trialDays ? addDays(sub.currentPeriodStart, trialDays) : undefined
 
 
-        if (sub.stripeSubscriptionId) {
+        if (sub.stripePaymentId) {
 
-            await stripe.updateSubscription(sub.stripeSubscriptionId, {
+            await stripe.updateSubscription(sub.stripePaymentId, {
                 billing_cycle_anchor: reset ? 'now' : 'unchanged',
                 default_payment_method: paymentMethodId,
                 ...(endDate && { cancel_at: Math.floor(endDate.getTime() / 1000) }),
@@ -236,16 +238,16 @@ export async function DELETE(req: Request, props: { params: Promise<Params> }) {
 
         const cancelDate = cancelOption === 'end' ? subscription.currentPeriodEnd : customDate ? new Date(customDate) : new Date();
 
-        if (subscription.stripeSubscriptionId) {
+        if (subscription.stripePaymentId) {
             await stripe.cancelSubscription(
-                subscription.stripeSubscriptionId,
+                subscription.stripePaymentId,
                 cancelOption === 'end',
                 cancelDate
             );
 
             if (refundAmount > 0) {
 
-                const sub = await stripe.getSubscription(subscription.stripeSubscriptionId)
+                const sub = await stripe.getSubscription(subscription.stripePaymentId)
                 const latestInvoice = sub.latest_invoice as Stripe.Invoice
                 const payment = latestInvoice.payments?.data[0].payment as Stripe.InvoicePayment.Payment
 
@@ -281,7 +283,7 @@ export async function DELETE(req: Request, props: { params: Promise<Params> }) {
             return NextResponse.json({ success: true }, { status: 200 });
         }
 
-        return NextResponse.json({ success: false, error: "No Stripe subscription found" }, { status: 400 });
+        return NextResponse.json({ success: false, error: "No Stripe payment reference found" }, { status: 400 });
 
     } catch (err) {
         console.error("Subscription cancellation error:", err);

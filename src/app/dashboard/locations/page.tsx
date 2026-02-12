@@ -16,8 +16,10 @@ async function fetchLocations(id: string, role: string) {
             })
             return locations
         } else if (role === "staff") {
+            const staffId = Number(id)
+            if (!Number.isInteger(staffId)) return []
             const staffLocations = await db.query.staffsLocations.findMany({
-                where: (staffLocations, { eq }) => eq(staffLocations.staffId, id),
+                where: (staffLocations, { eq }) => eq(staffLocations.staffId, staffId),
             })
 
             const locationIds = staffLocations.map(sl => sl.locationId)

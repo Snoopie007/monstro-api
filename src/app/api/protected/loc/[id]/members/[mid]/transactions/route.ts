@@ -86,7 +86,7 @@ export async function PUT(req: Request, props: { params: Promise<TransactionProp
 					where: (memberSubscriptions, { eq }) =>
 						eq(memberSubscriptions.id, subscriptionId),
 				});
-				if (!sub?.stripeSubscriptionId) {
+				if (!sub?.stripePaymentId) {
 					throw new Error("Stripe subscription not found");
 				}
 

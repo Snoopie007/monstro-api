@@ -21,7 +21,7 @@ export async function GET(
         const migrations = await db
             .select()
             .from(migrateMembers)
-            .leftJoin(memberPlanPricing, eq(migrateMembers.pricingId, memberPlanPricing.id))
+            .leftJoin(memberPlanPricing, eq(migrateMembers.priceId, memberPlanPricing.id))
             .where(eq(migrateMembers.locationId, params.id))
             .orderBy(desc(migrateMembers.created))
             .limit(size)

@@ -43,7 +43,7 @@ export default function StaffsPage(props: StaffsPageProps) {
 				const query = searchQuery.toLowerCase();
 				return (
 					staff?.firstName.toLowerCase().includes(query)
-					|| staff?.lastName.toLowerCase().includes(query)
+					|| (staff?.lastName?.toLowerCase().includes(query) ?? false)
 					|| staff?.phone.toLowerCase().includes(query)
 					|| staff?.email.toLowerCase().includes(query)
 				);

@@ -252,11 +252,11 @@ export function ProgramDialog({
 												</SelectTrigger>
 												<SelectContent>
 													{sls.map((sl) => {
-														const staff = sl.staff;
-														return (
-															<SelectItem key={staff?.id ?? ''} value={staff?.id ?? ''}>{staff?.firstName} {staff?.lastName}</SelectItem>
-														)
-													})}
+												const staff = sl.staff;
+												return (
+													<SelectItem key={staff?.id ?? ''} value={staff?.id ? String(staff.id) : ''}>{staff?.firstName} {staff?.lastName}</SelectItem>
+												)
+											})}
 													<SelectItem value={"null"} key={"none"}>None</SelectItem>
 												</SelectContent>
 											</Select>

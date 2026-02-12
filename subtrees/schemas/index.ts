@@ -27,7 +27,6 @@ export * from "./SupportDocuments";
 export * from "./PaymentMethods";
 export * from "./tax";
 export * from "./promos";
-export type { Promo } from "./promos";
 export * from "./permissions";
 export * from "./chat";
 export * from "./verifications";

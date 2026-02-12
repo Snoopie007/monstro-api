@@ -43,8 +43,9 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: str
         const metadata = { vendorId: session.user.vendorId, locationId: lid };
 
 
-        let stripeSubscriptionId: string | null = null;
-        if (ls.planId === 1) {
+		let stripeSubscriptionId: string | null = null;
+		const currentSubscriptionId = (ls.settings as { stripeSubscriptionId?: string } | null)?.stripeSubscriptionId ?? null;
+		if (ls.planId === 1) {
             // just upgrade the subscription
             const results = await Promise.all([
                 stripe.createSubscription(plan, metadata, 0),
@@ -53,37 +54,40 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: str
             stripeSubscriptionId = results[0].id;
         } else {
 
-            if (planId === 1) {
-                if (ls.stripeSubscriptionId) {
-                    // cancel ghl subscription
-                    await stripe.cancelSubscription(ls.stripeSubscriptionId);
-                }
-            } else {
-                if (!ls.stripeSubscriptionId) {
-                    const results = await Promise.all([
-                        stripe.createSubscription(plan, metadata, 0),
-                        stripe.createGHLSubscription(metadata),
-                    ]);
-                    stripeSubscriptionId = results[0].id;
-                } else {
-                    stripeSubscriptionId = ls.stripeSubscriptionId;
-                    const current = await stripe.getSubscription(ls.stripeSubscriptionId);
-                    if (!current) {
-                        return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
-                    }
-                    const previousId = current.items.data[0].id;
-                    await stripe.upgradeSubscription(ls.stripeSubscriptionId, previousId, plan);
-                }
-            }
-        }
+			if (planId === 1) {
+				if (currentSubscriptionId) {
+					// cancel ghl subscription
+					await stripe.cancelSubscription(currentSubscriptionId);
+				}
+			} else {
+				if (!currentSubscriptionId) {
+					const results = await Promise.all([
+						stripe.createSubscription(plan, metadata, 0),
+						stripe.createGHLSubscription(metadata),
+					]);
+					stripeSubscriptionId = results[0].id;
+				} else {
+					stripeSubscriptionId = currentSubscriptionId;
+					const current = await stripe.getSubscription(currentSubscriptionId);
+					if (!current) {
+						return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+					}
+					const previousId = current.items.data[0].id;
+					await stripe.upgradeSubscription(currentSubscriptionId, previousId, plan);
+				}
+			}
+		}
 
-        const updates = {
-            planId: planId,
-            stripeSubscriptionId,
-            usagePercent: plan?.usagePercent,
-            lastRenewalDate: today,
-            updated: today,
-        }
+		const updates = {
+			planId: planId,
+			settings: {
+				...(ls.settings || {}),
+				...(stripeSubscriptionId ? { stripeSubscriptionId } : {}),
+			},
+			usagePercent: plan?.usagePercent,
+			lastRenewalDate: today,
+			updated: today,
+		}
         // update the location state
         await db.update(locationState)
             .set(updates).where(eq(locationState.locationId, lid));

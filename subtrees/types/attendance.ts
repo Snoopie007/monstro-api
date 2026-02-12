@@ -52,6 +52,11 @@ export type MissedReservation = {
   programName: string;
 };
 
+export type AttendanceResponse = {
+  attendances: ExtendedAttendance[];
+  missedReservations: MissedReservation[];
+};
+
 export type RecurringReservation = typeof recurringReservations.$inferSelect & {
   session?: ProgramSession | null;
   location?: Location;

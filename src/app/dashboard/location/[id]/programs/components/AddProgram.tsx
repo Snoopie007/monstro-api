@@ -179,7 +179,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                                         {sls.map((sl) => {
                                                             const staff = sl.staff;
                                                             return (
-                                                                <SelectItem key={staff?.id ?? ''} value={staff?.id ?? ''}>
+												<SelectItem key={staff?.id ?? ''} value={staff?.id ? String(staff.id) : ''}>
                                                                     {staff?.firstName} {staff?.lastName}
                                                                 </SelectItem>
                                                             )

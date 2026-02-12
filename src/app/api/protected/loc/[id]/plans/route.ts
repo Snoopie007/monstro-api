@@ -12,11 +12,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 						program: true,
 					},
 				},
-				pricingOptions: true,
+				pricings: true,
 			},
 		});
 
-		return NextResponse.json(mbs, { status: 200 });
+		return NextResponse.json(
+			mbs.map((plan) => ({ ...plan, pricingOptions: plan.pricings })),
+			{ status: 200 }
+		);
 	} catch (err) {
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });

@@ -129,7 +129,7 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
                 const migration = row.original
                 return (
                     <span className="text-sm whitespace-nowrap">
-                        {format(new Date(migration.lastRenewalDay), 'MMM dd, yyyy')}
+						{migration.lastRenewalDay ? format(new Date(migration.lastRenewalDay), 'MMM dd, yyyy') : '-'}
                     </span>
                 )
             },
@@ -148,4 +148,3 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
         },
     ]
 }
-

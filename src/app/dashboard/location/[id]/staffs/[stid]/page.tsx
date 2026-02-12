@@ -7,20 +7,19 @@ import { ScrollArea } from "@/components/ui";
 
 async function getStaffLocation(stid: string, lid: string) {
     try {
+        const staffId = Number(stid)
+        if (!Number.isInteger(staffId)) {
+            return undefined
+        }
         const sl = await db.query.staffsLocations.findFirst({
             where: (staffLocations, { eq, and }) => and(
-                eq(staffLocations.staffId, stafId),
+                eq(staffLocations.staffId, staffId),
                 eq(staffLocations.locationId, lid)
             ),
             with: {
                 staff: {
                     with: {
                         user: true,
-                    },
-                },
-                roles: {
-                    with: {
-                        role: true,
                     },
                 },
             },
@@ -57,7 +56,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
         <div>
             <ScrollArea className="h-[calc(100vh-50px)]">
                 <div className="max-w-3xl mx-auto w-full  pb-20 space-y-4">
-                    <StaffAvatar avatar={staff.user?.image ?? null} staffId={staff.id} locationId={id} userId={staff.userId} />
+                    <StaffAvatar avatar={staff.user?.image ?? null} staffId={String(staff.id)} locationId={id} userId={staff.userId} />
                     <StaffProfile staff={staff} lid={id} />
                     <StaffEmail staff={staff} lid={id} />
                     <StaffPassword staff={staff} lid={id} />

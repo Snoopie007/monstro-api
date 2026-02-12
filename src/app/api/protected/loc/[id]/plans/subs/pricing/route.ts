@@ -79,37 +79,46 @@ export async function POST(
 
     let stripePriceId: string | null = null;
 
-    if (plan.stripeProductId) {
-      const integration = await db.query.integrations.findFirst({
-        where: (integrations, { eq, and }) =>
-          and(
-            eq(integrations.locationId, id),
-            eq(integrations.service, "stripe")
-          ),
-      });
+    const integration = await db.query.integrations.findFirst({
+      where: (integrations, { eq, and }) =>
+        and(
+          eq(integrations.locationId, id),
+          eq(integrations.service, "stripe")
+        ),
+    });
 
-      if (integration) {
-        try {
-          const stripe = new MemberStripePayments(String(integration.id));
-          const stripePrice = await stripe.createStripePrice(
-            plan.stripeProductId,
-            {
-              name: `${plan.name} - ${name}`,
-              price,
-              currency,
-              interval: interval || null,
-              intervalThreshold: intervalThreshold || 1,
-            },
-            {
-              locationId: id,
-              planId: plan.id,
-              vendorAccountId: integration.accountId,
-            }
-          );
-          stripePriceId = stripePrice.id;
-        } catch (stripeErr) {
-          console.error("Failed to create Stripe price:", stripeErr);
-        }
+    if (integration) {
+      try {
+        const stripe = new MemberStripePayments(String(integration.id));
+        const stripeProduct = await stripe.createStripeProductOnly(
+          {
+            name: `${plan.name} - ${name}`,
+            description: plan.description || "",
+          },
+          {
+            locationId: id,
+            planId: plan.id,
+            vendorAccountId: integration.accountId,
+          }
+        );
+        const stripePrice = await stripe.createStripePrice(
+          stripeProduct.id,
+          {
+            name: `${plan.name} - ${name}`,
+            price,
+            currency,
+            interval: interval || null,
+            intervalThreshold: intervalThreshold || 1,
+          },
+          {
+            locationId: id,
+            planId: plan.id,
+            vendorAccountId: integration.accountId,
+          }
+        );
+        stripePriceId = stripePrice.id;
+      } catch (stripeErr) {
+        console.error("Failed to create Stripe price:", stripeErr);
       }
     }
 
@@ -183,7 +192,7 @@ export async function PUT(
       intervalThreshold !== undefined && intervalThreshold !== existingPricing.intervalThreshold ||
       currency !== undefined && currency !== existingPricing.currency;
 
-    if (priceChanged && existingPricing.plan?.stripeProductId) {
+    if (priceChanged && existingPricing.plan) {
       const integration = await db.query.integrations.findFirst({
         where: (integrations, { eq, and }) =>
           and(
@@ -204,8 +213,19 @@ export async function PUT(
         }
 
         try {
+          const stripeProduct = await stripe.createStripeProductOnly(
+            {
+              name: `${existingPricing.plan.name} - ${name || existingPricing.name}`,
+              description: existingPricing.plan.description || "",
+            },
+            {
+              locationId: id,
+              planId: existingPricing.plan.id,
+              vendorAccountId: integration.accountId,
+            }
+          );
           const newStripePrice = await stripe.createStripePrice(
-            existingPricing.plan.stripeProductId,
+            stripeProduct.id,
             {
               name: `${existingPricing.plan.name} - ${name || existingPricing.name}`,
               price: price ?? existingPricing.price,

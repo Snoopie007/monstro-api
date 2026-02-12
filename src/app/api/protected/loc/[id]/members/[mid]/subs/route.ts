@@ -215,7 +215,7 @@ export async function POST(req: Request, props: Props) {
 
 
         const [sub] = await db.insert(memberSubscriptions).values({
-            stripeSubscriptionId: stripeSubscription.id,
+            stripePaymentId: stripeSubscription.id,
             startDate: startDate,
             currentPeriodStart: startDate,
             currentPeriodEnd: periodEnd,

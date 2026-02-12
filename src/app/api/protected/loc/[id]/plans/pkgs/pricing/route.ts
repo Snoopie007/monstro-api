@@ -44,12 +44,12 @@ export async function GET(req: NextRequest, props: Props) {
         eq(memberPlans.type, "one-time")
       ),
       with: {
-        pricingOptions: true,
+        pricings: true,
       },
     });
 
     const allPricing = plans.flatMap((plan) =>
-      plan.pricingOptions.map((pricing) => ({
+      plan.pricings.map((pricing) => ({
         ...pricing,
         planName: plan.name,
       }))

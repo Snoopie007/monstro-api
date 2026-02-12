@@ -161,10 +161,11 @@ export async function GET(
           recurringsBySessionDay.get(session.id)?.includes(session.day) === true;
 
         if (!hasReservation) {
+          const programColor = (session.program as { color?: number } | undefined)?.color ?? 1;
           events.push({
             id,
             title: session.program.name,
-            color: getEventColorFromId(session.program.color),
+            color: getEventColorFromId(programColor),
             start,
             end,
             duration: session.duration,
@@ -270,7 +271,7 @@ function addEventToCalendar(
   const duration = reservation.sessionDuration || reservation.session?.duration || 0;
   const staffId = reservation.staffId || reservation.session?.staffId;
   const staff = reservation.staff || reservation.session?.staff;
-  const programColor = reservation.program?.color || reservation.session?.program?.color;
+  const programColor = (reservation.program as { color?: number } | undefined)?.color || (reservation.session?.program as { color?: number } | undefined)?.color;
 
   if (!reservation.member || (!programName && !reservation.session?.program)) {
     return;

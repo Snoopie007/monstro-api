@@ -26,11 +26,14 @@ export async function GET(
             program: true,
           },
         },
-        pricingOptions: true,
+        pricings: true,
       },
     });
 
-    return NextResponse.json(subs, { status: 200 });
+    return NextResponse.json(
+      subs.map((plan) => ({ ...plan, pricingOptions: plan.pricings })),
+      { status: 200 }
+    );
   } catch (err) {
     return NextResponse.json({ error: err }, { status: 500 });
   }
@@ -62,12 +65,10 @@ export async function POST(
         })
         .returning();
 
-      let stripeProductId: string | null = null;
-
       if (data.type === "recurring" && integration) {
         try {
           const stripe = new MemberStripePayments(String(integration.id));
-          const stripeProduct = await stripe.createStripeProductOnly(
+          await stripe.createStripeProductOnly(
             {
               name: createdPlan.name,
               description: createdPlan.description || "",
@@ -78,14 +79,6 @@ export async function POST(
               vendorAccountId: integration.accountId,
             }
           );
-          stripeProductId = stripeProduct.id;
-
-          if (stripeProductId) {
-            await tx
-              .update(memberPlans)
-              .set({ stripeProductId })
-              .where(eq(memberPlans.id, createdPlan.id));
-          }
         } catch (stripeError) {
           console.error("Failed to create Stripe product:", stripeError);
         }
@@ -100,7 +93,7 @@ export async function POST(
         );
       }
 
-      return { ...createdPlan, stripeProductId };
+      return createdPlan;
     });
 
     return NextResponse.json(plan, { status: 200 });

@@ -105,7 +105,7 @@ export function CreateSession({ program, availableStaff, staffId, open, onOpenCh
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {DaysOfWeek.map((day, i) => (
-                                                            <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
+                                                            <SelectItem key={day} value={i.toString()}>{day}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -168,7 +168,7 @@ export function CreateSession({ program, availableStaff, staffId, open, onOpenCh
 
                                                         <SelectContent>
                                                             {availableStaff.map((staff) => (
-                                                                <SelectItem key={staff.id} value={staff.id}>
+                                                                <SelectItem key={staff.id} value={String(staff.id)}>
                                                                     {staff.firstName} {staff.lastName}
                                                                 </SelectItem>
                                                             ))}

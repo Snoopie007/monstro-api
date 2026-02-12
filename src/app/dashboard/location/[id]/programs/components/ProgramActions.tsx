@@ -85,7 +85,7 @@ export default function ProgramActions({
 
     return (
         <>
-            <CreateSession program={program} availableStaff={[]} staffId={program.instructorId ?? ''} open={openSession} onOpenChange={setOpenSession} onSuccess={onSessionCreated} />
+            <CreateSession program={program} availableStaff={[]} staffId={program.instructorId ? String(program.instructorId) : ''} open={openSession} onOpenChange={setOpenSession} onSuccess={onSessionCreated} />
             <UpdateProgram program={program} open={openUpdate} setOpen={setOpenUpdate} />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>

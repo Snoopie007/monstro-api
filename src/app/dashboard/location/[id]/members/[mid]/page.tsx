@@ -108,7 +108,7 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 		const { member, ...rest } = ml;
 		return {
 			member: member as Member,
-			ml: { ...rest, knownFamilyMembers: filteredFamilyMembers } as MemberLocation,
+			ml: { ...rest, knownFamilyMembers: filteredFamilyMembers } as unknown as MemberLocation,
 		};
 	} catch (error) {
 		console.log("error", error);

@@ -57,10 +57,6 @@ export async function DELETE(req: NextRequest, props: props) {
         throw new Error("Session not found");
       }
 
-      if (session.canceled) {
-        throw new Error("Session already canceled");
-      }
-
       const now = new Date();
       const cancellationResult: CancellationResult = {
         cancelledReservations: 0,
@@ -161,7 +157,6 @@ export async function DELETE(req: NextRequest, props: props) {
       // 4. Mark the session as cancelled
       await tx.update(programSessions)
         .set({ 
-          canceled: true,
           updated: now,
         })
         .where(eq(programSessions.id, params.sid));
@@ -200,7 +195,7 @@ export async function DELETE(req: NextRequest, props: props) {
             sessionDate,
             sessionTime,
             instructorFirstName: instructor?.firstName,
-            instructorLastName: instructor?.lastName,
+            instructorLastName: instructor?.lastName ?? undefined,
             reason,
             affectedMembers: uniqueMembers.map(m => ({
               memberId: m.id,

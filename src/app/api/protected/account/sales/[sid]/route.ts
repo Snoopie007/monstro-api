@@ -98,10 +98,12 @@ export async function POST(req: Request) {
         await db.transaction(async (tx) => {
             await tx.insert(locationState).values({
                 planId: sale.planId || 1,
-                settings: DEFAULT_LOCATION_SETTINGS,
+                settings: {
+                    ...DEFAULT_LOCATION_SETTINGS,
+                    ...(stripeSubscription?.id ? { stripeSubscriptionId: stripeSubscription.id } : {}),
+                },
                 agreeToTerms: sale.agreedToTerms,
                 locationId: location.id,
-                stripeSubscriptionId: stripeSubscription?.id,
                 status: stripeSubscription?.status || 'incomplete',
                 startDate: today,
                 lastRenewalDate: today,
