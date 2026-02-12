@@ -1,5 +1,5 @@
 import { db } from '@/db/db'
-import { supportAssistants, supportTriggers } from '@/db/schemas'
+import { supportAssistants, supportTriggers } from '@subtrees/schemas'
 import { eq } from 'drizzle-orm'
 import { Params } from 'next/dist/server/request/params'
 import { NextRequest, NextResponse } from 'next/server'

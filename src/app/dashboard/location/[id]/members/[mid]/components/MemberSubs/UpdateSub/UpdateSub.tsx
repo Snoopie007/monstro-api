@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
 import { format, intervalToDuration } from "date-fns";
-import { MemberPaymentMethod, MemberSubscription } from "@/types";
+import { MemberPaymentMethod, MemberSubscription } from "@subtrees/types";
 import { EndDayPicker } from ".";
 import { useMemberStatus } from "../../../providers";
 import { useMemberSubscriptions } from "@/hooks";

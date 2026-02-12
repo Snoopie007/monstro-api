@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/db";
-import { memberInvoices, members } from "@/db/schemas";
+import { memberInvoices, members } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { scheduleOneOffInvoiceReminders } from "../../utils";

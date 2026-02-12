@@ -15,7 +15,7 @@ import { SelectSourceStep } from './SelectSourceStep'
 import { MapFieldsStep } from './MapFieldsStep'
 import { PreviewStep } from './PreviewStep'
 import { StepperFooter } from './StepperFooter'
-import type { CustomFieldDefinition, CustomFieldType } from '@/types'
+import type { CustomFieldDefinition, CustomFieldType } from '@subtrees/types'
 
 export type ImportSource = 'csv' | 'gohighlevel' | null
 

@@ -1,4 +1,4 @@
-import { MemberAchievement } from "@/types";
+import { MemberAchievement } from "@subtrees/types";
 import useSWR from "swr";
 
 async function fetcher(data: { url: string; id: string; query?: string }) {

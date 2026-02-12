@@ -9,7 +9,7 @@ import {
 	AgendaDaysToShow,
 	EventItem,
 } from "@/components/event-calendar";
-import type { CalendarEvent, ClosedDate } from "@/types";
+import type { CalendarEvent, ClosedDate } from "@subtrees/types";
 import { getAgendaEventsForDay } from "@/libs/calendar";
 import { cn } from "@/libs/utils";
 

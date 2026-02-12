@@ -7,7 +7,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ChevronsUpDown, CircleFadingPlusIcon, Loader2 } from 'lucide-react'
 import { toast } from 'react-toastify'
-import { CustomFieldDefinition } from '@/types'
+import { CustomFieldDefinition } from '@subtrees/types'
 import {
     CardTitle, Collapsible, CollapsibleContent, CollapsibleTrigger, EmptyHeader,
     EmptyMedia, EmptyTitle, EmptyDescription, Empty

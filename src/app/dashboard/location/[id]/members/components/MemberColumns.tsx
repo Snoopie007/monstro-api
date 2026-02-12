@@ -1,12 +1,12 @@
 import { Checkbox } from "@/components/forms/checkbox";
 import { Badge } from "@/components/ui";
-import { MemberListItem } from "@/types";
+import { MemberListItem } from "@subtrees/types";
 import { ColumnDef, FilterFn } from "@tanstack/react-table";
 import Link from "next/link";
 import {
 	CustomFieldDisplay,
 } from "@/components/CustomFieldDisplay";
-import { CustomFieldDefinition } from "@/types";
+import { CustomFieldDefinition } from "@subtrees/types";
 
 const customFieldFilter: FilterFn<MemberListItem> = (row, columnId, filterValue) => {
 	if (columnId.startsWith('custom-field-')) {

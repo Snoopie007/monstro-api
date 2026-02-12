@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { locations } from "@/db/schemas";
+import { locations } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import S3Bucket from '@/libs/server/s3';

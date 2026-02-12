@@ -1,5 +1,5 @@
 import { db } from '@/db/db'
-import { memberPlans, memberPlanPricing } from '@/db/schemas'
+import { memberPlans, memberPlanPricing } from '@subtrees/schemas'
 import { PromosList, CreatePromo } from './components'
 import { eq, and } from 'drizzle-orm'
 

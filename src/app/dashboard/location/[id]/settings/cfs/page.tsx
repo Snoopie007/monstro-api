@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { CustomFieldsList, NewCF } from "./components";
-import { MemberField } from "@/types";
+import { MemberField } from "@subtrees/types";
 import { CFProvider } from "./provider";
 async function getCustomFields(locationId: string): Promise<MemberField[]> {
 	try {

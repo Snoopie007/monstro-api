@@ -1,7 +1,7 @@
 'use client'
 import Image from "next/image"
 import Link from "next/link";
-import { Partner } from "@/types";
+import { Partner } from "@subtrees/types";
 import { ChangeEvent, useState, use } from "react";
 import { IntergrationPartners } from './partners';
 import { Badge, Button } from "@/components/ui";

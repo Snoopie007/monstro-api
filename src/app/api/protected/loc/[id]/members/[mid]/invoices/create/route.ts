@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberInvoices, members, transactions, memberSubscriptions } from "@/db/schemas";
+import { memberInvoices, members, transactions, memberSubscriptions } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/server/stripe";

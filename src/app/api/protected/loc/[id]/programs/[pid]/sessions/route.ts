@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
-import { programSessions, reservations, programs, recurringReservations } from "@/db/schemas";
+import { programSessions, reservations, programs, recurringReservations } from "@subtrees/schemas";
 import { NextResponse, NextRequest } from "next/server";
 import { hasPermission } from "@/libs/server/permissions";
 

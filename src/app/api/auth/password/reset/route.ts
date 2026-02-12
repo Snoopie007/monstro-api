@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { users, accounts } from "@/db/schemas";
+import { users, accounts } from "@subtrees/schemas";
 import { sendEmailViaApi } from "@/libs/server/emails";
 import { eq, and } from "drizzle-orm";
 import type { NextRequest } from "next/server";

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { MemberSubscription } from "@/types/member";
+import { MemberSubscription } from "@subtrees/types/member";
 import { cn, tryCatch } from "@/libs/utils";
 import { useParams } from "next/navigation";
 import { DayFieldPopover } from "./CancelSub/DayFieldPopover";

@@ -1,10 +1,10 @@
 
-import { walletUsages } from "@/db/schemas";
+import { walletUsages } from "@subtrees/schemas";
 import { SQL, sql, getTableColumns, eq } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/db/db";
-import { Location, ProgramSession, Wallet } from "@/types";
-import { wallets } from "@/db/schemas";
+import { Location, ProgramSession, Wallet } from "@subtrees/types";
+import { wallets } from "@subtrees/schemas";
 import { VendorStripePayments } from "./stripe";
 import { isBefore } from "date-fns";
 

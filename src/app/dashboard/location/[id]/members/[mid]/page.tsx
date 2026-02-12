@@ -8,7 +8,7 @@ import {
 } from "@/components/ui";
 import { db } from "@/db/db";
 import { hasPermission } from "@/libs/server/permissions";
-import type { Member, MemberLocation, PaymentMethod } from "@/types";
+import type { Member, MemberLocation, PaymentMethod } from "@subtrees/types";
 import { sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import {

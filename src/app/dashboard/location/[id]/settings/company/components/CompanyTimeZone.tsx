@@ -2,7 +2,7 @@
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
 import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
-import { Location } from "@/types";
+import { Location } from "@subtrees/types";
 import { cn, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";

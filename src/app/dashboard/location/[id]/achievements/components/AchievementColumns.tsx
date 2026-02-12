@@ -1,6 +1,6 @@
 "use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
-import { Achievement } from "@/types";
+import { Achievement } from "@subtrees/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { UpdateAchievement } from ".";
 import { AchievementTriggers } from "@/libs/data";

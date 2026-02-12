@@ -7,7 +7,7 @@ import {
     ChartTooltipContent,
 } from '@/components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
-import { MemberLocation } from '@/types/member'
+import { MemberLocation } from '@subtrees/types/member'
 import { MONTHS } from '@/libs/data'
 import { Loader2 } from 'lucide-react'
 

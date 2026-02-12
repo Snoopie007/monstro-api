@@ -1,7 +1,7 @@
 import { ProductsTabs } from "./components";
 import { db } from "@/db/db";
 import { ProductsProvider } from "./providers";
-import { Group, Program } from "@/types";
+import { Group, Program } from "@subtrees/types";
 import { ScrollArea } from "@/components/ui";
 
 async function getPrograms(lid: string): Promise<Program[]> {

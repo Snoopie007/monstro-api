@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { PlanSelector } from '../../../../components'
-import { MonstroPlan } from '@/types/admin'
+import { MonstroPlan } from '@subtrees/types/vendor/admin'
 import {
     Button,
     AlertDialog,
@@ -16,7 +16,7 @@ import {
     AlertDialogAction
 } from '@/components/ui'
 import { Loader2 } from 'lucide-react'
-import { LocationState } from '@/types'
+import { LocationState } from '@subtrees/types'
 import { sleep } from '@/libs/utils'
 import { toast } from 'react-toastify'
 import { useRouter } from 'next/navigation'

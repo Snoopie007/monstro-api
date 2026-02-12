@@ -7,7 +7,7 @@ import {
     ChartTooltipContent,
 } from '@/components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
-import { Transaction } from '@/types/transaction'
+import { Transaction } from '@subtrees/types/transaction'
 import { MONTHS } from '@/libs/data'
 import { Loader2 } from 'lucide-react'
 

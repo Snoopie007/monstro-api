@@ -2,9 +2,9 @@ import { NextResponse, NextRequest } from 'next/server'
 import { auth } from '@/libs/auth/server'
 import { db } from '@/db/db'
 import { eq } from 'drizzle-orm'
-import { supportAssistants, BotModel, BotStatus } from '@/db/schemas'
+import { supportAssistants, BotModel, BotStatus } from '@subtrees/schemas'
 import { DEFAULT_SUPPORT_TOOLS } from '@/libs/SupportDefaults'
-import type { SupportPersona } from '@/types'
+import type { SupportPersona } from '@subtrees/types'
 
 // Helper function to serialize support assistant data for API response
 function serializeSupportAssistant(assistant: any) {

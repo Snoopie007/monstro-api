@@ -1,5 +1,5 @@
 "use client";
-import { Program } from "@/types/program";
+import { Program } from "@subtrees/types/program";
 import { AvatarFallback } from "@/components/ui";
 import ProgramActions from "./ProgramActions";
 import { useState } from "react";

@@ -1,19 +1,18 @@
 import { relations, sql } from "drizzle-orm";
 import {
+    index,
+    jsonb,
+    pgTable,
+    primaryKey,
     text,
     timestamp,
-    pgTable,
-    index,
-
-    primaryKey,
-    foreignKey,
 } from "drizzle-orm/pg-core";
-import { members } from "../members";
-import { users } from "../users";
-import { locations } from "../locations";
 import { groups } from "./groups";
-import { reactions } from "./reactions";
+import { locations } from "../locations";
 import { media } from "./medias";
+import { members } from "../members";
+import { reactions } from "./reactions";
+import { users } from "../users";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -40,17 +39,13 @@ export const chatMembers = pgTable("chat_members", {
 export const messages = pgTable("messages", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('msg_')`),
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-    senderId: text("sender_id").notNull().references(() => users.id, { onDelete: "set null" }),
-    replyId: text("reply_id"),
+    senderId: text("sender_id").references(() => users.id, { onDelete: "set null" }),
+    replyId: text("reply_id").references((): any => messages.id, { onDelete: "set null" }),
     content: text("content"),
+    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
-    foreignKey({
-        columns: [t.replyId],
-        foreignColumns: [t.id],
-        name: "fk_messages_reply_id",
-    }),
     index("idx_messages_chat_created").on(t.chatId, t.created),
     index("idx_messages_sender_id").on(t.senderId),
 ]);
@@ -98,10 +93,11 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
         fields: [messages.senderId],
         references: [users.id],
     }),
-    medias: many(media),
-    reply: one(messages, {
+    replyTo: one(messages, {
         fields: [messages.replyId],
         references: [messages.id],
     }),
+    medias: many(media),
     reactions: many(reactions, { relationName: 'messageReactions' }),
 }));
+

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberSubscriptions } from "@/db/schemas";
+import { memberSubscriptions } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 type Params = {

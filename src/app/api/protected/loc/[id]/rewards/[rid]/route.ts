@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from "@/db/db";
 import { eq } from 'drizzle-orm';
-import { rewards } from '@/db/schemas';
+import { rewards } from '@subtrees/schemas';
 import S3Bucket from '@/libs/server/s3';
 
 

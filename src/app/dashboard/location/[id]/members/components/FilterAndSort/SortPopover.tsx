@@ -4,7 +4,7 @@ import { ListOrderedIcon, TextAlignJustify, XIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@/components/forms";
 import { useState } from "react";
 import { ColumnDef } from "@/libs/table-utils";
-import { MemberListItem } from "@/types";
+import { MemberListItem } from "@subtrees/types";
 
 interface SortPopoverProps {
     columns: ColumnDef<MemberListItem, any>[];

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { NextResponse, NextRequest } from "next/server";
-import { ProgramSession } from "@/types";
+import { ProgramSession } from "@subtrees/types";
 
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {

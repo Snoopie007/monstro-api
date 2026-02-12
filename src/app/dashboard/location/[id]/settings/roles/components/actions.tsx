@@ -1,6 +1,6 @@
 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, Button } from '@/components/ui'
-import { Role } from '@/types'
+import { Role } from '@subtrees/types'
 import { DropdownMenuSeparator } from '@radix-ui/react-dropdown-menu'
 import { EllipsisVerticalIcon, Trash2 } from 'lucide-react'
 

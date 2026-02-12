@@ -13,7 +13,7 @@ import {
 	RefreshCw
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui";
-import { DocumentMetadataUI } from "@/types/knowledgeBase";
+import { DocumentMetadataUI } from "@subtrees/types/KnowledgeBase";
 
 interface SingleDocumentUploadProps {
 	existingDocument?: DocumentMetadataUI | null;

@@ -2,7 +2,7 @@
 
 import { Avatar, CircleProgress, Skeleton, TooltipContent, TooltipTrigger, Tooltip, AvatarImage } from '@/components/ui'
 import { cn, formatAmountForDisplay, tryCatch } from '@/libs/utils'
-import type { MemberSubscription } from '@/types'
+import type { MemberSubscription } from '@subtrees/types'
 import { format } from 'date-fns'
 import { SubActions } from './SubActions'
 import { Clock4Icon } from 'lucide-react'

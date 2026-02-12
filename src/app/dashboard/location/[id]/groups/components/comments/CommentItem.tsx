@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/libs/utils";
-import { PostComment } from "@/types/groups";
+import { PostComment } from "@subtrees/types/vendor/social/group";
 import { formatDistanceToNow } from "date-fns";
 import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import { useState } from "react";

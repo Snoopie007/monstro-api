@@ -1,4 +1,4 @@
-import { ExtendedAttendance, Member } from "@/types";
+import { ExtendedAttendance, Member } from "@subtrees/types";
 import { Time } from '@internationalized/date';
 import { type ClassValue, clsx } from "clsx";
 import { addDays, format, isToday, isYesterday, subDays, isSameDay } from "date-fns";
@@ -264,11 +264,12 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
                 const programs = ['Boxing', 'Muay Thai', 'CrossFit', 'Yoga']
 
                 attendances.push({
-                    id: `test-att-${weekIndex}-${dayIndex}`,
+                    id: String(weekIndex * 10 + dayIndex + 1),
                     memberId: 'mbr_BpT7jEb3Q16nOPL3vo7qlw',
                     locationId: '',
                     reservationId: null,
                     recurringId: null,
+                    programId: null,
                     programName: programs[Math.floor(seededRandom(seed) * programs.length)],
                     checkInTime,
                     checkOutTime,
@@ -279,7 +280,7 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
                     lat: null,
                     lng: null,
                     created: new Date(),
-                } as ExtendedAttendance)
+                })
             }
         })
 

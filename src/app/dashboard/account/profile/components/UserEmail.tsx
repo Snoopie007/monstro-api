@@ -1,7 +1,7 @@
 'use client'
 import { Input } from "@/components/forms/input";
 import { useState } from "react";
-import { Staff, Vendor } from "@/types";
+import { Staff, Vendor } from "@subtrees/types";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui";

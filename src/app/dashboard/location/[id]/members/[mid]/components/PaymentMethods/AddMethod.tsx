@@ -23,7 +23,7 @@ import {
 	Input,
 	Switch,
 } from "@/components/forms";
-import { Member } from "@/types";
+import { Member } from "@subtrees/types";
 
 import { DialogTrigger } from "@radix-ui/react-dialog";
 import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";

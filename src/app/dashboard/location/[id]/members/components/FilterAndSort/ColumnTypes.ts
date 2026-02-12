@@ -1,4 +1,4 @@
-import { CustomFieldDefinition } from "@/types";
+import { CustomFieldDefinition } from "@subtrees/types";
 
 export enum FilterInputType {
   TEXT = 'text',

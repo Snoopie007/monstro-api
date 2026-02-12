@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/libs/utils";
 import { MessageCircle, Pin, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { GroupPost } from "@/types";
+import { GroupPost } from "@subtrees/types/vendor/social";
 import Markdown from "react-markdown";
 import { ReactionBar, QuickReactions } from "./reactions";
 import { useReactions } from "@/hooks/useReactions";

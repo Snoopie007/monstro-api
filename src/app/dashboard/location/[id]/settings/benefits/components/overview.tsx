@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
-import { Vendor } from "@/types";
+import { Vendor } from "@subtrees/types";
 
 interface VendorProgressOverviewProps {
 

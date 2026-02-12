@@ -1,7 +1,7 @@
 'use client'
 import { Stripe } from "stripe";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/forms";
-import { CardPaymentMethod, PaymentMethod, UsBankAccountPaymentMethod } from "@/types";
+import { CardPaymentMethod, PaymentMethod, UsBankAccountPaymentMethod } from "@subtrees/types";
 
 
 interface PMSelectProps {

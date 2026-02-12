@@ -4,7 +4,7 @@
  */
 
 import { auth } from "@/libs/auth/server";
-import type { ExtendedUser } from "@/types/user";
+import type { ExtendedUser } from "@subtrees/types/user";
 import { getSupabaseJWT } from "../server/supabase";
 
 export interface ApiClient {

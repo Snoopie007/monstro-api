@@ -8,7 +8,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { Message } from "@/types/chats";
+import { Message } from "@subtrees/types/vendor/social/chat";
 
 interface MessageActionsDropdownProps {
     message: Message;

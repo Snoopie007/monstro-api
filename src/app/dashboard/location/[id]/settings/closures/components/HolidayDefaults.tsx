@@ -10,7 +10,7 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Sepa
 import { Checkbox, Form, FormField, FormItem, FormLabel, FormDescription, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Input, FormControl } from "@/components/forms";
 import { tryCatch } from "@/libs/utils";
 import { COMMON_HOLIDAYS, HolidayDefaultsSchema, type HolidayDefaultsFormData } from "../schemas";
-import type { HolidaySettings } from "@/types/location";
+import type { HolidaySettings } from "@subtrees/types/location";
 
 interface HolidayDefaultsProps {
   locationId: string;

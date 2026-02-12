@@ -1,9 +1,9 @@
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
-import { integrations } from "@/db/schemas";
+import { integrations } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import Stripe from "stripe";
-import { Integration } from "@/types/integrations";
+import { Integration } from "@subtrees/types/integrations";
 import { getQuickbooksSettings, exchangeCodeForToken } from "@/libs/quickbooks";
 import { HighLevelClient } from "@/libs/server/ghl";
 

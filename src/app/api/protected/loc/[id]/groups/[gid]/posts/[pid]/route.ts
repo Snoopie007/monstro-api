@@ -1,6 +1,6 @@
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { db } from "@/db/db";
-import { groupPosts, comments, staffLocations, staffs } from "@/db/schemas";
+import { groupPosts, comments, staffLocations, staffs } from "@subtrees/schemas";
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 
@@ -18,7 +18,7 @@ export async function GET(req: Request, props: RouteParams) {
         const post = await db.query.groupPosts.findFirst({
             where: eq(groupPosts.id, pid),
             with: {
-                user: true,
+                author: true,
             },
         });
 

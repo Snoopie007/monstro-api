@@ -18,8 +18,8 @@ import {
 	EmptyMedia,
 	Empty
 } from "@/components/ui";
-import { CalendarEvent } from "@/types/calendar";
-import { SessionManagementDialogProps, Member, MemberWithValidation } from "@/types";
+import { CalendarEvent } from "@subtrees/types/vendor/calendar";
+import { SessionManagementDialogProps, Member, MemberWithValidation } from "@subtrees/types";
 
 import { Input } from "@/components/forms/";
 import {

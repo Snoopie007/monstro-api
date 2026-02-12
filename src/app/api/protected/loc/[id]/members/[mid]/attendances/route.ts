@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { db } from '@/db/db'
-import type { ExtendedAttendance, MissedReservation } from '@/types/attendance'
+import type { ExtendedAttendance, MissedReservation } from '@subtrees/types/attendance'
 import { sql } from 'drizzle-orm';
 
 export async function GET(
@@ -59,6 +59,7 @@ export async function GET(
             locationId: row.location_id,
             memberId: row.member_id,
             created: row.created_at ?? new Date(),
+            updated: row.updated_at ?? null,
             programName: row.resolved_program_name,
         }))
 

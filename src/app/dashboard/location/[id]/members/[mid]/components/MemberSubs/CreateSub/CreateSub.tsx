@@ -10,7 +10,7 @@ import {
     ItemTitle
 } from '@/components/ui'
 import { useMemberSubscriptions, useSubscriptions } from '@/hooks'
-import { MemberSubscription } from '@/types'
+import { MemberSubscription } from '@subtrees/types'
 import { CircleFadingPlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { VisuallyHidden } from 'react-aria'

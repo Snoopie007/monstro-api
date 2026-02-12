@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Vendor, VendorReferral } from '@/types'
+import { Vendor, VendorReferral } from '@subtrees/types'
 import { CopyIcon } from 'lucide-react'
 
 import React from 'react'

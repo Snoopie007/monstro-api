@@ -1,4 +1,4 @@
-import { Media } from "@/types";
+import { Media } from "@subtrees/types/vendor/social";
 
 interface MessageMediaProps {
     media: Media[];

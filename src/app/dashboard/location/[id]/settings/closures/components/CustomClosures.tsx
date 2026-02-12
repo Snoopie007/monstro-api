@@ -26,7 +26,7 @@ import {
 } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
 import { NewClosureDialog } from "./NewClosureDialog";
-import type { ReservationException } from "@/types/reservation";
+import type { ReservationException } from "@subtrees/types/vendor/reservation";
 
 interface CustomClosuresProps {
   locationId: string;

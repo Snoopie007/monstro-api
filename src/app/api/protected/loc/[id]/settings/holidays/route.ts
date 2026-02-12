@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { locationState } from "@/db/schemas";
+import { locationState } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import type { HolidaySettings, LocationSettings } from "@/types/location";
+import type { HolidaySettings, LocationSettings } from "@subtrees/types/location";
 
 type Props = {
   params: Promise<{ id: string }>;

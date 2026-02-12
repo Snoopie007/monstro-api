@@ -6,7 +6,7 @@ import {
 	reservations,
 	recurringReservations,
 	reservationExceptions,
-} from "@/db/schemas";
+} from "@subtrees/schemas";
 import { cancelClassReminders } from "../../../utils";
 
 export async function DELETE(

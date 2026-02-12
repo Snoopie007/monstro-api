@@ -14,7 +14,7 @@ import {
 } from "@/components/ui";
 
 import { VariableGroups } from "@/components/extensions";
-import { CustomVariable, CustomVariableGroup } from "@/types";
+import { CustomVariable, CustomVariableGroup } from "@subtrees/types";
 import { Tag } from "lucide-react";
 import { useState } from "react";
 

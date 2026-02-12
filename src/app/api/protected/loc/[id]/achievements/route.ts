@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { achievements } from "@/db/schemas";
+import { achievements } from "@subtrees/schemas";
 import S3Bucket from "@/libs/server/s3";
 import { hasPermission } from "@/libs/server/permissions";
 

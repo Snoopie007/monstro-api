@@ -1,4 +1,4 @@
-import { MemberStatus, TableState } from '@/types/member'
+import { MemberStatus, TableState } from '@subtrees/types/member'
 
 interface NameGeneratorParams {
     statusFilter: MemberStatus[]

@@ -1,4 +1,4 @@
-import { MonstroPlan } from "@/types/admin";
+import { MonstroPlan } from "@subtrees/types/vendor/admin";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui";

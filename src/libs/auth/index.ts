@@ -1,5 +1,5 @@
 import { db } from '@/db/db';
-import { accounts, sessions, users } from '@/db/schemas';
+import { accounts, sessions, users } from '@subtrees/schemas';
 import bcrypt from 'bcryptjs';
 import { customSession, multiSession } from "better-auth/plugins";
 import { APIError, betterAuth } from 'better-auth';

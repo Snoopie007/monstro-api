@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { attendances } from '@/db/schemas';
+import { attendances } from '@subtrees/schemas';
 import { eq } from 'drizzle-orm';
 
 export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string, aid: string }> }) {
 	const params = await props.params;
+	const attendanceId = params.aid;
+
+	if (!attendanceId) {
+		return NextResponse.json({ error: "Invalid attendance id" }, { status: 400 });
+	}
 
 	try {
 		const body = await req.json();
 		const attendance = await db.query.attendances.findFirst({
-			where: (attendances, { eq }) => eq(attendances.id, params.aid),
+			where: (attendances, { eq }) => eq(attendances.id, attendanceId),
 		});
 
 		if (!attendance) {
@@ -44,7 +49,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: st
 			macAddress: macAddress || null,
 			lat: lat || null,
 			lng: lng || null,
-		}).where(eq(attendances.id, params.aid));
+		}).where(eq(attendances.id, attendanceId));
 
 
 		return NextResponse.json(updatedAttendance, { status: 200 });

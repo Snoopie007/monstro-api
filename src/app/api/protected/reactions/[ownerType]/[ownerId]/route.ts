@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db/db";
-import { ReactionEmoji } from "@/types";
+import { ReactionEmoji } from "@subtrees/types/vendor/social";
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 

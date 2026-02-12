@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from '@/hooks/useSession'
-import { SupportConversation, SupportMessage } from '@/types'
+import { SupportConversation, SupportMessage } from '@subtrees/types'
 import { createClient, RealtimeChannel } from '@supabase/supabase-js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 

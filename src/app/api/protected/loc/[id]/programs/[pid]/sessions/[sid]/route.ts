@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { and, eq, gte, isNull } from "drizzle-orm";
-import { programSessions, reservations, recurringReservations, reservationExceptions, locations } from "@/db/schemas";
+import { programSessions, reservations, recurringReservations, reservationExceptions, locations } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
-import type { CancellationResult } from "@/types/reservation";
+import type { CancellationResult } from "@subtrees/types/vendor/reservation";
 import { sendSessionCancellationNotifications } from "@/libs/notifications/SessionCancellation";
 
 type props = {

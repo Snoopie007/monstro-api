@@ -5,7 +5,7 @@ import {
     Avatar, AvatarImage
 } from '@/components/ui'
 import { formatAmountForDisplay, tryCatch } from '@/libs/utils'
-import { MemberPackage } from '@/types/member'
+import { MemberPackage } from '@subtrees/types/member'
 import { format } from 'date-fns'
 import { InfoField } from '../../../../../../../../components/ui/InfoField'
 import { useEffect, useMemo, useState } from 'react'

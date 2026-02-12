@@ -9,7 +9,7 @@ import {
     ButtonGroup,
 } from "@/components/ui";
 import { cn } from "@/libs/utils";
-import { Contract } from "@/types";
+import { Contract } from "@subtrees/types";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";

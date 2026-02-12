@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { eq, sql } from "drizzle-orm";
-import { reservations, programSessions, memberSubscriptions, memberPackages, members, locations } from "@/db/schemas";
+import { reservations, programSessions, memberSubscriptions, memberPackages, members, locations } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
-import type { CreateMakeUpClassInput } from "@/types/reservation";
+import type { CreateMakeUpClassInput } from "@subtrees/types/vendor/reservation";
 import { sendMakeupConfirmationNotification } from "@/libs/notifications/MakeupConfirmation";
 
 type Props = {

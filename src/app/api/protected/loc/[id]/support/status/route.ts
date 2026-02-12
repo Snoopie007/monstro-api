@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { supportAssistants } from "@/db/schemas";
+import { supportAssistants } from "@subtrees/schemas";
 
 export async function PUT(
   req: NextRequest,

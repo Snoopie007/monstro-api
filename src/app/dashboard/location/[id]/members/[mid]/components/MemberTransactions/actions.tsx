@@ -7,7 +7,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui'
 import { tryCatch } from '@/libs/utils'
-import { Transaction } from '@/types/transaction'
+import { Transaction } from '@subtrees/types/transaction'
 import { EllipsisVertical } from 'lucide-react'
 import { toast } from 'react-toastify'
 

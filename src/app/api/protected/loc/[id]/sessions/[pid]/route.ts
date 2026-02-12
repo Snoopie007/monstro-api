@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { programs, programSessions } from "@/db/schemas";
+import { programs, programSessions } from "@subtrees/schemas";
 import { NextResponse, NextRequest } from "next/server";
 
 

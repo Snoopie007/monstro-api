@@ -1,6 +1,6 @@
 "use client";
 import { useMemberPlans } from "@/hooks/usePlans";
-import { MemberPlan } from "@/types/member";
+import { MemberPlan } from "@subtrees/types/member";
 import { PlanCheckbox } from "./PlanItemCheckbox";
 import { Checkbox } from "@/components/forms";
 import { Skeleton } from "@/components/ui";

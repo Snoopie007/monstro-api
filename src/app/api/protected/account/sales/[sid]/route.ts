@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { admindb, db } from '@/db/db';
-import { locations, locationState, wallets } from '@/db/schemas';
+import { locations, locationState, wallets } from '@subtrees/schemas';
 import { VendorStripePayments } from '@/libs/server/stripe';
 import { getPlan, notifyAdminAPI } from '../../utils';
 import { eq } from 'drizzle-orm';
 import { sales } from '@/db/admin/sales';
 import Stripe from 'stripe';
-import { Location } from '@/types';
+import { Location } from '@subtrees/types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { DEFAULT_LOCATION_SETTINGS } from '@/libs/data';
 

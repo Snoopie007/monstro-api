@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { VendorBadge, VendorLevel } from "@/types";
+import { VendorBadge, VendorLevel } from "@subtrees/types";
 
 import Image from "next/image";
 import { cn } from "@/libs/utils";

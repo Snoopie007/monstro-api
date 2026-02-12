@@ -19,7 +19,7 @@ import {
 
 import { useMemberInvoices } from "@/hooks";
 import { formatAmountForDisplay } from "@/libs/utils";
-import type { MemberInvoice } from "@/types";
+import type { MemberInvoice } from "@subtrees/types";
 import { format } from "date-fns";
 import { CircleFadingPlusIcon, EllipsisVerticalIcon, CheckCircle2, Clock } from "lucide-react";
 import { useState } from "react";

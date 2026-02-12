@@ -20,7 +20,7 @@ import { z } from 'zod'
 import { Editor, EditorContent, useEditor } from '@tiptap/react'
 import { Button, ScrollArea } from '@/components/ui'
 
-import { CustomVariable } from '@/types'
+import { CustomVariable } from '@subtrees/types'
 import { useCallback } from 'react'
 import { VariableSelect } from './VariableSelect'
 import { SupportExtensionKit } from '@/components/extensions'

@@ -1,6 +1,6 @@
 'use client'
 
-import { MigrateMember } from '@/types/member'
+import { MigrateMember } from '@subtrees/types/member'
 import { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui'
 import { format } from 'date-fns'

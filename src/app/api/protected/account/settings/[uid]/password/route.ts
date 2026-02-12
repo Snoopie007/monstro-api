@@ -2,7 +2,7 @@ import { auth } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
-import { users, accounts } from "@/db/schemas";
+import { users, accounts } from "@subtrees/schemas";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(req: Request, props: { params: Promise<{ uid: string }> }) {

@@ -1,5 +1,5 @@
 import { Checkbox } from "@/components/forms/checkbox";
-import { MemberPlan } from "@/types/member";
+import { MemberPlan } from "@subtrees/types/member";
 
 interface PlanCheckboxProps {
     plan: MemberPlan;

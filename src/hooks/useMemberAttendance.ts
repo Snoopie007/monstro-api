@@ -1,6 +1,6 @@
 'use client'
 import { generateTestAttendanceData } from '@/libs/utils'
-import type { AttendanceResponse, ExtendedAttendance, MissedReservation } from '@/types/attendance'
+import type { AttendanceResponse, ExtendedAttendance, MissedReservation } from '@subtrees/types/attendance'
 import { useQuery } from '@tanstack/react-query'
 import { formatDate, subDays } from 'date-fns'
 import { format } from 'date-fns-tz'

@@ -1,7 +1,7 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
 import { useMemo } from "react";
-import { Transaction, MemberLocation } from "@/types";
+import { Transaction, MemberLocation } from "@subtrees/types";
 
 interface UseReportParams {
 	lid: string;

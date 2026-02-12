@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { memberContracts } from "@/db/schemas";
+import { memberContracts } from "@subtrees/schemas";
 import { db } from "@/db/db";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/libs/auth/server";

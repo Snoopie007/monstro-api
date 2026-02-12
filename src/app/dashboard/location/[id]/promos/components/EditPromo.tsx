@@ -9,7 +9,7 @@ import {
   DialogClose,
   Button,
 } from "@/components/ui"
-import type { Promo } from "@/db/schemas"
+import type { Promo } from "@subtrees/schemas"
 import { useState } from "react"
 import { toast } from "react-toastify"
 import { Loader2 } from "lucide-react"

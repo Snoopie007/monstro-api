@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { MemberListItem, CustomFieldDefinition } from '@/types/member'
+import { MemberListItem, CustomFieldDefinition } from '@subtrees/types/member'
 
 interface AllMembersResponse {
     members: MemberListItem[]

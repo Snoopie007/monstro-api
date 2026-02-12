@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { MemberStripePayments, VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
-import { transactions } from "@/db/schemas";
+import { transactions } from "@subtrees/schemas";
 import Stripe from "stripe";
 
 type TransactionProps = {

@@ -23,7 +23,7 @@ import {
 	EventHeight,
 	EventItem,
 } from "../event-calendar";
-import type { CalendarEvent, ClosedDate } from "@/types";
+import type { CalendarEvent, ClosedDate } from "@subtrees/types";
 import { DefaultStartHour } from "@/components/event-calendar/constants";
 import { getAllEventsForDay, getEventsForDay, getSpanningEventsForDay, sortEvents } from "@/libs/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

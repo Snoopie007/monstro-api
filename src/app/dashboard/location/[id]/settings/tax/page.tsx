@@ -6,7 +6,7 @@ import {
 } from "@/components/ui";
 import { PercentIcon } from "lucide-react";
 import { db } from "@/db/db";
-import { TaxRate } from "@/types";
+import { TaxRate } from "@subtrees/types";
 import { TaxRateProvider } from "./provider";
 
 

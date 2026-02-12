@@ -5,7 +5,7 @@ import {
 	staffLocations,
 	staffsLocationRoles,
 	locations,
-} from "@/db/schemas";
+} from "@subtrees/schemas";
 import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { sendEmailViaApi } from "@/libs/server/emails";

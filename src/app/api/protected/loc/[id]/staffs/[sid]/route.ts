@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { staffs, staffsLocationRoles, staffLocations } from '@/db/schemas';
+import { staffs, staffsLocationRoles, staffLocations } from '@subtrees/schemas';
 import { db } from '@/db/db';
 import { eq, and } from 'drizzle-orm';
 

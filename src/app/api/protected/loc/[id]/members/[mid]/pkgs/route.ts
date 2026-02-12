@@ -1,9 +1,9 @@
 import { db } from "@/db/db";
-import { memberLocations, memberPackages, memberPlanPricing, transactions, promos } from "@/db/schemas";
+import { memberLocations, memberPackages, memberPlanPricing, transactions, promos } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { eq, and, sql } from "drizzle-orm";
 
-import { PaymentType } from "@/types";
+import { PaymentType } from "@subtrees/types";
 import { NextRequest, NextResponse } from "next/server";
 import { addUserToGroup, calculateExpiresAt, calculateStripeFeeAmount, calculateTax, validatePromoForCheckout } from "../../utils";
 

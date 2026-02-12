@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
-import { StaffLocation } from "@/types";
+import { StaffLocation } from "@subtrees/types";
 
 
 

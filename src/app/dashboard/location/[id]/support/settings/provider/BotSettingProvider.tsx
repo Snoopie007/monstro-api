@@ -1,6 +1,6 @@
 "use client"
 import { getDefaultAssistantSettings } from '@/libs/utils';
-import { Member, SupportAssistant, TestChatMessage } from '@/types';
+import { Member, SupportAssistant, TestChatMessage } from '@subtrees/types';
 import { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 
 

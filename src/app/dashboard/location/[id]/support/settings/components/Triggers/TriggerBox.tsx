@@ -8,7 +8,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui'
-import { SupportAssistant, SupportTrigger } from '@/types'
+import { SupportAssistant, SupportTrigger } from '@subtrees/types'
 import { FormLabel } from '@/components/forms'
 import { TriggerItem } from '.'
 import { TriggerDialog } from './TriggerDialog'

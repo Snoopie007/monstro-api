@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import Loading from "@/components/loading";
 import { CircleFadingPlusIcon, ChevronRight } from "lucide-react";
-import { MemberPlan, PlanProgram } from "@/types";
+import { MemberPlan, PlanProgram } from "@subtrees/types";
 import { useState } from "react";
 import { formatAmountForDisplay } from "@/libs/utils";
 import PlanActions from "./PlanActions";

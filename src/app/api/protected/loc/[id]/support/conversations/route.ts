@@ -3,7 +3,7 @@ import {
   supportAssistants,
   supportConversations,
   supportMessages,
-} from "@/db/schemas";
+} from "@subtrees/schemas";
 import { auth } from "@/libs/auth/server";
 import {
   broadcastSupportConversation,

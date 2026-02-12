@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/db/db";
-import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions, planPrograms } from "@/db/schemas";
+import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions, planPrograms } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { and, count, eq, inArray, or } from "drizzle-orm";
 import { ACTIVE_SUBSCRIPTION_STATUSES, ACTIVE_PACKAGE_STATUSES } from "../../constants";

@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Button, ScrollArea } from '@/components/ui'
 import { Loader2, MessageSquare, Trash2 } from 'lucide-react'
-import { QAEntry } from '@/types/knowledgeBase'
+import { QAEntry } from '@subtrees/types/KnowledgeBase'
 
 interface QAEntryListProps {
     entries: QAEntry[]

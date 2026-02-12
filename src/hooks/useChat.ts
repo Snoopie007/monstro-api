@@ -1,7 +1,7 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import { uploadToS3 } from '@/libs/client/s3';
-import { Message, ReactionEmoji } from '@/types';
-import { UploadUrl } from '@/types/other';
+import { Message, ReactionEmoji } from '@subtrees/types/vendor/social';
+import { UploadUrl } from '@subtrees/types/other';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';

@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { groupPosts, media } from "@/db/schemas";
+import { groupPosts, media } from "@subtrees/schemas";
 import { auth } from "@/libs/auth/server";
 import S3Bucket from "@/libs/server/s3";
 import { NextRequest, NextResponse } from "next/server";
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
         const enrichedPost = await db.query.groupPosts.findFirst({
             where: (posts, { eq }) => eq(posts.id, newPost.id),
             with: {
-                user: true,
+                author: true,
             },
         });
 

@@ -6,7 +6,7 @@ import {
     ItemActions,
 } from '@/components/ui'
 import { formatAmountForDisplay } from '@/libs/utils'
-import { PaymentType, Transaction } from '@/types'
+import { PaymentType, Transaction } from '@subtrees/types'
 import { format } from 'date-fns'
 import MemberPaymentActions from './actions'
 

@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions, memberPlanPricing, promos } from "@/db/schemas";
+import { memberLocations, memberSubscriptions, memberPlanPricing, promos } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -14,7 +14,7 @@ import {
 } from "../../utils";
 import { eq, and, sql } from "drizzle-orm";
 
-import { PaymentType } from "@/types";
+import { PaymentType } from "@subtrees/types";
 
 
 type Props = {

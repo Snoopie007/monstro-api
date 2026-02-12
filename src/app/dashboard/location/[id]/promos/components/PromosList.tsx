@@ -13,7 +13,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui"
-import type { Promo } from "@/db/schemas"
+import type { Promo } from "@subtrees/schemas"
 import { flexRender, getCoreRowModel, useReactTable } from "@/libs/table-utils"
 import { createColumnHelper } from "@tanstack/react-table"
 import { Ticket, Tag, Pencil, Archive, Loader2 } from "lucide-react"

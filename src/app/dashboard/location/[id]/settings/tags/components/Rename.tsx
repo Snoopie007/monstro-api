@@ -12,7 +12,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { MemberTag } from "@/types";
+import { MemberTag } from "@subtrees/types";
 import { useTags } from "@/hooks/useTags";
 import { Loader2 } from "lucide-react";
 

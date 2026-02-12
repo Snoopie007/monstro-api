@@ -1,7 +1,7 @@
 'use client'
 
 import { Input } from '@/components/forms'
-import { MemberListItem } from '@/types/member'
+import { MemberListItem } from '@subtrees/types/member'
 import {
     ColumnFiltersState,
     getCoreRowModel,

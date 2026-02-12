@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { auth } from "@/libs/auth/server";
 import { eq, sql } from "drizzle-orm";
-import { wallets } from "@/db/schemas";
+import { wallets } from "@subtrees/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
 
 export async function POST(

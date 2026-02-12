@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import type { MemberSubscription } from '@/types';
+import type { MemberSubscription } from '@subtrees/types';
 import { useMemberInvoices } from './hooks';
 
 export function useInvoiceReminder(subscription: MemberSubscription) {

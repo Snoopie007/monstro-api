@@ -2,7 +2,7 @@
 import { Loader2 } from "lucide-react";
 import { useState } from 'react'
 import { Button } from "@/components/ui";
-import { Location } from "@/types";
+import { Location } from "@subtrees/types";
 import { tryCatch } from "@/libs/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { toast } from "react-toastify";

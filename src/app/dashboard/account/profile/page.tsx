@@ -1,4 +1,4 @@
-import { Staff, Vendor } from "@/types";
+import { Staff, Vendor } from "@subtrees/types";
 import { UserEmail, UserProfile } from "./components";
 import { db } from "@/db/db";
 import { auth } from "@/libs/auth/server";

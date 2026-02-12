@@ -34,8 +34,8 @@ import {
 } from "@/components/forms";
 import { cn, tryCatch } from "@/libs/utils";
 import { MakeupClassSchema, type MakeupClassFormData } from "./schemas";
-import type { Reservation } from "@/types/reservation";
-import type { MissedReservation } from "@/types/attendance";
+import type { Reservation } from "@subtrees/types/vendor/reservation";
+import type { MissedReservation } from "@subtrees/types/attendance";
 import { RadioBox } from "@/components/forms/radio-box";
 
 interface AvailableSlot {

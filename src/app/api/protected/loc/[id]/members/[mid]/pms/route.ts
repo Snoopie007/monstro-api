@@ -1,12 +1,12 @@
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
-import { members } from "@/db/schemas";
+import { members } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { memberPaymentMethods, paymentMethods } from "@/db/schemas";
+import { memberPaymentMethods, paymentMethods } from "@subtrees/schemas";
 import Stripe from "stripe";
-import { PaymentType } from "@/types/";
+import { PaymentType } from "@subtrees/types";
 
 type Props = {
 	params: Promise<{

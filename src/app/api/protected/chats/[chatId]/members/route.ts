@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { chatMembers, groupMembers } from '@/db/schemas';
+import { chatMembers, groupMembers } from '@subtrees/schemas';
 import { auth } from '@/libs/auth/server';
 
 export async function POST(

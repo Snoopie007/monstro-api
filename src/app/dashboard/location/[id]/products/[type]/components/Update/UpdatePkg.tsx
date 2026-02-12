@@ -35,7 +35,7 @@ import {
 } from "@/components/forms";
 import { usePackages } from "@/hooks/usePlans";
 import { UpdatePkgPlanSchema } from "@/libs/FormSchemas";
-import { MemberPlan } from "@/types";
+import { MemberPlan } from "@subtrees/types";
 import { Loader2 } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
 import { toast } from "react-toastify";

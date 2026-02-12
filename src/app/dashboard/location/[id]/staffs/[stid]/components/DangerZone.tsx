@@ -6,7 +6,7 @@ import {
 
 import { tryCatch } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
-import { Staff } from "@/types";
+import { Staff } from "@subtrees/types";
 import { toast } from "react-toastify";
 import { useState } from "react";
 import { useRouter } from "next/navigation";

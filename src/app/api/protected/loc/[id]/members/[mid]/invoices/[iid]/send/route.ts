@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberInvoices, locationState, integrations, members, locations } from "@/db/schemas";
+import { memberInvoices, locationState, integrations, members, locations } from "@subtrees/schemas";
 import { eq, and } from "drizzle-orm";
 import { serversideApiClient } from "@/libs/api/server";
 

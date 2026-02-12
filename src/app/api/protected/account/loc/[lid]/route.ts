@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { locationState, vendors } from "@/db/schemas";
+import { locationState, vendors } from "@subtrees/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
 import { getPlan, notifyAdminAPI } from "../../utils";

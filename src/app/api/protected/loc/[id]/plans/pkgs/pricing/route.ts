@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberPlanPricing, memberPlans, memberPackages } from "@/db/schemas";
+import { memberPlanPricing, memberPlans, memberPackages } from "@subtrees/schemas";
 import { eq, and, count, or } from "drizzle-orm";
 import { ACTIVE_PACKAGE_STATUSES } from "../../constants";
 

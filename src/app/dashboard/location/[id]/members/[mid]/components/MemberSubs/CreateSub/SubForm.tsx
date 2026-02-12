@@ -21,7 +21,7 @@ import {
 } from "@/components/ui";
 
 import { formatAmountForDisplay, sleep, tryCatch } from "@/libs/utils";
-import { MemberPlan, MemberPlanPricing, MemberSubscription, PaymentMethod } from "@/types";
+import { MemberPlan, MemberPlanPricing, MemberSubscription, PaymentMethod } from "@subtrees/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";

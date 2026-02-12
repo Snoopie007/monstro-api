@@ -1,6 +1,6 @@
 'use client'
 import { Button } from '@/components/ui'
-import { TestChatMessage } from '@/types'
+import { TestChatMessage } from '@subtrees/types'
 import { nanoid } from 'nanoid'
 import React, { FormEvent, useRef, useState } from 'react'
 import { useBotSettingContext } from '../../provider'

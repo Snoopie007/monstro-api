@@ -18,7 +18,7 @@ import { cn, tryCatch } from '@/libs/utils';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useForm } from 'react-hook-form';
-import { Permission, Role } from '@/types';
+import { Permission, Role } from '@subtrees/types';
 import { CreateRoleSchema } from '../schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';

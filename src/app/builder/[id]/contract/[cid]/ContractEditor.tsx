@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/ScrollArea'
 import { Sidebar } from '../components'
 import { useMemo, useState } from 'react'
 
-import { Contract } from '@/types'
+import { Contract } from '@subtrees/types'
 import { Input } from '@/components/forms'
 import { Skeleton } from '@/components/ui'
 

@@ -23,7 +23,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import z from 'zod'
 import { InviteStaffSchema } from '../schema'
-import { Role } from '@/types';
+import { Role } from '@subtrees/types';
 import { toast } from 'react-toastify';
 import { VisuallyHidden } from 'react-aria';
 import { Loader2, PlusIcon } from 'lucide-react';

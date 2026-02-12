@@ -15,7 +15,7 @@ import {
     AlertDialogCancel,
 } from "@/components/ui";
 import { Pencil, Trash2, Copy, MoreHorizontal, Loader2 } from "lucide-react";
-import { MemberField } from "@/types";
+import { MemberField } from "@subtrees/types";
 import { useState } from "react";
 import { cn, sleep } from "@/libs/utils";
 import { toast } from "react-toastify";

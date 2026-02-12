@@ -6,7 +6,7 @@ import {
     Button
 } from '@/components/ui'
 import { useMemberTransactions } from '@/hooks/hooks'
-import { Transaction } from '@/types'
+import { Transaction } from '@subtrees/types'
 import { TransactionItem } from './TransactionItem'
 import { CircleFadingPlusIcon } from 'lucide-react'
 

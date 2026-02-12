@@ -9,7 +9,7 @@ import {
 	Skeleton,
 } from "@/components/ui";
 import { Item, ItemContent, ItemMedia } from "@/components/ui/item";
-import type { MemberReward } from "@/types";
+import type { MemberReward } from "@subtrees/types";
 import { format } from "date-fns";
 import { GiftIcon } from "lucide-react";
 import Image from "next/image";

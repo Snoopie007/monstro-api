@@ -1,6 +1,6 @@
 
 import { ColumnDef } from "@tanstack/react-table";
-import { Transaction } from "@/types";
+import { Transaction } from "@subtrees/types";
 import { format } from "date-fns";
 import { formatAmountForDisplay } from "@/libs/utils";
 

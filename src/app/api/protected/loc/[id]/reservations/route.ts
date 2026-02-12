@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { reservations } from "@/db/schemas/reservations";
+import { reservations } from "@subtrees/schemas/reservations";
 import { NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { serviceApiClient } from "@/libs/api/server";

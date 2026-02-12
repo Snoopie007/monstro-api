@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 
-import { contractTemplates } from "@/db/schemas";
+import { contractTemplates } from "@subtrees/schemas";
 import { hasPermission } from "@/libs/server/permissions";
 
 export async function GET(

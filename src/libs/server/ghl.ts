@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { HighLevel } from '@gohighlevel/api-client';
-import { integrations } from "@/db/schemas";
-import { Integration } from "@/types";
+import { integrations } from "@subtrees/schemas";
+import { Integration } from "@subtrees/types";
 
 
 const IS_PROD = process.env.NODE_ENV === "production";

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { memberLocations } from '@/db/schemas';
+import { memberLocations } from '@subtrees/schemas';
 import { eq } from 'drizzle-orm';
 import { hasPermission } from '@/libs/server/permissions';
 

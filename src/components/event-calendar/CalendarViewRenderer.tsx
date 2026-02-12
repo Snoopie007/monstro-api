@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { CalendarEvent, CalendarView, ClosedDate } from "@/types";
+import type { CalendarEvent, CalendarView, ClosedDate } from "@subtrees/types";
 import { AgendaView, DayView, MonthView, WeekView } from "./";
 import { cn } from "@/libs/utils";
 

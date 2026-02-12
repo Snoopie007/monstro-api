@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes'
 import { Inbox as InboxIcon } from 'lucide-react'
 import { Button } from '../ui/button'
 import Link from 'next/link'
-import { ExtendedUser } from '@/types/user'
+import { ExtendedUser } from '@subtrees/types/user'
 import React from 'react'
 
 const lightAppearance = {

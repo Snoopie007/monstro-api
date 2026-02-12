@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent } from "@subtrees/types";
 
 export function useEventDialog() {
 	const [isOpen, setIsOpen] = useState(false);

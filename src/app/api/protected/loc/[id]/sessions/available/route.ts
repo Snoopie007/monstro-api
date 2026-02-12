@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/db'
 import { and, eq, gte, lte, or, isNull } from 'drizzle-orm'
-import { reservations } from '@/db/schemas'
+import { reservations } from '@subtrees/schemas'
 
 type Props = {
     params: Promise<{ id: string }>

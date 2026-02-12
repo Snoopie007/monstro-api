@@ -9,7 +9,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { cn } from '@/libs/utils'
-import { Transaction } from '@/types/transaction'
+import { Transaction } from '@subtrees/types/transaction'
 import { MONTHS } from '@/libs/data'
 import { Loader2 } from 'lucide-react'
 

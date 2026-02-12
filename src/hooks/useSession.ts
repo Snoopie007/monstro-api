@@ -6,7 +6,7 @@ import {
 	signOut as betterAuthSignOut,
 } from "@/libs/auth/client";
 import { useMemo } from "react";
-import type { ExtendedUser } from "@/types/user";
+import type { ExtendedUser } from "@subtrees/types/user";
 
 /**
  * Client session hook - matches Next-Auth's useSession API

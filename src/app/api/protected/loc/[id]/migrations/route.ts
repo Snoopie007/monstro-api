@@ -1,6 +1,6 @@
 import { db } from "@/db/db"
-import { migrateMembers } from "@/db/schemas/MigrateMembers"
-import { memberPlanPricing } from "@/db/schemas/MemberPlans"
+import { migrateMembers } from "@subtrees/schemas/MigrateMembers"
+import { memberPlanPricing } from "@subtrees/schemas/MemberPlans"
 import { desc, eq, sql } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
  

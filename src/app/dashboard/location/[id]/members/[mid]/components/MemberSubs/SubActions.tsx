@@ -8,7 +8,7 @@ import {
 	ButtonGroup,
 } from "@/components/ui";
 import { Pencil, Trash2, X, Pause, Play, EllipsisVertical } from "lucide-react";
-import { MemberSubscription } from "@/types";
+import { MemberSubscription } from "@subtrees/types";
 
 import { useState } from "react";
 import { cn } from "@/libs/utils";

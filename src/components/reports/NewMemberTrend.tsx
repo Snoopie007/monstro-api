@@ -10,7 +10,7 @@ import {
     CardTitle,
     Skeleton,
 } from '@/components/ui'
-import { MemberLocation } from '@/types'
+import { MemberLocation } from '@subtrees/types'
 import { TrendingDown, TrendingUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { isSameMonth, isSameYear, subMonths } from 'date-fns'

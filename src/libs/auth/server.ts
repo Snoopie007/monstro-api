@@ -1,6 +1,6 @@
 import { auth as betterAuth } from "@/libs/auth";
 import { headers } from "next/headers";
-import type { ExtendedUser } from "@/types/user";
+import type { ExtendedUser } from "@subtrees/types/user";
 
 export interface AuthSession {
   user: ExtendedUser;

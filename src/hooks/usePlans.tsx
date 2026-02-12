@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MemberPlan } from "@/types/member";
+import { MemberPlan } from "@subtrees/types/member";
 
 async function fetchPlans(url: string): Promise<MemberPlan[]> {
   const res = await fetch(url, {

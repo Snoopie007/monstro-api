@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/libs/utils";
 import { Lock, Share2, Users } from "lucide-react";
 import Image from "next/image";
-import { Group } from "@/types";
+import { Group } from "@subtrees/types/vendor/social";
 
 type GroupHeaderProps = {
   group: Group;

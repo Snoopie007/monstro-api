@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { isNull } from 'drizzle-orm';
-import { reservationExceptions } from '@/db/schemas';
+import { reservationExceptions } from '@subtrees/schemas';
 
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string, rid: string, mid: string }> }) {
 

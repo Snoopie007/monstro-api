@@ -1,5 +1,5 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
-import { CustomFieldType, MemberPlan } from '@/types';
+import { CustomFieldType, MemberPlan } from '@subtrees/types';
 
 /**
  * Represents a single validation error

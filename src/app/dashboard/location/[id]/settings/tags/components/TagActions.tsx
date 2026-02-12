@@ -8,7 +8,7 @@ import {
     ButtonGroup,
 } from "@/components/ui";
 import { Pencil, Trash2, MoreHorizontal } from "lucide-react";
-import { MemberTag } from "@/types";
+import { MemberTag } from "@subtrees/types";
 import { useState } from "react";
 import { cn } from "@/libs/utils";
 import { useTags } from "@/hooks/useTags";

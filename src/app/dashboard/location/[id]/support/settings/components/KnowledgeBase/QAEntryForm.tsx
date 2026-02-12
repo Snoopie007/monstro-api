@@ -20,7 +20,7 @@ import { KnowledgeBaseSchema } from '@/libs/FormSchemas/'
 import { Form } from '@/components/forms'
 import { Trash2, Plus, PlusIcon, Loader2 } from 'lucide-react'
 import { tryCatch } from '@/libs/utils'
-import { SupportAssistant } from '@/types'
+import { SupportAssistant } from '@subtrees/types'
 import { toast } from 'react-toastify'
 
 interface QAEntryFormProps {

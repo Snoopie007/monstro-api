@@ -1,7 +1,7 @@
 
 import useSWR from "swr";
 import { fetcher } from "./hooks";
-import { Program } from "@/types";
+import { Program } from "@subtrees/types";
 
 function usePrograms(id: string) {
 	const { data, error, isLoading, mutate } = useSWR<Program[]>({ url: `programs?page=1`, id: id }, fetcher);

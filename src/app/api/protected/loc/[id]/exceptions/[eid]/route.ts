@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { and, eq } from "drizzle-orm";
-import { reservationExceptions } from "@/db/schemas";
+import { reservationExceptions } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
 
 type Props = {

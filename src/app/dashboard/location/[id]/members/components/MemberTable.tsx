@@ -11,7 +11,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui";
-import { MemberListItem } from "@/types";
+import { MemberListItem } from "@subtrees/types";
 import { Skeleton } from "@/components/ui";
 
 export function MemberTable<TData, TValue>({

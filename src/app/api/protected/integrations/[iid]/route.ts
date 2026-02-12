@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { integrations } from "@/db/schemas";
+import { integrations } from "@subtrees/schemas";
 
 export async function DELETE(
   req: Request,

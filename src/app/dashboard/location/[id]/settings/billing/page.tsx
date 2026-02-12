@@ -19,7 +19,7 @@ import React from "react";
 import { cn, formatAmountForDisplay } from "@/libs/utils";
 import { auth } from "@/libs/auth/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
-import { LocationState } from "@/types";
+import { LocationState } from "@subtrees/types";
 import { Stripe } from "stripe";
 import { RetryPayment, CardList, Wallet } from "./components";
 import { db } from "@/db/db";

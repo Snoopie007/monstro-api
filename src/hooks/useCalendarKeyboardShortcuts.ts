@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { CalendarView } from "@/types";
+import type { CalendarView } from "@subtrees/types";
 
 interface UseCalendarKeyboardShortcutsProps {
 	isDialogOpen: boolean;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { attendances, reservations } from '@/db/schemas';
+import { attendances, reservations } from '@subtrees/schemas';
 import { triggerIncrement } from "@/libs/TriggerService";
 import { serviceApiClient } from "@/libs/api/server";
 import { eq } from 'drizzle-orm';

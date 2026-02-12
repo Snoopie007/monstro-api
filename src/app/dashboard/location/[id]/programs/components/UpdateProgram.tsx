@@ -24,7 +24,7 @@ import { usePrograms } from "@/hooks/usePrograms";
 import { toast } from "react-toastify";
 import { UpdateProgramSchema } from "../schemas";
 import { useStaffLocations } from "@/hooks/useStaffs";
-import { Program } from "@/types";
+import { Program } from "@subtrees/types";
 export interface UpdateProgramProps {
 
     open: boolean;

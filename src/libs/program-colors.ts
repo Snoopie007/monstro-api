@@ -1,4 +1,4 @@
-import type { EventColor } from "@/types/calendar";
+import type { EventColor } from "@subtrees/types/vendor/calendar";
 
 export const PROGRAM_COLOR_MAP: Record<number, EventColor> = {
   1: "sky",

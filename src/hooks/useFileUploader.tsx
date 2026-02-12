@@ -1,6 +1,6 @@
 'use client'
 import { useState } from "react";
-import { FileUploaderOptions } from "@/types";
+import { FileUploaderOptions } from "@subtrees/types";
 
 const DEFAULT_FILE_SIZE_LIMIT = 1 * 1024 * 1024; // 1MB
 const DEFAULT_ALLOWED_TYPES = ['image/jpeg', 'image/png'];

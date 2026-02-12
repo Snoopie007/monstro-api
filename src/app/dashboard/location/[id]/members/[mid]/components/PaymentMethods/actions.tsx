@@ -7,7 +7,7 @@ import {
 	DropdownMenuSeparator,
 } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
-import { PaymentMethod } from "@/types";
+import { PaymentMethod } from "@subtrees/types";
 import { EllipsisVertical } from "lucide-react";
 import { useMemberStatus } from "../../providers";
 import { toast } from "sonner";

@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import { tryCatch } from "@/libs/utils";
 import { useTaxRates } from "../provider";
 import { UpdateTaxRate } from "./UpdateTaxRate";
-import { TaxRate } from "@/types/tax";
+import { TaxRate } from "@subtrees/types/tax";
 
 const MenuItemStyle = "cursor-pointer text-xs flex flex-row items-center justify-between gap-2";
 

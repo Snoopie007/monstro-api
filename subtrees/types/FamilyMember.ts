@@ -7,4 +7,5 @@ export type FamilyMember = typeof familyMembers.$inferSelect & {
   relatedMember?: Member;
   relationship: MemberRelationship;
   status: FamilyMemberStatus;
+  contact?: string | null;
 };

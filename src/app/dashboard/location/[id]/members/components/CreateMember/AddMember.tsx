@@ -9,7 +9,7 @@ import {
 import React, { useState } from 'react'
 
 import { CreateMemberForm } from '.';
-import { Member } from '@/types';
+import { Member } from '@subtrees/types';
 import { Stripe } from 'stripe';
 import { VisuallyHidden } from 'react-aria';
 import { Plus, } from 'lucide-react';

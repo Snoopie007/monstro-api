@@ -2,8 +2,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { eq, and, ne } from 'drizzle-orm';
-import { programSessions, programs as program, programs } from '@/db/schemas';
-import { ProgramSession } from '@/types';
+import { programSessions, programs as program, programs } from '@subtrees/schemas';
+import { ProgramSession } from '@subtrees/types';
 import { format, addMinutes, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
 import { hasPermission } from '@/libs/server/permissions';
 

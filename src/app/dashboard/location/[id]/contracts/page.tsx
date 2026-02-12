@@ -21,7 +21,7 @@ import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { CloudDownloadIcon, FileIcon, LoaderIcon } from "lucide-react";
-import { MemberContract } from "@/types";
+import { MemberContract } from "@subtrees/types";
 import { Input } from "@/components/forms";
 
 

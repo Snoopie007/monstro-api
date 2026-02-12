@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { staffs, users } from '@/db/schemas';
+import { staffs, users } from '@subtrees/schemas';
 import { eq } from 'drizzle-orm';
 import S3Bucket from '@/libs/server/s3';
 

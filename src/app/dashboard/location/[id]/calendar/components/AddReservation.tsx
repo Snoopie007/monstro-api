@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { CalendarEvent } from '@/types/calendar';
+import { CalendarEvent } from '@subtrees/types/vendor/calendar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Clock, User, Plus } from 'lucide-react';
 import { format } from 'date-fns';

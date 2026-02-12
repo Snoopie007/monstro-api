@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarEvent } from "@/types/calendar";
+import { CalendarEvent } from "@subtrees/types/vendor/calendar";
 import { tryCatch } from "@/libs/utils";
 import {
   Button,

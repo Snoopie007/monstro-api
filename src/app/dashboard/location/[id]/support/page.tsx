@@ -1,7 +1,7 @@
-import type { SupportAssistant } from '@/types'
+import type { SupportAssistant } from '@subtrees/types'
 import { db } from '@/db/db'
 import { eq } from 'drizzle-orm'
-import { supportAssistants } from '@/db/schemas'
+import { supportAssistants } from '@subtrees/schemas'
 import { SupportList, ChatView } from './components'
 import { SupportProvider } from './providers/SupportProvider'
 

@@ -2,7 +2,7 @@ import { auth } from "@/libs/auth/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { getPlan } from "../../../utils";
-import { locationState } from "@/db/schemas";
+import { locationState } from "@subtrees/schemas";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 

@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { migrateMembers } from "@/db/schemas/MigrateMembers";
-import { memberFields } from "@/db/schemas/members";
+import { migrateMembers } from "@subtrees/schemas/MigrateMembers";
+import { memberFields } from "@subtrees/schemas/members";
 import { sendEmailViaApi } from "@/libs/server/emails";
-import type { CustomFieldType } from "@/types/member";
+import type { CustomFieldType } from "@subtrees/types/member";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { NextResponse } from "next/server";
 import Papa from "papaparse";

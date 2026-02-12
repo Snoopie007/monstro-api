@@ -27,7 +27,7 @@ import {
 import { toast } from 'react-toastify'
 import { useMemberPlans } from '@/hooks'
 import Link from 'next/link'
-import { MemberPlan, MemberPlanPricing } from '@/types'
+import { MemberPlan, MemberPlanPricing } from '@subtrees/types'
 import { ImportMemberForm, FieldMapping } from './'
 
 const REQUIRED_FIELDS = [

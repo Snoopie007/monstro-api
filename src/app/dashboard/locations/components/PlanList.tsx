@@ -1,6 +1,6 @@
 
 import { cn } from "@/libs/utils";
-import { MonstroPlan } from "@/types/admin";
+import { MonstroPlan } from "@subtrees/types/vendor/admin";
 import {
     Table, TableHeader, TableBody, TableRow,
     TableCell, TableHead, TooltipTrigger, Tooltip, TooltipContent,

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 import { Params } from 'next/dist/server/request/params'
 import { db } from '@/db/db'
-import { supportAssistants } from '@/db/schemas'
+import { supportAssistants } from '@subtrees/schemas'
 
 export async function GET(
     req: NextRequest,

@@ -21,7 +21,7 @@ import { ChevronRight, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/libs/utils";
 import { format } from "date-fns";
-import { StaffLocation } from "@/types/staff";
+import { StaffLocation } from "@subtrees/types/staff";
 
 interface StaffsPageProps {
 	params: Promise<{

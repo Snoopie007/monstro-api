@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { CalendarEvent } from "@/types/calendar";
-import { RecurringReservation } from "@/types";
+import { CalendarEvent } from "@subtrees/types/vendor/calendar";
+import { RecurringReservationWithRelations } from "@subtrees/types/vendor/reservation";
 import { endOfMonth, startOfMonth, addDays, addMinutes } from "date-fns";
 import { toDate,  } from 'date-fns-tz'
 import { NextResponse, NextRequest } from "next/server";
@@ -89,7 +89,7 @@ export async function GET(
           },
           exceptions: true,
         },
-      }) as Promise<RecurringReservation[]>,
+      }) as Promise<RecurringReservationWithRelations[]>,
     ]);
 
     const programIds = locationPrograms.map((p) => p.id);

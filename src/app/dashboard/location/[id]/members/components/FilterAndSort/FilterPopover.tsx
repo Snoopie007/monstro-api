@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { FilterInputType, memberColumnMetadata, getCustomFieldConfig } from "./ColumnTypes";
-import { CustomFieldDefinition, MemberListItem } from "@/types";
+import { CustomFieldDefinition, MemberListItem } from "@subtrees/types";
 import { FilterInput } from "./FilterInput";
 
 interface FilterPopoverProps {

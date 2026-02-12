@@ -1,5 +1,5 @@
 import useSWR from 'swr';
-import type { MemberSubscription } from '@/types';
+import type { MemberSubscription } from '@subtrees/types';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

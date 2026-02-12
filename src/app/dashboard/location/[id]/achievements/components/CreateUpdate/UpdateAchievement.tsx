@@ -18,7 +18,7 @@ import { tryCatch } from "@/libs/utils";
 
 import { toast } from "react-toastify";
 import { AchievementSchema } from "../../schemas";
-import { Achievement } from "@/types";
+import { Achievement } from "@subtrees/types";
 import { AchievementForm } from "./AchievementForm";
 import { useEffect, useState } from "react";
 import { Loader2, Pencil } from "lucide-react";

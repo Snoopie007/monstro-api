@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { accounts, familyMembers, memberLocations, members, memberSubscriptions, users } from "@/db/schemas";
+import { accounts, familyMembers, memberLocations, members, memberSubscriptions, users } from "@subtrees/schemas";
 import { NextResponse } from "next/server";
 import { sql, and, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";

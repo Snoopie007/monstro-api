@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { and, eq, gte, lte, or, isNull, between } from "drizzle-orm";
-import { reservationExceptions, reservations, recurringReservations, locations } from "@/db/schemas";
+import { reservationExceptions, reservations, recurringReservations, locations } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
-import type { CreateExceptionInput, ExceptionInitiator } from "@/types/reservation";
+import type { CreateExceptionInput, ExceptionInitiator } from "@subtrees/types/vendor/reservation";
 import { sendHolidayCancellationNotifications, type AffectedMember } from "@/libs/notifications/HolidayCancellation";
 import { addDays, eachDayOfInterval, isSameDay, getDay } from "date-fns";
 

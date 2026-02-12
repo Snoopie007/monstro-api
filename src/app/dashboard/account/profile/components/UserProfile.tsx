@@ -17,7 +17,7 @@ import {
 import { tryCatch } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Staff, Vendor } from "@/types";
+import { Staff, Vendor } from "@subtrees/types";
 import { toast } from "react-toastify";
 
 

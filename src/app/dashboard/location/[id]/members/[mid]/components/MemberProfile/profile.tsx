@@ -18,7 +18,7 @@ import { VisuallyHidden } from "react-aria";
 import { useMemberStatus } from "../../providers/MemberContext";
 import { ProfileActions } from "./ProfileActions";
 import { format } from "date-fns";
-import { FamilyMember } from "@/types/FamilyMember";
+import { FamilyMember } from "@subtrees/types/FamilyMember";
 import { cn } from "@/libs/utils";
 
 

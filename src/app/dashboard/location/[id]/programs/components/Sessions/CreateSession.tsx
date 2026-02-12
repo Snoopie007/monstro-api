@@ -23,7 +23,7 @@ import { SessionSchema, DaysOfWeek } from "../../schemas";
 import { DialogDescription } from "@/components/ui/dialog";
 
 import { Loader2 } from "lucide-react";
-import { Program, Staff } from "@/types";
+import { Program, Staff } from "@subtrees/types";
 
 
 

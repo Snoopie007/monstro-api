@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { MigrateMember } from '@/types/member'
+import { MigrateMember } from '@subtrees/types/member'
 
 interface UseMigrationsParams {
     locationId: string

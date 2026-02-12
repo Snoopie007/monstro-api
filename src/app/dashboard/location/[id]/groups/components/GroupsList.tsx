@@ -3,7 +3,7 @@ import { Input } from "@/components/forms"
 import { Avatar, AvatarFallback, ScrollArea } from "@/components/ui"
 import { useState } from "react"
 import { useGroups } from "./GroupsProvider"
-import { Chat } from "@/types/chats"
+import { Chat } from "@subtrees/types/vendor/social/chat"
 import { CreateGroupModal } from "./CreateGroupModal"
 import { Plus } from "lucide-react"
 export function GroupsList({ lid }: { lid: string }) {
