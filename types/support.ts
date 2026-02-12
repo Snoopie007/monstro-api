@@ -1,83 +1,84 @@
 import type {
-    supportAssistants,
-    supportTriggers,
-    supportConversations,
-    supportMessages,
-} from "../schemas";
+  supportAssistants,
+  supportTriggers,
+  supportConversations,
+  supportMessages,
+} from "@subtrees/schemas";
 import type { Member } from "./member";
-import type { KnowledgeBase } from "./KnowledgeBase";
+import { KnowledgeBase } from "./KnowledgeBase";
+
 // Settings UI Types
 export interface SupportAssistantSettingsRequest {
-    prompt: string;
-    initialMessage: string;
-    temperature: number;
-    model: string;
-    persona: SupportPersona;
+  prompt: string;
+  initialMessage: string;
+  temperature: number;
+  model: string;
+  persona: SupportPersona;
 }
 export type SupportTrigger = typeof supportTriggers.$inferSelect;
 
 export type SupportConversation = typeof supportConversations.$inferSelect & {
-    assistant?: SupportAssistant;
-    member?: Member;
-    messages?: SupportMessage[];
+  assistant?: SupportAssistant;
+  member?: Member;
+  messages?: SupportMessage[];
 };
 export type SupportConversationStatus =
-    (typeof supportConversations.$inferSelect)["status"];
+  (typeof supportConversations.$inferSelect)["status"];
 
 export type NewSupportConversation = typeof supportConversations.$inferInsert;
 export type SupportAssistant = typeof supportAssistants.$inferSelect & {
-    triggers?: SupportTrigger[];
-    conversations?: SupportConversation[];
-    persona: SupportPersona;
-    knowledgeBase: KnowledgeBase;
+  triggers?: SupportTrigger[];
+  conversations?: SupportConversation[];
+  persona: SupportPersona;
+  knowledgeBase: KnowledgeBase;
 };
 
 export type SupportAssistantSettings = typeof supportAssistants.$inferSelect & {
-    triggers?: SupportTrigger[];
-    conversations?: SupportConversation[];
-    persona: SupportPersona;
-    knowledgeBase: KnowledgeBase;
+  triggers?: SupportTrigger[];
+  conversations?: SupportConversation[];
+  persona: SupportPersona;
+  knowledgeBase: KnowledgeBase;
 };
 
 export type NewSupportAssistant = typeof supportAssistants.$inferInsert & {
-    persona: SupportPersona;
+  persona: SupportPersona;
 };
 export type SupportMessage = typeof supportMessages.$inferSelect & {
-    role: SupportMessageRole;
+  role: SupportMessageRole;
 };
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
 export type SupportPersona = {
-    avatar: string;
-    responseStyle: string;
-    personality: string[];
+  avatar: string;
+  responseStyle: string;
+  personality: string[];
 };
 
 export type SupportTool = {
-    name: string;
-    description: string;
-    parameters: Record<string, any>;
-    args: Record<string, any>;
+  name: string;
+  description: string;
+  parameters: Record<string, any>;
+  args: Record<string, any>;
 };
 
 export type SupportMessageRole =
-    | "human"
-    | "ai"
-    | "assistant"
-    | "system"
-    | "tool"
-    | "tool_response"
-    | "tool_call";
+  | "human"
+  | "ai"
+  | "assistant"
+  | "system"
+  | "tool"
+  | "tool_response"
+  | "tool_call";
 
 // Test Chat API Routes
 export interface TestChatMessage {
-    id: string;
-    role: SupportMessageRole;
-    content: string;
-    tool_calls?: Record<string, any>[];
-    tool_call_id?: string;
-    metadata?: any;
-    timestamp: number;
+  id: string;
+  role: SupportMessageRole;
+  content: string;
+  tool_calls?: Record<string, any>[];
+  tool_call_id?: string;
+  metadata?: any;
+  timestamp: number;
 }
 
 // export interface TestChatSession {
@@ -89,12 +90,12 @@ export interface TestChatMessage {
 // }
 
 export type CustomVariableGroup = {
-    name: string;
-    variables: CustomVariable[];
+  name: string;
+  variables: CustomVariable[];
 };
 
 export type CustomVariable = {
-    id: number;
-    label: string;
-    value: string;
+  id: number;
+  label: string;
+  value: string;
 };

@@ -1,13 +1,20 @@
-import { chatMembers, chats, messages } from "../schemas/chat";
-import type { Media } from "./medias";
-import type { User } from "./user";
+import { User } from "./user";
+import { chats, messages, chatMembers } from "@subtrees/schemas";
+import { Media } from "./medias";
+import { ReactionCount } from "./reactions";
+import { Location } from "./location";
+import { Group } from "./group";
 
+export type Chat = typeof chats.$inferSelect & {
+    messages?: Message[];
+    startedBy?: User;
+    location?: Location;
+    group?: Group;
+    chatMembers?: ChatMember[];
+}
 
-export type Chat = typeof chats.$inferSelect;
-export type Message = typeof messages.$inferSelect & {
-    medias?: Media[];
-    reply?: MessageReply;
-    sender?: MessageSender;
+export type ChatMember = typeof chatMembers.$inferSelect & {
+    user?: User;
 }
 
 export type MessageSender = Omit<User, 'password' | 'email' | 'emailVerified' | 'created' | 'updated'>;
@@ -19,7 +26,12 @@ export type MessageReply = {
     sender?: MessageSender;
 }
 
-
-export type ChatMember = typeof chatMembers.$inferSelect & {
-    user?: User;
+export type Message = typeof messages.$inferSelect & {
+    sender?: User;
+    medias?: Media[];
+    reactions?: ReactionCount[];
+    progress?: number;
+    pendingFiles?: File[];
+    isOptimistic?: boolean;
+    reply?: MessageReply;
 }
