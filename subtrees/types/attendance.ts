@@ -45,6 +45,13 @@ export type Reservation = ReservationBase &
     attendance?: Attendance;
   };
 
+export type MissedReservation = {
+  id: string;
+  startOn: Date | string;
+  programId: string | null;
+  programName: string;
+};
+
 export type RecurringReservation = typeof recurringReservations.$inferSelect & {
   session?: ProgramSession | null;
   location?: Location;

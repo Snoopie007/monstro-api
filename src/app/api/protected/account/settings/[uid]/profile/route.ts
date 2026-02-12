@@ -22,12 +22,16 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ uid: stri
                 })
                 .where(eq(vendors.id, uid))
         } else {
+            const staffId = Number(uid);
+            if (!Number.isInteger(staffId)) {
+                return NextResponse.json({ error: "Staff not found." }, { status: 404 });
+            }
             await db.update(staffs)
                 .set({
                     ...body,
                     updated: new Date()
                 })
-                .where(eq(staffs.id, uid))
+                .where(eq(staffs.id, staffId))
         }
 
 

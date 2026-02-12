@@ -4,5 +4,5 @@ export type {
   GroupMemberPreview,
   GroupPost,
   GroupPostAuthor,
-  PostComment,
+  Comment as PostComment,
 } from "../../group";

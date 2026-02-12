@@ -16,7 +16,7 @@ async function fetchLocations(id: string, role: string) {
             })
             return locations
         } else if (role === "staff") {
-            const staffLocations = await db.query.staffLocations.findMany({
+            const staffLocations = await db.query.staffsLocations.findMany({
                 where: (staffLocations, { eq }) => eq(staffLocations.staffId, id),
             })
 

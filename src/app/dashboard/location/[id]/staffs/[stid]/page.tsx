@@ -7,9 +7,9 @@ import { ScrollArea } from "@/components/ui";
 
 async function getStaffLocation(stid: string, lid: string) {
     try {
-        const sl = await db.query.staffLocations.findFirst({
+        const sl = await db.query.staffsLocations.findFirst({
             where: (staffLocations, { eq, and }) => and(
-                eq(staffLocations.staffId, stid),
+                eq(staffLocations.staffId, stafId),
                 eq(staffLocations.locationId, lid)
             ),
             with: {

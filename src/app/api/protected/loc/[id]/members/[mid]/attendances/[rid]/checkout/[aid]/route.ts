@@ -5,9 +5,9 @@ import { eq } from 'drizzle-orm';
 
 export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string, aid: string }> }) {
 	const params = await props.params;
-	const attendanceId = params.aid;
+	const attendanceId = Number(params.aid);
 
-	if (!attendanceId) {
+	if (!Number.isInteger(attendanceId)) {
 		return NextResponse.json({ error: "Invalid attendance id" }, { status: 400 });
 	}
 

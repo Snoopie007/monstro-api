@@ -40,8 +40,12 @@ export async function PATCH(req: Request, props: { params: Promise<{ uid: string
       })
       user = vendor?.user;
     } else {
+      const staffId = Number(uid);
+      if (!Number.isInteger(staffId)) {
+        return NextResponse.json({ message: 'Staff not found.' }, { status: 404 })
+      }
       const staff = await db.query.staffs.findFirst({
-        where: (staff, { eq }) => eq(staff.id, uid),
+        where: (staff, { eq }) => eq(staff.id, staffId),
         with: {
           user: {
             with: {

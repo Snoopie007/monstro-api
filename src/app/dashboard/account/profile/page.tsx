@@ -23,8 +23,12 @@ async function getVendor(id: string): Promise<Vendor | undefined> {
 
 async function getStaff(id: string): Promise<Staff | undefined> {
     try {
+        const staffId = Number(id);
+        if (!Number.isInteger(staffId)) {
+            return undefined;
+        }
         const staff = await db.query.staffs.findFirst({
-            where: (staff, { eq }) => eq(staff.id, id),
+            where: (staff, { eq }) => eq(staff.id, staffId),
             with: {
                 user: true,
             },

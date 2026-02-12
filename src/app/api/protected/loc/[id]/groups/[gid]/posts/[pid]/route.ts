@@ -1,6 +1,6 @@
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { db } from "@/db/db";
-import { groupPosts, comments, staffLocations, staffs } from "@subtrees/schemas";
+import { groupPosts, comments, staffsLocations, staffs } from "@subtrees/schemas";
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 
@@ -94,10 +94,10 @@ export async function DELETE(req: Request, props: RouteParams) {
         let isStaff = false;
         if (staff) {
             // Then check if they have access to this location
-            const staffLocation = await db.query.staffLocations.findFirst({
+            const staffLocation = await db.query.staffsLocations.findFirst({
                 where: and(
-                    eq(staffLocations.staffId, staff.id),
-                    eq(staffLocations.locationId, locationId)
+                    eq(staffsLocations.staffId, staff.id),
+                    eq(staffsLocations.locationId, locationId)
                 ),
             });
             isStaff = !!staffLocation;
