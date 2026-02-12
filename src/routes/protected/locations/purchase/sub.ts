@@ -6,10 +6,11 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
-    calculateStripeFeeAmount,
 } from "@/libs/utils";
-import type { MemberPlanPricing, PaymentType } from "@subtrees/types";
-import { subQueue } from "@/workers/queues";
+import {
+    scheduleCronBasedRenewal, scheduleRecursiveRenewal,
+    type SubscriptionRenewalData
+} from "@/queues/subscriptions";
 
 
 
@@ -254,18 +255,11 @@ export function purchaseSubRoutes(app: Elysia) {
                         amount: pricing.price,
                     });
                 }
-
-
-
-
-
-
                 await db.transaction(async (tx) => {
                     await tx.update(memberSubscriptions).set({
                         status: 'active',
                         cancelAt,
-
-                        stripeSubscriptionId: paymentMethod.stripeId,
+                        stripePaymentId: paymentMethod.stripeId,
                         metadata: {
                             hasPaidDownpayment,
                             stripePaymentMethodId: paymentMethodId,
@@ -293,7 +287,11 @@ export function purchaseSubRoutes(app: Elysia) {
                                 currency: pricing.currency,
                                 interval: pricing.interval,
                             },
-
+                            discount: discount > 0 ? {
+                                amount: discount,
+                                duration: pricing.intervalThreshold,
+                                durationInMonths: pricing.intervalThreshold,
+                            } : undefined,
                         };
                         if (pricing.intervalThreshold === 1) {
                             scheduleCronBasedRenewal({
@@ -331,88 +329,5 @@ export function purchaseSubRoutes(app: Elysia) {
     });
 
     return app
-
-}
-
-
-type SubscriptionRenewalData = {
-    sid: string;
-    lid: string;
-    taxRate: number;
-    stripeCustomerId: string;
-    pricing: {
-        id: string;
-        name: string;
-        price: number;
-        currency: string;
-        interval: "day" | "week" | "month" | "year";
-    };
-    discount?: {
-        amount: number;
-        duration: number;
-        durationInMonths: number;
-    }
-}
-
-
-
-type ScheduleRenewalProps = {
-    startDate: Date;
-    interval: "day" | "week" | "month" | "year";
-    data: SubscriptionRenewalData;
-}
-
-
-
-
-async function scheduleCronBasedRenewal({
-    startDate,
-    interval,
-    data,
-}: ScheduleRenewalProps) {
-    const { sid } = data;
-    const UTCDate = startDate.getUTCDate();
-    const UTCHour = startDate.getUTCHours();
-    const UTCMinute = startDate.getUTCMinutes();
-
-    let pattern: string | undefined = undefined;
-    if (interval === "month") {
-        pattern = `${UTCMinute} ${UTCHour} ${UTCDate} * *`;
-    } else if (interval === "year") {
-        pattern = `${UTCMinute} ${UTCHour} ${UTCDate} * *`;
-    }
-    await subQueue.upsertJobScheduler(`renewal:static${sid}`, {
-        pattern,
-        utc: true,
-        startDate: startDate,
-    }, {
-        name: `renewal:static:${sid}`,
-        data: data,
-        opts: {
-            attempts: 3,
-            removeOnComplete: true,
-        }
-    });
-}
-
-async function scheduleRecursiveRenewal({
-    startDate,
-    data,
-}: {
-    startDate: Date;
-    data: SubscriptionRenewalData;
-}) {
-    const { sid } = data;
-    await subQueue.add('renewal:recursive', data, {
-        jobId: `renewal:recursive:${sid}`,
-        attempts: 6,
-        delay: Math.max(0, startDate.getTime() - Date.now()),
-        removeOnComplete: true,
-        removeOnFail: false,
-        backoff: {
-            type: 'exponential',
-            delay: 24 * 60 * 60 * 1000,
-        }
-    });
 
 }

@@ -35,10 +35,6 @@ export const classQueue = new Queue('classes', {
     }
 });
 
-export const subQueue = new Queue('subscriptions', {
-    connection: redisConfig,
-    defaultJobOptions: queueConfig.defaultJobOptions
-});
 
 
 emailQueue.on('error', (err) => {

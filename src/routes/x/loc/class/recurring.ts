@@ -1,4 +1,4 @@
-import { classQueue } from "@/workers/queues";
+import { classQueue } from "@/queues";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 

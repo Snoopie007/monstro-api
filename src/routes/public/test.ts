@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { testQueue } from "@/workers/queues";
+import { testQueue } from "@/queues";
 export function testRoutes(app: Elysia) {
     return app.post('/test', async ({ body, status }) => {
         const { subId } = body;
