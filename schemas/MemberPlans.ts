@@ -24,7 +24,7 @@ import {
 } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { memberContracts, memberInvoices, members } from "./members";
-import { recurringReservations, reservations } from "./reservations";
+import { reservations } from "./reservations";
 
 export const memberPlans = pgTable("member_plans", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -185,7 +185,6 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 	}),
 	invoices: many(memberInvoices),
 	reservations: many(reservations),
-	recurrings: many(recurringReservations),
 }));
 
 export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
@@ -211,7 +210,6 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
 		references: [memberContracts.id],
 	}),
 	reservations: many(reservations),
-	recurrings: many(recurringReservations),
 	childs: many(memberPackages, {
 		relationName: "children",
 	}),

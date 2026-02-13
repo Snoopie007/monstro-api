@@ -1,7 +1,7 @@
-import { RecurringReservation, Reservation } from "./attendance";
-import { MemberPlan } from "./member";
-import { ProgramStatus } from "./DatabaseEnums";
-import { planPrograms, programSessions, programs } from "@subtrees/schemas";
+import type { Reservation } from "./attendance";
+import type { MemberPlan } from "./member";
+import type { ProgramStatus } from "./DatabaseEnums";
+import { planPrograms, programs, programSessions } from "../schemas/programs";
 import { Staff } from "./staff";
 
 export type Program = typeof programs.$inferSelect & {
@@ -20,7 +20,6 @@ export type PlanProgram = typeof planPrograms.$inferSelect & {
 }
 
 export type ProgramSession = typeof programSessions.$inferSelect & {
-  recurringReservations?: RecurringReservation[];
   program?: Program,
   reservations?: Reservation[]
   reservationsCount?: number | null
