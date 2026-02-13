@@ -8,7 +8,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
 import { paymentMethods } from "./PaymentMethods";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
@@ -38,18 +38,3 @@ export const transactions = pgTable("transactions", {
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-export const transactionsRelations = relations(transactions, ({ one }) => ({
-	member: one(members, {
-		fields: [transactions.memberId],
-		references: [members.id],
-	}),
-	location: one(locations, {
-		fields: [transactions.locationId],
-		references: [locations.id],
-	}),
-	invoice: one(memberInvoices, {
-		fields: [transactions.invoiceId],
-		references: [memberInvoices.id],
-	}),
-}));

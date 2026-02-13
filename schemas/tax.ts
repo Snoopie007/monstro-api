@@ -7,7 +7,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export const taxRates = pgTable("tax_rates", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -24,10 +24,3 @@ export const taxRates = pgTable("tax_rates", {
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-export const taxRatesRelations = relations(taxRates, ({ one }) => ({
-    location: one(locations, {
-        fields: [taxRates.locationId],
-        references: [locations.id],
-    }),
-}));

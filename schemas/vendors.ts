@@ -1,7 +1,6 @@
 import { text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
 import { users } from "./users";
-import { relations, sql } from "drizzle-orm";
-import { locations } from "./locations";
+import { sql } from "drizzle-orm";
 
 export const vendors = pgTable("vendors", {
   id: uuid("id")
@@ -19,11 +18,3 @@ export const vendors = pgTable("vendors", {
     .defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-export const vendorsRelations = relations(vendors, ({ one, many }) => ({
-  user: one(users, {
-    fields: [vendors.userId],
-    references: [users.id],
-  }),
-  locations: many(locations),
-}));

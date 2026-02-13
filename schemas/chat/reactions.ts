@@ -1,11 +1,7 @@
 // schema/reactions.ts
 import type { ReactionEmoji } from '../../types';
-import { relations, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { check, index, jsonb, pgTable, pgView, text, timestamp, unique, integer } from 'drizzle-orm/pg-core';
-import { messages } from './chats';
-import { comments } from './comments';
-import { groupPosts } from './groups';
-import { moments } from './moments';
 
 import { users } from '../users';
 
@@ -50,26 +46,3 @@ export const userReactions = pgView('user_reactions').as((qb) =>
 		created: reactions.created,
 	}).from(reactions)
 );
-
-export const reactionsRelations = relations(reactions, ({ one }) => ({
-	user: one(users, {
-		fields: [reactions.userId],
-		references: [users.id],
-	}),
-	message: one(messages, {
-		fields: [reactions.ownerId],
-		references: [messages.id],
-	}),
-	post: one(groupPosts, {
-		fields: [reactions.ownerId],
-		references: [groupPosts.id],
-	}),
-	moment: one(moments, {
-		fields: [reactions.ownerId],
-		references: [moments.id],
-	}),
-	comment: one(comments, {
-		fields: [reactions.ownerId],
-		references: [comments.id],
-	}),
-}));

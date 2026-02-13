@@ -1,6 +1,6 @@
+import { users } from "../schemas/users";
 import type { Member } from "./member";
 import type { Vendor } from "./vendor";
-import { users } from "../schemas/users";
 
 export type User = typeof users.$inferSelect & {
   vendor?: Vendor;
