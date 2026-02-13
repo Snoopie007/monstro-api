@@ -9,7 +9,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { sql } from "drizzle-orm";
-import { memberInvoices, members } from "./members";
+import { members } from "./members";
+import { memberInvoices } from "./invoice";
 import { paymentMethods } from "./PaymentMethods";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
 import type { TransactionItem, TransactionMetadata, TransactionFees } from "../types";
