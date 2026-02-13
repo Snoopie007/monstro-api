@@ -1,9 +1,7 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { boolean, text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
 
 import { locations } from "./locations";
-import { memberContracts } from "./members";
-import { memberPlans } from "./MemberPlans";
 import { ContractTypeEnum } from "./DatabaseEnums";
 
 export const contractTemplates = pgTable("contracts", {
@@ -19,15 +17,3 @@ export const contractTemplates = pgTable("contracts", {
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-export const contractTemplateRelations = relations(
-	contractTemplates,
-	({ many, one }) => ({
-		memberContracts: many(memberContracts),
-		plans: many(memberPlans),
-		location: one(locations, {
-			fields: [contractTemplates.locationId],
-			references: [locations.id],
-		}),
-	})
-);

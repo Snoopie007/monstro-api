@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { integer, primaryKey, text, timestamp, pgTable, unique, jsonb, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 
@@ -20,10 +20,3 @@ export const integrations = pgTable("integrations", {
     primaryKey({ columns: [t.id] }),
     unique("location_service_unique").on(t.locationId, t.service)
 ]);
-
-export const integrationRelations = relations(integrations, ({ one }) => ({
-    location: one(locations, {
-        fields: [integrations.locationId],
-        references: [locations.id],
-    }),
-}));

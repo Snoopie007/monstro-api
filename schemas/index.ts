@@ -27,3 +27,6 @@ export * from "./PaymentMethods";
 export * from "./tax";
 export * from "./promos";
 export * from "./verifications";
+
+// Export all relations from the relations file
+export * from "./relations";

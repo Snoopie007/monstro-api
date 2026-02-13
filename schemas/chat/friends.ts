@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { text, timestamp, pgTable, unique, index } from "drizzle-orm/pg-core";
 import { users } from "../users";
 
@@ -15,16 +15,3 @@ export const friends = pgTable("friends", {
     index("idx_friends_addressee_id").on(t.addresseeId),
     index("idx_friends_status").on(t.status),
 ]);
-
-export const friendsRelations = relations(friends, ({ one }) => ({
-    requester: one(users, {
-        fields: [friends.requesterId],
-        references: [users.id],
-        relationName: "friendRequester",
-    }),
-    addressee: one(users, {
-        fields: [friends.addresseeId],
-        references: [users.id],
-        relationName: "friendAddressee",
-    }),
-}));

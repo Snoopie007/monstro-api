@@ -1,11 +1,11 @@
 import type {
     supportAssistants,
-    supportTriggers,
     supportConversations,
     supportMessages,
+    supportTriggers,
 } from "../schemas";
-import type { Member } from "./member";
 import type { KnowledgeBase } from "./KnowledgeBase";
+import type { Member } from "./member";
 // Settings UI Types
 export interface SupportAssistantSettingsRequest {
     prompt: string;
@@ -48,6 +48,7 @@ export type SupportMessage = typeof supportMessages.$inferSelect & {
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
 export type SupportPersona = {
+    name: string;
     avatar: string;
     responseStyle: string;
     personality: string[];
@@ -63,6 +64,7 @@ export type SupportTool = {
 export type SupportMessageRole =
     | "human"
     | "ai"
+    | "staff"
     | "assistant"
     | "system"
     | "tool"

@@ -1,7 +1,7 @@
-import { text, integer, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { memberRewards } from "./members";
-import { relations, sql } from "drizzle-orm";
+import { members } from "./members";
 
 export const rewards = pgTable("rewards", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -16,6 +16,14 @@ export const rewards = pgTable("rewards", {
     updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const rewardRelations = relations(rewards, ({ many }) => ({
-    claims: many(memberRewards),
-}));
+
+export const memberRewards = pgTable('reward_claims', {
+    id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
+    memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+    rewardId: text('reward_id').notNull().references(() => rewards.id, { onDelete: 'cascade' }),
+    locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
+    previousPoints: integer('previous_points'),
+    dateClaimed: timestamp('date_claimed', { withTimezone: true }).notNull().defaultNow(),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+}, t => [primaryKey({ columns: [t.id] })])
