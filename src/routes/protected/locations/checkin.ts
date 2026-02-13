@@ -7,7 +7,7 @@ import type { Reservation } from "@subtrees/types";
 import { isSameHour } from "date-fns";
 import Elysia from "elysia";
 import { eq } from "drizzle-orm";
-import { classQueue } from "@/workers/queues";
+import { classQueue } from "@/queues";
 import { z } from "zod";
 
 

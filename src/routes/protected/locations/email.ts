@@ -1,5 +1,5 @@
 import { EmailTemplates } from "@subtrees/emails";
-import { emailQueue } from "@/workers/queues";
+import { emailQueue } from "@/queues";
 import type { Elysia } from "elysia";
 import { z } from "zod";
 const LocationEmailProps = {

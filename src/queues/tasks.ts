@@ -1,10 +1,13 @@
 import { Queue } from "bullmq";
 import { redisConfig, queueConfig } from "@/config";
 
-export const emailQueue = new Queue('email', {
+export const testQueue = new Queue('test', {
     connection: redisConfig,
     defaultJobOptions: queueConfig.defaultJobOptions
 });
+
+
+
 
 export const invoiceQueue = new Queue('invoices', {
     connection: redisConfig,
@@ -28,15 +31,8 @@ export const classQueue = new Queue('classes', {
     }
 });
 
-export const subQueue = new Queue('subscriptions', {
-    connection: redisConfig,
-    defaultJobOptions: queueConfig.defaultJobOptions
-});
 
 
-emailQueue.on('error', (err) => {
-    console.error('Email queue error:', err);
-});
 
 invoiceQueue.on('error', (err) => {
     console.error('Invoice queue error:', err);

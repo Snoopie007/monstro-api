@@ -1,4 +1,4 @@
-import { emailQueue } from "@/workers/queues";
+import { emailQueue } from "@/queues";
 import type { Elysia } from "elysia";
 import {
     HolidayCancellationProps,

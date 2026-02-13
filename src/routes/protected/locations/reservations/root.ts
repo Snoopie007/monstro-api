@@ -10,7 +10,7 @@ import {
     reservations
 } from "subtrees/schemas";
 import { eq, sql } from "drizzle-orm";
-import { classQueue } from "@/workers/queues";
+import { classQueue } from "@/queues";
 import { z } from "zod";
 import { addMinutes } from "date-fns";
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';

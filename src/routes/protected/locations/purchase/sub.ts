@@ -1,14 +1,16 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions } from "@subtrees/schemas";
+import { memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
-    calculateStripeFeeAmount,
 } from "@/libs/utils";
-import type { MemberPlanPricing, PaymentType } from "@subtrees/types";
+import {
+    scheduleCronBasedRenewal, scheduleRecursiveRenewal,
+    type SubscriptionRenewalData
+} from "@/queues/subscriptions";
 
 
 
@@ -221,60 +223,98 @@ export function purchaseSubRoutes(app: Elysia) {
                     });
                 }
 
+                const planName = `${pricing.plan.name}/${pricing.name}`;
+                const { chargeDetails } = await stripe.processPayment({
+                    amount: pricing.downpayment ? pricing.downpayment : pricing.price,
+                    isRecurring: !pricing.downpayment,
+                    description: pricing.downpayment
+                        ? `Downpayment for ${planName}`
+                        : `Payment for ${planName}`,
+                    paymentMethodId: paymentMethod.stripeId,
+                    passOnFees: locationState.settings?.passOnFees ?? false,
+                    usagePercent: locationState.usagePercent ?? 0,
+                    paymentType: paymentMethod.type,
+                    metadata,
+                    discount,
+                    taxRate: taxRate?.percentage,
+                    productName: planName,
+                    currency: pricing.plan.currency,
+                });
 
-
-                let hasPaidDownpayment = false;
-                if (pricing.downpayment) {
-                    // Move start date to the next billing date
-                    startDate = calculateThresholdDate({
-                        startDate: today,
-                        threshold: pricing.intervalThreshold,
-                        interval: pricing.interval,
-                    });
-                    await stripe.processPayment({
-                        amount: pricing.downpayment,
-                        paymentMethodId: paymentMethodId,
-                        passOnFees: locationState.settings.passOnFees,
-                        usagePercent: locationState.usagePercent,
-                        paymentType: paymentMethod.type,
-                        metadata: metadata,
-                        discount,
-                        taxRate: taxRate?.percentage,
-                        productName: `${pricing.plan.name}/${pricing.name}`,
-                        description: `Downpayment for ${pricing.plan.name}/${pricing.name}`,
-                        currency: pricing.plan.currency,
-                    });
-                    hasPaidDownpayment = true;
-
-                } else {
-
-                }
 
                 await db.transaction(async (tx) => {
                     await tx.update(memberSubscriptions).set({
                         status: 'active',
                         cancelAt,
-                        stripeSubscriptionId: paymentMethod.stripeId,
+                        stripePaymentId: paymentMethod.stripeId,
                         metadata: {
-                            hasPaidDownpayment,
-                            stripePaymentMethodId: paymentMethodId,
+                            hasPaidDownpayment: !!pricing.downpayment,
                         },
                     }).where(eq(memberSubscriptions.id, memberPlanId));
-
-                    await tx
-                        .update(memberLocations)
-                        .set({
-                            status: "active",
-                            updated: new Date(),
-                        })
-                        .where(
-                            and(
-                                eq(memberLocations.memberId, mid),
-                                eq(memberLocations.locationId, lid)
-                            )
-                        );
+                    await tx.insert(transactions).values({
+                        description: `Payment for ${planName}`,
+                        items: [{ name: planName, quantity: 1, price: pricing.price, discount }],
+                        type: "inbound",
+                        total: chargeDetails.total,
+                        subTotal: chargeDetails.subTotal,
+                        totalTax: chargeDetails.tax,
+                        fees: {
+                            stripeFee: chargeDetails.stripeFee,
+                            monstroFee: chargeDetails.monstroFee,
+                        },
+                        status: "paid",
+                        locationId: lid,
+                        memberId: mid,
+                        paymentType: paymentMethod.type,
+                        chargeDate: today,
+                        currency: pricing.currency,
+                        metadata: {
+                            memberSubscriptionId: memberPlanId,
+                        },
+                    });
+                    await tx.update(memberLocations).set({
+                        status: "active",
+                    }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
                 });
 
+
+                // Schedule renewal
+
+                if (pricing.interval && pricing.intervalThreshold) {
+                    if (["month", "year"].includes(pricing.interval)) {
+                        const payload: SubscriptionRenewalData = {
+                            sid: memberPlanId,
+                            lid: lid,
+                            taxRate: taxRate?.percentage || 0,
+                            stripeCustomerId: member.stripeCustomerId,
+                            pricing: {
+                                name: pricing.name,
+                                price: pricing.price,
+                                currency: pricing.currency,
+                                interval: pricing.interval,
+                            },
+                            discount: discount > 0 ? {
+                                amount: discount,
+                                duration: pricing.intervalThreshold,
+                                durationInMonths: pricing.intervalThreshold,
+                            } : undefined,
+                        };
+                        if (pricing.intervalThreshold === 1) {
+
+                            scheduleCronBasedRenewal({
+                                startDate,
+                                interval: pricing.interval,
+                                data: payload,
+                            });
+                        } else {
+                            scheduleRecursiveRenewal({
+                                startDate,
+                                data: payload,
+                            });
+                        }
+
+                    }
+                }
 
                 return status(200, { status: 'active' });
             } catch (error) {
