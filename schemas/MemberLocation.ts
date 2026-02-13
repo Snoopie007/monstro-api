@@ -2,7 +2,7 @@ import { pgTable } from "drizzle-orm/pg-core";
 
 import { sql } from "drizzle-orm";
 import { integer, jsonb, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
-import { MemberLocationProfile } from "../types/member";
+import type { MemberLocationProfile } from "../types/member";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { members } from "./members";
