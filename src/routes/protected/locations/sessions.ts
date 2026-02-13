@@ -2,7 +2,6 @@ import { db } from "@/db/db";
 import type { ExtendedProgramSession } from "@subtrees/types";
 import { addDays, addMinutes } from "date-fns";
 import { Elysia, t } from "elysia";
-import { generateVRs } from "@/libs/utils";
 
 
 const SessionsProps = {
@@ -29,7 +28,7 @@ export async function locationSessions(app: Elysia) {
 
         try {
 
-            const location = await db.query.locations.findFirst({
+            await db.query.locations.findFirst({
                 where: (locations, { eq }) => eq(locations.id, lid),
                 columns: {
                     timezone: true,
@@ -52,23 +51,7 @@ export async function locationSessions(app: Elysia) {
                 ),
             });
 
-            const rrs = await db.query.recurringReservations.findMany({
-                where: (rr, { and, gte, or, isNull, lte, inArray }) => and(
-                    inArray(rr.sessionId, sessionIds),
-                    lte(rr.startDate, startDate),
-                    or(
-                        isNull(rr.canceledOn),
-                        gte(rr.canceledOn, startDate.toISOString().split("T")[0]!)
-                    )
-                ),
-                with: {
-                    exceptions: true,
-                    session: true,
-                },
-            });
 
-            const virtualReservations = generateVRs({ reservations, rrs, startDate, endDate });
-            const all = [...reservations, ...virtualReservations];
 
             const sessions: ExtendedProgramSession[] = [];
 
@@ -81,7 +64,7 @@ export async function locationSessions(app: Elysia) {
 
                     sessions.push({
                         ...session,
-                        reservations: all.filter((r) => r.sessionId === session.id),
+                        reservations: reservations.filter((r) => r.sessionId === session.id),
                         program: program,
                         startTime,
                         endTime,

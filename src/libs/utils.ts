@@ -1,5 +1,5 @@
 import type {
-    PaymentType, RecurringReservation, Reservation, TaxRate,
+    PaymentType, Reservation, TaxRate,
     Member
 } from "@subtrees/types";
 import { addDays, addYears, addMonths, addWeeks, isSameDay } from "date-fns";
@@ -33,80 +33,6 @@ function generateReferralCode(): string {
     return result;
 }
 
-
-
-interface GenerateVRsParams {
-    reservations: Reservation[];
-    rrs: RecurringReservation[];
-    startDate: Date;
-    endDate: Date;
-}
-
-function generateVRs({ reservations, rrs, startDate, endDate }: GenerateVRsParams): Reservation[] {
-    const virtualReservations: Reservation[] = [];
-
-    rrs.forEach((rr) => {
-        let currentDate = new Date(startDate);
-        const sessionDay = rr.session?.day;
-        if (!sessionDay) {
-            return;
-        }
-
-        const currentDay = currentDate.getDay();
-
-        if (currentDay !== sessionDay) {
-            currentDate = addDays(currentDate, (sessionDay - currentDay + 7) % 7);
-        }
-
-        while (currentDate <= endDate) {
-            const currentDateString = currentDate.toISOString().split("T")[0];
-
-
-            const exception = rr.exceptions?.find((e) => {
-                return e.occurrenceDate.toISOString().split("T")[0] === currentDateString;
-            });
-
-            const existingReservation = reservations.find((r) => {
-                return (
-                    r.startOn.toISOString().split("T")[0] === currentDateString &&
-                    r.sessionId === rr.sessionId
-                );
-            });
-
-            if (exception || existingReservation) {
-                currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
-                continue;
-            }
-
-            // Create proper reservation object with required fields
-            const startOn = new Date(currentDate);
-            const endOn = new Date(
-                startOn.getTime() + (rr.session?.duration || 60) * 60000
-            );
-
-
-            const attendance = rr.attendances?.find(a => isSameDay(a.startTime, startOn));
-
-            const { id, startDate, session, exceptions, attendances, ...rest } = rr;
-            virtualReservations.push({
-                id: `${id}+${currentDateString}`,
-                ...rest,
-                startOn: startOn,
-                endOn: endOn,
-                attendance,
-                recurringId: id,
-                isRecurring: true,
-                cancelledAt: null,
-                cancelledReason: null,
-                isMakeUpClass: false,
-                originalReservationId: null,
-            } as Reservation);
-            currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
-        }
-    });
-
-    return virtualReservations;
-}
 
 
 function sanitizeHTML(html: string) {
@@ -392,7 +318,6 @@ export {
     getAccessTokenAsync,
     interEmailsAndText,
     generateReferralCode,
-    generateVRs,
     generateUsername,
     generateDiscriminator,
     interpolate,

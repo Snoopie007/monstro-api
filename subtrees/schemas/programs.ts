@@ -2,9 +2,9 @@ import { text, timestamp, time, smallint, pgTable, integer, unique, boolean, pri
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberPackages, memberPlans, memberSubscriptions } from "./MemberPlans";
-import { recurringReservations, reservations } from "./reservations";
+import { reservations } from "./reservations";
 import { staffs } from "./staffs";
-import { IntervalType, ProgramStatusEnum } from "./DatabaseEnums";
+import { ProgramStatusEnum } from "./DatabaseEnums";
 import { members } from "./members";
 
 export const programs = pgTable("programs", {
@@ -78,7 +78,6 @@ export const programSessionsRelations = relations(programSessions, ({ one, many 
 		references: [staffs.id],
 	}),
 	reservations: many(reservations),
-	recurringReservations: many(recurringReservations),
 	waitlist: many(sessionWaitlist),
 }));
 
