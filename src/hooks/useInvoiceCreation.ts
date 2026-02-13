@@ -1,17 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import useSWR from "swr"
 import { useRouter } from "next/navigation"
 import type { CreateInvoiceFormData } from "@/libs/FormSchemas/CreateInvoiceSchema"
 import { toast } from "sonner"
 import type { IStepperMethods } from "@/components/ui"
+import { useSession } from "./useSession"
+import { clientsideApiClient } from "@/libs/api/client"
 
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | null, ref: React.RefObject<HTMLDivElement & IStepperMethods> | null}) => {
     const router = useRouter();
+    const { data: session } = useSession();
+    const api = useMemo(() => {
+        if (!session?.user?.sbToken) return null;
+        return clientsideApiClient(session.user.sbToken);
+    }, [session?.user?.sbToken]);
 
     const [previewData, setPreviewData] = useState<any>(null)
     const [createdInvoice, setCreatedInvoice] = useState<any>(null)
@@ -49,6 +56,10 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
 
     // Generate invoice preview
     const handlePreview = async (data: CreateInvoiceFormData) => {
+        if (!api || !mid) {
+            toast.error('Session not ready')
+            return
+        }
         setIsGeneratingPreview(true)
         try {
             let requestBody: any;
@@ -68,21 +79,13 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
                 requestBody = { items: itemsInCents };
             }
 
-            const response = await fetch(
-                `/api/protected/loc/${id}/members/${mid}/invoices/preview`,
+            const result = await api.post(
+                `/x/loc/${id}/invoices/preview`,
                 {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
+                    ...requestBody,
+                    memberId: mid,
                 }
-            )
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Failed to generate preview')
-            }
-
-            const result = await response.json()
+            ) as { preview: unknown }
             setPreviewData(result.preview)
             ref?.current?.goToStep(3)
         } catch (error) {
@@ -98,6 +101,10 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
     }
 
     const handleCreateInvoice = async (data: CreateInvoiceFormData) => {
+        if (!api || !mid) {
+            toast.error('Session not ready')
+            return
+        }
         setIsCreating(true);
         try {
             let requestData = { ...data };
@@ -122,21 +129,14 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
                 };
             }
 
-            const response = await fetch(
-                `/api/protected/loc/${id}/members/${mid}/invoices/create`,
+            const invoice = await api.post(
+                `/x/loc/${id}/invoices`,
                 {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestData),
+                    ...requestData,
+                    memberId: mid,
+                    subscriptionId: requestData.selectedSubscriptionId,
                 }
-            );
-    
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to create invoice');
-            }
-    
-            const invoice = await response.json();
+            ) as any;
             setCreatedInvoice(invoice);
             toast.success(
                 data.type === 'from-subscription' || data.paymentType === 'cash'
@@ -156,6 +156,7 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
         // For cash payment methods, or if it's a simple invoice object (from-subscription)
         // Just complete and navigate to member page
         if (createdInvoice?.paymentType === 'cash' ||
+            createdInvoice?.invoice?.paymentType === 'cash' ||
             !createdInvoice?.invoice?.id) {
             handleComplete();
             return;
@@ -164,17 +165,14 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
         // For Stripe invoices, send them
         setIsSending(true)
         try {
-            const response = await fetch(
-                `/api/protected/loc/${id}/members/${mid}/invoices/${createdInvoice.invoice.id}/send`,
-                { method: 'PATCH' }
-            )
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Failed to send invoice')
+            if (!api) {
+                throw new Error('Session not ready')
             }
-
-            const result = await response.json()
+            const invoiceId = createdInvoice?.invoice?.id || createdInvoice?.id
+            const result = await api.post(
+                `/x/loc/${id}/invoices/${invoiceId}/send`,
+                {}
+            ) as { message?: string }
             toast.success(result.message || 'Invoice sent successfully!')
             handleComplete()
         } catch (error) {

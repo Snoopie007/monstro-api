@@ -1,12 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import type { MemberSubscription } from '@subtrees/types';
 import { useMemberInvoices } from './hooks';
+import { useSession } from './useSession';
+import { clientsideApiClient } from '@/libs/api/client';
 
 export function useInvoiceReminder(subscription: MemberSubscription) {
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [hasExistingInvoice, setHasExistingInvoice] = useState(false);
   const { invoices: memberInvoices } = useMemberInvoices(subscription.locationId, subscription.memberId)
+  const { data: session } = useSession();
+  const api = useMemo(() => {
+    if (!session?.user?.sbToken) return null;
+    return clientsideApiClient(session.user.sbToken);
+  }, [session?.user?.sbToken]);
 
   // Check for existing draft invoices on mount
   useEffect(() => {
@@ -86,20 +93,22 @@ export function useInvoiceReminder(subscription: MemberSubscription) {
   };
 
   const handleGenerateInvoice = async () => {
+    if (!api) {
+      toast.error('Session not ready');
+      return;
+    }
     setIsGeneratingInvoice(true);
     try {
-      const response = await fetch(
-        `/api/protected/loc/${subscription.locationId}/members/${subscription.memberId}/subs/${subscription.id}/generate`,
-        { 
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' } 
+      await api.post(
+        `/x/loc/${subscription.locationId}/invoices`,
+        {
+          memberId: subscription.memberId,
+          type: 'from-subscription',
+          paymentType: subscription.paymentType,
+          selectedSubscriptionId: subscription.id,
+          subscriptionId: subscription.id,
         }
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate invoice');
-      }
 
       toast.success('Invoice generated as draft');
       window.location.reload();
@@ -121,4 +130,3 @@ export function useInvoiceReminder(subscription: MemberSubscription) {
     setHasExistingInvoice,
   };
 }
-

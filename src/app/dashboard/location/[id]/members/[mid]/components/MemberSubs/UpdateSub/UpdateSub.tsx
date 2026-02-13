@@ -22,15 +22,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowRight, Loader2 } from "lucide-react";
-import { cn, tryCatch } from "@/libs/utils";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
 import { format, intervalToDuration } from "date-fns";
-import { MemberPaymentMethod, MemberSubscription } from "@subtrees/types";
+import { MemberSubscription } from "@subtrees/types";
 import { EndDayPicker } from ".";
-import { useMemberStatus } from "../../../providers";
 import { useMemberSubscriptions } from "@/hooks";
+import { useSession } from "@/hooks/useSession";
+import { clientsideApiClient } from "@/libs/api/client";
 
 const UpdateSubSchema = z.object({
 	endAt: z.date().optional(),
@@ -48,10 +48,12 @@ interface UpdateSubProps {
 
 export function UpdateSub({ sub, open, onOpenChange }: UpdateSubProps) {
 	const { mutate } = useMemberSubscriptions(sub.locationId, sub.memberId)
-	const [paymentMethod, setPaymentMethod] = useState<MemberPaymentMethod | null>(null);
-	const { ml } = useMemberStatus();
-	const paymentMethods = ml.memberPaymentMethods;
 	const params = useParams();
+	const { data: session } = useSession();
+	const api = useMemo(() => {
+		if (!session?.user?.sbToken) return null;
+		return clientsideApiClient(session.user.sbToken);
+	}, [session?.user?.sbToken]);
 
 	// Use cancelAt for the scheduled end date
 	const rawEndDate = sub.cancelAt;
@@ -75,7 +77,7 @@ export function UpdateSub({ sub, open, onOpenChange }: UpdateSubProps) {
 			});
 			form.setValue("trialDays", trialDays.days || 0, { shouldValidate: true });
 		}
-	}, [sub]);
+	}, [form, sub]);
 
 
 
@@ -85,20 +87,21 @@ export function UpdateSub({ sub, open, onOpenChange }: UpdateSubProps) {
 			return;
 		}
 
+		if (!api) {
+			toast.error("Session not ready. Please try again.");
+			return;
+		}
 
-
-		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subs/${sub.id}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(v),
-			})
-		);
-
-
-
-		if (error || !result || !result.ok) {
-			toast.error("Failed to update subscription");
+		try {
+			await api.patch(`/x/loc/${params.id}/subscriptions/${sub.id}`, {
+				cancelAt: v.endAt || null,
+				allowProration: v.allowProration,
+				trialDays: v.trialDays,
+				paymentMethodId: v.paymentMethodId,
+			});
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to update subscription";
+			toast.error(message);
 			return;
 		}
 

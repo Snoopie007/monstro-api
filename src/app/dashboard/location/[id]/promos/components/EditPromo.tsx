@@ -10,10 +10,12 @@ import {
   Button,
 } from "@/components/ui"
 import type { Promo } from "@subtrees/types/promos"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "react-toastify"
 import { Loader2 } from "lucide-react"
 import { VisuallyHidden } from "@react-aria/visually-hidden"
+import { useSession } from "@/hooks/useSession"
+import { clientsideApiClient } from "@/libs/api/client"
 
 interface EditPromoProps {
   promo: Promo
@@ -24,27 +26,29 @@ interface EditPromoProps {
 export function EditPromo({ promo, lid, onClose }: EditPromoProps) {
   const [isActive, setIsActive] = useState(promo.isActive)
   const [loading, setLoading] = useState(false)
+  const { data: session } = useSession()
+  const api = useMemo(() => {
+    if (!session?.user?.sbToken) return null
+    return clientsideApiClient(session.user.sbToken)
+  }, [session?.user?.sbToken])
 
   const handleSubmit = async () => {
+    if (!api) {
+      toast.error("Session not ready. Please try again.")
+      return
+    }
+
     setLoading(true)
     
     try {
-      const response = await fetch(`/api/locations/${lid}/promos/${promo.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive }),
-      })
+      await api.patch(`/x/loc/${lid}/promos/${promo.id}`, { isActive })
 
-      if (response.ok) {
-        toast.success("Promo updated successfully")
-        onClose()
-        window.location.reload()
-      } else {
-        const data = await response.json()
-        toast.error(data.error || "Failed to update promo")
-      }
+      toast.success("Promo updated successfully")
+      onClose()
+      window.location.reload()
     } catch (error) {
-      toast.error("Failed to update promo")
+      const message = error instanceof Error ? error.message : "Failed to update promo"
+      toast.error(message)
     } finally {
       setLoading(false)
     }
