@@ -58,10 +58,7 @@ export function mlPlansRoutes(app: Elysia) {
             const result = flatPlans.map(item => ({
                 ...item,
                 programs: programListMap.get(item.plan.id) || [],
-                plan: {
-                    ...item.plan,
-
-                },
+                plan: item.plan,
             }));
             return status(200, result);
         } catch (error) {
