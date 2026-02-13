@@ -35,3 +35,4 @@ export * from "./vendor/role";
 export * from "./vendor/tag";
 export * from "./vendor/VendorReferral";
 export * from "./vendor/admin";
+export * from "./MigrateMember";
