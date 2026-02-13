@@ -26,7 +26,6 @@ export type SubscriptionRenewalData = {
     taxRate: number;
     stripeCustomerId: string;
     pricing: {
-        id: string;
         name: string;
         price: number;
         currency: string;

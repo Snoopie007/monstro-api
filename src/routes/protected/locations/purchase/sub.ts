@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions } from "@subtrees/schemas";
+import { memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
@@ -223,48 +223,55 @@ export function purchaseSubRoutes(app: Elysia) {
                     });
                 }
 
-
-                const commonOptions = {
+                const planName = `${pricing.plan.name}/${pricing.name}`;
+                const { chargeDetails } = await stripe.processPayment({
+                    amount: pricing.downpayment ? pricing.downpayment : pricing.price,
+                    isRecurring: !pricing.downpayment,
+                    description: pricing.downpayment
+                        ? `Downpayment for ${planName}`
+                        : `Payment for ${planName}`,
                     paymentMethodId: paymentMethod.stripeId,
-                    passOnFees: locationState.settings.passOnFees || false,
-                    usagePercent: locationState.usagePercent || 0,
+                    passOnFees: locationState.settings?.passOnFees ?? false,
+                    usagePercent: locationState.usagePercent ?? 0,
                     paymentType: paymentMethod.type,
-                    metadata: metadata,
+                    metadata,
                     discount,
                     taxRate: taxRate?.percentage,
-                    productName: `${pricing.plan.name}/${pricing.name}`,
+                    productName: planName,
                     currency: pricing.plan.currency,
-                }
+                });
 
-                let hasPaidDownpayment = false;
-                if (pricing.downpayment) {
-                    // Move start date to the next billing date
 
-                    await stripe.processPayment({
-                        ...commonOptions,
-                        amount: pricing.downpayment,
-                        description: `Downpayment for ${pricing.plan.name}/${pricing.name}`,
-                    });
-                    hasPaidDownpayment = true;
-
-                } else {
-                    await stripe.processPayment({
-                        ...commonOptions,
-                        isRecurring: true,
-                        description: `Payment for ${pricing.plan.name}/${pricing.name}`,
-                        amount: pricing.price,
-                    });
-                }
                 await db.transaction(async (tx) => {
                     await tx.update(memberSubscriptions).set({
                         status: 'active',
                         cancelAt,
                         stripePaymentId: paymentMethod.stripeId,
                         metadata: {
-                            hasPaidDownpayment,
-                            stripePaymentMethodId: paymentMethodId,
+                            hasPaidDownpayment: !!pricing.downpayment,
                         },
                     }).where(eq(memberSubscriptions.id, memberPlanId));
+                    await tx.insert(transactions).values({
+                        description: `Payment for ${planName}`,
+                        items: [{ name: planName, quantity: 1, price: pricing.price, discount }],
+                        type: "inbound",
+                        total: chargeDetails.total,
+                        subTotal: chargeDetails.subTotal,
+                        totalTax: chargeDetails.tax,
+                        fees: {
+                            stripeFee: chargeDetails.stripeFee,
+                            monstroFee: chargeDetails.monstroFee,
+                        },
+                        status: "paid",
+                        locationId: lid,
+                        memberId: mid,
+                        paymentType: paymentMethod.type,
+                        chargeDate: today,
+                        currency: pricing.currency,
+                        metadata: {
+                            memberSubscriptionId: memberPlanId,
+                        },
+                    });
                     await tx.update(memberLocations).set({
                         status: "active",
                     }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
@@ -274,14 +281,13 @@ export function purchaseSubRoutes(app: Elysia) {
                 // Schedule renewal
 
                 if (pricing.interval && pricing.intervalThreshold) {
-                    if (pricing.interval === "month" || pricing.interval === "year") {
+                    if (["month", "year"].includes(pricing.interval)) {
                         const payload: SubscriptionRenewalData = {
                             sid: memberPlanId,
                             lid: lid,
                             taxRate: taxRate?.percentage || 0,
                             stripeCustomerId: member.stripeCustomerId,
                             pricing: {
-                                id: pricing.id,
                                 name: pricing.name,
                                 price: pricing.price,
                                 currency: pricing.currency,
@@ -294,6 +300,7 @@ export function purchaseSubRoutes(app: Elysia) {
                             } : undefined,
                         };
                         if (pricing.intervalThreshold === 1) {
+
                             scheduleCronBasedRenewal({
                                 startDate,
                                 interval: pricing.interval,

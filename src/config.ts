@@ -69,7 +69,7 @@ export const queueConfig = {
         attempts: 3,
         backoff: {
             type: 'exponential',
-            delay: 1000,
+            delay: 60 * 1000,
         },
         removeOnComplete: true,
         removeOnFail: false,

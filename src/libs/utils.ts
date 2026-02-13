@@ -341,14 +341,14 @@ const STRIPE_FEE_PERCENT = 2.9
 const STRIPE_FEE_AMOUNT = 0.30
 const STRIPE_BANK_FEE = 0.8;
 
-function calculateStripeFeePercentage(amount: number, paymentType: PaymentType, isRecurring?: boolean) {
-    if (paymentType === 'us_bank_account') {
-        return STRIPE_BANK_FEE;
-    }
-    const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
-    const finalPercentage = isRecurring ? (STRIPE_BILLING_FEE + STRIPE_FEE_PERCENT) : STRIPE_FEE_PERCENT;
-    return Number((additionalPercentage + finalPercentage).toFixed(2))
-}
+// function calculateStripeFeePercentage(amount: number, paymentType: PaymentType, isRecurring?: boolean) {
+//     if (paymentType === 'us_bank_account') {
+//         return STRIPE_BANK_FEE;
+//     }
+//     const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
+//     const finalPercentage = isRecurring ? (STRIPE_BILLING_FEE + STRIPE_FEE_PERCENT) : STRIPE_FEE_PERCENT;
+//     return Number((additionalPercentage + finalPercentage).toFixed(2))
+// }
 
 function calculateStripeFeeAmount(amount: number, paymentType: PaymentType, isRecurring?: boolean) {
     if (amount <= 0) return 0;
@@ -399,7 +399,6 @@ export {
     generateOtp,
     tryCatch,
     handleAdditionalData,
-    calculateStripeFeePercentage,
     calculateStripeFeeAmount,
     calculateThresholdDate,
 };

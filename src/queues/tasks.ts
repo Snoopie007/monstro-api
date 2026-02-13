@@ -8,10 +8,6 @@ export const testQueue = new Queue('test', {
 
 
 
-export const emailQueue = new Queue('email', {
-    connection: redisConfig,
-    defaultJobOptions: queueConfig.defaultJobOptions
-});
 
 export const invoiceQueue = new Queue('invoices', {
     connection: redisConfig,
@@ -37,9 +33,6 @@ export const classQueue = new Queue('classes', {
 
 
 
-emailQueue.on('error', (err) => {
-    console.error('Email queue error:', err);
-});
 
 invoiceQueue.on('error', (err) => {
     console.error('Invoice queue error:', err);

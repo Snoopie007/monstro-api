@@ -213,7 +213,7 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 const planName = `${pricing.plan.name}/${pricing.name}`;
 
-                const { clientSecret, chargeDetails } = await stripe.processPayment({
+                const { paymentIntentId, chargeDetails } = await stripe.processPayment({
                     amount: pricing.price,
                     paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.plan.currency,
@@ -250,6 +250,15 @@ export function purchasePkgRoutes(app: Elysia) {
                         memberId: mid,
                         paymentType: paymentMethod.type,
                         chargeDate: today,
+                        currency: pricing.plan.currency,
+                        paymentIntentId: paymentIntentId,
+                        metadata: {
+                            memberPackageId: memberPlanId,
+                        },
+                        fees: {
+                            stripeFee: chargeDetails.stripeFee,
+                            monstroFee: chargeDetails.monstroFee,
+                        },
                     });
                     await tx.update(memberLocations).set({
                         status: "active",
