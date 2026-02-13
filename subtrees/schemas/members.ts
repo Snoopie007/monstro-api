@@ -1,12 +1,11 @@
 import { sql } from 'drizzle-orm'
-import { integer, primaryKey, text, timestamp, pgTable, boolean, jsonb, unique, uuid, bigint } from 'drizzle-orm/pg-core'
+import { primaryKey, text, timestamp, pgTable, boolean, jsonb, unique, uuid } from 'drizzle-orm/pg-core'
 import { locations } from './locations'
 import { users } from './users'
 import {
-	InvoiceStatusEnum, MemberRelationshipEnum, CustomFieldTypeEnum,
-	PaymentTypeEnum, FamilyMemberStatusEnum
+	MemberRelationshipEnum, CustomFieldTypeEnum,
+	FamilyMemberStatusEnum
 } from './DatabaseEnums'
-import type { InvoiceItem } from '../types'
 import { contractTemplates } from './contracts'
 
 

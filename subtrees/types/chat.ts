@@ -1,8 +1,8 @@
 import { chatMembers, chats, messages } from "../schemas/chat";
-import { Group } from "./group";
+import type { Group } from "./group";
 import type { Media } from "./medias";
 import type { User } from "./user";
-
+import type { Location } from "./location";
 type LastChatMessage = {
     content: string | null;
     created: Date;

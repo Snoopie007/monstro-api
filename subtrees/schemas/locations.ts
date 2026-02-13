@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
-	primaryKey,
 	text,
 	timestamp,
 	pgTable,
@@ -9,10 +8,8 @@ import {
 	integer,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { members } from "./members";
 import { vendors } from "./vendors";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import type { MemberLocationProfile } from "../types/member";
 import type { LocationSettings } from "../types";
 
 export const locations = pgTable("locations", {
