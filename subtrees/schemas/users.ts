@@ -1,10 +1,5 @@
 import { text, timestamp, pgTable, uuid, index, boolean, unique, integer } from "drizzle-orm/pg-core";
-import { accounts } from "./accounts";
-import { relations, sql } from "drizzle-orm";
-import { members } from "./members";
-import { vendors } from "./vendors";
-import { staffs } from "./staffs";
-import { userFeeds } from "./chat/moments";
+import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -38,32 +33,3 @@ export const userNotifications = pgTable("user_notifications", {
     index("idx_user_notifications_enabled").on(t.enabled).where(sql`${t.enabled} = true`),
     index("idx_user_notifications_token").on(t.token),
 ]);
-
-
-
-
-export const usersRelations = relations(users, ({ many, one }) => ({
-    accounts: many(accounts),
-    member: one(members, {
-        fields: [users.id],
-        references: [members.userId],
-    }),
-    vendor: one(vendors, {
-        fields: [users.id],
-        references: [vendors.userId],
-    }),
-    staff: one(staffs, {
-        fields: [users.id],
-        references: [staffs.userId],
-    }),
-    feeds: many(userFeeds, { relationName: 'userFeeds' }),
-    authorFeeds: many(userFeeds, { relationName: 'authorFeeds' }),
-    notifications: many(userNotifications),
-}));
-
-export const userNotificationsRelations = relations(userNotifications, ({ one }) => ({
-    user: one(users, {
-        fields: [userNotifications.userId],
-        references: [users.id],
-    }),
-}));
