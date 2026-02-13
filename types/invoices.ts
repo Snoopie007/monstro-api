@@ -1,4 +1,4 @@
-import { memberInvoices } from "../schemas/members";
+import { memberInvoices } from "../schemas/invoice";
 import type { Location } from "./location";
 import type { Member, MemberSubscription } from "./member";
 

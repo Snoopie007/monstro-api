@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { InvoiceItem } from "../types";
+import type { InvoiceItem } from "../types/invoices";
 import { InvoiceStatusEnum, PaymentTypeEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { memberSubscriptions } from "./MemberPlans";
