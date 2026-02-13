@@ -35,6 +35,7 @@ export type TransactionItem = {
   quantity: number;
   price: number;
   productId?: string;
+  discount?: number;
 }
 
 export type NewTransaction = typeof transactions.$inferInsert;
