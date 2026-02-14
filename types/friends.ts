@@ -1,6 +1,6 @@
 import { friends } from "../schemas";
-import { Chat } from "./chat";
-import { User } from "./user";
+import type { Chat } from "./chat";
+import type { User } from "./user";
 
 export type NewFriend = typeof friends.$inferInsert
 
