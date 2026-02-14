@@ -1,6 +1,6 @@
 import { memberRewards, rewards } from "../schemas/rewards";
-import { Location } from "./location";
-import { Member } from "./member";
+import type { Location } from "./location";
+import type { Member } from "./member";
 
 export type Reward = typeof rewards.$inferSelect & {
     location?: Location
