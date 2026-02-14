@@ -30,5 +30,6 @@ export type ExtendedProgramSession = ProgramSession & {
   planIds: string[];
   startTime: Date;
   endTime: Date;
-
+  utcStartTime: Date;
+  utcEndTime: Date;
 }
