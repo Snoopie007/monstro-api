@@ -3,7 +3,7 @@ import {
     attendances, reservations,
 } from "@subtrees/schemas";
 import type { MemberSubscription, MemberPackage, Reservation } from "@subtrees/types";
-import { isSameHour } from "date-fns";
+import { differenceInMinutes, isSameHour } from "date-fns";
 import { Elysia, t } from "elysia";
 import { sql } from "drizzle-orm";
 import { classQueue } from "@/queues";
@@ -15,8 +15,6 @@ const LocationCheckinProps = {
     }),
     body: t.Object({
         rid: t.String(),
-        startOn: t.Date(),
-        endOn: t.Date(),
     }),
 };
 
@@ -24,19 +22,20 @@ const LocationCheckinProps = {
 export async function locationCheckin(app: Elysia) {
     return app.post('/checkin', async ({ body, params, status }) => {
         const { lid } = params;
-        const { rid, startOn, endOn } = body;
+        const { rid } = body;
 
         try {
             const reservation = await db.query.reservations.findFirst({
                 where: (r, { eq }) => eq(r.id, rid),
                 columns: {
-                    id: true,
                     memberPackageId: true,
                     memberSubscriptionId: true,
                     programId: true,
                     programName: true,
                     memberId: true,
                     sessionId: true,
+                    startOn: true,
+                    endOn: true,
                 },
                 extras: {
                     attendanceCount: sql<number>`(
@@ -47,18 +46,25 @@ export async function locationCheckin(app: Elysia) {
                 },
             });
 
-            console.log(reservation);
 
             if (!reservation) {
                 return status(404, { error: "Reservation not found" });
             }
 
+            const { memberSubscriptionId, memberPackageId, attendanceCount, ...rest } = reservation;
 
             if (reservation.attendanceCount > 0) {
                 return status(400, { error: "Already checked in for this session" });
             }
 
-            const { memberSubscriptionId, memberPackageId, ...rest } = reservation;
+            const now = new Date();
+            const minutesUntilStart = differenceInMinutes(reservation.startOn, now);
+            const minutesUntilEnd = differenceInMinutes(reservation.endOn, now);
+
+            const canCheckin = minutesUntilStart <= 50 && minutesUntilEnd >= 15;
+            if (!canCheckin) {
+                return status(400, { error: "Cannot check in outside of session time" });
+            }
 
 
             let memberPlan: MemberSubscription | MemberPackage | undefined = undefined;
@@ -78,39 +84,21 @@ export async function locationCheckin(app: Elysia) {
                 return status(400, { error: "Member plan is not active" });
             }
 
-
             const checkin = await db.insert(attendances).values({
-                reservationId: reservation.id,
-                programId: reservation.programId,
-                programName: reservation.programName,
-                memberId: reservation.memberId,
+                ...rest,
                 locationId: lid,
-                checkInTime: new Date(),
-                startTime: startOn,
-                endTime: endOn,
+                checkInTime: now,
+                startTime: rest.startOn,
+                endTime: rest.endOn,
             }).returning();
-
-
-
-            const member = await db.query.members.findFirst({
-                where: (m, { eq }) => eq(m.id, reservation.memberId),
-                columns: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                    phone: true,
-                },
-            });
 
             // Evaluate attendance triggers after successful check-in
             // TODO: Evaluate attendance triggers
 
             // Cancel the missed class check job since member checked in
             try {
-                const jobId = `missed:checkin:${rid}`;
 
-                const job = await classQueue.getJob(jobId);
+                const job = await classQueue.getJob(`class:missed:${rid}`);
                 if (job) {
                     await job.remove();
                     console.log(`Cancelled missed class check for reservation ${rid}`);

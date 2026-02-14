@@ -21,21 +21,20 @@ const ReservationsProps = {
     }),
     body: t.Object({
         memberPlanId: t.String(),
-        date: t.String(),
         session: t.Object({
             id: t.String(),
             programId: t.String(),
-            duration: t.Number(),
-            time: t.String(),
+            utcStartTime: t.Date(),
+            utcEndTime: t.Date(),
         }),
         autoReschedule: t.Optional(t.Boolean()),
     }),
 };
 export async function locationReservations(app: Elysia) {
     app.group('/reservations', (app) => {
-        app.post('/sub', async ({ body, params, status }) => {
+        app.post('/', async ({ body, params, status }) => {
             const { lid } = params;
-            const { memberPlanId, date, session, autoReschedule } = body;
+            const { memberPlanId, session, autoReschedule } = body;
             const isPackage = memberPlanId.startsWith("pkg_");
             try {
 
@@ -113,22 +112,21 @@ export async function locationReservations(app: Elysia) {
                     return status(200, { success: false, message: "Class limit reached for your plan." });
                 }
                 // location time
-                const locationTime = formatInTimeZone(`${date}T${session.time}`, location!.timezone, 'yyyy-MM-dd HH:mm:ss');
-                const startTime = new Date(locationTime);
-                const endTime = addMinutes(startTime, session.duration);
+
+                const { utcStartTime, utcEndTime, programId } = session;
 
                 // Check if session is in the past
-                const isPasted = startTime.getTime() < now.getTime();
-                if (isPasted) {
-                    return status(200, { success: false, message: "This session is in the past." });
-                }
+                const diff = differenceInMilliseconds(utcStartTime, now);
 
+                if (diff <= 15) {
+                    return status(200, { success: false, message: "This session is in the future." });
+                }
 
                 // Check session state
                 const { isFull, isReserved } = await getSessionState({
-                    startTime,
+                    startTime: utcStartTime,
                     sessionId: session.id,
-                    programId: session.programId,
+                    programId: programId,
                     memberId: memberId!,
                 });
                 if (isFull || isReserved) {
@@ -144,8 +142,8 @@ export async function locationReservations(app: Elysia) {
                         memberId: memberId!,
                         locationId: lid,
                         sessionId: session.id,
-                        startOn: startTime,
-                        endOn: endTime,
+                        startOn: utcStartTime,
+                        endOn: utcEndTime,
                         ...session,
                         ...(isPackage ? {
                             memberPackageId: pkg?.id,
@@ -182,31 +180,31 @@ export async function locationReservations(app: Elysia) {
                     const payload = {
                         rid: reservation.id,
                         lid,
-
+                        mid: memberId,
                     }
                     // Calculate delays for reminders and missed checks
 
-                    const reminderDelay = differenceInMilliseconds(subDays(startTime, 2), now);
-                    const missedDelay = differenceInMilliseconds(addHours(startTime, 1), now);
+                    const reminderDelay = differenceInMilliseconds(subDays(session.utcStartTime, 2), now);
+                    const missedDelay = differenceInMilliseconds(addMinutes(session.utcEndTime, 45), now);
                     let queues = [
                         classQueue.add('reminder', payload, {
-                            jobId: `reminder:${reservation.id}`,
+                            jobId: `class:reminder:${reservation.id}`,
                             attempts: 3,
                             delay: reminderDelay,
                         }),
 
                         classQueue.add('missed:check', payload, {
-                            jobId: `missed:check:${reservation.id}`,
+                            jobId: `class:missed:${reservation.id}`,
                             attempts: 3,
                             delay: missedDelay,
                         })
                     ]
 
                     if (autoReschedule) {
-                        const rescheduleDelay = differenceInMilliseconds(subDays(startTime, 1), now);
+                        const rescheduleDelay = differenceInMilliseconds(subDays(session.utcStartTime, 1), now);
                         queues.push(
                             classQueue.add('reschedule', payload, {
-                                jobId: `reschedule:${reservation.id}`,
+                                jobId: `class:reschedule:${reservation.id}`,
                                 attempts: 3,
                                 delay: rescheduleDelay,
                             })
@@ -228,7 +226,6 @@ export async function locationReservations(app: Elysia) {
         }, ReservationsProps)
         app.delete('/:rid', async ({ params, status }) => {
             const { rid } = params;
-            console.log('rid', rid);
             try {
                 const reservation = await db.query.reservations.findFirst({
                     where: (reservations, { eq }) => eq(reservations.id, rid),

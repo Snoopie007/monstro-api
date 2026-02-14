@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import type { ExtendedProgramSession } from "@subtrees/types";
 import { addDays, addMinutes } from "date-fns";
 import { Elysia, t } from "elysia";
-
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 const SessionsProps = {
     params: t.Object({
@@ -28,12 +28,15 @@ export async function locationSessions(app: Elysia) {
 
         try {
 
-            await db.query.locations.findFirst({
+            const location = await db.query.locations.findFirst({
                 where: (locations, { eq }) => eq(locations.id, lid),
                 columns: {
                     timezone: true,
                 },
             });
+            if (!location) {
+                return status(404, { error: "Location not found" });
+            }
 
             const programs = await db.query.programs.findMany({
                 where: (programs, { inArray }) => inArray(programs.id, programIdsArray),
@@ -52,22 +55,38 @@ export async function locationSessions(app: Elysia) {
             });
 
 
+            console.log(location.timezone);
 
             const sessions: ExtendedProgramSession[] = [];
 
             programs.forEach((program) => {
+                console.log(program.name);
                 program.sessions.forEach((session) => {
-                    const startTime = new Date();
-                    const [hours, minutes, seconds] = session.time.split(":").map(Number);
-                    startTime.setHours(hours!, minutes!, seconds!, 0);
-                    const endTime = addMinutes(startTime, session.duration);
+                    // session.day is expected to be 0=Sunday, 1=Monday, ..., 6=Saturday
+                    // startDate is the first day of the week as per above
+                    const sessionDay = typeof session.day === "number" ? session.day : 0;
+                    const sessionDate = new Date(startDate);
+                    // Set sessionDate to the correct day of this week
+                    sessionDate.setDate(startDate.getDate() + (sessionDay - startDate.getDay() + 7) % 7);
 
+                    const [hours, minutes, seconds] = session.time.split(":").map(Number);
+                    sessionDate.setHours(hours!, minutes!, seconds!, 0);
+
+                    const startTime = new Date(sessionDate);
+                    const endTime = addMinutes(startTime, session.duration);
+                    const utcStartTime = fromZonedTime(startTime, location.timezone);
+                    const utcEndTime = fromZonedTime(endTime, location.timezone);
+
+                    const r = reservations.filter((r) => r.sessionId === session.id);
                     sessions.push({
                         ...session,
-                        reservations: reservations.filter((r) => r.sessionId === session.id),
+                        reservations: r,
                         program: program,
                         startTime,
                         endTime,
+                        availability: program.capacity - r.length,
+                        utcStartTime,
+                        utcEndTime,
                     } as ExtendedProgramSession);
                 });
             });
