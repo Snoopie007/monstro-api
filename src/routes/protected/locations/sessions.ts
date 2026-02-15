@@ -60,7 +60,6 @@ export async function locationSessions(app: Elysia) {
             const sessions: ExtendedProgramSession[] = [];
 
             programs.forEach((program) => {
-                console.log(program.name);
                 program.sessions.forEach((session) => {
                     // session.day is expected to be 0=Sunday, 1=Monday, ..., 6=Saturday
                     // startDate is the first day of the week as per above
