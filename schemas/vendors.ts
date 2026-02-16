@@ -41,28 +41,6 @@ export const supportPlans = pgTable("support_plans", {
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const vendorsRelations = relations(vendors, ({ one, many }) => ({
-  user: one(users, {
-    fields: [vendors.userId],
-    references: [users.id],
-  }),
-  locations: many(locations),
-  vendorLevel: one(vendorLevels, {
-    fields: [vendors.id],
-    references: [vendorLevels.vendorId],
-  }),
-  referrals: many(vendorReferrals, { relationName: "referrals" }),
-  referee: one(vendorReferrals, {
-    fields: [vendors.id],
-    references: [vendorReferrals.referralId],
-    relationName: "referee",
-  }),
-  supportPlans: one(supportPlans, {
-    fields: [vendors.id],
-    references: [supportPlans.vendorId],
-  }),
-}));
-
 export const supportPlansRelations = relations(supportPlans, ({ one }) => ({
   vendor: one(vendors, {
     fields: [supportPlans.vendorId],
