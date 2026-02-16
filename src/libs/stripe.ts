@@ -1,4 +1,4 @@
-import type { BillingCycleAnchorConfig, PaymentType } from "@subtrees/types";
+import type { PaymentType } from "@subtrees/types";
 
 import { addMonths } from "date-fns";
 import Stripe from "stripe";
@@ -561,30 +561,6 @@ class MemberStripePayments extends BaseStripePayments {
 
 
 
-        const option: Stripe.Checkout.SessionCreateParams = {
-            customer: this._customer,
-            payment_method_types: ['card', 'us_bank_account'],
-
-
-            mode: 'subscription',
-        }
-
-        const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
-            transfer_data: {
-                destination: this._accountId,
-            },
-            invoice_settings: {
-                issuer: {
-                    type: "account" as const,
-                    account: this._accountId
-                }
-            },
-            on_behalf_of: this._accountId,
-
-        }
-
-
-        return this._stripe.checkout.sessions.create(option);
     }
 
 
