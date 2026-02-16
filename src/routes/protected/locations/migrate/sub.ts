@@ -10,10 +10,11 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
+    calculateChargeDetails,
 } from "@/libs/utils";
 import { isToday } from "date-fns";
-import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, type SubscriptionRenewalData } from "@/queues/subscriptions";
-
+import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
+import type { SubscriptionJobData } from "@subtrees/bullmq";
 const MigrateSubProps = {
     params: z.object({
         lid: z.string(),
@@ -35,6 +36,9 @@ export function migrateSubRoutes(app: Elysia) {
                         member: {
                             columns: {
                                 stripeCustomerId: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
                             },
                         },
                         pricing: {
@@ -67,9 +71,6 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(404, { error: "Migrate not found" });
             }
 
-
-
-
             if (!location) {
                 return status(404, { error: "Location not found" });
             }
@@ -101,7 +102,6 @@ export function migrateSubRoutes(app: Elysia) {
                 ],
             });
 
-
             const currentPeriodStart = migrate.lastRenewalDay ? new Date(migrate.lastRenewalDay) : new Date();
 
             const currentPeriodEnd = calculateThresholdDate({
@@ -126,36 +126,47 @@ export function migrateSubRoutes(app: Elysia) {
 
             const planName = `${pricing.plan.name}/${pricing.name}`;
 
-
             const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
             let nextBillingDate: Date = currentPeriodStart;
 
+            let paymentIntentId: string | undefined = undefined;
             if (isToday(currentPeriodStart)) {
-                const { chargeDetails } = await stripe.processPayment({
+                const isGrowthPlan = locationState.planId === 3;
+                const chargeDetails = calculateChargeDetails({
                     amount: pricing.price,
-                    isRecurring: true,
-                    taxRate: taxRate?.percentage,
-                    description: `Payment for ${planName}`,
-                    paymentMethodId: paymentMethod.stripeId,
-                    passOnFees: false,
-                    usagePercent: locationState.usagePercent ?? 0,
+                    taxRate: taxRate?.percentage ?? 0,
+                    usagePercent: locationState.usagePercent || 0,
                     paymentType: paymentMethod.type,
-                    metadata,
-                    productName: planName,
-                    currency: pricing.plan.currency,
-                })
+                    isRecurring: !isGrowthPlan,
+                    passOnFees: locationState.settings?.passOnFees || false,
+                });
+
+                const productName = pricing.name;
+                const description = `Payment for ${pricing.name}`;
+                try {
+                    const { id } = await stripe.processPayment({
+
+                        ...chargeDetails,
+                        paymentMethodId,
+                        currency: pricing.currency,
+                        description,
+                        productName,
+                        metadata: metadata,
+                    });
+                    paymentIntentId = id;
+                } catch (error) {
+
+                }
                 await db.insert(transactions).values({
-                    description: `Payment for ${planName}`,
+                    description,
                     items: [{ name: planName, quantity: 1, price: pricing.price }],
                     type: "inbound",
-                    total: chargeDetails.total,
-                    subTotal: chargeDetails.subTotal,
-                    totalTax: chargeDetails.tax,
+                    ...chargeDetails,
                     fees: {
                         stripeFee: chargeDetails.stripeFee,
                         monstroFee: chargeDetails.monstroFee,
                     },
-                    status: "paid",
+                    status: paymentIntentId ? "paid" : "failed",
                     locationId: lid,
                     memberId: mid,
                     paymentType: paymentMethod.type,
@@ -189,7 +200,7 @@ export function migrateSubRoutes(app: Elysia) {
                     classCredits: migrate.classCredits || 0,
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentMethod.type,
-                    status: 'active',
+                    status: paymentIntentId ? 'active' : 'past_due',
                     stripePaymentId: paymentMethod.stripeId,
                 }).returning();
                 // Insert transaction
@@ -213,11 +224,21 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(500, { error: "Failed to create subscription" });
             }
             if (["month", "year"].includes(pricing.interval)) {
-                const payload: SubscriptionRenewalData = {
+                const payload: SubscriptionJobData = {
                     sid: sub.id,
                     lid: lid,
                     taxRate: taxRate?.percentage || 0,
+                    member: {
+                        firstName: member.firstName,
+                        lastName: member.lastName,
+                        email: member.email,
+                    },
                     stripeCustomerId: member.stripeCustomerId,
+                    location: {
+                        name: location.name,
+                        phone: location.phone,
+                        email: location.email,
+                    },
                     pricing: {
                         name: pricing.name,
                         price: pricing.price,

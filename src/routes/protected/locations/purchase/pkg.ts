@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import {
     calculateThresholdDate,
-    calculateStripeFeeAmount
+    calculateChargeDetails,
 } from "@/libs/utils";
 
 import Stripe from "stripe";
@@ -211,25 +211,36 @@ export function purchasePkgRoutes(app: Elysia) {
                 const today = new Date();
                 const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
 
-                const planName = `${pricing.plan.name}/${pricing.name}`;
+                const { settings, usagePercent } = locationState;
 
-                const { paymentIntentId, chargeDetails } = await stripe.processPayment({
+                const productName = `${pricing.plan.name}/${pricing.name}`;
+                const description = `Payment for ${productName}`;
+                const chargeDetails = calculateChargeDetails({
                     amount: pricing.price,
-                    paymentMethodId: paymentMethod.stripeId,
-                    currency: pricing.plan.currency,
-                    passOnFees: locationState.settings.passOnFees,
-                    usagePercent: locationState.usagePercent,
-                    paymentType: paymentMethod.type,
-                    description: `Payment for ${planName}`,
-                    productName: planName,
-                    taxRate: taxRate?.percentage,
                     discount,
-                    metadata: {
-                        pricingId: pricing.id,
-                        planId: pricing.plan.id,
-                        ...metadata,
-                    },
+                    taxRate: taxRate?.percentage ?? 0,
+                    usagePercent: usagePercent || 0,
+                    paymentType: paymentMethod.type,
+                    isRecurring: false,
+                    passOnFees: settings?.passOnFees || false,
                 });
+                let paymentIntentId: string | undefined = undefined;
+                try {
+                    const { id } = await stripe.processPayment({
+                        ...chargeDetails,
+                        paymentMethodId,
+                        currency: pricing.currency,
+                        description,
+                        productName,
+                        metadata: {
+                            memberPackageId: memberPlanId,
+                            ...metadata,
+                        },
+                    });
+                    paymentIntentId = id;
+                } catch (error) {
+
+                }
 
                 await db.transaction(async (tx) => {
                     await tx.update(memberPackages).set({
@@ -239,12 +250,10 @@ export function purchasePkgRoutes(app: Elysia) {
                         },
                     }).where(eq(memberPackages.id, memberPlanId));
                     await tx.insert(transactions).values({
-                        description: `Payment for ${planName}`,
-                        items: [{ name: planName, quantity: 1, price: pricing.price, discount }],
+                        description,
+                        items: [{ name: productName, quantity: 1, price: pricing.price, discount }],
                         type: "inbound",
-                        total: chargeDetails.total,
-                        subTotal: chargeDetails.subTotal,
-                        totalTax: chargeDetails.tax,
+                        ...chargeDetails,
                         status: "paid",
                         locationId: lid,
                         memberId: mid,

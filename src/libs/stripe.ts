@@ -2,7 +2,6 @@ import type { PaymentType } from "@subtrees/types";
 
 import { addMonths } from "date-fns";
 import Stripe from "stripe";
-import { calculateStripeFeeAmount } from "./utils";
 import { BASE_MONSTRO_X_URL } from "@subtrees/emails/_shared/data";
 
 type Customer = {
@@ -31,14 +30,12 @@ interface VendorPaymentIntentOptions {
 
 
 type MemberPaymentOptions = {
-    isRecurring?: boolean;
-    amount: number,
-    passOnFees: boolean;
+    total: number,
+    unitCost: number,
+    tax: number,
+    applicationFeeAmount: number,
     paymentMethodId: string,
-    usagePercent: number;
-    paymentType: PaymentType;
     authorizeOnly?: boolean,
-    taxRate?: number;
     description?: string,
     productName?: string,
     discount?: number,
@@ -289,14 +286,13 @@ abstract class BaseStripePayments {
         return res.data;
     }
 
-    async retryPayment(invoiceId: string, paymentMethod: string) {
-        return await this._stripe.invoices.pay(invoiceId, {
-            payment_method: paymentMethod,
+    async retryPaymentIntent(lid: string, paymentIntentId: string, paymentMethodId: string) {
+        const url = `${BASE_MONSTRO_X_URL}/account/location/${lid}/purchase/confirm`;
+        return await this._stripe.paymentIntents.confirm(paymentIntentId, {
+            payment_method: paymentMethodId,
+            return_url: url,
+            expand: ["payment_method"],
         });
-    }
-
-    async refund(chargeId: string) {
-        return await this._stripe.refunds.create({ charge: chargeId });
     }
 
     async removeAccount(accountId: string) {
@@ -452,22 +448,6 @@ class MemberStripePayments extends BaseStripePayments {
         return res.data;
     }
 
-    async createPaymentIntent(customerId: string, amount: number, paymentMethodId: string) {
-
-        const option: Stripe.PaymentIntentCreateParams = {
-            amount,
-            currency: "usd",
-            customer: customerId,
-            payment_method: paymentMethodId,
-            confirm: true,
-            return_url: `${BASE_MONSTRO_X_URL}/account/location/`,
-        };
-
-        return await this._stripe.paymentIntents.create(option);
-
-
-    }
-
     async processPayment(options: MemberPaymentOptions) {
 
         if (!this._customer) {
@@ -479,30 +459,13 @@ class MemberStripePayments extends BaseStripePayments {
 
 
         const {
-            description, taxRate, metadata, discount,
+
+            description, total, unitCost, metadata, discount,
             authorizeOnly, productName, currency,
-            isRecurring, amount, paymentMethodId,
-            passOnFees, usagePercent, paymentType
+            tax, paymentMethodId, applicationFeeAmount
         } = options || {};
 
 
-        let price = Math.max(0, amount - (discount || 0));
-
-        const tax = Math.floor(price * (taxRate || 0) / 100);
-
-        let total = price + tax;
-        const monstroFee = Math.floor(price * (usagePercent / 100));
-
-        const stripeFee = calculateStripeFeeAmount((
-            passOnFees ? total : total + monstroFee
-        ), paymentType, isRecurring || false);
-
-        const applicationFeeAmount = monstroFee + stripeFee;
-
-        if (passOnFees) {
-            total += applicationFeeAmount;
-            price += applicationFeeAmount;
-        }
 
         const url = `${BASE_MONSTRO_X_URL}/account/location/${metadata?.lid}/purchase/confirm`;
         const option: Stripe.PaymentIntentCreateParams = {
@@ -514,7 +477,7 @@ class MemberStripePayments extends BaseStripePayments {
                 line_items: [{
                     product_name: productName || "",
                     quantity: 1,
-                    unit_cost: price,
+                    unit_cost: unitCost,
                     ...(discount && { discount_amount: discount }),
                     tax: {
                         total_tax_amount: tax,
@@ -530,22 +493,16 @@ class MemberStripePayments extends BaseStripePayments {
             payment_method: paymentMethodId || undefined,
             capture_method: authorizeOnly ? "manual" : "automatic",
             return_url: url,
+            expand: ["payment_method"],
             metadata: metadata || undefined
         }
 
-        const { id, client_secret, payment_method, latest_charge } = await this._stripe.paymentIntents.create(option);
+
+        const { id, client_secret } = await this._stripe.paymentIntents.create(option);
+
         return {
-            paymentIntentId: id,
+            id,
             clientSecret: client_secret,
-            paymentMethod: payment_method,
-            chargeId: latest_charge,
-            chargeDetails: {
-                total,
-                subTotal: price,
-                tax,
-                stripeFee,
-                monstroFee,
-            }
         };
     }
 
@@ -561,6 +518,17 @@ class MemberStripePayments extends BaseStripePayments {
 
 
 
+        const option: Stripe.Checkout.SessionCreateParams = {
+            customer: this._customer,
+            payment_method_types: ['card', 'us_bank_account'],
+
+
+            mode: 'subscription',
+        }
+
+
+
+        return this._stripe.checkout.sessions.create(option);
     }
 
 

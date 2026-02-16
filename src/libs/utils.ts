@@ -267,14 +267,7 @@ const STRIPE_FEE_PERCENT = 2.9
 const STRIPE_FEE_AMOUNT = 0.30
 const STRIPE_BANK_FEE = 0.8;
 
-// function calculateStripeFeePercentage(amount: number, paymentType: PaymentType, isRecurring?: boolean) {
-//     if (paymentType === 'us_bank_account') {
-//         return STRIPE_BANK_FEE;
-//     }
-//     const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
-//     const finalPercentage = isRecurring ? (STRIPE_BILLING_FEE + STRIPE_FEE_PERCENT) : STRIPE_FEE_PERCENT;
-//     return Number((additionalPercentage + finalPercentage).toFixed(2))
-// }
+
 
 function calculateStripeFeeAmount(amount: number, paymentType: PaymentType, isRecurring?: boolean) {
     if (amount <= 0) return 0;
@@ -292,14 +285,62 @@ function calculateStripeFeeAmount(amount: number, paymentType: PaymentType, isRe
 
 
 
+type CalculateChargeDetailsProps = {
+    amount: number;
+    discount?: number;
+    taxRate: number;
+    usagePercent: number;
+    paymentType: PaymentType;
+    isRecurring: boolean;
+    passOnFees: boolean;
+}
 
-interface EndDateParams {
+type ChargeDetailsReturn = {
+    total: number;
+    subTotal: number;
+    unitCost: number;
+    tax: number;
+    monstroFee: number;
+    stripeFee: number;
+    applicationFeeAmount: number;
+}
+function calculateChargeDetails(props: CalculateChargeDetailsProps): ChargeDetailsReturn {
+    const { amount, discount, taxRate, usagePercent, paymentType, isRecurring, passOnFees } = props;
+    let price = Math.max(0, amount - (discount || 0));
+
+    const tax = Math.floor(price * (taxRate || 0) / 100);
+
+    let total = price + tax;
+    const monstroFee = Math.floor(price * (usagePercent / 100));
+
+    const stripeFee = calculateStripeFeeAmount((
+        passOnFees ? total : total + monstroFee
+    ), paymentType, isRecurring || false);
+
+    const applicationFeeAmount = monstroFee + stripeFee;
+
+    if (passOnFees) {
+        total += applicationFeeAmount;
+        price += applicationFeeAmount;
+    }
+    return {
+        total,
+        subTotal: price,
+        unitCost: price,
+        tax,
+        monstroFee,
+        stripeFee,
+        applicationFeeAmount,
+    }
+}
+
+interface ThresholdDateParams {
     startDate: Date,
     threshold: number,
     interval: 'day' | 'week' | 'month' | 'year'
 }
 
-function calculateThresholdDate({ startDate, threshold, interval }: EndDateParams) {
+function calculateThresholdDate({ startDate, threshold, interval }: ThresholdDateParams) {
     switch (interval) {
         case "day":
             return addDays(startDate, threshold);
@@ -324,6 +365,7 @@ export {
     generateOtp,
     tryCatch,
     handleAdditionalData,
+    calculateChargeDetails,
     calculateStripeFeeAmount,
     calculateThresholdDate,
 };

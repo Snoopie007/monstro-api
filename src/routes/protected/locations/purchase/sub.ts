@@ -6,11 +6,12 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
+    calculateChargeDetails,
 } from "@/libs/utils";
 import {
     scheduleCronBasedRenewal, scheduleRecursiveRenewal,
-    type SubscriptionRenewalData
 } from "@/queues/subscriptions";
+import type { SubscriptionJobData } from "@subtrees/bullmq";
 
 
 
@@ -106,6 +107,9 @@ export function purchaseSubRoutes(app: Elysia) {
                     db.query.members.findFirst({
                         where: (member, { eq }) => eq(member.id, mid),
                         columns: {
+                            firstName: true,
+                            lastName: true,
+                            email: true,
                             stripeCustomerId: true,
                         },
                     }),
@@ -223,23 +227,38 @@ export function purchaseSubRoutes(app: Elysia) {
                     });
                 }
 
-                const planName = `${pricing.plan.name}/${pricing.name}`;
-                const { chargeDetails } = await stripe.processPayment({
-                    amount: pricing.downpayment ? pricing.downpayment : pricing.price,
-                    isRecurring: !pricing.downpayment,
-                    description: pricing.downpayment
-                        ? `Downpayment for ${planName}`
-                        : `Payment for ${planName}`,
-                    paymentMethodId: paymentMethod.stripeId,
-                    passOnFees: locationState.settings?.passOnFees ?? false,
-                    usagePercent: locationState.usagePercent ?? 0,
-                    paymentType: paymentMethod.type,
-                    metadata,
+                const { usagePercent, settings } = locationState;
+                const isGrowthPlan = locationState.planId === 3;
+                const chargeDetails = calculateChargeDetails({
+                    amount: pricing.price,
                     discount,
-                    taxRate: taxRate?.percentage,
-                    productName: planName,
-                    currency: pricing.plan.currency,
+                    taxRate: taxRate?.percentage ?? 0,
+                    usagePercent: usagePercent || 0,
+                    paymentType: paymentMethod.type,
+                    isRecurring: !isGrowthPlan,
+                    passOnFees: settings?.passOnFees || false,
                 });
+
+                const productName = pricing.name;
+                const description = `Payment for ${pricing.name}`;
+                let paymentIntentId: string | undefined = undefined;
+                try {
+                    const { id } = await stripe.processPayment({
+
+                        ...chargeDetails,
+                        paymentMethodId,
+                        currency: pricing.currency,
+                        description,
+                        productName,
+                        metadata: {
+                            memberSubscriptionId: memberPlanId,
+                            ...metadata,
+                        },
+                    });
+                    paymentIntentId = id;
+                } catch (error) {
+
+                }
 
 
                 await db.transaction(async (tx) => {
@@ -252,12 +271,10 @@ export function purchaseSubRoutes(app: Elysia) {
                         },
                     }).where(eq(memberSubscriptions.id, memberPlanId));
                     await tx.insert(transactions).values({
-                        description: `Payment for ${planName}`,
-                        items: [{ name: planName, quantity: 1, price: pricing.price, discount }],
+                        description,
+                        items: [{ name: productName, quantity: 1, price: pricing.price, discount }],
                         type: "inbound",
-                        total: chargeDetails.total,
-                        subTotal: chargeDetails.subTotal,
-                        totalTax: chargeDetails.tax,
+                        ...chargeDetails,
                         fees: {
                             stripeFee: chargeDetails.stripeFee,
                             monstroFee: chargeDetails.monstroFee,
@@ -282,11 +299,21 @@ export function purchaseSubRoutes(app: Elysia) {
 
                 if (pricing.interval && pricing.intervalThreshold) {
                     if (["month", "year"].includes(pricing.interval)) {
-                        const payload: SubscriptionRenewalData = {
+                        const payload: SubscriptionJobData = {
                             sid: memberPlanId,
                             lid: lid,
+                            member: {
+                                firstName: member.firstName,
+                                lastName: member.lastName,
+                                email: member.email,
+                            },
                             taxRate: taxRate?.percentage || 0,
                             stripeCustomerId: member.stripeCustomerId,
+                            location: {
+                                name: location.name,
+                                phone: location.phone,
+                                email: location.email,
+                            },
                             pricing: {
                                 name: pricing.name,
                                 price: pricing.price,
@@ -296,7 +323,6 @@ export function purchaseSubRoutes(app: Elysia) {
                             discount: discount > 0 ? {
                                 amount: discount,
                                 duration: pricing.intervalThreshold,
-                                durationInMonths: pricing.intervalThreshold,
                             } : undefined,
                         };
                         if (pricing.intervalThreshold === 1) {

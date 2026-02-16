@@ -1,6 +1,7 @@
 
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
+import type { SubscriptionJobData } from "@subtrees/bullmq/types";
 
 
 export const subQueue = new Queue('subscriptions', {
@@ -15,30 +16,13 @@ subQueue.on('error', (err) => {
     console.error('Subscription renewal error:', err);
 });
 
-export type SubscriptionRenewalData = {
-    sid: string;
-    lid: string;
-    taxRate: number;
-    stripeCustomerId: string;
-    pricing: {
-        name: string;
-        price: number;
-        currency: string;
-        interval: "day" | "week" | "month" | "year";
-    };
-    discount?: {
-        amount: number;
-        duration: number;
-        durationInMonths: number;
-    }
-}
 
 
 
 type ScheduleRenewalProps = {
     startDate: Date;
     interval: "day" | "week" | "month" | "year";
-    data: SubscriptionRenewalData;
+    data: SubscriptionJobData;
 }
 
 
@@ -75,7 +59,7 @@ export async function scheduleRecursiveRenewal({
     data,
 }: {
     startDate: Date;
-    data: SubscriptionRenewalData;
+    data: SubscriptionJobData;
 }) {
     const { sid } = data;
     await subQueue.add('renewal:recursive', data, {
