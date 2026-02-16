@@ -91,7 +91,7 @@ export async function POST(
 				.where(
 					and(
 						eq(transactions.invoiceId, params.iid),
-						eq(transactions.status, "incomplete")
+						eq(transactions.status, "failed")
 					)
 				);
 

@@ -139,7 +139,7 @@ export async function POST(req: NextRequest, props: Props) {
             await tx.insert(transactions).values({
                 description: `One time payment for ${plan.name} - ${pricing.name}`,
                 ...CommonData,
-                totalTax: tax,
+                tax,
                 type: "inbound",
                 items: [{
                     productId: plan.id,

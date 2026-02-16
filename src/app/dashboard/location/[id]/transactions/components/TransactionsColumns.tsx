@@ -34,7 +34,7 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
         cell: ({ row }) => {
             const transaction = row.original
             return (
-                <div className="flex flex-row items-center gap-2">{formatAmountForDisplay(transaction.totalTax / 100, transaction.currency || 'usd', true)}</div>
+                <div className="flex flex-row items-center gap-2">{formatAmountForDisplay(transaction.tax / 100, transaction.currency || 'usd', true)}</div>
             )
         },
     },

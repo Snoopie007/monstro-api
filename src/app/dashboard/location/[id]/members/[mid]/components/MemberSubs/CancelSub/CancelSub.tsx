@@ -76,9 +76,10 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 			await api.post(`/x/loc/${params.id}/subscriptions/${sub.id}/cancel`, {
 				mode,
 				cancelAt: formState.cancelOption === "custom" ? formState.customDate : null,
+				reason: formState.reason || undefined,
 				refund: {
 					enabled: formState.refundAmount > 0,
-					amountType: formState.refundAmount > 0 ? "partial" : undefined,
+					amountType: formState.refundAmount > 0 ? "full" : undefined,
 					amount: formState.refundAmount > 0 ? formState.refundAmount : undefined,
 				},
 			});
@@ -109,6 +110,7 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 								setFormState((prev) => ({
 									...prev,
 									cancelOption: value as "now" | "end" | "custom",
+									...(value !== "now" ? { refundAmount: 0 } : {}),
 								}))
 							}
 							className="space-y-2 text-sm col-span-3"
@@ -162,8 +164,7 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 						</RadioGroup>
 					</div>
 
-					{/* URGENT TODO: REFACTOR REFUND */}
-					{/* {sub.stripeSubscriptionId && (
+					{sub.paymentType !== "cash" && formState.cancelOption === "now" && (
 						<RefundOptions
 							onChange={(value) => {
 								setFormState((prev) => ({
@@ -173,7 +174,7 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 							}}
 							amount={sub.pricing?.price || 0}
 						/>
-					)} */}
+					)}
 
 					<div className="grid grid-cols-4 gap-4">
 						<Label className="text-sm col-span-1">Reason</Label>

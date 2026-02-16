@@ -12,6 +12,18 @@ import { clientsideApiClient } from "@/libs/api/client"
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
+const normalizeItemsForApi = (items: CreateInvoiceFormData["items"]) =>
+    items.map((item) => ({
+        name: item.name,
+        description: item.description || "",
+        quantity: Number(item.quantity || 1),
+        price: Number(item.price || 0),
+    }))
+
+const normalizeFormData = (
+    data: CreateInvoiceFormData | CreateInvoiceFormData[]
+) => (Array.isArray(data) ? data[0] : data)
+
 export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | null, ref: React.RefObject<HTMLDivElement & IStepperMethods> | null}) => {
     const router = useRouter();
     const { data: session } = useSession();
@@ -60,24 +72,42 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
             toast.error('Session not ready')
             return
         }
+        const normalizedData = normalizeFormData(data)
+        if (!normalizedData) {
+            toast.error('Invalid invoice data')
+            return
+        }
         setIsGeneratingPreview(true)
         try {
             let requestBody: any;
 
             // Handle from-subscription type
-            if (data.type === 'from-subscription' && data.selectedSubscriptionId) {
+            if (normalizedData.type === 'from-subscription' && normalizedData.selectedSubscriptionId) {
                 requestBody = {
                     type: 'from-subscription',
-                    selectedSubscriptionId: data.selectedSubscriptionId,
+                    selectedSubscriptionId: normalizedData.selectedSubscriptionId,
                 };
             } else {
                 // Convert prices from dollars to cents for API
-                const itemsInCents = data.items.map((item) => ({
+                const itemsInCents = normalizeItemsForApi(normalizedData.items).map((item) => ({
                     ...item,
                     price: Math.round(item.price * 100),
                 }))
-                requestBody = { items: itemsInCents };
+                requestBody = {
+                    items: itemsInCents,
+                    type: normalizedData.type,
+                    collectionMethod: normalizedData.collectionMethod,
+                };
             }
+
+            console.log('[InvoiceCreation] Preview payload', {
+                locationId: id,
+                memberId: mid,
+                type: requestBody.type,
+                collectionMethod: requestBody.collectionMethod,
+                itemCount: Array.isArray(requestBody.items) ? requestBody.items.length : 0,
+                selectedSubscriptionId: requestBody.selectedSubscriptionId,
+            })
 
             const result = await api.post(
                 `/x/loc/${id}/invoices/preview`,
@@ -105,29 +135,55 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
             toast.error('Session not ready')
             return
         }
+        const normalizedData = normalizeFormData(data)
+        if (!normalizedData) {
+            toast.error('Invalid invoice data')
+            return
+        }
         setIsCreating(true);
         try {
-            let requestData = { ...data };
+            let requestData = { ...normalizedData };
 
             // Handle from-subscription type
-            if (data.type === 'from-subscription' && data.selectedSubscriptionId) {
+            if (normalizedData.type === 'from-subscription' && normalizedData.selectedSubscriptionId) {
                 // API will handle item population from subscription
                 requestData = {
-                    ...data,
-                    // Items will be populated by API, but we still pass them for validation
-                    items: data.items,
+                    type: normalizedData.type,
+                    collectionMethod: normalizedData.collectionMethod,
+                    paymentType: normalizedData.paymentType,
+                    dueDate: normalizedData.dueDate,
+                    isRecurring: false,
+                    description: normalizedData.description,
+                    selectedSubscriptionId: normalizedData.selectedSubscriptionId,
+                    items: [],
                 };
             } else {
                 // Convert prices from dollars to cents for API (for manual entry)
-                const itemsInCents = data.items.map((item) => ({
+                const itemsInCents = normalizeItemsForApi(normalizedData.items).map((item) => ({
                     ...item,
                     price: Math.round(item.price * 100),
                 }));
                 requestData = {
-                    ...data,
+                    type: normalizedData.type,
+                    collectionMethod: normalizedData.collectionMethod,
+                    paymentType: normalizedData.paymentType,
+                    dueDate: normalizedData.dueDate,
+                    isRecurring: normalizedData.isRecurring,
+                    description: normalizedData.description,
                     items: itemsInCents,
                 };
             }
+
+            console.log('[InvoiceCreation] Create payload', {
+                locationId: id,
+                memberId: mid,
+                type: requestData.type,
+                collectionMethod: requestData.collectionMethod,
+                paymentType: requestData.paymentType,
+                itemCount: Array.isArray((requestData as any).items) ? (requestData as any).items.length : 0,
+                selectedSubscriptionId: (requestData as any).selectedSubscriptionId,
+                dueDate: requestData.dueDate,
+            })
 
             const invoice = await api.post(
                 `/x/loc/${id}/invoices`,
@@ -137,14 +193,23 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
                     subscriptionId: requestData.selectedSubscriptionId,
                 }
             ) as any;
+            console.log('[InvoiceCreation] Create response', {
+                hasInvoice: !!invoice,
+                invoiceId: invoice?.invoice?.id || invoice?.id,
+                status: invoice?.invoice?.status || invoice?.status,
+            })
             setCreatedInvoice(invoice);
             toast.success(
-                data.type === 'from-subscription' || data.paymentType === 'cash'
+                normalizedData.type === 'from-subscription' || normalizedData.paymentType === 'cash'
                     ? 'Invoice created as draft'
                     : 'Invoice created and sent'
             );
             ref?.current?.nextStep?.();
         } catch (error) {
+            console.error('[InvoiceCreation] Create failed', {
+                error,
+                message: error instanceof Error ? error.message : 'Unknown error',
+            })
             toast.error(error instanceof Error ? error.message : 'Failed to create invoice');
         } finally {
             setIsCreating(false);
