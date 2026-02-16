@@ -102,11 +102,12 @@ export const MarkPaid = ({
             // Also revalidate subscriptions to update status (if invoice is linked to subscription)
             mutate({ url: `members/${params.mid}/subs`, id: params.id })
         } catch (error) {
-            toast.error(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to mark as paid'
-            )
+            const message = error instanceof Error ? error.message : 'Failed to mark as paid'
+            if (message.includes('WALLET_CHARGE_FAILED')) {
+                toast.error('Insufficient wallet balance to process this payment. Please top up wallet first.')
+            } else {
+                toast.error(message)
+            }
         } finally {
             setIsLoading(false)
         }
