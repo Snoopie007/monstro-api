@@ -1,23 +1,31 @@
-import { User } from "./user";
-import { chats, messages, chatMembers } from "@subtrees/schemas";
-import { Media } from "./medias";
-import { ReactionCount } from "./reactions";
-import { Location } from "./location";
-import { Group } from "./group";
-
-export type Chat = typeof chats.$inferSelect & {
-    messages?: Message[];
-    startedBy?: User;
-    location?: Location;
-    group?: Group;
-    chatMembers?: ChatMember[];
+import { chatMembers, chats, messages } from "../schemas/chat";
+import type { Group } from "./group";
+import type { Location } from "./location";
+import type { Media } from "./medias";
+import type { ReactionCount } from "./reactions";
+import type { User } from "./user";
+type LastChatMessage = {
+    content: string | null;
+    created: Date;
 }
 
 export type ChatMember = typeof chatMembers.$inferSelect & {
     user?: User;
 }
 
-export type MessageSender = Omit<User, 'password' | 'email' | 'emailVerified' | 'created' | 'updated'>;
+export type Chat = typeof chats.$inferSelect & {
+    members?: ChatMember[];
+    messages?: Message[];
+    startedBy?: User;
+    group?: Group;
+    location?: Location;
+    chatMembers?: ChatMember[];
+    lastMessage?: LastChatMessage;
+
+}
+
+export type MessageSender =
+    Omit<User, 'password' | 'email' | 'emailVerified' | 'isChild' | 'created' | 'updated' | 'discriminator' | 'username'>;
 
 export type MessageReply = {
     id: string;
@@ -34,4 +42,5 @@ export type Message = typeof messages.$inferSelect & {
     pendingFiles?: File[];
     isOptimistic?: boolean;
     reply?: MessageReply;
+    files?: Media[];
 }

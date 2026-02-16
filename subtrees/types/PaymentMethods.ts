@@ -1,7 +1,7 @@
-import { memberPaymentMethods, paymentMethods } from "@subtrees/schemas/PaymentMethods"
-import { PaymentType } from "./DatabaseEnums"
-import { Member } from "./member"
-import { Location } from "./location"
+import { memberPaymentMethods, paymentMethods } from "../schemas/PaymentMethods"
+import type { PaymentType } from "./DatabaseEnums"
+import type { Location } from "./location"
+import type { Member } from "./member"
 
 export type PaymentMethod = typeof paymentMethods.$inferSelect & {
     type: PaymentType
@@ -16,6 +16,7 @@ export type MemberPaymentMethod = typeof memberPaymentMethods.$inferSelect & {
     member?: Member
     location?: Location
 }
+
 
 export type CardPaymentMethod = {
     brand: string

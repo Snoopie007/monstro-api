@@ -19,7 +19,6 @@ interface ClassReminderEmailProps {
 	class: {
 		name: string;
 		startTime: Date;
-		duration: number;
 		endTime: Date;
 		instructor?: Pick<Staff, 'firstName' | 'lastName'> | null;
 	};
@@ -79,7 +78,6 @@ ClassReminderEmail.PreviewProps = {
 	...DummyData,
 	class: {
 		name: 'Morning Yoga',
-		description: 'Start your day with a relaxing yoga session',
 		startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
 		endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(),
 		instructor: {

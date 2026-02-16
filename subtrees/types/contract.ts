@@ -1,4 +1,3 @@
-
 import { Location } from "./location";
 import { Member, MemberPackage } from "./member";
 import { MemberSubscription } from "./member";

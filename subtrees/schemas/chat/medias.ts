@@ -1,14 +1,11 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
     bigint,
-    index,
     jsonb,
     pgTable,
     text,
     timestamp,
 } from "drizzle-orm/pg-core";
-import { messages } from "./chats";
-import { groupPosts } from "./groups";
 
 export const media = pgTable("media", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('med_')`),
@@ -24,21 +21,4 @@ export const media = pgTable("media", {
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-}, (t) => [
-    index("idx_media_owner").on(t.ownerId, t.ownerType),
-    index("idx_media_owner_type").on(t.ownerType),
-    index("idx_media_created_at").on(t.created),
-]);
-
-export const mediaRelations = relations(media, ({ one }) => ({
-    post: one(groupPosts, {
-        fields: [media.ownerId],
-        references: [groupPosts.id],
-    }),
-    message: one(messages, {
-        fields: [media.ownerId],
-        references: [messages.id],
-    }),
-}));
-
-
+});

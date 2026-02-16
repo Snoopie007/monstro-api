@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { text, timestamp, pgTable, jsonb, boolean, unique } from "drizzle-orm/pg-core";
 import { members } from "../members";
 
@@ -34,39 +34,5 @@ export const memoryLikes = pgTable("memory_likes", {
     memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
-    unique("unique_memory_likes_memory_member").on(t.memoryId, t.memberId),
+    unique("unique_moment_likes_moment_user").on(t.momentId, t.userId),
 ]);
-
-export const momentComments = memoryComments;
-export const momentLikes = memoryLikes;
-
-export const memoriesRelations = relations(memories, ({ one, many }) => ({
-    member: one(members, {
-        fields: [memories.memberId],
-        references: [members.id],
-    }),
-    memoryComments: many(memoryComments),
-    memoryLikes: many(memoryLikes),
-}));
-
-export const memoryCommentsRelations = relations(memoryComments, ({ one }) => ({
-    memory: one(memories, {
-        fields: [memoryComments.memoryId],
-        references: [memories.id],
-    }),
-    member: one(members, {
-        fields: [memoryComments.memberId],
-        references: [members.id],
-    }),
-}));
-
-export const memoryLikesRelations = relations(memoryLikes, ({ one }) => ({
-    memory: one(memories, {
-        fields: [memoryLikes.memoryId],
-        references: [memories.id],
-    }),
-    member: one(members, {
-        fields: [memoryLikes.memberId],
-        references: [members.id],
-    }),
-}));

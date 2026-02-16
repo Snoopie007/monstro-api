@@ -1,25 +1,25 @@
-import { Contract, MemberContract } from './contract'
-import { FamilyMember } from './FamilyMember'
-import { Location } from './location'
-import { PlanProgram } from './program'
 import {
-    migrateMembers,
-    memberInvoices,
-    memberLocations,
-    memberPackages,
-    memberPlans,
-    memberPlanPricing,
-    memberReferrals,
-    members,
-    memberSubscriptions,
-    memberFields,
-    memberCustomFields,
-} from '@subtrees/schemas'
-import { PaymentType } from './DatabaseEnums'
-import { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
-import { ColumnFiltersState } from '@tanstack/react-table'
-import { User } from './user'
-
+  memberCustomFields,
+  memberFields,
+  memberPackages,
+  memberPlanPricing,
+  memberPlans,
+  memberReferrals,
+  members,
+  memberSubscriptions,
+} from '../schemas'
+import { memberInvoices } from '../schemas/invoice'
+import { memberLocations } from '../schemas/MemberLocation'
+import type { MemberPointsHistory } from './achievement'
+import type { Contract, MemberContract } from './contract'
+import type { PaymentType } from './DatabaseEnums'
+import type { FamilyMember } from './FamilyMember'
+import type { Location } from './location'
+import type { MigrateMember } from './MigrateMember'
+import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
+import type { PlanProgram, Program } from './program'
+import type { User } from './user'
+import type { Invoice } from './invoices'
 
 export type Member = typeof members.$inferSelect & {
     user?: User
@@ -33,21 +33,30 @@ export type Member = typeof members.$inferSelect & {
     referredBy?: MemberReferral
   }
 
+
+
+
+
 export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
     plan?: MemberPlan
 }
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
-    child?: MemberSubscription
-    invoices?: MemberInvoice[]
-    plan?: MemberPlan
-    pricing?: MemberPlanPricing
-    contract?: MemberContract
-    member?: Member
-    paymentType: PaymentType
-    location?: Location
-    stripeSubscriptionId?: string | null
-  }
+  child?: MemberSubscription
+  invoices?: Invoice[]
+  plan?: MemberPlan
+  pricing?: MemberPlanPricing
+  contract?: MemberContract
+  member?: Member
+  paymentType: PaymentType
+  location?: Location
+}
+
+export type ExtendedMemberSubscription = MemberSubscription & {
+  planId?: string
+  programs?: Program[]
+}
+
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
     plan?: MemberPlan
@@ -59,6 +68,10 @@ export type MemberPackage = typeof memberPackages.$inferSelect & {
     location?: Location
 }
 
+export type ExtendedMemberPackage = MemberPackage & {
+  planId?: string
+  programs?: Program[]
+}
 export type BillingCycleAnchorConfig = {
     day_of_month: number
     hour?: number
@@ -85,13 +98,15 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 }
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
-    location?: Location
-    member?: Member,
-    knownFamilyMembers?: FamilyMember[],
-    lastCheckInTime?: Date | null
-    totalPointsEarned?: number
-    memberPaymentMethods?: MemberPaymentMethod[]
-    paymentMethods?: PaymentMethod[]
+  location?: Location
+  member?: Member,
+  knownFamilyMembers?: FamilyMember[],
+  lastCheckInTime?: Date | null
+  totalPointsEarned?: number
+  memberPaymentMethods?: MemberPaymentMethod[]
+  paymentMethods?: PaymentMethod[]
+  migration?: MigrateMember;
+  pointsHistory?: MemberPointsHistory[];
 }
 
 

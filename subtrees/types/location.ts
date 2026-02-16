@@ -1,15 +1,16 @@
-import {
-  locationState,
-  locations,
-} from "@subtrees/schemas/locations";
-import { MemberInvoice, MemberPlan, MemberReferral, MemberSubscription } from "./member";
-
-import { Program } from "./program";
-import { Transaction } from "./transaction";
-import { Wallet } from "./wallet";
-import { MemberPointsHistory } from "./achievement";
-import { PaymentType } from "./DatabaseEnums";
-import { TaxRate } from "./tax";
+import type {
+  MemberInvoice,
+  MemberSubscription,
+  MemberReferral,
+  PaymentType,
+  MemberPointsHistory,
+  Program,
+  TaxRate,
+  Transaction,
+  Wallet,
+} from ".";
+import { locations, locationState } from "../schemas/locations";
+import type { MemberPlan } from "./member";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
