@@ -79,7 +79,7 @@ export const useMemberAttendance = (id: string, mid: string) => {
             isCurrentMonth: boolean
             isEmpty: boolean
             attendances?: Array<{
-                programName: string
+                programName: string | null
                 startTime: Date
                 endTime: Date
                 checkInTime: Date

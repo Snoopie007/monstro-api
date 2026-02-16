@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { and, eq, gte, isNull } from "drizzle-orm";
-import { programSessions, reservations, recurringReservations, reservationExceptions, locations } from "@subtrees/schemas";
+import { and, eq, gte } from "drizzle-orm";
+import { programSessions, reservations, reservationExceptions, locations } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
 import type { CancellationResult } from "@subtrees/types/vendor/reservation";
 import { sendSessionCancellationNotifications } from "@/libs/notifications/SessionCancellation";
@@ -22,8 +22,7 @@ export async function PATCH(
  * Cancel a session with cascading effects:
  * 1. Mark session as cancelled
  * 2. Update all future reservations to cancelled_by_vendor
- * 3. Cancel affected recurring reservations
- * 4. Create exception entries for audit trail
+ * 3. Create exception entries for audit trail
  * 
  * Query params:
  * - notify: boolean - Whether to send notifications to affected members (default: false)
@@ -60,7 +59,6 @@ export async function DELETE(req: NextRequest, props: props) {
       const now = new Date();
       const cancellationResult: CancellationResult = {
         cancelledReservations: 0,
-        cancelledRecurringReservations: 0,
         exceptionsCreated: 0,
         notificationsSent: 0,
       };
@@ -110,51 +108,7 @@ export async function DELETE(req: NextRequest, props: props) {
         }
       }
 
-      // 3. Find and cancel all active recurring reservations for this session
-      const activeRecurring = await tx.query.recurringReservations.findMany({
-        where: and(
-          eq(recurringReservations.sessionId, params.sid),
-          isNull(recurringReservations.canceledOn),
-          eq(recurringReservations.status, 'confirmed')
-        ),
-        with: {
-          member: true,
-        },
-      });
-
-      if (activeRecurring.length > 0) {
-        // Cancel the recurring reservations
-        await tx.update(recurringReservations)
-          .set({
-            canceledOn: now.toISOString().split('T')[0],
-            status: 'cancelled_by_vendor',
-            updated: now,
-          })
-          .where(and(
-            eq(recurringReservations.sessionId, params.sid),
-            isNull(recurringReservations.canceledOn),
-            eq(recurringReservations.status, 'confirmed')
-          ));
-
-        cancellationResult.cancelledRecurringReservations = activeRecurring.length;
-
-        // Create exception entries for recurring reservations
-        const recurringExceptionEntries = activeRecurring.map(r => ({
-          recurringReservationId: r.id,
-          locationId: params.id,
-          sessionId: params.sid,
-          occurrenceDate: now,
-          initiator: 'vendor' as const,
-          reason: reason,
-        }));
-
-        if (recurringExceptionEntries.length > 0) {
-          await tx.insert(reservationExceptions).values(recurringExceptionEntries);
-          cancellationResult.exceptionsCreated += recurringExceptionEntries.length;
-        }
-      }
-
-      // 4. Mark the session as cancelled
+      // 3. Mark the session as cancelled
       await tx.update(programSessions)
         .set({ 
           updated: now,
@@ -164,12 +118,11 @@ export async function DELETE(req: NextRequest, props: props) {
       // 5. If no reservations existed, we could hard delete instead
       // But we keep the soft delete approach for consistency and audit
 
-      // 6. Send notifications if requested
+      // 4. Send notifications if requested
       if (notify) {
-        const allAffectedMembers = [
-          ...futureReservations.map(r => r.member),
-          ...activeRecurring.map(r => r.member),
-        ].filter(Boolean);
+        const allAffectedMembers = futureReservations
+          .map(r => r.member)
+          .filter(Boolean);
 
         const uniqueMembers = [...new Map(
           allAffectedMembers.map(m => [m.id, m])

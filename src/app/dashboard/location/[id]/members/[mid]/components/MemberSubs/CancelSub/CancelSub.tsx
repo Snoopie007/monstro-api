@@ -162,7 +162,8 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 						</RadioGroup>
 					</div>
 
-					{sub.stripeSubscriptionId && (
+					{/* URGENT TODO: REFACTOR REFUND */}
+					{/* {sub.stripeSubscriptionId && (
 						<RefundOptions
 							onChange={(value) => {
 								setFormState((prev) => ({
@@ -172,7 +173,7 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 							}}
 							amount={sub.pricing?.price || 0}
 						/>
-					)}
+					)} */}
 
 					<div className="grid grid-cols-4 gap-4">
 						<Label className="text-sm col-span-1">Reason</Label>

@@ -18,7 +18,7 @@ import { Loader2 } from "lucide-react";
 import { RegisterSchema } from "@/libs/FormSchemas/schemas";
 import { PatternFormat } from "react-number-format";
 import { CountryCodes } from "@/libs/data";
-import { CountryCode } from "@subtrees/types";
+import { CountryCode } from "@subtrees/types/other";
 import { useJoin } from "../providers/JoinProvider";
 
 const InputStyle = "bg-white border border-gray-200 text-base ";

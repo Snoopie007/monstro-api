@@ -3,15 +3,11 @@ import {
   timestamp,
   pgTable,
   integer,
-  serial,
   boolean,
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { relations, sql } from "drizzle-orm";
-import { vendorLevels } from "./VendorProgress";
-import { vendorReferrals } from "./VendorReferrals";
-import { locations } from "./locations";
 
 export const vendors = pgTable("vendors", {
   id: uuid("id")

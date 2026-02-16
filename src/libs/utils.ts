@@ -268,7 +268,6 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
                     memberId: 'mbr_BpT7jEb3Q16nOPL3vo7qlw',
                     locationId: '',
                     reservationId: null,
-                    recurringId: null,
                     programId: null,
                     programName: programs[Math.floor(seededRandom(seed) * programs.length)],
                     checkInTime,
@@ -453,6 +452,7 @@ export function getDefaultAssistantSettings() {
         temperature: '0.7',
         model: 'gpt' as const,
         persona: {
+            name: 'Support Assistant',
             avatar: 'https://randomuser.me/api/portraits/lego/4.jpg',
             responseStyle: 'Respond in a friendly manner',
             personality: ['friendly', 'informative', 'professional'],

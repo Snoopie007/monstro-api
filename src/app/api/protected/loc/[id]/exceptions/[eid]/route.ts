@@ -37,21 +37,6 @@ export async function GET(req: NextRequest, props: Props) {
             },
           },
         },
-        recurringReservation: {
-          columns: {
-            id: true,
-            startDate: true,
-            programName: true,
-          },
-          with: {
-            member: {
-              columns: {
-                id: true,
-                email: true,
-              },
-            },
-          },
-        },
         session: {
           columns: {
             id: true,

@@ -376,6 +376,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
                     count: 1,
                     userIds: [currentUserId],
                     userNames: [session?.user?.name || 'You'],
+                    created: new Date(),
                   },
                 ],
               };
@@ -600,4 +601,3 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
     refresh,
   };
 };
-

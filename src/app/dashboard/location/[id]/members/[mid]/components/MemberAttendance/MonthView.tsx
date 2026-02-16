@@ -20,7 +20,7 @@ interface Closure {
 }
 
 interface SimplifiedAttendance {
-    programName: string;
+    programName: string | null;
     startTime: Date;
     endTime: Date;
     checkInTime: Date;

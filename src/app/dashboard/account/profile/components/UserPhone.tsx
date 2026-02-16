@@ -6,7 +6,8 @@ import { tryCatch } from "@/libs/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { toast } from "react-toastify";
 import { CountryCodes } from "@/libs/data";
-import { CountryCode, Staff, Vendor } from "@subtrees/types";
+import { Staff, Vendor } from "@subtrees/types";
+import { CountryCode } from "@subtrees/types/other";
 import { PatternFormat } from "react-number-format";
 import { getPhoneFormat } from "@/libs/utils";
 

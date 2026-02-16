@@ -59,16 +59,20 @@ export type EventColor =
 
 export type CalendarEventData = {
   reservationId?: string;
-  recurringId?: string;
   programId: string;
   sessionId: string;
   members: CalendarEventMember[];
-  isRecurring: boolean;
+  memberReservations?: CalendarEventMemberReservation[];
   memberPlanId?: string[] | null;
   // Status tracking for attendance
   isMakeUpClass?: boolean;
   status?: 'confirmed' | 'cancelled_by_member' | 'cancelled_by_vendor' | 'cancelled_by_holiday' | 'completed' | 'no_show';
   hasCheckIn?: boolean; // Whether members checked in
+};
+
+export type CalendarEventMemberReservation = {
+  memberId: string;
+  reservationId: string;
 };
 
 export type CalendarEventMember = {
