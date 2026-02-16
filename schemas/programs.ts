@@ -1,8 +1,7 @@
 import { text, timestamp, time, smallint, pgTable, integer, unique, boolean, primaryKey, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations, sql } from "drizzle-orm";
-import { memberPackages, memberPlans, memberSubscriptions } from "./MemberPlans";
-import { reservations } from "./reservations";
+import { sql } from "drizzle-orm";
+import { memberPlans } from "./MemberPlans";
 import { staffs } from "./staffs";
 import { ProgramStatusEnum } from "./DatabaseEnums";
 import { members } from "./members";
@@ -51,54 +50,3 @@ export const sessionWaitlist = pgTable("session_waitlist", {
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	sessionDate: timestamp("session_date", { withTimezone: true }).notNull(),
 }, (t) => [unique("unique_session_waitlist").on(t.sessionId, t.memberId, t.sessionDate)]);
-
-
-export const programsRelations = relations(programs, ({ one, many }) => ({
-	location: one(locations, {
-		fields: [programs.locationId],
-		references: [locations.id],
-	}),
-	sessions: many(programSessions),
-	instructor: one(staffs, {
-		fields: [programs.instructorId],
-		references: [staffs.id],
-	}),
-	memberSubscriptions: many(memberSubscriptions),
-	memberPackages: many(memberPackages),
-	planPrograms: many(planPrograms),
-}));
-
-export const programSessionsRelations = relations(programSessions, ({ one, many }) => ({
-	program: one(programs, {
-		fields: [programSessions.programId],
-		references: [programs.id],
-	}),
-	staff: one(staffs, {
-		fields: [programSessions.staffId],
-		references: [staffs.id],
-	}),
-	reservations: many(reservations),
-	waitlist: many(sessionWaitlist),
-}));
-
-export const planProgramsRelations = relations(planPrograms, ({ one }) => ({
-	plan: one(memberPlans, {
-		fields: [planPrograms.planId],
-		references: [memberPlans.id],
-	}),
-	program: one(programs, {
-		fields: [planPrograms.programId],
-		references: [programs.id],
-	}),
-}));
-
-export const sessionWaitlistRelations = relations(sessionWaitlist, ({ one }) => ({
-	session: one(programSessions, {
-		fields: [sessionWaitlist.sessionId],
-		references: [programSessions.id],
-	}),
-	member: one(members, {
-		fields: [sessionWaitlist.memberId],
-		references: [members.id],
-	}),
-}));

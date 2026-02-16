@@ -1,10 +1,7 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { text, timestamp, pgTable, jsonb, boolean, index, primaryKey, integer } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { users } from "../users";
-import { media } from "./medias";
-import { comments } from "./comments";
-import { userFeeds } from "./moments";
 
 export const groups = pgTable("groups", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -42,39 +39,3 @@ export const groupPosts = pgTable("group_posts", {
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-
-export const groupsRelations = relations(groups, ({ one, many }) => ({
-    location: one(locations, {
-        fields: [groups.locationId],
-        references: [locations.id],
-    }),
-    feeds: many(userFeeds),
-    groupMembers: many(groupMembers),
-    posts: many(groupPosts),
-}));
-
-export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
-    group: one(groups, {
-        fields: [groupMembers.groupId],
-        references: [groups.id],
-    }),
-    user: one(users, {
-        fields: [groupMembers.userId],
-        references: [users.id],
-    }),
-}));
-
-export const groupPostsRelations = relations(groupPosts, ({ one, many }) => ({
-    group: one(groups, {
-        fields: [groupPosts.groupId],
-        references: [groups.id],
-    }),
-    author: one(users, {
-        fields: [groupPosts.authorId],
-        references: [users.id],
-    }),
-    feeds: many(userFeeds),
-    comments: many(comments),
-    medias: many(media),
-}));

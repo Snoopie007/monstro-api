@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, integer, boolean, unique } from "drizzle-orm/pg-core";
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { locations } from "./locations";
 import { PromoTypeEnum, PromoDurationEnum } from "./DatabaseEnums";
 
@@ -23,10 +23,3 @@ export const promos = pgTable("promos", {
 }, (t) => [
     unique("promos_location_code_unique").on(t.locationId, t.code),
 ]);
-
-export const promosRelations = relations(promos, ({ one }) => ({
-    location: one(locations, {
-        fields: [promos.locationId],
-        references: [locations.id],
-    }),
-}));

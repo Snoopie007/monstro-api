@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
-import { sql, relations } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { supportAssistants } from './SupportAssistants';
 import { triggerTypeEnum } from './SupportBotEnums';
 import type { SupportTool } from "../types";
@@ -18,11 +18,3 @@ export const supportTriggers = pgTable("support_triggers", {
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-// Define relations
-export const supportTriggersRelations = relations(supportTriggers, ({ one }) => ({
-  assistant: one(supportAssistants, {
-    fields: [supportTriggers.supportAssistantId],
-    references: [supportAssistants.id],
-  }),
-}));

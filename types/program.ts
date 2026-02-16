@@ -1,7 +1,7 @@
-import type { Reservation } from "./attendance";
-import type { MemberPlan } from "./member";
-import type { ProgramStatus } from "./DatabaseEnums";
 import { planPrograms, programs, programSessions } from "../schemas/programs";
+import type { Reservation } from "./attendance";
+import type { ProgramStatus } from "./DatabaseEnums";
+import type { MemberPlan } from "./member";
 
 export type Program = typeof programs.$inferSelect & {
   programPlans?: PlanProgram[];
@@ -30,5 +30,6 @@ export type ExtendedProgramSession = ProgramSession & {
   planIds: string[];
   startTime: Date;
   endTime: Date;
-
+  utcStartTime: Date;
+  utcEndTime: Date;
 }

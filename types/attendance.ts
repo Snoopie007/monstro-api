@@ -1,10 +1,10 @@
+import { attendances } from "../schemas/attendances";
 import {
   reservationExceptions,
   reservations,
 } from "../schemas/reservations";
-import type { Program, ProgramSession } from "./program";
 import type { Member, MemberPackage, MemberSubscription } from "./member";
-import { attendances } from "../schemas/attendances";
+import type { Program, ProgramSession } from "./program";
 
 export type Attendance = typeof attendances.$inferSelect & {
   reservation?: Reservation;

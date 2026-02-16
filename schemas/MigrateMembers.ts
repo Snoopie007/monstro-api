@@ -8,7 +8,7 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { memberPlanPricing } from "./MemberPlans";
 import { members } from "./members";
 import { MigrateStatusEnum, PlanType } from "./DatabaseEnums";
@@ -39,18 +39,3 @@ export const migrateMembers = pgTable('migrate_members', {
     customFieldValues?: Array<{ fieldId: string; value: string }>
   }>().default(sql`'{}'::jsonb`),
 })
-
-export const migrateRelations = relations(migrateMembers, ({ one }) => ({
-  location: one(locations, {
-    fields: [migrateMembers.locationId],
-    references: [locations.id],
-  }),
-  member: one(members, {
-    fields: [migrateMembers.memberId],
-    references: [members.id],
-  }),
-  pricing: one(memberPlanPricing, {
-    fields: [migrateMembers.priceId],
-    references: [memberPlanPricing.id],
-  })
-}));

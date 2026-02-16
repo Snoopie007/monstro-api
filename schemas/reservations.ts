@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
 	integer,
 	timestamp,
@@ -12,7 +12,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { programSessions, programs } from "./programs";
 import { members } from "./members";
-import { attendances } from "./attendances";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
 import { locations } from "./locations";
 import { staffs } from "./staffs";
@@ -62,70 +61,3 @@ export const reservationExceptions = pgTable("reservation_exceptions", {
 	createdBy: text("created_by").references(() => staffs.id, { onDelete: "set null" }),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-export const reservationsRelations = relations(reservations, ({ one, many }) => ({
-	attendance: one(attendances, {
-		fields: [reservations.id],
-		references: [attendances.reservationId],
-	}),
-	session: one(programSessions, {
-		fields: [reservations.sessionId],
-		references: [programSessions.id],
-	}),
-	member: one(members, {
-		fields: [reservations.memberId],
-		references: [members.id],
-	}),
-	memberSubscription: one(memberSubscriptions, {
-		fields: [reservations.memberSubscriptionId],
-		references: [memberSubscriptions.id],
-	}),
-	memberPackage: one(memberPackages, {
-		fields: [reservations.memberPackageId],
-		references: [memberPackages.id],
-	}),
-	location: one(locations, {
-		fields: [reservations.locationId],
-		references: [locations.id],
-	}),
-	program: one(programs, {
-		fields: [reservations.programId],
-		references: [programs.id],
-	}),
-	staff: one(staffs, {
-		fields: [reservations.staffId],
-		references: [staffs.id],
-	}),
-	originalReservation: one(reservations, {
-		fields: [reservations.originalReservationId],
-		references: [reservations.id],
-		relationName: "makeUpReservations",
-	}),
-	exceptions: many(reservationExceptions, {
-		relationName: "reservationExceptions",
-	}),
-}));
-
-
-
-export const reservationExceptionsRelations = relations(reservationExceptions,
-	({ one }) => ({
-		reservation: one(reservations, {
-			fields: [reservationExceptions.reservationId],
-			references: [reservations.id],
-			relationName: "reservationExceptions",
-		}),
-		location: one(locations, {
-			fields: [reservationExceptions.locationId],
-			references: [locations.id],
-		}),
-		session: one(programSessions, {
-			fields: [reservationExceptions.sessionId],
-			references: [programSessions.id],
-		}),
-		createdByStaff: one(staffs, {
-			fields: [reservationExceptions.createdBy],
-			references: [staffs.id],
-		}),
-	})
-);
