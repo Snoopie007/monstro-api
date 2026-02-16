@@ -341,11 +341,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 }
 
                 if (pricing.interval && pricing.intervalThreshold) {
-                    const nextBillingDate = calculateThresholdDate({
-                        startDate: startDate,
-                        threshold: pricing.intervalThreshold,
-                        interval: pricing.interval,
-                    });
+                    const nextBillingDate = new Date(currentPeriodEnd);
                     if (["month", "year"].includes(pricing.interval)) {
                         const payload: SubscriptionJobData = {
                             sid: memberPlanId,
