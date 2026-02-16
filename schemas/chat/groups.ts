@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { users } from "../users";
+import { comments } from "./comments";
 
 export const groups = pgTable("groups", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -43,24 +44,6 @@ export const groupPosts = pgTable("group_posts", {
     index("idx_group_posts_group_id").on(t.groupId),
     index("idx_group_posts_group_pinned_created").on(t.groupId, t.pinned, t.created),
 ]);
-
-// Polymorphic comments table - used for posts, memories, etc.
-export const comments = pgTable("comments", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
-    ownerId: text("owner_id").notNull(),
-    ownerType: text("owner_type").notNull(),
-    parentId: text("parent_id"),
-    likes: text("likes").array().default(sql`'{}'::text[]`),
-    pinned: boolean("pinned").notNull().default(false),
-    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-    content: text("content").notNull(),
-    depth: integer("depth").notNull().default(0),
-    replyCounts: integer("reply_counts").notNull().default(0),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    deletedOn: timestamp("deleted_on", { withTimezone: true }),
-    updated: timestamp("updated_at", { withTimezone: true }),
-});
 
 export const groupsRelations = relations(groups, ({ one, many }) => ({
     location: one(locations, {

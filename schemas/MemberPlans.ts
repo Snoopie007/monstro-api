@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -10,7 +10,6 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { contractTemplates } from "./contracts";
-import { planPrograms } from "./programs";
 import { promos } from "./promos";
 
 import type { BillingCycleAnchorConfig } from "../types";
@@ -23,8 +22,7 @@ import {
 	PlanType,
 } from "./DatabaseEnums";
 import { locations } from "./locations";
-import { memberContracts, memberInvoices, members } from "./members";
-import { reservations } from "./reservations";
+import { memberContracts, members } from "./members";
 
 export const memberPlans = pgTable("member_plans", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -127,90 +125,3 @@ export const memberPackages = pgTable("member_packages", {
 		}),
 	]
 );
-
-export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
-	location: one(locations, {
-		fields: [memberPlans.locationId],
-		references: [locations.id],
-	}),
-	group: one(groups, {
-		fields: [memberPlans.groupId],
-		references: [groups.id],
-	}),
-	contract: one(contractTemplates, {
-		fields: [memberPlans.contractId],
-		references: [contractTemplates.id],
-	}),
-	planPrograms: many(planPrograms),
-	packages: many(memberPackages),
-	subscriptions: many(memberSubscriptions),
-	pricings: many(memberPlanPricing),
-}));
-
-export const memberPlanPricingRelations = relations(memberPlanPricing, ({ one, many }) => ({
-	plan: one(memberPlans, {
-		fields: [memberPlanPricing.memberPlanId],
-		references: [memberPlans.id],
-	}),
-	subscriptions: many(memberSubscriptions),
-	packages: many(memberPackages),
-}));
-
-export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one, many }) => ({
-	member: one(members, {
-		fields: [memberSubscriptions.memberId],
-		references: [members.id],
-		relationName: "payer",
-	}),
-	parent: one(memberSubscriptions, {
-		fields: [memberSubscriptions.parentId],
-		references: [memberSubscriptions.id],
-		relationName: "childs",
-	}),
-
-	pricing: one(memberPlanPricing, {
-		fields: [memberSubscriptions.memberPlanPricingId],
-		references: [memberPlanPricing.id],
-	}),
-	location: one(locations, {
-		fields: [memberSubscriptions.locationId],
-		references: [locations.id],
-	}),
-	contract: one(memberContracts, {
-		fields: [memberSubscriptions.memberContractId],
-		references: [memberContracts.id],
-	}),
-	childs: many(memberSubscriptions, {
-		relationName: "childs",
-	}),
-	invoices: many(memberInvoices),
-	reservations: many(reservations),
-}));
-
-export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
-
-	pricing: one(memberPlanPricing, {
-		fields: [memberPackages.memberPlanPricingId],
-		references: [memberPlanPricing.id],
-	}),
-	location: one(locations, {
-		fields: [memberPackages.locationId],
-		references: [locations.id],
-	}),
-	member: one(members, {
-		fields: [memberPackages.memberId],
-		references: [members.id],
-	}),
-	parent: one(memberPackages, {
-		fields: [memberPackages.parentId],
-		references: [memberPackages.id],
-	}),
-	contract: one(memberContracts, {
-		fields: [memberPackages.memberContractId],
-		references: [memberContracts.id],
-	}),
-	reservations: many(reservations),
-	childs: many(memberPackages, {
-		relationName: "children",
-	}),
-}));

@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./users";
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey().notNull().default(sql`uuid_base62('ses_')`),
@@ -15,10 +15,3 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
-
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id],
-  }),
-}));

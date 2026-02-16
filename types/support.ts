@@ -1,12 +1,11 @@
 import type {
-  supportAssistants,
-  supportTriggers,
-  supportConversations,
-  supportMessages,
-} from "@subtrees/schemas";
+    supportAssistants,
+    supportConversations,
+    supportMessages,
+    supportTriggers,
+} from "../schemas";
+import type { KnowledgeBase } from "./KnowledgeBase";
 import type { Member } from "./member";
-import { KnowledgeBase } from "./KnowledgeBase";
-
 // Settings UI Types
 export interface SupportAssistantSettingsRequest {
   prompt: string;
@@ -49,9 +48,10 @@ export type SupportMessage = typeof supportMessages.$inferSelect & {
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
 export type SupportPersona = {
-  avatar: string;
-  responseStyle: string;
-  personality: string[];
+    name: string;
+    avatar: string;
+    responseStyle: string;
+    personality: string[];
 };
 
 export type SupportTool = {
@@ -62,13 +62,14 @@ export type SupportTool = {
 };
 
 export type SupportMessageRole =
-  | "human"
-  | "ai"
-  | "assistant"
-  | "system"
-  | "tool"
-  | "tool_response"
-  | "tool_call";
+    | "human"
+    | "ai"
+    | "staff"
+    | "assistant"
+    | "system"
+    | "tool"
+    | "tool_response"
+    | "tool_call";
 
 // Test Chat API Routes
 export interface TestChatMessage {

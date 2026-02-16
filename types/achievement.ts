@@ -1,6 +1,6 @@
 import { achievements, memberAchievements, memberPointsHistory } from "../schemas";
-import type { Member } from "./member";
 import type { Location } from "./location";
+import type { Member } from "./member";
 
 
 export type Achievement = typeof achievements.$inferSelect & {

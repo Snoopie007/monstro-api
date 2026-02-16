@@ -8,16 +8,17 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations, sql } from "drizzle-orm";
-import { memberInvoices, members } from "./members";
+import { sql } from "drizzle-orm";
+import { members } from "./members";
+import { memberInvoices } from "./invoice";
 import { paymentMethods } from "./PaymentMethods";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionItem, TransactionMetadata, TransactionFees } from "../types";
-
+import type { TransactionMetadata, TransactionFees } from "../types";
+import type { InvoiceItem } from "../types/invoices";
 export const transactions = pgTable("transactions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	description: text("description"),
-	items: jsonb("items").$type<TransactionItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
+	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
 	fees: jsonb("fees").$type<TransactionFees>(),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
@@ -38,18 +39,3 @@ export const transactions = pgTable("transactions", {
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-export const transactionsRelations = relations(transactions, ({ one }) => ({
-	member: one(members, {
-		fields: [transactions.memberId],
-		references: [members.id],
-	}),
-	location: one(locations, {
-		fields: [transactions.locationId],
-		references: [locations.id],
-	}),
-	invoice: one(memberInvoices, {
-		fields: [transactions.invoiceId],
-		references: [memberInvoices.id],
-	}),
-}));

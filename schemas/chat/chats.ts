@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
     index,
     jsonb,
@@ -9,9 +9,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { groups } from "./groups";
 import { locations } from "../locations";
-import { media } from "./medias";
-import { members } from "../members";
-import { reactions } from "./reactions";
 import { users } from "../users";
 
 export const chats = pgTable("chats", {
@@ -49,55 +46,3 @@ export const messages = pgTable("messages", {
     index("idx_messages_chat_created").on(t.chatId, t.created),
     index("idx_messages_sender_id").on(t.senderId),
 ]);
-
-
-
-
-export const chatsRelations = relations(chats, ({ one, many }) => ({
-    started: one(members, {
-        fields: [chats.startedBy],
-        references: [members.id],
-        relationName: "chatStartedBy",
-    }),
-    location: one(locations, {
-        fields: [chats.locationId],
-        references: [locations.id],
-    }),
-    group: one(groups, {
-        fields: [chats.groupId],
-        references: [groups.id],
-    }),
-    chatMembers: many(chatMembers),
-    messages: many(messages),
-}));
-
-export const chatMembersRelations = relations(chatMembers, ({ one }) => ({
-    chat: one(chats, {
-        fields: [chatMembers.chatId],
-        references: [chats.id],
-        relationName: "chatChatMembers",
-    }),
-    user: one(users, {
-        fields: [chatMembers.userId],
-        references: [users.id],
-        relationName: "chatMemberMember",
-    }),
-}));
-
-export const messagesRelations = relations(messages, ({ one, many }) => ({
-    chat: one(chats, {
-        fields: [messages.chatId],
-        references: [chats.id],
-    }),
-    sender: one(users, {
-        fields: [messages.senderId],
-        references: [users.id],
-    }),
-    replyTo: one(messages, {
-        fields: [messages.replyId],
-        references: [messages.id],
-    }),
-    medias: many(media),
-    reactions: many(reactions, { relationName: 'messageReactions' }),
-}));
-

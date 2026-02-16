@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { text, pgTable, primaryKey, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
@@ -19,10 +19,3 @@ export const accounts = pgTable("account", {
 	created: timestamp("created_at", { withTimezone: true }).defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.provider, t.accountId] })]);
-
-export const accountsRelations = relations(accounts, ({ one }) => ({
-	user: one(users, {
-		fields: [accounts.userId],
-		references: [users.id],
-	}),
-}));
