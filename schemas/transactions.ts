@@ -15,6 +15,8 @@ import { paymentMethods } from "./PaymentMethods";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
 import type { TransactionMetadata, TransactionFees } from "../types";
 import type { InvoiceItem } from "../types/invoices";
+
+
 export const transactions = pgTable("transactions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	description: text("description"),
