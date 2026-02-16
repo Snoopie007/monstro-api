@@ -380,7 +380,9 @@ export function purchaseSubRoutes(app: Elysia) {
 
                             scheduleRecursiveRenewal({
                                 startDate: nextBillingDate,
-                                data: payload,
+                                data: {
+                                    ...payload,
+                                },
                             });
                         }
                     }

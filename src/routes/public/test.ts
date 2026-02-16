@@ -35,23 +35,21 @@ export function testRoutes(app: Elysia) {
 
                 return { ok: true, result: res };
             } catch (error: any) {
-                if (
-                    error instanceof Stripe.errors.StripeError ||
-                    (error && error.type && error.message)
-                ) {
+                if (error instanceof Stripe.errors.StripeError) {
                     switch (error.type) {
                         case "StripeCardError":
                             const paymentIntent = error.payment_intent;
-                            console.log(paymentIntent);
+                            const lastError = paymentIntent?.last_payment_error;
                             console.log(error.code);
                             await paymentQueue.add("retry:wallet", {
-                                paymentIntentId: paymentIntent.id,
+                                paymentIntentId: paymentIntent?.id,
                                 attempts: 0,
-                                amount: paymentIntent.amount,
+                                amount: paymentIntent?.amount,
+                                paymentMethodId: lastError?.payment_method?.id,
                                 lid: "acc_BpT7jEb3Q16nOPL3vo7qlw",
                                 walletId: "wal_1SzrBsEiUYeMOEsWYAMcyFeM",
                             }, {
-                                jobId: `retry:wallet:${paymentIntent.id}`,
+                                jobId: `retry:wallet:${paymentIntent?.id}`,
                                 delay: 2 * 60 * 1000,
                                 attempts: 8,
                                 backoff: {
