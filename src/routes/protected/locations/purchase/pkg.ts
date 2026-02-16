@@ -243,18 +243,13 @@ export function purchasePkgRoutes(app: Elysia) {
                 }
 
                 await db.transaction(async (tx) => {
-                    await tx.update(memberPackages).set({
-                        status: "active",
-                        metadata: {
-                            paymentMethodId: paymentMethod.stripeId,
-                        },
-                    }).where(eq(memberPackages.id, memberPlanId));
+
                     await tx.insert(transactions).values({
                         description,
                         items: [{ name: productName, quantity: 1, price: pricing.price, discount }],
                         type: "inbound",
                         ...chargeDetails,
-                        status: "paid",
+                        status: paymentIntentId ? "paid" : "failed",
                         locationId: lid,
                         memberId: mid,
                         paymentType: paymentMethod.type,
@@ -270,32 +265,30 @@ export function purchasePkgRoutes(app: Elysia) {
                         },
                     });
 
-                    await tx
-                        .update(memberLocations)
-                        .set({
+                    if (paymentIntentId) {
+                        await tx.update(memberPackages).set({
                             status: "active",
-                            updated: new Date(),
-                        })
-                        .where(
-                            and(
-                                eq(memberLocations.memberId, mid),
-                                eq(memberLocations.locationId, lid)
-                            )
-                        );
+                        }).where(eq(memberPackages.id, memberPlanId));
+                    }
+                    await tx.update(memberLocations).set({
+                        status: "active",
+                        updated: new Date(),
+                    }).where(and(
+                        eq(memberLocations.memberId, mid),
+                        eq(memberLocations.locationId, lid)
+                    ));
                 });
 
                 return status(200, { status: "active" });
             } catch (error) {
+                console.log(error);
                 if (error instanceof Stripe.errors.StripeError) {
-                    switch (error.type) {
-                        case "StripeCardError":
-                            const paymentIntent = error.payment_intent;
-                            console.log(paymentIntent);
-                            console.log(error.code);
-                            return status(400, { error: error.message });
-                        default:
-                            return status(500, { error: error.message });
+                    const lastError = error.payment_intent?.last_payment_error;
+                    const declineCode = lastError?.decline_code;
+                    if (declineCode) {
+                        return status(400, { error: error.message });
                     }
+                    return status(500, { error: error.message });
                 }
                 return status(500, { error: "Failed to checkout" });
             }

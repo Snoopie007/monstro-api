@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
@@ -53,6 +53,15 @@ export function purchaseSubRoutes(app: Elysia) {
                 });
 
 
+                let cancelAt: Date | undefined = undefined;
+                if (pricing.expireThreshold && pricing.expireInterval) {
+                    cancelAt = calculateThresholdDate({
+                        startDate: today,
+                        threshold: pricing.expireThreshold,
+                        interval: pricing.expireInterval,
+                    });
+                }
+
                 const classCredits = pricing.plan.classLimitInterval === 'term' ? pricing.plan.totalClassLimit || 0 : 0;
 
                 const [subscription] = await db.insert(memberSubscriptions).values({
@@ -61,11 +70,14 @@ export function purchaseSubRoutes(app: Elysia) {
                     currentPeriodEnd,
                     locationId: lid,
                     memberId: mid,
-
+                    cancelAt,
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentType,
                     classCredits,
                     status: 'incomplete',
+                    metadata: {
+                        hasPaidDownpayment: !!pricing.downpayment,
+                    },
                 }).returning();
 
                 if (!subscription) {
@@ -104,16 +116,26 @@ export function purchaseSubRoutes(app: Elysia) {
 
             try {
 
-                const [member, location, pricing] = await Promise.all([
-                    db.query.members.findFirst({
-                        where: (member, { eq }) => eq(member.id, mid),
+                const [sub, location, pricing] = await Promise.all([
+                    db.query.memberSubscriptions.findFirst({
+                        where: (memberSubscription, { eq }) => eq(memberSubscription.id, memberPlanId),
                         columns: {
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                            stripeCustomerId: true,
+                            currentPeriodStart: true,
+                            currentPeriodEnd: true,
+                        },
+                        with: {
+                            member: {
+                                columns: {
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    stripeCustomerId: true,
+                                },
+                            },
                         },
                     }),
+
+
                     db.query.locations.findFirst({
                         where: (location, { eq }) => eq(location.id, lid),
                         with: {
@@ -136,6 +158,11 @@ export function purchaseSubRoutes(app: Elysia) {
                     })
                 ]);
 
+                if (!sub) {
+                    return status(404, { error: "Subscription not found" });
+                }
+
+                const { member, currentPeriodEnd, currentPeriodStart } = sub;
 
                 if (!member || !member.stripeCustomerId) {
                     return status(404, { error: "Member or Stripe customer not found" });
@@ -182,7 +209,8 @@ export function purchaseSubRoutes(app: Elysia) {
                     memberId: mid,
                 };
 
-                const today = new Date();
+                const today = new Date(currentPeriodStart);
+
                 let startDate: Date = today;
 
                 let discount: number = 0;
@@ -219,15 +247,6 @@ export function purchaseSubRoutes(app: Elysia) {
                 }
 
 
-                let cancelAt: Date | undefined = undefined;
-                if (pricing.expireThreshold && pricing.expireInterval) {
-                    cancelAt = calculateThresholdDate({
-                        startDate: startDate,
-                        threshold: pricing.expireThreshold,
-                        interval: pricing.expireInterval,
-                    });
-                }
-
                 const { usagePercent, settings } = locationState;
                 const isGrowthPlan = locationState.planId === 3;
                 const chargeDetails = calculateChargeDetails({
@@ -242,6 +261,31 @@ export function purchaseSubRoutes(app: Elysia) {
 
                 const productName = pricing.name;
                 const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
+
+                const invoiceData = {
+                    description,
+                    items: [{
+                        name: productName,
+                        quantity: 1,
+                        price: chargeDetails.unitCost,
+                    }],
+                    memberId: mid,
+                    locationId: lid,
+                    memberSubscriptionId: memberPlanId,
+                    ...chargeDetails,
+                    forPeriodStart: today,
+                    forPeriodEnd: currentPeriodEnd,
+                    discount,
+                    currency: pricing.currency,
+                    dueDate: today,
+                }
+                const [invoice] = await db.insert(memberInvoices).values({
+                    ...invoiceData,
+                    status: 'unpaid',
+                }).returning({
+                    id: memberInvoices.id
+                });
+
                 const { id: paymentIntentId } = await stripe.processPayment({
                     ...chargeDetails,
                     paymentMethodId,
@@ -255,13 +299,10 @@ export function purchaseSubRoutes(app: Elysia) {
                 });
 
                 await db.transaction(async (tx) => {
+
                     await tx.update(memberSubscriptions).set({
                         status: paymentIntentId ? 'active' : 'past_due',
-                        cancelAt,
-                        stripePaymentId: paymentMethod.stripeId,
-                        metadata: {
-                            hasPaidDownpayment: !!pricing.downpayment,
-                        },
+                        stripePaymentId: paymentMethod.stripeId
                     }).where(eq(memberSubscriptions.id, memberPlanId));
                     await tx.insert(transactions).values({
                         description,
@@ -282,6 +323,12 @@ export function purchaseSubRoutes(app: Elysia) {
                             memberSubscriptionId: memberPlanId,
                         },
                     });
+                    if (paymentIntentId) {
+                        await tx.update(memberInvoices).set({
+                            status: "paid",
+                            paid: true,
+                        }).where(eq(memberInvoices.id, invoice!.id));
+                    }
                     await tx.update(memberLocations).set({
                         status: "active",
                     }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
