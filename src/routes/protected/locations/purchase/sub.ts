@@ -363,6 +363,7 @@ export function purchaseSubRoutes(app: Elysia) {
                                 price: pricing.price,
                                 currency: pricing.currency,
                                 interval: pricing.interval,
+                                intervalThreshold: pricing.intervalThreshold,
                             },
                             discount: discount > 0 ? {
                                 amount: discount,
@@ -382,6 +383,7 @@ export function purchaseSubRoutes(app: Elysia) {
                                 startDate: nextBillingDate,
                                 data: {
                                     ...payload,
+                                    recurrenceCount: 1,
                                 },
                             });
                         }

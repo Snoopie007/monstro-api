@@ -245,6 +245,7 @@ export function migrateSubRoutes(app: Elysia) {
                         price: pricing.price,
                         currency: pricing.currency,
                         interval: pricing.interval,
+                        intervalThreshold: pricing.intervalThreshold,
                     }
                 };
                 if (pricing.intervalThreshold === 1) {
@@ -257,7 +258,10 @@ export function migrateSubRoutes(app: Elysia) {
                 } else {
                     scheduleRecursiveRenewal({
                         startDate: nextBillingDate,
-                        data: payload,
+                        data: {
+                            ...payload,
+                            recurrenceCount: 1,
+                        },
                     });
                 }
 
