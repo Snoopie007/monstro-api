@@ -14,6 +14,8 @@ export type InvoiceItem = {
     quantity: number;
     price: number;
     productId?: string;
+    discount?: number;
+    tax?: number;
 }
 
 export type NewInvoice = typeof memberInvoices.$inferInsert;
