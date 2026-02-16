@@ -1,13 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
-	integer,
 	timestamp,
 	pgTable,
-	date,
 	uuid,
 	text,
-	time,
-	smallint,
 	boolean,
 } from "drizzle-orm/pg-core";
 import { programSessions, programs } from "./programs";
