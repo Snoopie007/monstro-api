@@ -1,6 +1,5 @@
 import { 
   reservations, 
-  recurringReservations, 
   reservationExceptions,
 } from '@subtrees/schemas/reservations';
 import { Member } from '../member';
@@ -39,22 +38,6 @@ export type ReservationWithRelations = Reservation & {
   originalReservation?: Reservation;
 };
 
-// Recurring reservation types
-export type RecurringReservation = typeof recurringReservations.$inferSelect;
-
-export type RecurringReservationWithRelations = RecurringReservation & {
-  member?: Member;
-  program?: Program;
-  session?: {
-    id: string;
-    time: string;
-    duration: number;
-    day: number;
-    programId: string;
-  };
-  exceptions?: ReservationException[];
-};
-
 // Unified exception type (repurposed from recurring_reservations_exceptions)
 export type ReservationException = typeof reservationExceptions.$inferSelect;
 
@@ -79,28 +62,9 @@ export type CreateReservationInput = {
   originalReservationId?: string;
 };
 
-export type CreateRecurringReservationInput = {
-  sessionId?: string;
-  memberId: string;
-  locationId: string;
-  startDate: Date;
-  memberSubscriptionId?: string;
-  memberPackageId?: string;
-  interval?: 'day' | 'week' | 'month' | 'year';
-  intervalThreshold?: number;
-  // Denormalized fields
-  programId?: string;
-  programName?: string;
-  sessionTime?: string;
-  sessionDuration?: number;
-  sessionDay?: number;
-  staffId?: string;
-};
-
 // Input types for exceptions
 export type CreateExceptionInput = {
   reservationId?: string;
-  recurringReservationId?: string;
   locationId?: string;
   sessionId?: string;
   occurrenceDate: Date;
@@ -130,7 +94,8 @@ export type CreateMakeUpClassInput = {
 // Response type for cancellation operations
 export type CancellationResult = {
   cancelledReservations: number;
-  cancelledRecurringReservations: number;
+  // Legacy compatibility for routes not yet migrated off recurring logic
+  cancelledRecurringReservations?: number;
   exceptionsCreated: number;
   notificationsSent?: number;
 };
