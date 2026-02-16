@@ -4,7 +4,7 @@ import { calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory, getModel } from 
 import { ToolFunctions } from "@/libs/ai/FNHandler";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { broadcastSupportMessage, formatSupportMessagePayload } from "@/libs/support-broadcast";
-import { chargeWallet, checkWalletBalance } from "@/libs/wallet";
+import { chargeWallet, hasEnoughBalance } from "@/libs/wallet";
 import type {
     MemberLocation, NewSupportMessage,
     SupportConversation, SupportMessage
@@ -70,8 +70,13 @@ export async function supportMessagesRoute(app: Elysia) {
                 const usage = output.llmOutput?.tokenUsage;
                 if (usage) {
                     const cost = calculateAICost(usage, conversation.assistant.model);
-                    await checkWalletBalance(ml.location);
-                    await chargeWallet(ml.location, cost, `AI Support: ${cost}`);
+                    await hasEnoughBalance({ lid, amount: cost });
+                    await chargeWallet({
+                        lid,
+                        vendorId: ml.location.vendorId,
+                        amount: cost,
+                        description: `AI Support: ${cost}`,
+                    });
                 }
             });
 

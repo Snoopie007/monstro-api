@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { testQueue } from "@/queues";
+import { paymentQueue, testQueue } from "@/queues";
 import { MemberStripePayments } from "@/libs/stripe";
 import { db } from "@/db/db";
 import Stripe from "stripe";
@@ -9,6 +9,7 @@ export function testRoutes(app: Elysia) {
         "/test",
         async ({ body, set }) => {
             const { subId } = body;
+
 
             try {
                 const integration = await db.query.integrations.findFirst({
@@ -31,6 +32,7 @@ export function testRoutes(app: Elysia) {
                     1000,
                     "pm_1SzrBsEiUYeMOEsWYAMcyFeM"
                 );
+
                 return { ok: true, result: res };
             } catch (error: any) {
                 if (
@@ -39,10 +41,26 @@ export function testRoutes(app: Elysia) {
                 ) {
                     switch (error.type) {
                         case "StripeCardError":
-                            const lastPaymentError = error.payment_intent?.last_payment_error;
-                            console.log(lastPaymentError);
+                            const paymentIntent = error.payment_intent;
+                            console.log(paymentIntent);
                             console.log(error.code);
-                            console.log(error.decline_code);
+                            await paymentQueue.add("retry:wallet", {
+                                paymentIntentId: paymentIntent.id,
+                                attempts: 0,
+                                amount: paymentIntent.amount,
+                                lid: "acc_BpT7jEb3Q16nOPL3vo7qlw",
+                                walletId: "wal_1SzrBsEiUYeMOEsWYAMcyFeM",
+                            }, {
+                                jobId: `retry:wallet:${paymentIntent.id}`,
+                                delay: 2 * 60 * 1000,
+                                attempts: 8,
+                                backoff: {
+                                    type: 'exponential',
+                                    delay: 2 * 60 * 1000,
+                                },
+                                removeOnComplete: true,
+                                removeOnFail: true,
+                            });
                             set.status = 400;
                             return { error: error.message };
                         case "StripeError":

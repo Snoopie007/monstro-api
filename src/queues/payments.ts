@@ -5,7 +5,7 @@ import { Queue } from "bullmq";
 export const paymentQueue = new Queue('payments', {
     connection: redisConfig,
     defaultJobOptions: {
-        attempts: 1,
+        attempts: 8,
         removeOnFail: true,
         removeOnComplete: true,
         backoff: {
