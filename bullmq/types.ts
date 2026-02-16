@@ -48,6 +48,7 @@ const PricingSchema = z.object({
     currency: z.string(),
     price: z.coerce.number(),
     interval: z.enum(['day', 'week', 'month', 'year']),
+    intervalThreshold: z.coerce.number(),
 })
 
 export const DiscountSchema = z.object({
