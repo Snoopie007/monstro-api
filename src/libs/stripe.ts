@@ -447,7 +447,25 @@ class MemberStripePayments extends BaseStripePayments {
         });
         return res.data;
     }
+    async createPaymentIntent(amount: number, paymentMethodId: string) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
 
+        const option: Stripe.PaymentIntentCreateParams = {
+            payment_method_types: ['card', 'us_bank_account'],
+            customer: this._customer,
+            payment_method: paymentMethodId,
+            confirm: true,
+            amount,
+            currency: "usd",
+            return_url: `${BASE_MONSTRO_X_URL}/stripe/cards/success`,
+        }
+        return this._stripe.paymentIntents.create(option);
+    }
     async processPayment(options: MemberPaymentOptions) {
 
         if (!this._customer) {

@@ -27,8 +27,8 @@ export function testRoutes(app: Elysia) {
                     return { error: "Integration not found" };
                 }
                 const stripe = new MemberStripePayments(integration.accountId);
+                stripe.setCustomer("cus_TjU6Twx5tNTTLs");
                 const res = await stripe.createPaymentIntent(
-                    "cus_TjU6Twx5tNTTLs",
                     1000,
                     "pm_1SzrBsEiUYeMOEsWYAMcyFeM"
                 );

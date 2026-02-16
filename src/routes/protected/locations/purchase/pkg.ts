@@ -286,14 +286,16 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 return status(200, { status: "active" });
             } catch (error) {
-                console.log(error);
                 if (error instanceof Stripe.errors.StripeError) {
-                    const lastError = error.payment_intent?.last_payment_error;
-                    const declineCode = lastError?.decline_code;
-                    if (declineCode) {
-                        return status(400, { error: error.message });
+                    switch (error.type) {
+                        case "StripeCardError":
+                            const paymentIntent = error.payment_intent;
+                            console.log(paymentIntent);
+                            console.log(error.code);
+                            return status(400, { error: error.message });
+                        default:
+                            return status(500, { error: error.message });
                     }
-                    return status(500, { error: error.message });
                 }
                 return status(500, { error: "Failed to checkout" });
             }
