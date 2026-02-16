@@ -1,19 +1,18 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import type {
-    Reservation, MemberPackage,
-    MemberSubscription,
+    Reservation
 } from "subtrees/types";
 import {
     memberPackages, memberSubscriptions,
     reservations
 } from "subtrees/schemas";
-import { eq, sql, and, gte, lte } from "drizzle-orm";
-import { classQueue } from "@/queues";
+import { eq, sql } from "drizzle-orm";
 
-import { addHours, addMinutes, addWeeks, differenceInMilliseconds, subDays } from "date-fns";
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
-import { checkSubClassCredits, getSessionState } from "./utils";
+import { differenceInMilliseconds } from "date-fns";
+import { toZonedTime } from 'date-fns-tz';
+import { checkSubClassCredits, getSessionState, scheduleClassReminderJobs } from "./utils";
+import { chargeWallet } from "@/libs/wallet";
 
 const ReservationsProps = {
     params: t.Object({
@@ -50,11 +49,12 @@ export async function locationReservations(app: Elysia) {
                     where: (locations, { eq }) => eq(locations.id, lid),
                     columns: {
                         id: true,
+                        vendorId: true,
                         name: true,
                         email: true,
                         phone: true,
                         timezone: true,
-                    },
+                    }
                 });
 
                 if (!location) {
@@ -67,9 +67,9 @@ export async function locationReservations(app: Elysia) {
                 let member = undefined;
                 if (isPackage) {
                     pkg = await db.query.memberPackages.findFirst({
-                        where: (memberPackages, { eq, and }) => and(
-                            eq(memberPackages.id, memberPlanId),
-                            eq(memberPackages.status, "active")
+                        where: (mp, { eq, and }) => and(
+                            eq(mp.id, memberPlanId),
+                            eq(mp.status, "active")
                         ),
                         with: {
                             member: {
@@ -90,9 +90,9 @@ export async function locationReservations(app: Elysia) {
                     classLimitReached = pkg ? pkg.totalClassAttended >= pkg.totalClassLimit : false;
                 } else {
                     sub = await db.query.memberSubscriptions.findFirst({
-                        where: (memberSubscriptions, { eq, and }) => and(
-                            eq(memberSubscriptions.id, memberPlanId),
-                            eq(memberSubscriptions.status, "active")
+                        where: (ms, { eq, and }) => and(
+                            eq(ms.id, memberPlanId),
+                            eq(ms.status, "active")
                         ),
                         with: {
                             member: {
@@ -110,6 +110,9 @@ export async function locationReservations(app: Elysia) {
                         },
                     });
 
+                    if (plan.classLimitInterval === 'term' && sub?.classCredits === 0) {
+                        return status(200, { success: false, message: "No credits available for your plan." });
+                    }
                     member = sub?.member;
                     classLimitReached = sub ? await checkSubClassCredits({
                         sid: sub.id,
@@ -194,80 +197,25 @@ export async function locationReservations(app: Elysia) {
                     }
                     return res;
                 });
+                const success = await chargeWallet({
+                    lid,
+                    vendorId: location.vendorId,
+                    amount: autoReschedule ? 1000 : 1500,
+                    description: `Automation fee for ${session.programName}`,
+                });
 
-                // Schedule class reminder jobs using new queue-based system
-                try {
-
-                    const payload = {
-                        rid: reservation.id,
+                if (success) {
+                    await scheduleClassReminderJobs({
                         lid,
-                        member: {
-                            firstName: member.firstName,
-                            lastName: member.lastName,
-                            email: member.email,
-                        },
-                        location: {
-                            name: location.name,
-                            email: location.email,
-                            phone: location.phone,
-                        },
-                        class: {
-                            name: session.programName,
-                            startTime: session.utcStartTime,
-                            endTime: session.utcEndTime,
-                        },
-                    }
-                    // Calculate delays for reminders and missed checks
-
-                    const reminderDelay = differenceInMilliseconds(subDays(session.utcStartTime, 2), now);
-                    const missedDelay = differenceInMilliseconds(addMinutes(session.utcEndTime, 45), now);
-                    let queues = [
-                        classQueue.add('reminder', payload, {
-                            jobId: `class:reminder:${reservation.id}`,
-                            attempts: 2,
-                            delay: reminderDelay,
-                        }),
-
-                        classQueue.add('missed:check', {
-                            ...payload,
-                            mid: member.id,
-                        }, {
-                            jobId: `class:missed:${reservation.id}`,
-                            attempts: 2,
-                            delay: missedDelay,
-                        })
-                    ]
-
-                    if (true) {
-                        const nextUtcStartTime = addWeeks(session.utcStartTime, 1);
-                        const nextUtcEndTime = addWeeks(session.utcEndTime, 1);
-                        const rescheduleDelay = differenceInMilliseconds(subDays(nextUtcStartTime, 2), now);
-                        queues.push(
-                            classQueue.add('auto:reschedule', {
-                                lid,
-                                memberPlanId: memberPlanId,
-                                location: payload.location,
-                                member: payload.member,
-                                session: {
-                                    ...session,
-                                    utcStartTime: nextUtcStartTime,
-                                    utcEndTime: nextUtcEndTime,
-                                },
-                                plan,
-                            }, {
-                                jobId: `class:reschedule:${reservation.id}`,
-                                attempts: 3,
-                                delay: rescheduleDelay,
-                            })
-                        )
-                    }
-
-                    await Promise.all(queues)
-                } catch (error) {
-                    console.error('Error scheduling class reminder jobs:', error);
-                    // Don't fail the reservation if job scheduling fails
+                        reservationId: reservation.id,
+                        memberPlanId,
+                        member,
+                        location,
+                        session,
+                        plan,
+                        autoReschedule: autoReschedule ?? false,
+                    });
                 }
-
 
                 return status(200, { success: true, data: reservation });
             } catch (err) {
@@ -361,11 +309,10 @@ export async function locationReservations(app: Elysia) {
 
         return app;
     })
-
-
-
     return app;
 }
+
+
 
 
 

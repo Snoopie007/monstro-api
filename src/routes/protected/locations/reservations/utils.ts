@@ -1,7 +1,9 @@
 import { db } from "@/db/db";
 import { reservations } from "@subtrees/schemas";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { startOfWeek, endOfWeek, sub } from "date-fns";
+import { startOfWeek, endOfWeek, subDays, addMinutes, differenceInMilliseconds, addWeeks } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+import { classQueue } from "@/queues";
 
 
 type CheckSubClassCreditsProps = {
@@ -77,3 +79,116 @@ export async function getSessionState(props: GetSessionStateProps): Promise<Sess
     return { isFull, isReserved };
 }
 
+
+type ScheduleClassReminderJobsProps = {
+    lid: string;
+    reservationId: string;
+    memberPlanId: string;
+    member: {
+        id: string;
+        firstName: string;
+        lastName: string | null;
+        email: string;
+    };
+    location: {
+        id: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        timezone: string;
+    };
+    session: {
+        id: string;
+        programName: string;
+        utcStartTime: Date;
+        utcEndTime: Date;
+    };
+    plan: {
+        id: string;
+        classLimitInterval: "week" | "term" | "one" | null;
+        totalClassLimit: number | null;
+    };
+    autoReschedule: boolean;
+};
+
+
+export async function scheduleClassReminderJobs(props: ScheduleClassReminderJobsProps) {
+    const { lid, reservationId, memberPlanId, member, location, session, plan, autoReschedule } = props;
+    const now = toZonedTime(new Date(), location.timezone);
+    try {
+
+        const payload = {
+            rid: reservationId,
+            lid,
+            member: {
+                firstName: member.firstName,
+                lastName: member.lastName,
+                email: member.email,
+            },
+            location: {
+                name: location.name,
+                email: location.email,
+                phone: location.phone,
+            },
+            class: {
+                name: session.programName,
+                startTime: session.utcStartTime,
+                endTime: session.utcEndTime,
+            },
+        }
+        // Calculate delays for reminders and missed checks
+
+        const reminderDelay = differenceInMilliseconds(subDays(session.utcStartTime, 2), now);
+        const missedDelay = differenceInMilliseconds(addMinutes(session.utcEndTime, 45), now);
+        let queues = [
+            classQueue.add('reminder', payload, {
+                jobId: `class:reminder:${reservationId}`,
+                attempts: 2,
+                delay: reminderDelay,
+            }),
+
+            classQueue.add('missed:check', {
+                ...payload,
+                mid: member.id,
+            }, {
+                jobId: `class:missed:${reservationId}`,
+                attempts: 2,
+                delay: missedDelay,
+            })
+        ]
+
+        if (autoReschedule) {
+            const nextUtcStartTime = addWeeks(session.utcStartTime, 1);
+            const nextUtcEndTime = addWeeks(session.utcEndTime, 1);
+            const rescheduleDelay = differenceInMilliseconds(subDays(nextUtcStartTime, 2), now);
+            queues.push(
+                classQueue.add('auto:reschedule', {
+                    lid,
+                    memberPlanId: memberPlanId,
+                    location: {
+                        ...payload.location,
+                        timezone: location.timezone,
+                    },
+                    member: payload.member,
+                    session: {
+                        ...session,
+                        utcStartTime: nextUtcStartTime,
+                        utcEndTime: nextUtcEndTime,
+                    },
+                    plan,
+                }, {
+                    jobId: `class:reschedule:${reservationId}`,
+                    attempts: 3,
+                    delay: rescheduleDelay,
+                })
+            )
+        }
+        await Promise.all(queues)
+
+    } catch (error) {
+        console.error('Error scheduling class reminder jobs:', error);
+        // Don't fail the reservation if job scheduling fails
+    }
+
+
+}

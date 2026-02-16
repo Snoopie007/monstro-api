@@ -1,19 +1,14 @@
 
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
-import type { Member, Location, MemberPlanPricing } from "@subtrees/types";
 
 
 export const subQueue = new Queue('subscriptions', {
     connection: redisConfig,
     defaultJobOptions: {
-        attempts: 6,
+        attempts: 1,
         removeOnFail: true,
         removeOnComplete: true,
-        backoff: {
-            type: 'exponential',
-            delay: 24 * 60 * 60 * 1000,
-        }
     }
 });
 subQueue.on('error', (err) => {
