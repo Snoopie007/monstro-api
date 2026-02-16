@@ -19,7 +19,7 @@ import type { MigrateMember } from './MigrateMember'
 import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { PlanProgram, Program } from './program'
 import type { User } from './user'
-
+import type { Invoice } from './invoices'
 
 export type Member = typeof members.$inferSelect & {
   user?: User
@@ -43,7 +43,7 @@ export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
   child?: MemberSubscription
-  invoices?: MemberInvoice[]
+  invoices?: Invoice[]
   plan?: MemberPlan
   pricing?: MemberPlanPricing
   contract?: MemberContract
@@ -88,12 +88,6 @@ export type MemberPlan = typeof memberPlans.$inferSelect & {
   member?: Member
 }
 
-export type MemberInvoice = typeof memberInvoices.$inferSelect & {
-  member?: Member
-  location?: Location
-  memberPackage?: MemberPackage | null
-  memberSubscription?: MemberSubscription | null
-}
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
   location?: Location
