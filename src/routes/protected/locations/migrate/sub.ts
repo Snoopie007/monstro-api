@@ -15,6 +15,7 @@ import {
 import { isToday } from "date-fns";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
 import type { SubscriptionJobData } from "@subtrees/bullmq";
+import Stripe from "stripe";
 const MigrateSubProps = {
     params: z.object({
         lid: z.string(),
@@ -271,7 +272,14 @@ export function migrateSubRoutes(app: Elysia) {
                 planId: plan.id,
             });
         } catch (error) {
-            console.error(error);
+            console.log(error);
+            if (error instanceof Stripe.errors.StripeError) {
+                const lastError = error.payment_intent?.last_payment_error;
+                const declineCode = lastError?.decline_code;
+                if (declineCode) {
+                    return status(400, { error: error.message });
+                }
+            }
             return status(500, { error: "Failed to checkout" });
         }
     }, {

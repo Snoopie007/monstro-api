@@ -12,6 +12,7 @@ import {
     scheduleCronBasedRenewal, scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
 import type { SubscriptionJobData } from "@subtrees/bullmq";
+import Stripe from "stripe";
 
 
 
@@ -230,40 +231,32 @@ export function purchaseSubRoutes(app: Elysia) {
                 const { usagePercent, settings } = locationState;
                 const isGrowthPlan = locationState.planId === 3;
                 const chargeDetails = calculateChargeDetails({
-                    amount: pricing.price,
+                    amount: pricing.downpayment || pricing.price,
                     discount,
                     taxRate: taxRate?.percentage ?? 0,
                     usagePercent: usagePercent || 0,
                     paymentType: paymentMethod.type,
-                    isRecurring: !isGrowthPlan,
+                    isRecurring: isGrowthPlan ? false : pricing.downpayment ? false : true,
                     passOnFees: settings?.passOnFees || false,
                 });
 
                 const productName = pricing.name;
-                const description = `Payment for ${pricing.name}`;
-                let paymentIntentId: string | undefined = undefined;
-                try {
-                    const { id } = await stripe.processPayment({
-
-                        ...chargeDetails,
-                        paymentMethodId,
-                        currency: pricing.currency,
-                        description,
-                        productName,
-                        metadata: {
-                            memberSubscriptionId: memberPlanId,
-                            ...metadata,
-                        },
-                    });
-                    paymentIntentId = id;
-                } catch (error) {
-
-                }
-
+                const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
+                const { id: paymentIntentId } = await stripe.processPayment({
+                    ...chargeDetails,
+                    paymentMethodId,
+                    currency: pricing.currency,
+                    description,
+                    productName,
+                    metadata: {
+                        memberSubscriptionId: memberPlanId,
+                        ...metadata,
+                    },
+                });
 
                 await db.transaction(async (tx) => {
                     await tx.update(memberSubscriptions).set({
-                        status: 'active',
+                        status: paymentIntentId ? 'active' : 'past_due',
                         cancelAt,
                         stripePaymentId: paymentMethod.stripeId,
                         metadata: {
@@ -279,7 +272,7 @@ export function purchaseSubRoutes(app: Elysia) {
                             stripeFee: chargeDetails.stripeFee,
                             monstroFee: chargeDetails.monstroFee,
                         },
-                        status: "paid",
+                        status: paymentIntentId ? "paid" : "failed",
                         locationId: lid,
                         memberId: mid,
                         paymentType: paymentMethod.type,
@@ -296,8 +289,16 @@ export function purchaseSubRoutes(app: Elysia) {
 
 
                 // Schedule renewal
+                if (!paymentIntentId) {
+                    return status(200, { status: 'past_due' });
+                }
 
                 if (pricing.interval && pricing.intervalThreshold) {
+                    const nextBillingDate = calculateThresholdDate({
+                        startDate: startDate,
+                        threshold: pricing.intervalThreshold,
+                        interval: pricing.interval,
+                    });
                     if (["month", "year"].includes(pricing.interval)) {
                         const payload: SubscriptionJobData = {
                             sid: memberPlanId,
@@ -328,23 +329,30 @@ export function purchaseSubRoutes(app: Elysia) {
                         if (pricing.intervalThreshold === 1) {
 
                             scheduleCronBasedRenewal({
-                                startDate,
+                                startDate: nextBillingDate,
                                 interval: pricing.interval,
                                 data: payload,
                             });
                         } else {
+
                             scheduleRecursiveRenewal({
-                                startDate,
+                                startDate: nextBillingDate,
                                 data: payload,
                             });
                         }
-
                     }
                 }
 
                 return status(200, { status: 'active' });
             } catch (error) {
-                console.error(error);
+                console.log(error);
+                if (error instanceof Stripe.errors.StripeError) {
+                    const lastError = error.payment_intent?.last_payment_error;
+                    const declineCode = lastError?.decline_code;
+                    if (declineCode) {
+                        return status(400, { error: error.message });
+                    }
+                }
                 return status(500, { error: "Failed to checkout" });
             }
         }, {

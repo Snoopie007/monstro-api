@@ -286,9 +286,13 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 return status(200, { status: "active" });
             } catch (error) {
-                console.error(error);
+                console.log(error);
                 if (error instanceof Stripe.errors.StripeError) {
-                    console.error('Stripe error', error.message);
+                    const lastError = error.payment_intent?.last_payment_error;
+                    const declineCode = lastError?.decline_code;
+                    if (declineCode) {
+                        return status(400, { error: error.message });
+                    }
                     return status(500, { error: error.message });
                 }
                 return status(500, { error: "Failed to checkout" });
