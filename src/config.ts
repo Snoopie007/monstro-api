@@ -37,7 +37,7 @@ export const redisConfig = {
     host: process.env.UPSTASH_REDIS_HOST,
     port: parseInt(process.env.UPSTASH_REDIS_PORT ?? '6379'),
     password: process.env.UPSTASH_REDIS_PASSWORD,
-    tls: {},
+    tls: false,
     // Retry strategy to prevent negative timeout warnings
     // First retry must be at least 1 second to avoid negative timeout calculations
     retryStrategy: (times: number) => {

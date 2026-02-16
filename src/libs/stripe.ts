@@ -58,6 +58,8 @@ abstract class BaseStripePayments {
     constructor(key: string) {
         this._stripe = new Stripe(key, {
             apiVersion: STRIPE_API_VERSION,
+            timeout: 30000,
+            maxNetworkRetries: 1,
             appInfo: {
                 name: "My Monstro",
                 url: "https://monstro-x.com",
@@ -553,14 +555,35 @@ class MemberStripePayments extends BaseStripePayments {
     async createRefund(params: {
         payment_intent?: string;
         charge?: string;
+        amount?: number;
+        reverseTransfer?: boolean;
+        allowNoReverseTransferFallback?: boolean;
     }): Promise<Stripe.Refund> {
-        return this._stripe.refunds.create({
+        const requestedReverseTransfer = params.reverseTransfer ?? true;
+        const buildPayload = (reverseTransfer: boolean): Stripe.RefundCreateParams => ({
             ...(params.payment_intent && { payment_intent: params.payment_intent }),
             ...(params.charge && { charge: params.charge }),
+            ...(typeof params.amount === "number" && params.amount > 0 && { amount: params.amount }),
             refund_application_fee: false,
-            reverse_transfer: true,
+            reverse_transfer: reverseTransfer,
             reason: "requested_by_customer",
         });
+
+        try {
+            return await this._stripe.refunds.create(buildPayload(requestedReverseTransfer));
+        } catch (error) {
+            const canFallback =
+                requestedReverseTransfer
+                && (params.allowNoReverseTransferFallback ?? true)
+                && error instanceof Stripe.errors.StripeInvalidRequestError
+                && /reverse_transfer|insufficient funds/i.test(error.message || "");
+
+            if (!canFallback) {
+                throw error;
+            }
+
+            return await this._stripe.refunds.create(buildPayload(false));
+        }
     }
 
 
