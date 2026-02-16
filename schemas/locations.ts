@@ -11,6 +11,7 @@ import {
 import { vendors } from "./vendors";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import type { LocationSettings } from "../types";
+import { contractTemplates } from "./contracts";
 
 export const locations = pgTable("locations", {
 	id: uuid("id")
@@ -47,7 +48,7 @@ export const locationState = pgTable("location_state", {
 		.primaryKey()
 		.references(() => locations.id, { onDelete: "cascade" }),
 	planId: integer("plan_id").notNull().default(1),
-	waiverId: text("waiver_id").references(() => locations.id, {
+	waiverId: text("waiver_id").references(() => contractTemplates.id, {
 		onDelete: "set null",
 	}),
 	agreeToTerms: boolean("agree_to_terms").notNull().default(false),
