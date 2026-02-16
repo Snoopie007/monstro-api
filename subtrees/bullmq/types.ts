@@ -79,6 +79,10 @@ export const CashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
     vendorId: z.string(),
 });
 
+export const RecursiveCashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+    vendorId: z.string(),
+    recurrenceCount: z.number(),
+});
 export const RRClassSchema = z.object({
     plan: z.object({
         id: z.string(),
