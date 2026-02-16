@@ -74,10 +74,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentType,
                     classCredits,
-                    status: 'incomplete',
-                    metadata: {
-                        hasPaidDownpayment: !!pricing.downpayment,
-                    },
+                    status: 'incomplete'
                 }).returning();
 
                 if (!subscription) {
@@ -302,7 +299,10 @@ export function purchaseSubRoutes(app: Elysia) {
 
                     await tx.update(memberSubscriptions).set({
                         status: paymentIntentId ? 'active' : 'past_due',
-                        stripePaymentId: paymentMethod.stripeId
+                        stripePaymentId: paymentMethod.stripeId,
+                        metadata: {
+                            hasPaidDownpayment: pricing.downpayment && paymentIntentId,
+                        },
                     }).where(eq(memberSubscriptions.id, memberPlanId));
                     await tx.insert(transactions).values({
                         description,
