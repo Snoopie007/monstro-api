@@ -1,7 +1,7 @@
 
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
-import type { SubscriptionJobData } from "@subtrees/bullmq/types";
+import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@subtrees/bullmq/types";
 
 
 export const subQueue = new Queue('subscriptions', {
@@ -59,7 +59,7 @@ export async function scheduleRecursiveRenewal({
     data,
 }: {
     startDate: Date;
-    data: SubscriptionJobData;
+    data: RecursiveSubscriptionJobData;
 }) {
     const { sid } = data;
     await subQueue.add('renewal:recursive', data, {
