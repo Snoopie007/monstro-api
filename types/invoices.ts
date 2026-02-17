@@ -2,7 +2,7 @@ import { memberInvoices } from "../schemas/invoice";
 import type { Location } from "./location";
 import type { Member, MemberSubscription } from "./member";
 
-export type Invoice = typeof memberInvoices.$inferSelect & {
+export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     member?: Member;
     location?: Location;
     items?: InvoiceItem[];
