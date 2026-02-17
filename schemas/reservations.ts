@@ -5,6 +5,9 @@ import {
 	uuid,
 	text,
 	boolean,
+	time,
+	integer,
+	smallint,
 } from "drizzle-orm/pg-core";
 import { programSessions, programs } from "./programs";
 import { members } from "./members";
@@ -25,6 +28,9 @@ export const reservations = pgTable("reservations", {
 	endOn: timestamp("end_on", { withTimezone: true }).notNull(),
 	programId: text("program_id").references(() => programs.id, { onDelete: "set null" }),
 	programName: text("program_name"),
+	sessionTime: time("session_time"),
+	sessionDuration: integer("session_duration"),
+	sessionDay: smallint("session_day"),
 	staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),
 	status: ReservationStatusEnum("status").notNull().default("confirmed"),
 	cancelledAt: timestamp("cancelled_at", { withTimezone: true }),

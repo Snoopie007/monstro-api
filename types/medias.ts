@@ -1,4 +1,4 @@
-import { media } from "../schemas/chat/medias";
+import { media } from "@subtrees/schemas";
 
 export type Media = typeof media.$inferSelect;
 export type NewMedia = typeof media.$inferInsert;
