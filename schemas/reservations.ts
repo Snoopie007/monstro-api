@@ -1,17 +1,18 @@
 import { sql } from "drizzle-orm";
 import {
-	timestamp,
-	pgTable,
-	uuid,
-	text,
 	boolean,
+	pgTable,
+	primaryKey,
+	text,
+	timestamp,
+	uuid,
 } from "drizzle-orm/pg-core";
-import { programSessions, programs } from "./programs";
-import { members } from "./members";
+import { ExceptionInitiatorEnum, ReservationStatusEnum } from "./DatabaseEnums";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
 import { locations } from "./locations";
+import { members } from "./members";
+import { programSessions, programs } from "./programs";
 import { staffs } from "./staffs";
-import { ReservationStatusEnum, ExceptionInitiatorEnum } from "./DatabaseEnums";
 
 
 export const reservations = pgTable("reservations", {
@@ -54,3 +55,8 @@ export const reservationExceptions = pgTable("reservation_exceptions", {
 	createdBy: text("created_by").references(() => staffs.id, { onDelete: "set null" }),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const memberAutoSchedule = pgTable("member_auto_schedule", {
+	sessionId: text("session_id").notNull().references(() => programSessions.id, { onDelete: "cascade" }),
+	jobKey: text("job_key").notNull(),
+}, (t) => [primaryKey({ columns: [t.sessionId, t.jobKey] })]);
