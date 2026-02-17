@@ -5,6 +5,9 @@ import {
 	uuid,
 	text,
 	boolean,
+	time,
+	integer,
+	smallint,
 } from "drizzle-orm/pg-core";
 import { programSessions, programs } from "./programs";
 import { members } from "./members";
