@@ -206,9 +206,9 @@ export function purchaseSubRoutes(app: Elysia) {
                     memberId: mid,
                 };
 
-                const today = new Date(currentPeriodStart);
 
-                let startDate: Date = today;
+                const now = new Date();
+                const startDate = new Date(currentPeriodStart);
 
                 let discount: number = 0;
                 if (promoId) {
@@ -270,11 +270,11 @@ export function purchaseSubRoutes(app: Elysia) {
                     locationId: lid,
                     memberSubscriptionId: memberPlanId,
                     ...chargeDetails,
-                    forPeriodStart: today,
+                    forPeriodStart: startDate,
                     forPeriodEnd: currentPeriodEnd,
                     discount,
                     currency: pricing.currency,
-                    dueDate: today,
+                    dueDate: startDate,
                 }
                 const [invoice] = await db.insert(memberInvoices).values({
                     ...invoiceData,
@@ -285,7 +285,7 @@ export function purchaseSubRoutes(app: Elysia) {
 
                 const { id: paymentIntentId } = await stripe.processPayment({
                     ...chargeDetails,
-                    paymentMethodId,
+                    paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.currency,
                     description,
                     productName,
@@ -317,7 +317,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         locationId: lid,
                         memberId: mid,
                         paymentType: paymentMethod.type,
-                        chargeDate: today,
+                        chargeDate: now,
                         currency: pricing.currency,
                         metadata: {
                             memberSubscriptionId: memberPlanId,
