@@ -135,8 +135,6 @@ export function purchasePkgRoutes(app: Elysia) {
                     return status(404, { error: "Pricing not found" });
                 }
 
-
-
                 const { taxRates, locationState, integrations } = location;
 
                 const integration = integrations[0];
@@ -224,24 +222,17 @@ export function purchasePkgRoutes(app: Elysia) {
                     isRecurring: false,
                     passOnFees: settings?.passOnFees || false,
                 });
-                let paymentIntentId: string | undefined = undefined;
-                try {
-                    const { id } = await stripe.processPayment({
-                        ...chargeDetails,
-                        paymentMethodId,
-                        currency: pricing.currency,
-                        description,
-                        productName,
-                        metadata: {
-                            memberPackageId: memberPlanId,
-                            ...metadata,
-                        },
-                    });
-                    paymentIntentId = id;
-                } catch (error) {
-
-                }
-
+                const { id: paymentIntentId } = await stripe.processPayment({
+                    ...chargeDetails,
+                    paymentMethodId: paymentMethod.stripeId,
+                    currency: pricing.currency,
+                    description,
+                    productName,
+                    metadata: {
+                        memberPackageId: memberPlanId,
+                        ...metadata,
+                    },
+                });
                 await db.transaction(async (tx) => {
 
                     await tx.insert(transactions).values({
@@ -252,6 +243,7 @@ export function purchasePkgRoutes(app: Elysia) {
                         status: paymentIntentId ? "paid" : "failed",
                         locationId: lid,
                         memberId: mid,
+                        paymentMethodId: paymentMethod.stripeId,
                         paymentType: paymentMethod.type,
                         chargeDate: today,
                         currency: pricing.plan.currency,

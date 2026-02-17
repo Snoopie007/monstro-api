@@ -158,7 +158,6 @@ export function purchaseSubRoutes(app: Elysia) {
                 if (!sub) {
                     return status(404, { error: "Subscription not found" });
                 }
-
                 const { member, currentPeriodEnd, currentPeriodStart } = sub;
 
                 if (!member || !member.stripeCustomerId) {
@@ -206,9 +205,9 @@ export function purchaseSubRoutes(app: Elysia) {
                     memberId: mid,
                 };
 
-                const today = new Date(currentPeriodStart);
 
-                let startDate: Date = today;
+                const now = new Date();
+                const startDate = new Date(currentPeriodStart);
 
                 let discount: number = 0;
                 if (promoId) {
@@ -270,22 +269,27 @@ export function purchaseSubRoutes(app: Elysia) {
                     locationId: lid,
                     memberSubscriptionId: memberPlanId,
                     ...chargeDetails,
-                    forPeriodStart: today,
+                    forPeriodStart: startDate,
                     forPeriodEnd: currentPeriodEnd,
                     discount,
                     currency: pricing.currency,
-                    dueDate: today,
+                    dueDate: startDate,
                 }
+
+                let invoiceId: string | null = null;
                 const [invoice] = await db.insert(memberInvoices).values({
                     ...invoiceData,
                     status: 'unpaid',
                 }).returning({
                     id: memberInvoices.id
                 });
+                if (invoice) {
+                    invoiceId = invoice.id;
+                }
 
                 const { id: paymentIntentId } = await stripe.processPayment({
                     ...chargeDetails,
-                    paymentMethodId,
+                    paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.currency,
                     description,
                     productName,
@@ -309,6 +313,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         items: [{ name: productName, quantity: 1, price: pricing.price, discount }],
                         type: "inbound",
                         ...chargeDetails,
+                        invoiceId,
                         fees: {
                             stripeFee: chargeDetails.stripeFee,
                             monstroFee: chargeDetails.monstroFee,
@@ -316,18 +321,19 @@ export function purchaseSubRoutes(app: Elysia) {
                         status: paymentIntentId ? "paid" : "failed",
                         locationId: lid,
                         memberId: mid,
+                        paymentMethodId: paymentMethod.stripeId,
                         paymentType: paymentMethod.type,
-                        chargeDate: today,
+                        chargeDate: now,
                         currency: pricing.currency,
                         metadata: {
                             memberSubscriptionId: memberPlanId,
                         },
                     });
-                    if (paymentIntentId) {
+                    if (paymentIntentId && invoiceId) {
                         await tx.update(memberInvoices).set({
                             status: "paid",
                             paid: true,
-                        }).where(eq(memberInvoices.id, invoice!.id));
+                        }).where(eq(memberInvoices.id, invoiceId));
                     }
                     await tx.update(memberLocations).set({
                         status: "active",
@@ -363,6 +369,7 @@ export function purchaseSubRoutes(app: Elysia) {
                                 price: pricing.price,
                                 currency: pricing.currency,
                                 interval: pricing.interval,
+                                intervalThreshold: pricing.intervalThreshold,
                             },
                             discount: discount > 0 ? {
                                 amount: discount,
@@ -380,7 +387,10 @@ export function purchaseSubRoutes(app: Elysia) {
 
                             scheduleRecursiveRenewal({
                                 startDate: nextBillingDate,
-                                data: payload,
+                                data: {
+                                    ...payload,
+                                    recurrenceCount: 1,
+                                },
                             });
                         }
                     }
@@ -388,6 +398,7 @@ export function purchaseSubRoutes(app: Elysia) {
 
                 return status(200, { status: 'active' });
             } catch (error) {
+                console.log(error);
                 if (error instanceof Stripe.errors.StripeError) {
                     switch (error.type) {
                         case "StripeCardError":

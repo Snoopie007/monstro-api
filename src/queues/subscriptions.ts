@@ -1,7 +1,7 @@
 
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
-import type { SubscriptionJobData } from "@subtrees/bullmq/types";
+import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@subtrees/bullmq/types";
 
 
 export const subQueue = new Queue('subscriptions', {
@@ -45,9 +45,9 @@ export async function scheduleCronBasedRenewal({
     }
 
     return await subQueue.upsertJobScheduler(`renewal:static:${sid}`, {
-        pattern,
+        pattern: '*/2 * * * *',
         utc: true,
-        startDate: startDate,
+        // startDate: new Date(),
     }, {
         name: `renewal:static:${sid}`,
         data: data,
@@ -59,7 +59,7 @@ export async function scheduleRecursiveRenewal({
     data,
 }: {
     startDate: Date;
-    data: SubscriptionJobData;
+    data: RecursiveSubscriptionJobData;
 }) {
     const { sid } = data;
     await subQueue.add('renewal:recursive', data, {

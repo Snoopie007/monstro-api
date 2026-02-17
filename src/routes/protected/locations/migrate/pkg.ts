@@ -92,11 +92,9 @@ export function migratePkgRoutes(app: Elysia) {
                     paymentType: paymentMethod.type,
                     totalClassLimit,
                     totalClassAttended,
+                    stripePaymentId: paymentMethod.stripeId,
                     expireDate,
-                    status: "active",
-                    metadata: {
-                        paymentMethodId: paymentMethod.stripeId,
-                    },
+                    status: "active"
                 }).returning();
 
                 await tx.update(memberLocations).set({

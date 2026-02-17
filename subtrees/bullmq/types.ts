@@ -48,6 +48,7 @@ const PricingSchema = z.object({
     currency: z.string(),
     price: z.coerce.number(),
     interval: z.enum(['day', 'week', 'month', 'year']),
+    intervalThreshold: z.coerce.number(),
 })
 
 export const DiscountSchema = z.object({
@@ -55,25 +56,33 @@ export const DiscountSchema = z.object({
     duration: z.coerce.number(),
 })
 
-export const SubscriptionJobSchema = z.object({
+const SubscriptionJobSchemaBase = z.object({
     sid: z.string(),
     lid: z.string(),
     member: MemberSchema,
     location: LocationSchema,
     taxRate: z.coerce.number(),
-    stripeCustomerId: z.string().nullable(),
     pricing: PricingSchema,
     discount: DiscountSchema.optional(),
-})
+});
 
-export const CashSubscriptionJobSchema = z.object({
-    sid: z.string(),
-    lid: z.string(),
-    interval: z.enum(['day', 'week', 'month', 'year']),
-    intervalThreshold: z.coerce.number(),
-})
+export const SubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+    stripeCustomerId: z.string().nullable(),
+});
 
+export const RecursiveSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+    stripeCustomerId: z.string().nullable(),
+    recurrenceCount: z.number(),
+});
 
+export const CashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+    vendorId: z.string(),
+});
+
+export const RecursiveCashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+    vendorId: z.string(),
+    recurrenceCount: z.number(),
+});
 export const RRClassSchema = z.object({
     plan: z.object({
         id: z.string(),
@@ -114,9 +123,30 @@ export const CheckMissedClassSchema = z.object({
     class: ClassSchema,
 });
 
+
+// retry payment jobs
+export const RetrySubPaymentSchema = z.object({
+    paymentIntentId: z.string(),
+    attempts: z.number(),
+    subId: z.string(),
+    lid: z.string(),
+})
+
+export const RetryWalletSchema = z.object({
+    paymentIntentId: z.string(),
+    stripeCustomerId: z.string(),
+    paymentMethodId: z.string(),
+    attempts: z.number(),
+    amount: z.number(),
+    walletId: z.string(),
+    lid: z.string(),
+})
+export type RetrySubPaymentData = z.infer<typeof RetrySubPaymentSchema>;
+export type RetryWalletData = z.infer<typeof RetryWalletSchema>;
 export type CheckMissedClassData = z.infer<typeof CheckMissedClassSchema>;
 export type ClassReminderData = z.infer<typeof ClassReminderJobSchema>;
 export type RRClassData = z.infer<typeof RRClassSchema>;
 export type DiscountData = z.infer<typeof DiscountSchema>;
 export type SubscriptionJobData = z.infer<typeof SubscriptionJobSchema>;
 export type CashSubscriptionJobData = z.infer<typeof CashSubscriptionJobSchema>;
+export type RecursiveSubscriptionJobData = z.infer<typeof RecursiveSubscriptionJobSchema>;

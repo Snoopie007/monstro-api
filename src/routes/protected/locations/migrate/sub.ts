@@ -144,20 +144,17 @@ export function migrateSubRoutes(app: Elysia) {
 
                 const productName = pricing.name;
                 const description = `Payment for ${pricing.name}`;
-                try {
-                    const { id } = await stripe.processPayment({
+                const { id } = await stripe.processPayment({
 
-                        ...chargeDetails,
-                        paymentMethodId,
-                        currency: pricing.currency,
-                        description,
-                        productName,
-                        metadata: metadata,
-                    });
-                    paymentIntentId = id;
-                } catch (error) {
+                    ...chargeDetails,
+                    paymentMethodId,
+                    currency: pricing.currency,
+                    description,
+                    productName,
+                    metadata: metadata,
+                });
+                paymentIntentId = id;
 
-                }
                 await db.insert(transactions).values({
                     description,
                     items: [{ name: planName, quantity: 1, price: pricing.price }],
@@ -167,6 +164,7 @@ export function migrateSubRoutes(app: Elysia) {
                         stripeFee: chargeDetails.stripeFee,
                         monstroFee: chargeDetails.monstroFee,
                     },
+                    paymentMethodId: paymentMethodId,
                     status: paymentIntentId ? "paid" : "failed",
                     locationId: lid,
                     memberId: mid,
@@ -245,6 +243,7 @@ export function migrateSubRoutes(app: Elysia) {
                         price: pricing.price,
                         currency: pricing.currency,
                         interval: pricing.interval,
+                        intervalThreshold: pricing.intervalThreshold,
                     }
                 };
                 if (pricing.intervalThreshold === 1) {
@@ -257,7 +256,10 @@ export function migrateSubRoutes(app: Elysia) {
                 } else {
                     scheduleRecursiveRenewal({
                         startDate: nextBillingDate,
-                        data: payload,
+                        data: {
+                            ...payload,
+                            recurrenceCount: 1,
+                        },
                     });
                 }
 
