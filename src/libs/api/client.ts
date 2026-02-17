@@ -28,7 +28,6 @@ export const clientsideApiClient = (token?: string): ApiClient => {
 
     return {
         get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
-            console.log("endpoint", endpoint);
             // For XRoutes, strip /api from baseUrl
             const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
 
@@ -78,13 +77,6 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
-
-            console.log('[API Client] POST request:', {
-                url: url.toString(),
-                hasToken: !!token,
-                endpoint,
-                isFormData: data instanceof FormData,
-            });
 
             const response = await fetchWithTimeout(url.toString(), {
                 method: 'POST',
