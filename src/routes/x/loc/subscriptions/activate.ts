@@ -200,7 +200,8 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             return status(502, { error: message });
         }
 
-        await db.transaction(async (tx) => {
+        try {
+            await db.transaction(async (tx) => {
             const lineItems = [{
                 name: planName,
                 description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
@@ -216,7 +217,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     ? `Downpayment for ${planName}`
                     : `${sub.pricing.name} - Billing Period`,
                 items: lineItems,
-                subtotal: chargeDetails.subTotal,
+                subTotal: chargeDetails.subTotal,
                 total: chargeDetails.total,
                 tax: chargeDetails.tax,
                 discount: discountAmount,
@@ -289,7 +290,26 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     updated: new Date(),
                 }).where(eq(promos.id, promoMeta.id));
             }
-        });
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to persist activation records";
+            console.error("[x/subscriptions/activate] db transaction failed after payment", {
+                lid,
+                sid,
+                memberId: sub.memberId,
+                paymentMethodId,
+                paymentIntentId,
+                message,
+                stack: error instanceof Error ? error.stack : undefined,
+                error,
+            });
+
+            return status(500, {
+                error: "Activation payment succeeded but database update failed",
+                code: "ACTIVATION_DB_WRITE_FAILED",
+                details: { message, paymentIntentId },
+            });
+        }
 
         const payload: SubscriptionJobData = {
             sid: sub.id,
@@ -352,7 +372,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             });
         }
 
-        console.log("[x/subscriptions/activate] success", { lid, sid, paymentIntentId });
         return status(200, {
             status: "active",
             paymentIntentId,

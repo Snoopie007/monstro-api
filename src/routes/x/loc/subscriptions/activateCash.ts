@@ -44,7 +44,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     memberSubscriptionId: sid,
                     description: `${sub.pricing.name} - Billing Period`,
                     items: lineItems,
-                    subtotal: sub.pricing.price,
+                    subTotal: sub.pricing.price,
                     total: sub.pricing.price,
                     tax: 0,
                     discount: 0,
