@@ -1,7 +1,7 @@
-import { staffs } from "@subtrees/schemas";
-import { permissions, roles } from "@subtrees/schemas/permissions";
-import { staffsLocations } from "../schemas/staffs";
-import { User } from "./user";
+import type { staffs } from "@subtrees/schemas";
+import type { permissions, roles } from "@subtrees/schemas/permissions";
+import type { staffsLocations } from "../schemas/staffs";
+import type { User } from "./user";
 
 export type Permission = typeof permissions.$inferSelect;
 export type Role = typeof roles.$inferSelect & {

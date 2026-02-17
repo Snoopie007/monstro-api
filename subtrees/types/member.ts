@@ -1,12 +1,12 @@
 import {
-  memberCustomFields,
-  memberFields,
-  memberPackages,
-  memberPlanPricing,
-  memberPlans,
-  memberReferrals,
-  members,
-  memberSubscriptions,
+    memberCustomFields,
+    memberFields,
+    memberPackages,
+    memberPlanPricing,
+    memberPlans,
+    memberReferrals,
+    members,
+    memberSubscriptions,
 } from '../schemas'
 import { memberInvoices } from '../schemas/invoice'
 import { memberLocations } from '../schemas/MemberLocation'
@@ -20,6 +20,7 @@ import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { PlanProgram } from './program'
 import type { User } from './user'
 import type { Invoice } from './invoices'
+import { ColumnFiltersState } from '@/libs/table-utils'
 
 export type Member = typeof members.$inferSelect & {
     user?: User
@@ -47,14 +48,14 @@ export type MemberLocationProfile = {
 }
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
-  child?: MemberSubscription
-  invoices?: Invoice[]
-  plan?: MemberPlan
-  pricing?: MemberPlanPricing
-  contract?: MemberContract
-  member?: Member
-  paymentType: PaymentType
-  location?: Location
+    child?: MemberSubscription
+    invoices?: Invoice[]
+    plan?: MemberPlan
+    pricing?: MemberPlanPricing
+    contract?: MemberContract
+    member?: Member
+    paymentType: PaymentType
+    location?: Location
 }
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
@@ -93,15 +94,15 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 }
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
-  location?: Location
-  member?: Member,
-  knownFamilyMembers?: FamilyMember[],
-  lastCheckInTime?: Date | null
-  totalPointsEarned?: number
-  memberPaymentMethods?: MemberPaymentMethod[]
-  paymentMethods?: PaymentMethod[]
-  migration?: MigrateMember;
-  pointsHistory?: MemberPointsHistory[];
+    location?: Location
+    member?: Member,
+    knownFamilyMembers?: FamilyMember[],
+    lastCheckInTime?: Date | null
+    totalPointsEarned?: number
+    memberPaymentMethods?: MemberPaymentMethod[]
+    paymentMethods?: PaymentMethod[]
+    migration?: MigrateMember;
+    pointsHistory?: MemberPointsHistory[];
 }
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
