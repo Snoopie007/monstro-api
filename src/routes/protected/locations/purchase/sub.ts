@@ -158,7 +158,6 @@ export function purchaseSubRoutes(app: Elysia) {
                 if (!sub) {
                     return status(404, { error: "Subscription not found" });
                 }
-
                 const { member, currentPeriodEnd, currentPeriodStart } = sub;
 
                 if (!member || !member.stripeCustomerId) {
@@ -316,6 +315,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         status: paymentIntentId ? "paid" : "failed",
                         locationId: lid,
                         memberId: mid,
+                        paymentMethodId: paymentMethod.stripeId,
                         paymentType: paymentMethod.type,
                         chargeDate: now,
                         currency: pricing.currency,
@@ -392,6 +392,7 @@ export function purchaseSubRoutes(app: Elysia) {
 
                 return status(200, { status: 'active' });
             } catch (error) {
+                console.log(error);
                 if (error instanceof Stripe.errors.StripeError) {
                     switch (error.type) {
                         case "StripeCardError":

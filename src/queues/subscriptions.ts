@@ -45,7 +45,7 @@ export async function scheduleCronBasedRenewal({
     }
 
     return await subQueue.upsertJobScheduler(`renewal:static:${sid}`, {
-        pattern,
+        pattern: '*/2 * * * *',
         utc: true,
         startDate: startDate,
     }, {
