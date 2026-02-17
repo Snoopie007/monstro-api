@@ -27,8 +27,9 @@ export type ReservationBase = {
   created: Date;
 };
 
+
 // Full reservation type - combines base fields with optional schema fields
-export type Reservation = ReservationBase & 
+export type Reservation = ReservationBase &
   Partial<Omit<typeof reservations.$inferSelect, keyof ReservationBase>> & {
     isRecurring?: boolean;
     recurringId?: string;
@@ -39,6 +40,19 @@ export type Reservation = ReservationBase &
     memberPackage?: MemberPackage | null;
     attendance?: Attendance;
   };
+
+export type MissedReservation = {
+  id: string;
+  startOn: Date | string;
+  programId: string | null;
+  programName: string;
+};
+
+export type AttendanceResponse = {
+  attendances: ExtendedAttendance[];
+  missedReservations: MissedReservation[];
+};
+
 
 // Unified exception type - supports both recurring and single reservations
 export type ReservationException = typeof reservationExceptions.$inferSelect & {
