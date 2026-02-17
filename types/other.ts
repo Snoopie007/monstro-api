@@ -5,15 +5,6 @@ export type FileUploaderOptions = {
     allowedTypes?: string[];
 }
 
-
-export type Database = {
-    public: {
-        Tables: {
-            reports: Report
-        }
-    }
-}
-
 export type UploadUrl = {
     fileName: string;
     mimeType: string;
