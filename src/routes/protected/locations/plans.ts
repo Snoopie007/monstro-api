@@ -54,7 +54,7 @@ export async function locationPlans(app: Elysia) {
                     ...rest,
                     programs,
                     startingPrice: minPrice,
-                    prices: pricings,
+                    pricings,
                     ageRange: { min: minAge, max: maxAge },
                 };
             });
