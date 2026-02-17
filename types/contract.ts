@@ -1,6 +1,5 @@
-import { Location } from "./location";
-import { Member, MemberPackage } from "./member";
-import { MemberSubscription } from "./member";
+import type { Location } from "./location";
+import type { Member, MemberPackage, MemberSubscription } from "./member";
 import { contractTemplates, memberContracts } from "@subtrees/schemas";
 
 export type Contract = typeof contractTemplates.$inferSelect & {
