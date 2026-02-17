@@ -63,7 +63,7 @@ export function PackageItem({ pkg }: { pkg: MemberPlan }) {
   const lid = pkg.locationId;
 
   // Get pricing display from pricingOptions
-  const pricingOptions = pkg.pricingOptions || [];
+  const pricingOptions = pkg.pricings || [];
   const getPriceDisplay = () => {
     if (pricingOptions.length === 0) return 'N/A';
     if (pricingOptions.length === 1) {

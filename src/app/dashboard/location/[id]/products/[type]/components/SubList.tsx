@@ -69,7 +69,7 @@ export function SubscriptionItem({ sub }: { sub: MemberPlan }) {
 	}
 
 	// Get pricing display
-	const pricingOptions = sub.pricingOptions || [];
+	const pricingOptions = sub.pricings || [];
 	const getPriceDisplay = () => {
 		if (pricingOptions.length === 0) return 'N/A';
 		if (pricingOptions.length === 1) {

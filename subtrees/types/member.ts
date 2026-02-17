@@ -7,21 +7,21 @@ import {
     memberReferrals,
     members,
     memberSubscriptions,
-} from '../schemas'
-import { memberInvoices } from '../schemas/invoice'
-import { memberLocations } from '../schemas/MemberLocation'
-import type { MemberPointsHistory } from './achievement'
-import type { Contract, MemberContract } from './contract'
-import type { PaymentType } from './DatabaseEnums'
-import type { FamilyMember } from './FamilyMember'
-import type { Location } from './location'
-import type { MigrateMember } from './MigrateMember'
-import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
-import type { PlanProgram } from './program'
-import type { User } from './user'
-import type { Invoice } from './invoices'
-
-export type Member = typeof members.$inferSelect & {
+  } from '../schemas'
+  import { memberInvoices } from '../schemas/invoice'
+  import { memberLocations } from '../schemas/MemberLocation'
+  import type { MemberPointsHistory } from './achievement'
+  import type { Contract, MemberContract } from './contract'
+  import type { PaymentType } from './DatabaseEnums'
+  import type { FamilyMember } from './FamilyMember'
+  import type { Location } from './location'
+  import type { MigrateMember } from './MigrateMember'
+  import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
+  import type { PlanProgram, Program } from './program'
+  import type { User } from './user'
+  import type { Invoice } from './invoices'
+  
+  export type Member = typeof members.$inferSelect & {
     user?: User
     familyMembers?: FamilyMember[]
     relatedByFamily?: FamilyMember[]
@@ -32,21 +32,14 @@ export type Member = typeof members.$inferSelect & {
     reedemPoints?: number
     referredBy?: MemberReferral
   }
-
-
-export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
+  
+  
+  
+  export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
     plan?: MemberPlan
-}
-
-export type MemberLocationProfile = {
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-    avatar: string
-}
-
-export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
+  }
+  
+  export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
     child?: MemberSubscription
     invoices?: Invoice[]
     plan?: MemberPlan
@@ -55,9 +48,15 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
     member?: Member
     paymentType: PaymentType
     location?: Location
-}
-
-export type MemberPackage = typeof memberPackages.$inferSelect & {
+  }
+  
+  export type ExtendedMemberSubscription = MemberSubscription & {
+    planId?: string
+    programs?: Program[]
+  }
+  
+  
+  export type MemberPackage = typeof memberPackages.$inferSelect & {
     plan?: MemberPlan
     pricing?: MemberPlanPricing
     contract?: MemberContract
@@ -65,34 +64,30 @@ export type MemberPackage = typeof memberPackages.$inferSelect & {
     parent?: MemberPackage
     paymentType: PaymentType,
     location?: Location
-}
-
-export type BillingCycleAnchorConfig = {
+  }
+  
+  export type ExtendedMemberPackage = MemberPackage & {
+    planId?: string
+    programs?: Program[]
+  }
+  export type BillingCycleAnchorConfig = {
     day_of_month: number
     hour?: number
     minute?: number
     month?: number
     second?: number
-}
-
-export type MemberPlan = typeof memberPlans.$inferSelect & {
-    contract?: Contract | undefined
+  }
+  
+  export type MemberPlan = typeof memberPlans.$inferSelect & {
+    contract?: Contract | null
     billingAnchorConfig: BillingCycleAnchorConfig | null
     planPrograms?: PlanProgram[]
     pricings?: MemberPlanPricing[]
-    pricingOptions?: MemberPlanPricing[]
-    stripeProductId?: string | null
     member?: Member
-}
-
-export type MemberInvoice = typeof memberInvoices.$inferSelect & {
-    member?: Member
-    location?: Location
-    memberPackage?: MemberPackage | null
-    memberSubscription?: MemberSubscription | null
-}
-
-export type MemberLocation = typeof memberLocations.$inferSelect & {
+  }
+  
+  
+  export type MemberLocation = typeof memberLocations.$inferSelect & {
     location?: Location
     member?: Member,
     knownFamilyMembers?: FamilyMember[],
@@ -102,20 +97,138 @@ export type MemberLocation = typeof memberLocations.$inferSelect & {
     paymentMethods?: PaymentMethod[]
     migration?: MigrateMember;
     pointsHistory?: MemberPointsHistory[];
-}
-
-export type MemberReferral = typeof memberReferrals.$inferSelect & {
+  }
+  
+  
+  
+  export type MemberLocationProfile = {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+    avatar: string
+  }
+  
+  export type FamilyPlan = {
+    planName: string
+    planId: number
+    subscriptionId?: number
+    packageId?: number
+  }
+  
+  
+  
+  export type MemberReferral = typeof memberReferrals.$inferSelect & {
     member?: Member
-    referred?: Member
+    referredMember?: Member
     location?: Location
-}
-
-export type MemberField = typeof memberFields.$inferSelect & {
+  }
+  
+  export type CustomFieldType =
+    | 'text'
+    | 'number'
+    | 'date'
+    | 'boolean'
+    | 'select'
+    | 'multi-select'
+  
+  export type MemberField = typeof memberFields.$inferSelect & {
     location?: Location
     customFields?: MemberCustomField[]
-}
-
-export type MemberCustomField = typeof memberCustomFields.$inferSelect & {
+  }
+  
+  export type MemberCustomField = typeof memberCustomFields.$inferSelect & {
     member?: Member
     field?: MemberField
-}
+  }
+  
+  export type MemberWithCustomFields = Member & {
+    customFields?: MemberCustomField[]
+  }
+  
+  export type CustomFieldOption = {
+    value: string
+    label: string
+  }
+  
+  export type CustomFieldDefinition = MemberField & {
+    options?: CustomFieldOption[]
+    required?: boolean
+    placeholder?: string
+    helpText?: string
+  }
+  
+  export type MemberSortableField =
+    | 'created'
+    | 'updated'
+    | 'firstName'
+    | 'lastName'
+    | 'email'
+    | 'dob'
+  
+  export const MEMBER_SORTABLE_FIELDS: MemberSortableField[] = [
+    'created',
+    'updated',
+    'firstName',
+    'lastName',
+    'email',
+    'dob',
+  ]
+  
+  // Determine sort order - type-safe mapping of sortable fields
+  export const sortColumnMap: Record<MemberSortableField, any> = {
+    created: members.created,
+    updated: members.updated,
+    firstName: members.firstName,
+    lastName: members.lastName,
+    email: members.email,
+    dob: members.dob,
+  }
+  
+  export type LocationMembersQuery = {
+    size: string
+    page: string
+    query: string
+    tags: string
+    tagOperator: string
+    sortBy: string
+    sortOrder: string
+    columnFilters: string
+  }
+  
+  export type MemberTagRef = {
+    id: string
+    name: string
+  }
+  
+  export type MemberCustomFieldValue = {
+    fieldId: string
+    value: string
+  }
+  
+  export type MemberListItem = {
+    id: string
+    userId: string
+    firstName: string
+    lastName: string | null
+    email: string
+    phone: string
+    avatar: string | null
+    created: Date
+    updated: Date | null
+    dob: Date | null
+    gender: string | null
+    firstTime: boolean
+    referralCode: string
+    stripeCustomerId: string | null
+    memberLocation: { status: string }
+    tags: MemberTagRef[]
+    customFields: MemberCustomFieldValue[]
+  }
+  
+  export type LocationMembersResponse = {
+    count: number
+    members: MemberListItem[]
+    customFields: CustomFieldDefinition[]
+  }
+  

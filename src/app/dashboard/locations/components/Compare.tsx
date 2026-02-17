@@ -1,4 +1,4 @@
-import { MonstroPlan } from '@/types';
+import { MonstroPlan } from '@/types/monstro';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui";

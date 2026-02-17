@@ -19,7 +19,7 @@ import {
 
 import { useMemberInvoices } from "@/hooks";
 import { formatAmountForDisplay } from "@/libs/utils";
-import type { MemberInvoice } from "@subtrees/types";
+import type { Invoice } from "@subtrees/types";
 import { format } from "date-fns";
 import { CircleFadingPlusIcon, EllipsisVerticalIcon, CheckCircle2, Clock } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -59,7 +59,7 @@ export function MemberInvoices({ params }: MemberInvoiceProps) {
 			</Item>
 			{invoices && invoices.length > 0 ? (
 				<div className="space-y-2">
-					{invoices.map((invoice: MemberInvoice) => (
+					{invoices.map((invoice: Invoice) => (
 						<InvoiceItem 
 							key={invoice.id} 
 							invoice={invoice} 
@@ -92,7 +92,7 @@ function InvoiceItem({
 	api,
 	onPaid 
 }: { 
-	invoice: MemberInvoice;
+	invoice: Invoice;
 	params: { id: string; mid: string };
 	api: ReturnType<typeof clientsideApiClient> | null;
 	onPaid: () => void;

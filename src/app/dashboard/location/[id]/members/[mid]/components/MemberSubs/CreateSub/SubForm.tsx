@@ -73,7 +73,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
         return subs.find(s => s.id === selectedPlanId);
     }, [subs, selectedPlanId]);
 
-    const pricingOptions = selectedPlan?.pricingOptions || [];
+    const pricingOptions = selectedPlan?.pricings || [];
 
     async function onSubmit(v: z.infer<typeof NewSubscriptionSchema>) {
         if (!api) {

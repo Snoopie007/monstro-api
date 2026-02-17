@@ -75,7 +75,7 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
         return pkgs.find(p => p.id === selectedPlanId);
     }, [pkgs, selectedPlanId]);
 
-    const pricingOptions = selectedPlan?.pricingOptions || [];
+    const pricingOptions = selectedPlan?.pricings || [];
 
 
 

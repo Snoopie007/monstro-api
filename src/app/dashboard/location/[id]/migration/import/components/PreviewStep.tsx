@@ -86,7 +86,7 @@ export function PreviewStep({
         return plans?.find((p: MemberPlan) => p.id === selectedPlanId)
     }, [plans, selectedPlanId])
 
-    const pricingOptions = selectedPlan?.pricingOptions || []
+    const pricingOptions = selectedPlan?.pricings || []
 
     // Reset pricing when plan changes
     useEffect(() => {

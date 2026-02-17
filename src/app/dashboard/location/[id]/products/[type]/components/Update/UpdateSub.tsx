@@ -73,7 +73,7 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 			currency: sub.currency || "USD",
 			billingAnchor: sub.billingAnchorConfig?.day_of_month || undefined,
 			pricingOptions:
-				sub.pricingOptions?.map((p) => ({
+				sub.pricings?.map((p) => ({
 					id: p.id,
 					name: p.name,
 					price: p.price,
@@ -126,7 +126,7 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 				currency: sub.currency || "USD",
 				billingAnchor: sub.billingAnchorConfig?.day_of_month || undefined,
 				pricingOptions:
-					sub.pricingOptions?.map((p) => ({
+					sub.pricings?.map((p) => ({
 						id: p.id,
 						name: p.name,
 						price: p.price,
