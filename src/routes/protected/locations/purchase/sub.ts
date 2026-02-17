@@ -275,12 +275,17 @@ export function purchaseSubRoutes(app: Elysia) {
                     currency: pricing.currency,
                     dueDate: startDate,
                 }
+
+                let invoiceId: string | null = null;
                 const [invoice] = await db.insert(memberInvoices).values({
                     ...invoiceData,
                     status: 'unpaid',
                 }).returning({
                     id: memberInvoices.id
                 });
+                if (invoice) {
+                    invoiceId = invoice.id;
+                }
 
                 const { id: paymentIntentId } = await stripe.processPayment({
                     ...chargeDetails,
@@ -308,6 +313,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         items: [{ name: productName, quantity: 1, price: pricing.price, discount }],
                         type: "inbound",
                         ...chargeDetails,
+                        invoiceId,
                         fees: {
                             stripeFee: chargeDetails.stripeFee,
                             monstroFee: chargeDetails.monstroFee,
@@ -323,11 +329,11 @@ export function purchaseSubRoutes(app: Elysia) {
                             memberSubscriptionId: memberPlanId,
                         },
                     });
-                    if (paymentIntentId) {
+                    if (paymentIntentId && invoiceId) {
                         await tx.update(memberInvoices).set({
                             status: "paid",
                             paid: true,
-                        }).where(eq(memberInvoices.id, invoice!.id));
+                        }).where(eq(memberInvoices.id, invoiceId));
                     }
                     await tx.update(memberLocations).set({
                         status: "active",

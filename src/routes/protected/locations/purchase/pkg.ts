@@ -135,8 +135,6 @@ export function purchasePkgRoutes(app: Elysia) {
                     return status(404, { error: "Pricing not found" });
                 }
 
-
-
                 const { taxRates, locationState, integrations } = location;
 
                 const integration = integrations[0];
