@@ -48,6 +48,7 @@ const PricingSchema = z.object({
     currency: z.string(),
     price: z.coerce.number(),
     interval: z.enum(['day', 'week', 'month', 'year']),
+    intervalThreshold: z.coerce.number(),
 })
 
 export const DiscountSchema = z.object({
@@ -78,6 +79,10 @@ export const CashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
     vendorId: z.string(),
 });
 
+export const RecursiveCashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+    vendorId: z.string(),
+    recurrenceCount: z.number(),
+});
 export const RRClassSchema = z.object({
     plan: z.object({
         id: z.string(),
