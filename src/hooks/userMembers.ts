@@ -6,7 +6,7 @@ import {
     SavedTabConfig,
     TabConfig,
     TabParams
-} from '@subtrees/types/member'
+} from '@/types/member'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { filterByColumnFilters, filterBySearch, filterByStatus, filterByTags, sortMembers } from './filters'
 import { useAllLocationMembers } from './useAllLocationMembers'

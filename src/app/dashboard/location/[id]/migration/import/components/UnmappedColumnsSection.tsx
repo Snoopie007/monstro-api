@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/forms'
 import { Badge } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 import { cn } from '@/libs/utils'
-import type { CustomFieldType } from '@subtrees/types'
+import type { CustomFieldType } from '@/types/member'
 import type { NewCustomField } from './ImportStepperPage'
 
 interface UnmappedColumnsSectionProps {

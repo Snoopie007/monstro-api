@@ -9,7 +9,7 @@ import {
     users,
 } from '@subtrees/schemas'
 import { auth } from '@/libs/auth/server'
-import { CustomFieldDefinition, MemberListItem } from '@subtrees/types/member'
+import { CustomFieldDefinition, MemberListItem } from '@/types/member'
 import { and, eq, inArray, ne } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 

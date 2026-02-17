@@ -1,7 +1,6 @@
 import { db, admindb } from "@/db/db";
 import { wallets } from "@subtrees/schemas/locations";
 import { VendorStripePayments } from "@/libs/server/stripe";
-import { Sale } from "@subtrees/types/vendor/admin";
 
 async function chargeWallet(
   stripe: VendorStripePayments,

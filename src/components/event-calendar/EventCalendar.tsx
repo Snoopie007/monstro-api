@@ -17,7 +17,7 @@ import {
 	EventHeight,
 	WeekCellsHeight,
 } from "./";
-import type { CalendarEvent, CalendarView, ClosedDate } from "@subtrees/types";
+import type { CalendarEvent, CalendarView, ClosedDate } from "@/types/calendar";
 import { cn } from "@/libs/utils";
 import { CalendarToolbar } from "./CalendarToolbar";
 import { CalendarViewRenderer } from "./CalendarViewRenderer";

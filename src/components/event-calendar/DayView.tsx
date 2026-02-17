@@ -19,7 +19,7 @@ import {
   EventItem,
   WeekCellsHeight,
 } from "../event-calendar";
-import type { CalendarEvent, ClosedDate } from "@subtrees/types";
+import type { CalendarEvent, ClosedDate } from "@/types/calendar";
 import { EndHour, StartHour } from "./constants";
 import { cn } from "@/libs/utils";
 import { useCurrentTimeIndicator } from "@/hooks";

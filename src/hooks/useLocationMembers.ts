@@ -1,5 +1,5 @@
 import { clientsideApiClient } from "@/libs/api/client";
-import { LocationMembersResponse } from "@subtrees/types/member";
+import { LocationMembersResponse } from "@/types/member";
 import { ColumnFiltersState } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -74,4 +74,3 @@ export function useLocationMembers({
         refetch,
     };
 }
-

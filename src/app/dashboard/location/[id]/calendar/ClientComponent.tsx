@@ -22,7 +22,7 @@ import {
   EventCalendar,
   CalendarDndProvider
 } from "@/components/event-calendar";
-import { CalendarEvent, CalendarView } from "@subtrees/types";
+import { CalendarEvent, CalendarView } from "@/types/calendar";
 import { Loader2 } from "lucide-react";
 
 interface CalendarPageClientProps {

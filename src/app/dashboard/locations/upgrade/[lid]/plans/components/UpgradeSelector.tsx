@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { PlanSelector } from '../../../../components'
-import { MonstroPlan } from '@subtrees/types/vendor/admin'
+import { MonstroPlan } from '@/types/admin/monstro'
 import {
     Button,
     AlertDialog,

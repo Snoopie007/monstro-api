@@ -3,7 +3,7 @@
 import { use, useEffect, useState, useCallback } from "react";
 import { Separator } from "@/components/ui";
 import { HolidayDefaults, CustomClosures } from "./components";
-import type { ReservationException } from "@subtrees/types/vendor/reservation";
+import type { ReservationException } from "@/types/reservation";
 import type { HolidaySettings } from "@subtrees/types/location";
 
 interface ClosuresPageProps {
@@ -78,4 +78,3 @@ export default function ClosuresPage({ params }: ClosuresPageProps) {
     </div>
   );
 }
-

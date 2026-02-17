@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { and, eq, gte, lte, or } from "drizzle-orm";
 import { reservationExceptions, reservations, locations } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
-import type { CreateExceptionInput, ExceptionInitiator } from "@subtrees/types/vendor/reservation";
+import type { CreateExceptionInput, ExceptionInitiator } from "@/types/reservation";
 import { sendHolidayCancellationNotifications, type AffectedMember } from "@/libs/notifications/HolidayCancellation";
 import { eachDayOfInterval } from "date-fns";
 

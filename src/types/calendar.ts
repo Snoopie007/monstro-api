@@ -2,7 +2,7 @@
 // Calendar View Types
 // ============================================================================
 
-import { Member } from "../member";
+import { Member } from "@subtrees/types/member";
 
 export type CalendarView = "month" | "week" | "day" | "agenda";
 

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { MemberListItem, CustomFieldDefinition } from '@subtrees/types/member'
+import { MemberListItem, CustomFieldDefinition } from '@/types/member'
 
 interface AllMembersResponse {
     members: MemberListItem[]
@@ -26,4 +26,3 @@ export function useAllLocationMembers(locationId: string) {
         refetchOnWindowFocus: false,
     })
 }
-

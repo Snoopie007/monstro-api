@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CalendarEvent } from "@subtrees/types";
+import type { CalendarEvent } from "@/types/calendar";
 
 export function useEventDialog() {
 	const [isOpen, setIsOpen] = useState(false);
@@ -42,4 +42,3 @@ export function useEventDialog() {
 		setClickedDateTime,
 	};
 }
-

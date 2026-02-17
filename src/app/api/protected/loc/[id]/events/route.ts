@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { getEventColorFromId } from "@/libs/program-colors";
-import { CalendarEvent } from "@subtrees/types/vendor/calendar";
+import { CalendarEvent } from "@/types/calendar";
 import { addDays, addMinutes, endOfMonth, startOfMonth } from "date-fns";
 import { toDate } from "date-fns-tz";
 import { NextRequest, NextResponse } from "next/server";

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { CalendarView } from "@subtrees/types";
+import type { CalendarView } from "@/types/calendar";
 
 interface UseCalendarKeyboardShortcutsProps {
 	isDialogOpen: boolean;
@@ -46,4 +46,3 @@ export function useCalendarKeyboardShortcuts({
 		};
 	}, [isDialogOpen, onViewChange]);
 }
-

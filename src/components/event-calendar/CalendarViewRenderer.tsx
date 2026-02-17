@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { CalendarEvent, CalendarView, ClosedDate } from "@subtrees/types";
+import type { CalendarEvent, CalendarView, ClosedDate } from "@/types/calendar";
 import { AgendaView, DayView, MonthView, WeekView } from "./";
 import { cn } from "@/libs/utils";
 
@@ -70,4 +70,3 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
 });
 
 CalendarViewRenderer.displayName = "CalendarViewRenderer";
-

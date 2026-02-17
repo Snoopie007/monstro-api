@@ -13,7 +13,8 @@ import { toast } from 'react-toastify'
 import { tryCatch, formatAmountForDisplay } from '@/libs/utils'
 import { useMemberPlans } from '@/hooks'
 import { validateImportData } from '@/libs/validation/importValidation'
-import type { MemberPlan, MemberPlanPricing, CustomFieldDefinition } from '@subtrees/types'
+import type { MemberPlan, MemberPlanPricing } from '@subtrees/types'
+import type { CustomFieldDefinition } from '@/types/member'
 import type { NewCustomField } from './ImportStepperPage'
 
 interface PreviewStepProps {

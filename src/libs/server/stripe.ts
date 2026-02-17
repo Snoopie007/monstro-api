@@ -1,6 +1,6 @@
 
 import { MemberPlan, MemberPlanPricing } from "@subtrees/types";
-import { MonstroPlan } from "@subtrees/types/vendor/admin";
+import { MonstroPlan } from '@/types/admin/monstro';
 import { AddressParam } from "@stripe/stripe-js";
 import { isSameDay, addMonths, isAfter } from "date-fns";
 import Stripe from "stripe";

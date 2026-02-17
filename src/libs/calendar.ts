@@ -1,4 +1,4 @@
-import { CalendarEvent, EventColor } from "@subtrees/types/vendor/calendar";
+import { CalendarEvent, EventColor } from "@/types/calendar";
 import { isSameDay } from "date-fns";
 /**
  * Get CSS classes for event colors

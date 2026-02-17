@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -11,15 +11,14 @@ import {
 	DialogBody,
 	MultiDialogContent,
 	Avatar, AvatarImage, Button, Badge,
-	EmptyContent,
 	EmptyHeader,
 	EmptyTitle,
-	EmptyDescription,
 	EmptyMedia,
 	Empty
 } from "@/components/ui";
-import { CalendarEvent } from "@subtrees/types/vendor/calendar";
-import { SessionManagementDialogProps, Member, MemberWithValidation } from "@subtrees/types";
+import { CalendarEvent } from "@/types/calendar";
+import { SessionManagementDialogProps, MemberWithValidation } from "@/types/calendar";
+import { Member } from "@subtrees/types/member";
 
 import { Input } from "@/components/forms/";
 import {

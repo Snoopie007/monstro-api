@@ -1,4 +1,4 @@
-import { TabConfig, SavedTabConfig } from '@subtrees/types/member'
+import { TabConfig, SavedTabConfig } from '@/types/member'
 
 const MAX_CUSTOM_TABS = 20
 

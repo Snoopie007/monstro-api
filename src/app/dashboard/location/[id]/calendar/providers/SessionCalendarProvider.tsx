@@ -1,5 +1,5 @@
 'use client'
-import { CalendarEvent } from "@subtrees/types/vendor/calendar";
+import { CalendarEvent } from "@/types/calendar";
 import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
 import { DateRange } from "react-day-picker";
 

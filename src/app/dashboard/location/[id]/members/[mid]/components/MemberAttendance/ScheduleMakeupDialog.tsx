@@ -34,7 +34,7 @@ import {
 } from "@/components/forms";
 import { cn, tryCatch } from "@/libs/utils";
 import { MakeupClassSchema, type MakeupClassFormData } from "./schemas";
-import type { Reservation } from "@subtrees/types/vendor/reservation";
+import type { Reservation } from "@/types/reservation";
 import type { MissedReservation } from "@subtrees/types/attendance";
 import { RadioBox } from "@/components/forms/radio-box";
 
@@ -539,4 +539,3 @@ export function ScheduleMakeupDialog({
     </Dialog>
   );
 }
-

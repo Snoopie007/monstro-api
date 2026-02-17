@@ -7,7 +7,7 @@ import {
 	ChevronRightIcon,
 } from "lucide-react";
 
-import type { CalendarView } from "@subtrees/types";
+import type { CalendarView } from "@/types/calendar";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
