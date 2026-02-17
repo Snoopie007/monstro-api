@@ -20,7 +20,6 @@ import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { PlanProgram } from './program'
 import type { User } from './user'
 import type { Invoice } from './invoices'
-import { ColumnFiltersState } from '@/libs/table-utils'
 
 export type Member = typeof members.$inferSelect & {
     user?: User
