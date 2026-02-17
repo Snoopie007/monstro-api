@@ -67,3 +67,30 @@ export async function scheduleRecursiveRenewal({
         delay: Math.max(0, startDate.getTime() - Date.now()),
     });
 }
+
+export async function removeRenewalJobs(sid: string) {
+    const schedulerIds = [
+        `renewal:static:${sid}`,
+        `renewal:cash:${sid}`,
+    ];
+
+    for (const schedulerId of schedulerIds) {
+        try {
+            await subQueue.removeJobScheduler(schedulerId);
+        } catch {
+            // no-op
+        }
+    }
+
+    const jobIds = [
+        `renewal:recursive:${sid}`,
+        `renewal:cash:recursive:${sid}`,
+    ];
+
+    for (const jobId of jobIds) {
+        const job = await subQueue.getJob(jobId);
+        if (job) {
+            await job.remove();
+        }
+    }
+}
