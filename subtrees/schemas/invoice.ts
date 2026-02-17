@@ -19,7 +19,7 @@ export const memberInvoices = pgTable('member_invoices', {
     tax: integer('tax').notNull().default(0),
     total: integer('total').notNull().default(0),
     discount: integer('discount').notNull().default(0),
-    subtotal: integer('subtotal').notNull().default(0),
+    subTotal: integer('subtotal').notNull().default(0),
     forPeriodStart: timestamp('for_period_start', { withTimezone: true }),
     forPeriodEnd: timestamp('for_period_end', { withTimezone: true }),
     dueDate: timestamp('due_date', { withTimezone: true }).notNull().defaultNow(),
