@@ -1,7 +1,8 @@
-import { sql } from "drizzle-orm";
-import { text, timestamp, pgTable, jsonb, boolean, index, primaryKey, integer } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { users } from "../users";
+import { comments } from "./comments";
 
 export const groups = pgTable("groups", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -32,10 +33,14 @@ export const groupPosts = pgTable("group_posts", {
     title: text("title").notNull(),
     groupId: text("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
     authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    content: text("content").notNull(),
     commentCounts: integer("comment_counts").notNull().default(0),
     pinned: boolean("pinned").notNull().default(false),
     status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
+    content: text("content"),
+    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-});
+}, (t) => [
+    index("idx_group_posts_group_id").on(t.groupId),
+    index("idx_group_posts_group_pinned_created").on(t.groupId, t.pinned, t.created),
+]);
