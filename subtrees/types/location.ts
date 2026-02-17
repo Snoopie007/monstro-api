@@ -1,5 +1,5 @@
 import type {
-  Invoice,
+  MemberInvoice,
   MemberSubscription,
   MemberReferral,
   PaymentType,
@@ -15,7 +15,7 @@ import type { MemberPlan } from "./member";
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
   programs?: Program[];
-  memberInvoices?: Invoice[];
+  memberInvoices?: MemberInvoice[];
   memberSubscriptions?: MemberSubscription[];
   pointsHistory?: MemberPointsHistory[];
   referrals?: MemberReferral[];

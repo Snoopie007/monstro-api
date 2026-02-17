@@ -34,7 +34,7 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
-import type { Invoice } from '@subtrees/types'
+import type { MemberInvoice } from '@subtrees/types'
 import { toast } from 'react-toastify'
 import { Calendar } from '@/components/ui/calendar'
 import { ChevronDownIcon } from 'lucide-react'
@@ -60,7 +60,7 @@ export const MarkPaid = ({
 }: {
     isOpen: boolean
     setIsOpen: (isOpen: boolean) => void
-    invoice: Invoice
+    invoice: MemberInvoice
     params: { id: string; mid: string }
     api: ReturnType<typeof clientsideApiClient> | null
     onPaid: () => void

@@ -8,7 +8,6 @@ import {
     members,
     memberSubscriptions,
   } from '../schemas'
-  import { memberInvoices } from '../schemas/invoice'
   import { memberLocations } from '../schemas/MemberLocation'
   import type { MemberPointsHistory } from './achievement'
   import type { Contract, MemberContract } from './contract'
@@ -19,7 +18,7 @@ import {
   import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
   import type { PlanProgram, Program } from './program'
   import type { User } from './user'
-  import type { Invoice } from './invoices'
+  import type { MemberInvoice } from './invoices'
   
   export type Member = typeof members.$inferSelect & {
     user?: User
@@ -41,7 +40,7 @@ import {
   
   export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
     child?: MemberSubscription
-    invoices?: Invoice[]
+    invoices?: MemberInvoice[]
     plan?: MemberPlan
     pricing?: MemberPlanPricing
     contract?: MemberContract
