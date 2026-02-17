@@ -1,8 +1,8 @@
 
 import { supportPlans, vendorBadges, vendorClaimedRewards, vendorLevels, vendorRewards, vendors } from "@subtrees/schemas";
-import { VendorReferral } from "./vendor/VendorReferral";
-import { User } from "./user";
-import { Location } from "./location";
+import type { VendorReferral } from "./vendor/VendorReferral";
+import type { User } from "./user";
+import type { Location } from "./location";
 
 
 

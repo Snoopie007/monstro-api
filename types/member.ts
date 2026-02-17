@@ -1,12 +1,12 @@
 import {
-  memberCustomFields,
-  memberFields,
-  memberPackages,
-  memberPlanPricing,
-  memberPlans,
-  memberReferrals,
-  members,
-  memberSubscriptions,
+    memberCustomFields,
+    memberFields,
+    memberPackages,
+    memberPlanPricing,
+    memberPlans,
+    memberReferrals,
+    members,
+    memberSubscriptions,
 } from '../schemas'
 import { memberInvoices } from '../schemas/invoice'
 import { memberLocations } from '../schemas/MemberLocation'
@@ -32,7 +32,7 @@ export type Member = typeof members.$inferSelect & {
     referrals?: MemberReferral[]
     reedemPoints?: number
     referredBy?: MemberReferral
-  }
+}
 
 
 
@@ -43,19 +43,19 @@ export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
 }
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
-  child?: MemberSubscription
-  invoices?: Invoice[]
-  plan?: MemberPlan
-  pricing?: MemberPlanPricing
-  contract?: MemberContract
-  member?: Member
-  paymentType: PaymentType
-  location?: Location
+    child?: MemberSubscription
+    invoices?: Invoice[]
+    plan?: MemberPlan
+    pricing?: MemberPlanPricing
+    contract?: MemberContract
+    member?: Member
+    paymentType: PaymentType
+    location?: Location
 }
 
 export type ExtendedMemberSubscription = MemberSubscription & {
-  planId?: string
-  programs?: Program[]
+    planId?: string
+    programs?: Program[]
 }
 
 
@@ -70,8 +70,8 @@ export type MemberPackage = typeof memberPackages.$inferSelect & {
 }
 
 export type ExtendedMemberPackage = MemberPackage & {
-  planId?: string
-  programs?: Program[]
+    planId?: string
+    programs?: Program[]
 }
 export type BillingCycleAnchorConfig = {
     day_of_month: number
@@ -99,15 +99,15 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 }
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
-  location?: Location
-  member?: Member,
-  knownFamilyMembers?: FamilyMember[],
-  lastCheckInTime?: Date | null
-  totalPointsEarned?: number
-  memberPaymentMethods?: MemberPaymentMethod[]
-  paymentMethods?: PaymentMethod[]
-  migration?: MigrateMember;
-  pointsHistory?: MemberPointsHistory[];
+    location?: Location
+    member?: Member,
+    knownFamilyMembers?: FamilyMember[],
+    lastCheckInTime?: Date | null
+    totalPointsEarned?: number
+    memberPaymentMethods?: MemberPaymentMethod[]
+    paymentMethods?: PaymentMethod[]
+    migration?: MigrateMember;
+    pointsHistory?: MemberPointsHistory[];
 }
 
 
@@ -204,7 +204,7 @@ export type LocationMembersQuery = {
     sortBy: string
     sortOrder: string
     columnFilters: string
-  }
+}
 
 export type MemberTagRef = {
     id: string
@@ -234,7 +234,7 @@ export type MemberListItem = {
     memberLocation: { status: string }
     tags: MemberTagRef[]
     customFields: MemberCustomFieldValue[]
-  }
+}
 
 export type LocationMembersResponse = {
     count: number
@@ -242,8 +242,8 @@ export type LocationMembersResponse = {
     customFields: CustomFieldDefinition[]
 }
 
-export type MemberStatus = 
-    | 'active' | 'incomplete' | 'past_due' | 'canceled' 
+export type MemberStatus =
+    | 'active' | 'incomplete' | 'past_due' | 'canceled'
     | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired' | 'archived'
 
 export interface TableState {

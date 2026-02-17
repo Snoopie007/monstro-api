@@ -1,5 +1,5 @@
 import { planPrograms, programs, programSessions } from "../schemas/programs";
-import { Staff } from "./staff";
+import type { Staff } from "./staff";
 import type { Reservation } from "./attendance";
 import type { ProgramStatus } from "./DatabaseEnums";
 import type { MemberPlan } from "./member";

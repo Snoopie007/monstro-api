@@ -1,12 +1,12 @@
-import { 
-  reservations, 
+import {
+  reservations,
   reservationExceptions,
 } from '@subtrees/schemas/reservations';
-import { Member } from '../member';
-import { Program } from '../program';
+import type { Member } from '../member';
+import type { Program } from '../program';
 
 // Reservation status type derived from enum
-export type ReservationStatus = 
+export type ReservationStatus =
   | 'confirmed'
   | 'cancelled_by_member'
   | 'cancelled_by_vendor'
@@ -15,7 +15,7 @@ export type ReservationStatus =
   | 'no_show';
 
 // Exception initiator type derived from enum
-export type ExceptionInitiator = 
+export type ExceptionInitiator =
   | 'member'
   | 'vendor'
   | 'holiday'

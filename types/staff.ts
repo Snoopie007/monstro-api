@@ -1,8 +1,8 @@
 import { staffs } from "@subtrees/schemas";
-import { staffsLocations } from "../schemas/staffs";
-import { Role } from "./vendor/role";
-import { User } from "./user";
-
+import type { staffsLocations } from "../schemas/staffs";
+import type { Role } from "./vendor/role";
+import type { User } from "./user";
+import type { Location } from "./location";
 export type Staff = typeof staffs.$inferSelect & {
     user?: User;
     staffLocations?: StaffLocation[];
