@@ -1,24 +1,25 @@
-import type { Contract, MemberContract } from './contract'
-import type { FamilyMember } from './FamilyMember'
-import type { Location } from './location'
-import type { PlanProgram } from './program'
 import {
-  migrateMembers,
-  memberInvoices,
-  memberLocations,
+  memberCustomFields,
+  memberFields,
   memberPackages,
-  memberPlans,
   memberPlanPricing,
+  memberPlans,
   memberReferrals,
   members,
   memberSubscriptions,
-  memberFields,
-  memberCustomFields,
-} from 'subtrees/schemas'
+} from '../schemas'
+import { memberInvoices } from '../schemas/invoice'
+import { memberLocations } from '../schemas/MemberLocation'
+import type { MemberPointsHistory } from './achievement'
+import type { Contract, MemberContract } from './contract'
 import type { PaymentType } from './DatabaseEnums'
+import type { FamilyMember } from './FamilyMember'
+import type { Location } from './location'
+import type { MigrateMember } from './MigrateMember'
 import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
+import type { PlanProgram, Program } from './program'
 import type { User } from './user'
-
+import type { Invoice } from './invoices'
 
 export type Member = typeof members.$inferSelect & {
   user?: User
@@ -32,13 +33,17 @@ export type Member = typeof members.$inferSelect & {
   referredBy?: MemberReferral
 }
 
+
+
+
+
 export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
   plan?: MemberPlan
 }
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
   child?: MemberSubscription
-  invoices?: MemberInvoice[]
+  invoices?: Invoice[]
   plan?: MemberPlan
   pricing?: MemberPlanPricing
   contract?: MemberContract
@@ -46,6 +51,12 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
   paymentType: PaymentType
   location?: Location
 }
+
+export type ExtendedMemberSubscription = MemberSubscription & {
+  planId?: string
+  programs?: Program[]
+}
+
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
   plan?: MemberPlan
@@ -57,6 +68,10 @@ export type MemberPackage = typeof memberPackages.$inferSelect & {
   location?: Location
 }
 
+export type ExtendedMemberPackage = MemberPackage & {
+  planId?: string
+  programs?: Program[]
+}
 export type BillingCycleAnchorConfig = {
   day_of_month: number
   hour?: number
@@ -69,16 +84,10 @@ export type MemberPlan = typeof memberPlans.$inferSelect & {
   contract?: Contract | null
   billingAnchorConfig: BillingCycleAnchorConfig | null
   planPrograms?: PlanProgram[]
-  pricingOptions?: MemberPlanPricing[]
+  pricings?: MemberPlanPricing[]
   member?: Member
 }
 
-export type MemberInvoice = typeof memberInvoices.$inferSelect & {
-  member?: Member
-  location?: Location
-  memberPackage?: MemberPackage | null
-  memberSubscription?: MemberSubscription | null
-}
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
   location?: Location
@@ -88,6 +97,8 @@ export type MemberLocation = typeof memberLocations.$inferSelect & {
   totalPointsEarned?: number
   memberPaymentMethods?: MemberPaymentMethod[]
   paymentMethods?: PaymentMethod[]
+  migration?: MigrateMember;
+  pointsHistory?: MemberPointsHistory[];
 }
 
 
@@ -107,15 +118,11 @@ export type FamilyPlan = {
   packageId?: number
 }
 
-export type MigrateMember = typeof migrateMembers.$inferSelect & {
-  pricing?: MemberPlanPricing | null
-  member?: Member
-  location?: Location
-}
+
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
   member?: Member
-  referred?: Member
+  referredMember?: Member
   location?: Location
 }
 

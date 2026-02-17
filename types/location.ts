@@ -1,14 +1,14 @@
 import type {
-  Wallet,
-  Program,
   MemberInvoice,
   MemberSubscription,
-  Transaction,
   PaymentType,
+  Program,
   TaxRate,
+  Transaction,
+  Wallet,
 } from ".";
-import { locations, locationState } from "subtrees/schemas/locations";
-import type { MemberLocation, MemberPlan, MigrateMember } from "./member";
+import { locations, locationState } from "../schemas/locations";
+import type { MemberPlan } from "./member";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
@@ -19,6 +19,7 @@ export type Location = typeof locations.$inferSelect & {
   wallet?: Wallet;
   memberPlans?: MemberPlan[];
   taxRates?: TaxRate[];
+  taxRate?: TaxRate;
 };
 
 

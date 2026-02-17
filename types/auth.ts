@@ -1,5 +1,3 @@
-import { z } from "zod";
-import { AuthAdditionalDataSchema } from "@/libs/schemas";
 
 export type BaseUser = {
   id: string; // UUID from database
@@ -22,4 +20,8 @@ export type ExtendedVendorUser = ExtendedUser & {
   vendorId: string;
 };
 
-export type AuthAdditionalData = z.infer<typeof AuthAdditionalDataSchema>
+export type AuthAdditionalData = {
+  migrateId?: string | null;
+  ref?: string | null;
+  lid?: string | null;
+};

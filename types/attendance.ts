@@ -1,21 +1,16 @@
+import { attendances } from "../schemas/attendances";
 import {
-  recurringReservations,
   reservationExceptions,
   reservations,
-} from "subtrees/schemas/reservations";
-import type { ProgramSession } from "subtrees/types/program";
+} from "../schemas/reservations";
 import type { Member, MemberPackage, MemberSubscription } from "./member";
-import { attendances } from "subtrees/schemas/attendances";
-import type { Location } from "./location";
+import type { Program, ProgramSession } from "./program";
 
 export type Attendance = typeof attendances.$inferSelect & {
-  recurring?: RecurringReservation;
   reservation?: Reservation;
 };
 
-export type ExtendedAttendance = Attendance & {
-  programName: string;
-};
+export type ExtendedAttendance = Attendance;
 
 export type InsertReservation = typeof reservations.$inferInsert;
 
@@ -45,20 +40,8 @@ export type Reservation = ReservationBase &
     attendance?: Attendance;
   };
 
-export type RecurringReservation = typeof recurringReservations.$inferSelect & {
-  session?: ProgramSession | null;
-  location?: Location;
-  attendances?: Attendance[];
-  member?: Member;
-  exceptions?: ReservationException[];
+// Unified exception type - supports both recurring and single reservations
+export type ReservationException = typeof reservationExceptions.$inferSelect & {
+  reservation?: Reservation;
 };
 
-// Unified exception type - supports both recurring and single reservations
-export type ReservationException =
-  typeof reservationExceptions.$inferSelect & {
-    recurring?: RecurringReservation;
-    reservation?: Reservation;
-  };
-
-// Backward compatible alias
-export type RecurringReservationException = ReservationException;

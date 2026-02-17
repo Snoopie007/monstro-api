@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -10,9 +10,8 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { contractTemplates } from "./contracts";
-import { planPrograms } from "./programs";
 
-import type { BillingCycleAnchorConfig } from "subtrees/types";
+import type { BillingCycleAnchorConfig } from "../types";
 import { groups } from "./chat/groups";
 import {
 	IntervalType,
@@ -22,8 +21,7 @@ import {
 	PlanType,
 } from "./DatabaseEnums";
 import { locations } from "./locations";
-import { memberContracts, memberInvoices, members } from "./members";
-import { recurringReservations, reservations } from "./reservations";
+import { memberContracts, members } from "./members";
 
 export const memberPlans = pgTable("member_plans", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -69,18 +67,17 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	memberPlanPricingId: text("member_plan_pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "set null" }),
 	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	stripeSubscriptionId: text("stripe_subscription_id"),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
 	startDate: timestamp("start_date", { withTimezone: true }).notNull(),
 	currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
 	currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
-	expiresAt: timestamp("expires_at", { withTimezone: true }),
 	cancelAt: timestamp("cancel_at", { withTimezone: true }),
 	cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
 	trialEnd: timestamp("trial_end", { withTimezone: true }),
 	endedAt: timestamp("ended_at", { withTimezone: true }),
 	classCredits: integer("class_credits").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
+	stripePaymentId: text("stripe_payment_id"),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	makeUpCredits: integer("make_up_credits").notNull().default(0),
 	allowMakeUpCarryOver: boolean("allow_make_up_carry_over").notNull().default(false),
@@ -106,6 +103,7 @@ export const memberPackages = pgTable("member_packages", {
 	expireDate: timestamp("expire_date", { withTimezone: true }),
 	status: PackageStatusEnum("status").notNull(),
 	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
+	termsLeft: integer("terms_left").notNull().default(0),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
 	totalClassAttended: integer("total_class_attended").notNull().default(0),
 	totalClassLimit: integer("total_class_limit").notNull().default(0),
@@ -122,92 +120,3 @@ export const memberPackages = pgTable("member_packages", {
 		}),
 	]
 );
-
-export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
-	location: one(locations, {
-		fields: [memberPlans.locationId],
-		references: [locations.id],
-	}),
-	group: one(groups, {
-		fields: [memberPlans.groupId],
-		references: [groups.id],
-	}),
-	contract: one(contractTemplates, {
-		fields: [memberPlans.contractId],
-		references: [contractTemplates.id],
-	}),
-	planPrograms: many(planPrograms),
-	packages: many(memberPackages),
-	subscriptions: many(memberSubscriptions),
-	pricings: many(memberPlanPricing),
-}));
-
-export const memberPlanPricingRelations = relations(memberPlanPricing, ({ one, many }) => ({
-	plan: one(memberPlans, {
-		fields: [memberPlanPricing.memberPlanId],
-		references: [memberPlans.id],
-	}),
-	subscriptions: many(memberSubscriptions),
-	packages: many(memberPackages),
-}));
-
-export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one, many }) => ({
-	member: one(members, {
-		fields: [memberSubscriptions.memberId],
-		references: [members.id],
-		relationName: "payer",
-	}),
-	parent: one(memberSubscriptions, {
-		fields: [memberSubscriptions.parentId],
-		references: [memberSubscriptions.id],
-		relationName: "childs",
-	}),
-
-	pricing: one(memberPlanPricing, {
-		fields: [memberSubscriptions.memberPlanPricingId],
-		references: [memberPlanPricing.id],
-	}),
-	location: one(locations, {
-		fields: [memberSubscriptions.locationId],
-		references: [locations.id],
-	}),
-	contract: one(memberContracts, {
-		fields: [memberSubscriptions.memberContractId],
-		references: [memberContracts.id],
-	}),
-	childs: many(memberSubscriptions, {
-		relationName: "childs",
-	}),
-	invoices: many(memberInvoices),
-	reservations: many(reservations),
-	recurrings: many(recurringReservations),
-}));
-
-export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
-
-	pricing: one(memberPlanPricing, {
-		fields: [memberPackages.memberPlanPricingId],
-		references: [memberPlanPricing.id],
-	}),
-	location: one(locations, {
-		fields: [memberPackages.locationId],
-		references: [locations.id],
-	}),
-	member: one(members, {
-		fields: [memberPackages.memberId],
-		references: [members.id],
-	}),
-	parent: one(memberPackages, {
-		fields: [memberPackages.parentId],
-		references: [memberPackages.id],
-	}),
-	contract: one(memberContracts, {
-		fields: [memberPackages.memberContractId],
-		references: [memberContracts.id],
-	}),
-	reservations: many(reservations),
-	recurrings: many(recurringReservations),
-	childs: many(memberPackages, {
-		relationName: "children",
-	}),
-}));

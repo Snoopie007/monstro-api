@@ -1,9 +1,5 @@
 import { pgTable, text, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { relations } from "drizzle-orm";
-import { messages } from "./chats";
-import { groupPosts } from "./groups";
-import { moments } from "./moments";
 
 export const media = pgTable("media", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -19,19 +15,3 @@ export const media = pgTable("media", {
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-
-export const mediaRelations = relations(media, ({ one }) => ({
-    message: one(messages, {
-        fields: [media.ownerId],
-        references: [messages.id],
-    }),
-    post: one(groupPosts, {
-        fields: [media.ownerId],
-        references: [groupPosts.id],
-    }),
-    moment: one(moments, {
-        fields: [media.ownerId],
-        references: [moments.id],
-    }),
-}));

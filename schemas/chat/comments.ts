@@ -1,8 +1,6 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { users } from "../users";
-import { groupPosts } from "./groups";
-import { moments } from "./moments";
 
 export const comments = pgTable("comments", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -20,29 +18,3 @@ export const comments = pgTable("comments", {
     deletedOn: timestamp("deleted_on", { withTimezone: true }),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-
-
-export const commentsRelations = relations(comments, ({ one, many }) => ({
-    post: one(groupPosts, {
-        fields: [comments.ownerId],
-        references: [groupPosts.id],
-    }),
-    moment: one(moments, {
-        fields: [comments.ownerId],
-        references: [moments.id],
-    }),
-    parent: one(comments, {
-        fields: [comments.parentId],
-        references: [comments.id],
-        relationName: "replies",
-    }),
-    user: one(users, {
-        fields: [comments.userId],
-        references: [users.id],
-    }),
-
-    replies: many(comments, {
-        relationName: "replies",
-    }),
-}));

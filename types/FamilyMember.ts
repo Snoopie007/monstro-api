@@ -1,4 +1,4 @@
-import { familyMembers } from "subtrees/schemas";
+import { familyMembers } from "../schemas/members";
 import type { FamilyMemberStatus, MemberRelationship } from "./DatabaseEnums";
 import type { Member } from "./member";
 

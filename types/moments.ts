@@ -1,9 +1,11 @@
-import { momentLikes, moments } from "subtrees/schemas";
-import type { User } from "./user";
+import { momentLikes, moments } from "../schemas/chat/moments";
 import type { Comment } from "./group";
+import type { Media } from "./medias";
+import type { User } from "./user";
 
 export type Moment = typeof moments.$inferSelect & {
     author?: User;
+    medias?: Media[];
     comments?: Comment[];
 }
 
