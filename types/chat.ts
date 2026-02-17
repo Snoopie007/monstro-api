@@ -2,28 +2,26 @@ import { chatMembers, chats, messages } from "../schemas/chat";
 import type { Group } from "./group";
 import type { Location } from "./location";
 import type { Media } from "./medias";
-import type { ReactionCounts } from "./reactions";
+import type { ReactionCount } from "./reactions";
 import type { User } from "./user";
 type LastChatMessage = {
     content: string | null;
     created: Date;
 }
 
+export type ChatMember = typeof chatMembers.$inferSelect & {
+    user?: User;
+}
+
 export type Chat = typeof chats.$inferSelect & {
     members?: ChatMember[];
     messages?: Message[];
+    startedBy?: User;
     group?: Group;
     location?: Location;
     chatMembers?: ChatMember[];
     lastMessage?: LastChatMessage;
 
-}
-export type Message = typeof messages.$inferSelect & {
-    medias?: Media[];
-    reply?: MessageReply;
-    sender?: MessageSender;
-    reactions?: ReactionCounts[];
-    files?: Media[];
 }
 
 export type MessageSender =
@@ -36,9 +34,13 @@ export type MessageReply = {
     sender?: MessageSender;
 }
 
-
-export type ChatMember = typeof chatMembers.$inferSelect & {
-    user?: User;
+export type Message = typeof messages.$inferSelect & {
+    sender?: User;
+    medias?: Media[];
+    reactions?: ReactionCount[];
+    progress?: number;
+    pendingFiles?: File[];
+    isOptimistic?: boolean;
+    reply?: MessageReply;
+    files?: Media[];
 }
-
-

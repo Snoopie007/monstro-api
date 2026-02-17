@@ -100,7 +100,3 @@ export const memberCustomFields = pgTable('member_custom_fields', {
 	primaryKey({ columns: [t.memberId, t.customFieldId] }),
 	unique('mcf_member_field_unique').on(t.memberId, t.customFieldId),
 ])
-
-
-
-

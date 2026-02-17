@@ -10,6 +10,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { contractTemplates } from "./contracts";
+import { promos } from "./promos";
 
 import type { BillingCycleAnchorConfig } from "../types";
 import { groups } from "./chat/groups";
@@ -61,7 +62,7 @@ export const memberPlanPricing = pgTable("member_plan_pricing", {
 });
 
 export const memberSubscriptions = pgTable("member_subscriptions", {
-	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	parentId: text("parent_id"),
 	memberPlanPricingId: text("member_plan_pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "set null" }),
@@ -83,13 +84,16 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	allowMakeUpCarryOver: boolean("allow_make_up_carry_over").notNull().default(false),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-}, (table) => [
-	foreignKey({
-		columns: [table.parentId],
-		foreignColumns: [table.id],
-		name: "parent_child_fk",
-	}),
-]);
+  promoId: text("promo_id").references(() => promos.id, { onDelete: "set null" }),
+},
+  (table) => [
+    foreignKey({
+      columns: [table.parentId],
+      foreignColumns: [table.id],
+      name: "parent_child_fk",
+    }),
+  ]
+);
 
 export const memberPackages = pgTable("member_packages", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -111,6 +115,7 @@ export const memberPackages = pgTable("member_packages", {
 	allowMakeUpCarryOver: boolean("allow_make_up_carry_over").notNull().default(false),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
+  promoId: text("promo_id").references(() => promos.id, { onDelete: "set null" }),
 },
 	(table) => [
 		foreignKey({

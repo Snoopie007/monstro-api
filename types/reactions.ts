@@ -1,4 +1,4 @@
-import type { reactions } from "../schemas/chat";
+import type { reactions } from "@subtrees/schemas";
 import type { User } from "./user";
 
 
@@ -18,7 +18,7 @@ export type ReactionEmoji = {
     type: string;
 }
 
-export type ReactionCounts = {
+export type ReactionCount = {
     ownerType: string;
     ownerId: string;
     display: string;
