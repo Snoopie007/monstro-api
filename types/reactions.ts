@@ -18,7 +18,7 @@ export type ReactionEmoji = {
     type: string;
 }
 
-export type ReactionCounts = {
+export type ReactionCount = {
     ownerType: string;
     ownerId: string;
     display: string;
