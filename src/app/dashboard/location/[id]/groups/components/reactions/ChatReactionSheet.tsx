@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { CHAT_QUICK_REACTIONS, EMOJI_CATEGORIES, toEmojiData } from "@/constants/emojis";
 import { cn } from "@/libs/utils";
-import { ReactionEmoji } from "@subtrees/types/vendor/social";
+import { ReactionEmoji } from "@subtrees/types/reactions";
 import { X } from "lucide-react";
 
 type ChatReactionSheetProps = {

@@ -5,7 +5,7 @@ import { useChat } from "@/hooks/useChat";
 import { useSession } from "@/hooks/useSession";
 import { formatMessageTimestamp, getDateLabel, isGroupedMessage } from "@/libs/utils";
 import { User } from "@subtrees/types";
-import { Message } from "@subtrees/types/vendor/social";
+import { Message } from "@subtrees/types/chat";
 import { isSameDay } from "date-fns";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";

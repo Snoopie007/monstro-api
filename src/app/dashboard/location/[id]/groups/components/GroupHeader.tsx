@@ -1,11 +1,9 @@
 "use client";
 
-import { Badge, Button, Card } from "@/components/ui";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/libs/utils";
-import { Lock, Share2, Users } from "lucide-react";
+import { Badge, Card } from "@/components/ui";
+import { Lock, Users } from "lucide-react";
 import Image from "next/image";
-import { Group } from "@subtrees/types/vendor/social";
+import { Group } from "@subtrees/types/group";
 
 type GroupHeaderProps = {
   group: Group;

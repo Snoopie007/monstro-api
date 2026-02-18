@@ -118,7 +118,6 @@ export async function POST(req: NextRequest) {
                     url: s3Result.url,
                     thumbnailUrl: null,
                     altText: null,
-                    metadata: {},
                 }).returning();
 
                 uploadedMedia.push(mediaRecord);

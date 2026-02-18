@@ -4,8 +4,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Vendor, VendorReferral } from '@subtrees/types'
 import { CopyIcon } from 'lucide-react'
 
-import React from 'react'
-
 interface VendorReferralsProps {
     vendor: Vendor
 }

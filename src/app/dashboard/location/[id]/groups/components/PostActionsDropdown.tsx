@@ -8,7 +8,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Trash2 } from "lucide-react";
-import { GroupPost } from "@subtrees/types/vendor/social/group";
+import { GroupPost } from "@subtrees/types/group";
 
 interface PostActionsDropdownProps {
     post: GroupPost;

@@ -1,6 +1,6 @@
 "use client";
 
-import { PostComment } from "@subtrees/types/vendor/social/group";
+import { PostComment } from "@subtrees/types/group";
 import { CommentItem } from "./CommentItem";
 import { Skeleton } from "@/components/ui";
 

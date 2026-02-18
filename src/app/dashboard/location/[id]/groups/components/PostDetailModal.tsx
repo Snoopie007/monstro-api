@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge, Button, ScrollArea } from "@/components/ui";
-import { GroupPost, PostComment } from "@subtrees/types/vendor/social/group";
+import { GroupPost, PostComment } from "@subtrees/types/group";
 import { usePostComments } from "@/hooks/usePostComments";
 import { useReactions } from "@/hooks/useReactions";
 import { useSession } from "@/hooks/useSession";

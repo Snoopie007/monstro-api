@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChatMember } from "@subtrees/types/vendor/social/chat";
+import { ChatMember } from "@subtrees/types/chat";
 import { EllipsisVertical, UserPlusIcon } from "lucide-react";
 import { useState } from "react";
 import { ChatMembersDialog } from "./AddMemberDialog";

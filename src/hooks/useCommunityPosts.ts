@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { GroupPost } from "@subtrees/types/vendor/social/group";
+import { GroupPost } from "@subtrees/types/group";
 import { useState } from "react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());

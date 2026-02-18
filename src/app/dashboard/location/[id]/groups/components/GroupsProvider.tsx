@@ -3,7 +3,7 @@
 import { useConversationListListener } from '@/hooks/useConversationListListener';
 import { useSession } from "@/hooks/useSession";
 import { clientsideApiClient } from "@/libs/api/client";
-import { Chat } from "@subtrees/types/vendor/social/chat";
+import { Chat } from "@subtrees/types/chat";
 import {
     createContext,
     ReactNode,

@@ -1,7 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui";
-import { ReactionCount, ReactionEmoji } from "@subtrees/types/vendor/social";
+import { ReactionCount, ReactionEmoji } from "@subtrees/types/reactions";
 import { cn } from "@/libs/utils";
 import { SmilePlus } from "lucide-react";
 

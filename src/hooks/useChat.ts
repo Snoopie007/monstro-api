@@ -1,6 +1,7 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import { uploadToS3 } from '@/libs/client/s3';
-import { Message, ReactionEmoji } from '@subtrees/types/vendor/social';
+import { Message } from '@subtrees/types/chat';
+import {ReactionEmoji} from '@subtrees/types/reactions';
 import { UploadUrl } from '@subtrees/types/other';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -162,7 +163,6 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
             chatId: currentChatId,
             senderId,
             content,
-            metadata: {},
             created: new Date(),
             updated: null,
             sender: {

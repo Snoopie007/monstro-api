@@ -2,7 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { db } from "@/db/db";
 import { chatMembers, chats, groups, groupMembers } from "@subtrees/schemas";
 import { auth } from "@/libs/auth/server";
-import { Chat } from "@subtrees/types/vendor/social/chat";
+import { Chat } from "@subtrees/types/chat";
 import { and, eq, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { memo } from "react";
