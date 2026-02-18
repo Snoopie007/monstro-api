@@ -26,4 +26,3 @@ export function useAllLocationMembers(locationId: string) {
         refetchOnWindowFocus: false,
     })
 }
-

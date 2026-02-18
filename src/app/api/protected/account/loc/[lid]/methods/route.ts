@@ -5,7 +5,7 @@ import { VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
 import { getPlan } from "../../../utils";
 import { auth } from '@/libs/auth/server';
-import { locations, locationState } from "@/db/schemas/locations";
+import { locations, locationState } from "@subtrees/schemas/locations";
 import { db } from "@/db/db";
 
 export async function POST(

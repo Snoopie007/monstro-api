@@ -7,8 +7,8 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { supportAssistants, supportDocumentChunks } from "@/db/schemas";
-import { KnowledgeBase, DocumentMetadata } from "@/types/knowledgeBase";
+import { supportAssistants, supportDocumentChunks } from "@subtrees/schemas";
+import { KnowledgeBase, DocumentMetadata } from "@subtrees/types/KnowledgeBase";
 import { 
   chunkText, 
   extractTextFromFile, 

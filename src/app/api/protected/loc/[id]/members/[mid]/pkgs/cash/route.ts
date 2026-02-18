@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { memberLocations, memberPackages, memberPlanPricing, transactions, promos } from "@/db/schemas";
+import { memberLocations, memberPackages, memberPlanPricing, transactions, promos } from "@subtrees/schemas";
 import { eq, and, sql } from "drizzle-orm";
 
-import { PaymentType } from "@/types";
+import { PaymentType } from "@subtrees/types";
 import { NextRequest, NextResponse } from "next/server";
 import { addUserToGroup, calculateExpiresAt, calculateTax, validatePromoForCheckout } from "../../../utils";
 
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest, props: Props) {
             await tx.insert(transactions).values({
                 description: `One time payment for ${plan.name} - ${pricing.name}`,
                 ...CommonData,
-                totalTax: tax,
+                tax,
                 type: "inbound",
                 items: [{
                     productId: plan.id,

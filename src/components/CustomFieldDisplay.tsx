@@ -3,7 +3,7 @@
 import { Badge } from './ui';
 import { Check, X } from "lucide-react";
 import { format } from "date-fns";
-import type { CustomFieldDefinition } from "@/types";
+import type { CustomFieldDefinition } from "@/types/member";
 
 interface CustomFieldDisplayProps {
   field: CustomFieldDefinition;

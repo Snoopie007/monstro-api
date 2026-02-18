@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { taxRates } from "@/db/schemas";
+import { taxRates } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 

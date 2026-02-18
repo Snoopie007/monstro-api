@@ -1,5 +1,5 @@
 'use client';
-import { MemberPackage, MemberSubscription } from '@/types';
+import { MemberPackage, MemberSubscription } from '@subtrees/types';
 import {
     Dialog,
     DialogTitle,

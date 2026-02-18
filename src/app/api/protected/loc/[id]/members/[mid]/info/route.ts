@@ -1,6 +1,6 @@
 // MEMBER INFO UPDATE START: New API route for member personal info updates
 import { db } from "@/db/db";
-import { memberLocations } from "@/db/schemas";
+import { memberLocations } from "@subtrees/schemas";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";

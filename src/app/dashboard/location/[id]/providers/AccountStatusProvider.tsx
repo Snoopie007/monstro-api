@@ -1,6 +1,6 @@
 'use client'
 import supabase from "@/libs/client/supabase";
-import { LocationState } from "@/types/location";
+import { LocationState } from "@subtrees/types/location";
 import {
     createContext,
     Dispatch,

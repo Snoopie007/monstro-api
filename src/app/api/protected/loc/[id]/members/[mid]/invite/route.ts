@@ -3,7 +3,7 @@ import { sendEmailViaApi } from '@/libs/server/emails';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { memberLocations } from '@/db/schemas';
+import { memberLocations } from '@subtrees/schemas';
 import { eq, and } from 'drizzle-orm';
 
 export async function POST(_req: NextRequest, props: { params: Promise<{ id: string, mid: string }> }) {

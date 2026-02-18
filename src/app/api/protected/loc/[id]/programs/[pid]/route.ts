@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 
 import { eq, sql } from 'drizzle-orm';
-import { programs } from '@/db/schemas';
+import { programs } from '@subtrees/schemas';
 import { hasPermission } from '@/libs/server/permissions';
 
 type Params = {

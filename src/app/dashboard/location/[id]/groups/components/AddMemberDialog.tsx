@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { tryCatch } from "@/libs/utils";
-import { ChatMember } from "@/types";
+import { ChatMember } from "@subtrees/types/chat";
 import { Loader2, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";

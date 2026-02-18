@@ -1,5 +1,5 @@
 'use client';
-import { SupportAssistant, SupportConversation } from "@/types/support";
+import { SupportAssistant, SupportConversation } from "@subtrees/types/support";
 import {
     createContext,
     ReactNode,

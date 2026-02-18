@@ -8,7 +8,7 @@ import {
     Separator
 } from '@/components/ui';
 import { cn } from '@/libs/utils';
-import { Attendance, MissedReservation } from '@/types';
+import { Attendance, MissedReservation } from '@subtrees/types';
 import { format, formatDate, isPast } from 'date-fns';
 import { AlertTriangle, CalendarPlus, CalendarX, Wrench } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -20,7 +20,7 @@ interface Closure {
 }
 
 interface SimplifiedAttendance {
-    programName: string;
+    programName: string | null;
     startTime: Date;
     endTime: Date;
     checkInTime: Date;

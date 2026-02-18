@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
-import { memberTags, memberHasTags, members } from "@/db/schemas";
+import { memberTags, memberHasTags, members } from "@subtrees/schemas";
 import { eq, and } from "drizzle-orm";
 
 export async function GET(

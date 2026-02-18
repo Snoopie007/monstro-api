@@ -1,5 +1,5 @@
 "use client";
-import { Contract } from "@/types";
+import { Contract } from "@subtrees/types";
 import { FormControl } from "@/components/forms";
 import {
   Select,

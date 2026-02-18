@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { db } from "@/db/db";
-import { achievements } from "@/db/schemas";
+import { achievements } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { hasPermission } from "@/libs/server/permissions";
 

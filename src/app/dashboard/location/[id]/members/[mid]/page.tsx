@@ -8,7 +8,7 @@ import {
 } from "@/components/ui";
 import { db } from "@/db/db";
 import { hasPermission } from "@/libs/server/permissions";
-import type { Member, MemberLocation, PaymentMethod } from "@/types";
+import type { Member, MemberLocation, PaymentMethod } from "@subtrees/types";
 import { sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import {
@@ -108,7 +108,7 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 		const { member, ...rest } = ml;
 		return {
 			member: member as Member,
-			ml: { ...rest, knownFamilyMembers: filteredFamilyMembers } as MemberLocation,
+			ml: { ...rest, knownFamilyMembers: filteredFamilyMembers } as unknown as MemberLocation,
 		};
 	} catch (error) {
 		console.log("error", error);

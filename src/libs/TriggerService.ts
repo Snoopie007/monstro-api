@@ -3,9 +3,9 @@ import {
     memberAchievements,
     memberPointsHistory,
     memberLocations,
-} from '@/db/schemas'
+} from '@subtrees/schemas'
 import { AchievementTriggers } from '@/libs/data'
-import { NewMemberPointsHistory } from '@/types/'
+import { NewMemberPointsHistory } from '@subtrees/types'
 import { and, eq, inArray, SQL, sql } from 'drizzle-orm'
 
 export async function triggerSignUp(data: { mid: string, lid: string, pid: string }) {

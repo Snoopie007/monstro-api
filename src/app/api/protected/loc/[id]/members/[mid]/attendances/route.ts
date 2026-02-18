@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { db } from '@/db/db'
-import type { ExtendedAttendance, MissedReservation } from '@/types/attendance'
+import type { ExtendedAttendance, MissedReservation } from '@subtrees/types/attendance'
 import { sql } from 'drizzle-orm';
 
 export async function GET(
@@ -19,9 +19,7 @@ export async function GET(
                     COALESCE(a.program_id, p.id) as resolved_program_id
                 FROM check_ins a
                 LEFT JOIN reservations r ON a.reservation_id = r.id
-                LEFT JOIN recurring_reservations rr ON a.recurring_id = rr.id
-                LEFT JOIN program_sessions ps ON 
-                    (r.session_id = ps.id OR rr.session_id = ps.id)
+                LEFT JOIN program_sessions ps ON r.session_id = ps.id
                 LEFT JOIN programs p ON ps.program_id = p.id
                 WHERE a.member_id = ${params.mid}
                     AND a.location_id = ${params.id}
@@ -46,7 +44,6 @@ export async function GET(
         const attendances: ExtendedAttendance[] = attendanceRows.map((row: any) => ({
             id: row.id,
             reservationId: row.reservation_id,
-            recurringId: row.recurring_id,
             programId: row.resolved_program_id,
             startTime: row.start_time,
             endTime: row.end_time,
@@ -59,6 +56,7 @@ export async function GET(
             locationId: row.location_id,
             memberId: row.member_id,
             created: row.created_at ?? new Date(),
+            updated: row.updated_at ?? null,
             programName: row.resolved_program_name,
         }))
 

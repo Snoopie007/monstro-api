@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button'
 
 import { cn } from '@/libs/utils'
-import { VendorClaimedReward } from '@/types'
+import { VendorClaimedReward } from '@subtrees/types'
 import Image from 'next/image'
 import React from 'react'
 

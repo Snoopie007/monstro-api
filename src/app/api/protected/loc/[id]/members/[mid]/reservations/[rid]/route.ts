@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { and, eq, isNull } from "drizzle-orm";
-import { authenticateMember } from "@/libs/utils";
+import { eq } from "drizzle-orm";
 import {
 	reservations,
-	recurringReservations,
-	reservationExceptions,
-} from "@/db/schemas";
+} from "@subtrees/schemas";
 import { cancelClassReminders } from "../../../utils";
 
 export async function DELETE(

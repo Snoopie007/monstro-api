@@ -1,5 +1,5 @@
 'use client'
-import { Transaction } from "@/types";
+import { Transaction } from "@subtrees/types";
 import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
 
 type StateType = {

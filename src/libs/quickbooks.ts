@@ -2,8 +2,8 @@
 import { Buffer } from 'buffer';
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { integrations } from "@/db/schemas";
-import { Integration } from "@/types";
+import { integrations } from "@subtrees/schemas";
+import { Integration } from "@subtrees/types";
 
 const QB_BASE_URL = process.env.QUICKBOOKS_ENVIRONMENT === 'production'
 	? 'https://quickbooks.api.intuit.com'

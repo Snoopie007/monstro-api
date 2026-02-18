@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
-import { groups, groupMembers, chats, chatMembers } from "@/db/schemas";
+import { groups, groupMembers, chats, chatMembers } from "@subtrees/schemas";
 import S3Bucket from "@/libs/server/s3";
 
 export async function POST(

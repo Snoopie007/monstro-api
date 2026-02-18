@@ -1,5 +1,5 @@
 'use client'
-import { Group, Program } from "@/types";
+import { Group, Program } from "@subtrees/types";
 import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
 
 type StateType = {

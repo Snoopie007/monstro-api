@@ -1,17 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import useSWR from "swr"
 import { useRouter } from "next/navigation"
 import type { CreateInvoiceFormData } from "@/libs/FormSchemas/CreateInvoiceSchema"
 import { toast } from "sonner"
 import type { IStepperMethods } from "@/components/ui"
+import { useSession } from "./useSession"
+import { clientsideApiClient } from "@/libs/api/client"
 
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
+const normalizeItemsForApi = (items: CreateInvoiceFormData["items"]) =>
+    items.map((item) => ({
+        name: item.name,
+        description: item.description || "",
+        quantity: Number(item.quantity || 1),
+        price: Number(item.price || 0),
+    }))
+
+const normalizeFormData = (
+    data: CreateInvoiceFormData | CreateInvoiceFormData[]
+) => (Array.isArray(data) ? data[0] : data)
+
 export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | null, ref: React.RefObject<HTMLDivElement & IStepperMethods> | null}) => {
     const router = useRouter();
+    const { data: session } = useSession();
+    const api = useMemo(() => {
+        if (!session?.user?.sbToken) return null;
+        return clientsideApiClient(session.user.sbToken);
+    }, [session?.user?.sbToken]);
 
     const [previewData, setPreviewData] = useState<any>(null)
     const [createdInvoice, setCreatedInvoice] = useState<any>(null)
@@ -49,40 +68,54 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
 
     // Generate invoice preview
     const handlePreview = async (data: CreateInvoiceFormData) => {
+        if (!api || !mid) {
+            toast.error('Session not ready')
+            return
+        }
+        const normalizedData = normalizeFormData(data)
+        if (!normalizedData) {
+            toast.error('Invalid invoice data')
+            return
+        }
         setIsGeneratingPreview(true)
         try {
             let requestBody: any;
 
             // Handle from-subscription type
-            if (data.type === 'from-subscription' && data.selectedSubscriptionId) {
+            if (normalizedData.type === 'from-subscription' && normalizedData.selectedSubscriptionId) {
                 requestBody = {
                     type: 'from-subscription',
-                    selectedSubscriptionId: data.selectedSubscriptionId,
+                    selectedSubscriptionId: normalizedData.selectedSubscriptionId,
                 };
             } else {
                 // Convert prices from dollars to cents for API
-                const itemsInCents = data.items.map((item) => ({
+                const itemsInCents = normalizeItemsForApi(normalizedData.items).map((item) => ({
                     ...item,
                     price: Math.round(item.price * 100),
                 }))
-                requestBody = { items: itemsInCents };
+                requestBody = {
+                    items: itemsInCents,
+                    type: normalizedData.type,
+                    collectionMethod: normalizedData.collectionMethod,
+                };
             }
 
-            const response = await fetch(
-                `/api/protected/loc/${id}/members/${mid}/invoices/preview`,
+            console.log('[InvoiceCreation] Preview payload', {
+                locationId: id,
+                memberId: mid,
+                type: requestBody.type,
+                collectionMethod: requestBody.collectionMethod,
+                itemCount: Array.isArray(requestBody.items) ? requestBody.items.length : 0,
+                selectedSubscriptionId: requestBody.selectedSubscriptionId,
+            })
+
+            const result = await api.post(
+                `/x/loc/${id}/invoices/preview`,
                 {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
+                    ...requestBody,
+                    memberId: mid,
                 }
-            )
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Failed to generate preview')
-            }
-
-            const result = await response.json()
+            ) as { preview: unknown }
             setPreviewData(result.preview)
             ref?.current?.goToStep(3)
         } catch (error) {
@@ -98,53 +131,85 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
     }
 
     const handleCreateInvoice = async (data: CreateInvoiceFormData) => {
+        if (!api || !mid) {
+            toast.error('Session not ready')
+            return
+        }
+        const normalizedData = normalizeFormData(data)
+        if (!normalizedData) {
+            toast.error('Invalid invoice data')
+            return
+        }
         setIsCreating(true);
         try {
-            let requestData = { ...data };
+            let requestData = { ...normalizedData };
 
             // Handle from-subscription type
-            if (data.type === 'from-subscription' && data.selectedSubscriptionId) {
+            if (normalizedData.type === 'from-subscription' && normalizedData.selectedSubscriptionId) {
                 // API will handle item population from subscription
                 requestData = {
-                    ...data,
-                    // Items will be populated by API, but we still pass them for validation
-                    items: data.items,
+                    type: normalizedData.type,
+                    collectionMethod: normalizedData.collectionMethod,
+                    paymentType: normalizedData.paymentType,
+                    dueDate: normalizedData.dueDate,
+                    isRecurring: false,
+                    description: normalizedData.description,
+                    selectedSubscriptionId: normalizedData.selectedSubscriptionId,
+                    items: [],
                 };
             } else {
                 // Convert prices from dollars to cents for API (for manual entry)
-                const itemsInCents = data.items.map((item) => ({
+                const itemsInCents = normalizeItemsForApi(normalizedData.items).map((item) => ({
                     ...item,
                     price: Math.round(item.price * 100),
                 }));
                 requestData = {
-                    ...data,
+                    type: normalizedData.type,
+                    collectionMethod: normalizedData.collectionMethod,
+                    paymentType: normalizedData.paymentType,
+                    dueDate: normalizedData.dueDate,
+                    isRecurring: normalizedData.isRecurring,
+                    description: normalizedData.description,
                     items: itemsInCents,
                 };
             }
 
-            const response = await fetch(
-                `/api/protected/loc/${id}/members/${mid}/invoices/create`,
+            console.log('[InvoiceCreation] Create payload', {
+                locationId: id,
+                memberId: mid,
+                type: requestData.type,
+                collectionMethod: requestData.collectionMethod,
+                paymentType: requestData.paymentType,
+                itemCount: Array.isArray((requestData as any).items) ? (requestData as any).items.length : 0,
+                selectedSubscriptionId: (requestData as any).selectedSubscriptionId,
+                dueDate: requestData.dueDate,
+            })
+
+            const invoice = await api.post(
+                `/x/loc/${id}/invoices`,
                 {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestData),
+                    ...requestData,
+                    memberId: mid,
+                    subscriptionId: requestData.selectedSubscriptionId,
                 }
-            );
-    
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to create invoice');
-            }
-    
-            const invoice = await response.json();
+            ) as any;
+            console.log('[InvoiceCreation] Create response', {
+                hasInvoice: !!invoice,
+                invoiceId: invoice?.invoice?.id || invoice?.id,
+                status: invoice?.invoice?.status || invoice?.status,
+            })
             setCreatedInvoice(invoice);
             toast.success(
-                data.type === 'from-subscription' || data.paymentType === 'cash'
+                normalizedData.type === 'from-subscription' || normalizedData.paymentType === 'cash'
                     ? 'Invoice created as draft'
                     : 'Invoice created and sent'
             );
             ref?.current?.nextStep?.();
         } catch (error) {
+            console.error('[InvoiceCreation] Create failed', {
+                error,
+                message: error instanceof Error ? error.message : 'Unknown error',
+            })
             toast.error(error instanceof Error ? error.message : 'Failed to create invoice');
         } finally {
             setIsCreating(false);
@@ -156,6 +221,7 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
         // For cash payment methods, or if it's a simple invoice object (from-subscription)
         // Just complete and navigate to member page
         if (createdInvoice?.paymentType === 'cash' ||
+            createdInvoice?.invoice?.paymentType === 'cash' ||
             !createdInvoice?.invoice?.id) {
             handleComplete();
             return;
@@ -164,17 +230,14 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
         // For Stripe invoices, send them
         setIsSending(true)
         try {
-            const response = await fetch(
-                `/api/protected/loc/${id}/members/${mid}/invoices/${createdInvoice.invoice.id}/send`,
-                { method: 'PATCH' }
-            )
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Failed to send invoice')
+            if (!api) {
+                throw new Error('Session not ready')
             }
-
-            const result = await response.json()
+            const invoiceId = createdInvoice?.invoice?.id || createdInvoice?.id
+            const result = await api.post(
+                `/x/loc/${id}/invoices/${invoiceId}/send`,
+                {}
+            ) as { message?: string }
             toast.success(result.message || 'Invoice sent successfully!')
             handleComplete()
         } catch (error) {

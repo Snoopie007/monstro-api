@@ -4,35 +4,56 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     Button,
-    DropdownMenuSeparator,
 } from '@/components/ui'
-import { tryCatch } from '@/libs/utils'
-import { Transaction } from '@/types/transaction'
+import { Transaction } from '@subtrees/types/transaction'
 import { EllipsisVertical } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { useSession } from '@/hooks/useSession'
+import { clientsideApiClient } from '@/libs/api/client'
+import { useMemo } from 'react'
 
 interface MemberPaymentActionsProps {
     transaction: Transaction
-    mid: string
     lid: string
+    onRefunded?: () => void
 }
 
 export default function MemberPaymentActions({
     transaction,
-    mid,
     lid,
+    onRefunded,
 }: MemberPaymentActionsProps) {
-    async function makeARefund(id: string | undefined) {
-        if (!id) return;
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${mid}/transactions`, {
-                method: 'PUT',
-                body: JSON.stringify({ chargeId: id }),
+    const { data: session } = useSession()
+    const api = useMemo(() => {
+        if (!session?.user?.sbToken) return null
+        return clientsideApiClient(session.user.sbToken)
+    }, [session?.user?.sbToken])
+
+    async function makeARefund() {
+        if (!api) {
+            toast.error('Session not ready. Please try again.')
+            return
+        }
+
+        try {
+            const endpoint = transaction.paymentType === 'cash'
+                ? `/x/loc/${lid}/transactions/${transaction.id}/refund/cash`
+                : `/x/loc/${lid}/transactions/${transaction.id}/refund`
+
+            await api.post(endpoint, {
+                amountType: 'full',
             })
-        )
-        if (error) {
-            toast.error('Something went wrong, please try again later');
-            return;
+            toast.success(transaction.paymentType === 'cash'
+                ? 'Cash refund recorded successfully'
+                : 'Refund processed successfully')
+            onRefunded?.()
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Something went wrong, please try again later'
+            if (message.includes('SUBSCRIPTION_REFUND_BLOCKED') || message.includes('Please cancel the subscription instead to refund')) {
+                toast.error('Please cancel the subscription instead to refund')
+                return
+            }
+            toast.error(message)
         }
     }
 
@@ -49,8 +70,8 @@ export default function MemberPaymentActions({
             <DropdownMenuContent className="w-[180px] border-foreground/20 p-2">
                 <DropdownMenuItem
                     className="cursor-pointer bg-red-500 hover:bg-red-800 text-white font-semibold "
-                    disabled={transaction.status === 'incomplete'}
-                    onClick={() => makeARefund(transaction.metadata?.chargeId)}
+                    disabled={transaction.status !== 'paid' || transaction.refunded}
+                    onClick={makeARefund}
                 >
                     Refund
                 </DropdownMenuItem>

@@ -2,8 +2,8 @@
 
 import { createContext, useReducer, ReactElement, useCallback, useContext, ReactNode } from "react";
 
-import { LocationState } from "@/types/location";
-import { MonstroPlan } from "@/types/admin";
+import { LocationState } from "@subtrees/types/location";
+import { MonstroPlan } from '@/types/monstro';
 
 type StateType = {
     locationState: LocationState;

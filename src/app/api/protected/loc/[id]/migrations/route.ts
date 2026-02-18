@@ -1,6 +1,6 @@
 import { db } from "@/db/db"
-import { migrateMembers } from "@/db/schemas/MigrateMembers"
-import { memberPlanPricing } from "@/db/schemas/MemberPlans"
+import { migrateMembers } from "@subtrees/schemas/MigrateMembers"
+import { memberPlanPricing } from "@subtrees/schemas/MemberPlans"
 import { desc, eq, sql } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
  
@@ -21,7 +21,7 @@ export async function GET(
         const migrations = await db
             .select()
             .from(migrateMembers)
-            .leftJoin(memberPlanPricing, eq(migrateMembers.pricingId, memberPlanPricing.id))
+            .leftJoin(memberPlanPricing, eq(migrateMembers.priceId, memberPlanPricing.id))
             .where(eq(migrateMembers.locationId, params.id))
             .orderBy(desc(migrateMembers.created))
             .limit(size)

@@ -13,7 +13,8 @@ import { toast } from 'react-toastify'
 import { tryCatch, formatAmountForDisplay } from '@/libs/utils'
 import { useMemberPlans } from '@/hooks'
 import { validateImportData } from '@/libs/validation/importValidation'
-import type { MemberPlan, MemberPlanPricing, CustomFieldDefinition } from '@/types'
+import type { MemberPlan, MemberPlanPricing } from '@subtrees/types'
+import type { CustomFieldDefinition } from '@/types/member'
 import type { NewCustomField } from './ImportStepperPage'
 
 interface PreviewStepProps {
@@ -85,7 +86,7 @@ export function PreviewStep({
         return plans?.find((p: MemberPlan) => p.id === selectedPlanId)
     }, [plans, selectedPlanId])
 
-    const pricingOptions = selectedPlan?.pricingOptions || []
+    const pricingOptions = selectedPlan?.pricings || []
 
     // Reset pricing when plan changes
     useEffect(() => {

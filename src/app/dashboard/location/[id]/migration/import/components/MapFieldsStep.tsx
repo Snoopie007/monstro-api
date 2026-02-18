@@ -7,7 +7,7 @@ import { cn } from '@/libs/utils'
 import { Badge } from '@/components/ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui'
 import { UnmappedColumnsSection } from './UnmappedColumnsSection'
-import type { CustomFieldDefinition } from '@/types'
+import type { CustomFieldDefinition } from '@/types/member'
 import type { NewCustomField } from './ImportStepperPage'
 
 interface MapFieldsStepProps {

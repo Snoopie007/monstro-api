@@ -6,7 +6,7 @@ import {
 	subWeeks,
 	addWeeks,
 } from "date-fns";
-import type { CalendarView } from "@/types";
+import type { CalendarView } from "@/types/calendar";
 import { AgendaDaysToShow } from "../components/event-calendar/constants";
 
 interface UseDateNavigationProps {
@@ -89,4 +89,3 @@ export function useDateNavigation({
 		handleToday,
 	};
 }
-

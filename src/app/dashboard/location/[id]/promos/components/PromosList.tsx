@@ -13,13 +13,15 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui"
-import type { Promo } from "@/db/schemas"
+import type { Promo } from "@subtrees/types"
 import { flexRender, getCoreRowModel, useReactTable } from "@/libs/table-utils"
 import { createColumnHelper } from "@tanstack/react-table"
 import { Ticket, Tag, Pencil, Archive, Loader2 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { EditPromo } from "./EditPromo"
 import { toast } from "react-toastify"
+import { useSession } from "@/hooks/useSession"
+import { clientsideApiClient } from "@/libs/api/client"
 
 interface PromosListProps {
   promos: Promo[]
@@ -32,26 +34,29 @@ export function PromosList({ promos, lid }: PromosListProps) {
   const [editingPromo, setEditingPromo] = useState<Promo | null>(null)
   const [promoToArchive, setPromoToArchive] = useState<Promo | null>(null)
   const [isArchiving, setIsArchiving] = useState(false)
+  const { data: session } = useSession()
+  const api = useMemo(() => {
+    if (!session?.user?.sbToken) return null
+    return clientsideApiClient(session.user.sbToken)
+  }, [session?.user?.sbToken])
 
   const handleArchive = async () => {
     if (!promoToArchive) return
+    if (!api) {
+      toast.error("Session not ready. Please try again.")
+      return
+    }
     
     setIsArchiving(true)
     try {
-      const response = await fetch(`/api/locations/${lid}/promos/${promoToArchive.id}`, {
-        method: "DELETE",
-      })
-      
-      if (response.ok) {
-        toast.success("Promo archived successfully")
-        setPromoToArchive(null)
-        window.location.reload()
-      } else {
-        toast.error("Failed to archive promo")
-      }
+      await api.post(`/x/loc/${lid}/promos/${promoToArchive.id}/archive`, {})
+
+      toast.success("Promo archived successfully")
+      setPromoToArchive(null)
+      window.location.reload()
     } catch (error) {
-      console.error("Error archiving promo:", error)
-      toast.error("Failed to archive promo")
+      const message = error instanceof Error ? error.message : "Failed to archive promo"
+      toast.error(message)
     } finally {
       setIsArchiving(false)
     }

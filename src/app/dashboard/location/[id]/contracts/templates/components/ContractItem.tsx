@@ -1,5 +1,5 @@
 "use client";
-import { Contract } from "@/types";
+import { Contract } from "@subtrees/types";
 import ContractActions from "./ContractActions";
 import { TableRow, TableCell, Button } from "@/components/ui";
 import { format } from "date-fns";

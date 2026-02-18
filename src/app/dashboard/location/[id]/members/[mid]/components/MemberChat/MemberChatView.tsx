@@ -9,7 +9,7 @@ import {
 	Badge,
 } from "@/components/ui/";
 import { Loader2 } from "lucide-react";
-import { Member } from "@/types";
+import { Member } from "@subtrees/types";
 import { formatMessageTimestamp, getDateLabel, isGroupedMessage } from "@/libs/utils";
 import { isSameDay } from "date-fns";
 import ReactMarkdown from "react-markdown";
@@ -17,7 +17,7 @@ import { GroupChatInput } from "../../../../groups/components/GroupChatInput";
 import { ChatReactions, ChatReactionSheet } from "../../../../groups/components/reactions";
 import { UploadingMessage } from "../../../../groups/components/UploadingMessage";
 import { MessageMedia } from "../../../../groups/components/MessageMedia";
-import { Message } from "@/types";
+import { Message } from "@subtrees/types";
 
 interface MemberChatViewProps {
 	locationId: string;

@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
-import { Contract } from "@/types";
+import { Contract } from "@subtrees/types";
 
 
 function useContracts(id: string, withDraft: boolean = true) {

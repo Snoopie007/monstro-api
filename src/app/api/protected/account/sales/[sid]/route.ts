@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { admindb, db } from '@/db/db';
-import { locations, locationState, wallets } from '@/db/schemas';
+import { locations, locationState, wallets } from '@subtrees/schemas';
 import { VendorStripePayments } from '@/libs/server/stripe';
 import { getPlan, notifyAdminAPI } from '../../utils';
 import { eq } from 'drizzle-orm';
 import { sales } from '@/db/admin/sales';
 import Stripe from 'stripe';
-import { Location } from '@/types';
+import { Location } from '@subtrees/types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { DEFAULT_LOCATION_SETTINGS } from '@/libs/data';
 
@@ -98,10 +98,12 @@ export async function POST(req: Request) {
         await db.transaction(async (tx) => {
             await tx.insert(locationState).values({
                 planId: sale.planId || 1,
-                settings: DEFAULT_LOCATION_SETTINGS,
+                settings: {
+                    ...DEFAULT_LOCATION_SETTINGS,
+                    ...(stripeSubscription?.id ? { stripeSubscriptionId: stripeSubscription.id } : {}),
+                },
                 agreeToTerms: sale.agreedToTerms,
                 locationId: location.id,
-                stripeSubscriptionId: stripeSubscription?.id,
                 status: stripeSubscription?.status || 'incomplete',
                 startDate: today,
                 lastRenewalDate: today,

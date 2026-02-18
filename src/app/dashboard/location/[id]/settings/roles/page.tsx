@@ -12,7 +12,7 @@ import {
   EmptyDescription,
 } from "@/components/ui";
 import { Input } from "@/components/forms";
-import { Role } from "@/types";
+import { Role } from "@subtrees/types";
 import useSWR from "swr";
 import { UpsertRole } from "./components";
 import RoleListActions from "./components/actions";

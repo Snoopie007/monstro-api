@@ -17,7 +17,7 @@ import {
     EmptyMedia,
     Empty
 } from '@/components/ui'
-import { Member, CardPaymentMethod, UsBankAccountPaymentMethod, PaymentMethod } from '@/types'
+import { Member, CardPaymentMethod, UsBankAccountPaymentMethod, PaymentMethod } from '@subtrees/types'
 interface PaymentMethodsProps {
     params: { id: string; mid: string }
     editable: boolean

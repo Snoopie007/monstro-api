@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { taxRates } from "@/db/schemas";
+import { taxRates } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 
 import { NextRequest, NextResponse } from "next/server";

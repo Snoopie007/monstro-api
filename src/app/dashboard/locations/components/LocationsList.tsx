@@ -1,7 +1,7 @@
 'use client';
 import { Badge, Button, Card } from '@/components/ui';
 import Link from 'next/link';
-import { Location } from '@/types';
+import { Location } from '@subtrees/types';
 import { ChevronRight } from 'lucide-react';
 import { Input } from '@/components/forms';
 import { useEffect, useState } from 'react';

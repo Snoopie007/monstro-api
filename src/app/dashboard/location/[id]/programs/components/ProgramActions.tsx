@@ -16,7 +16,7 @@ import {
     AlertDialogAction,
 } from "@/components/ui";
 import { cn, tryCatch } from "@/libs/utils";
-import { Program } from "@/types";
+import { Program } from "@subtrees/types";
 import { MoreVertical, Pencil, Pause, Play, Archive, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -85,7 +85,7 @@ export default function ProgramActions({
 
     return (
         <>
-            <CreateSession program={program} availableStaff={[]} staffId={program.instructorId ?? ''} open={openSession} onOpenChange={setOpenSession} onSuccess={onSessionCreated} />
+            <CreateSession program={program} availableStaff={[]} staffId={program.instructorId ? String(program.instructorId) : ''} open={openSession} onOpenChange={setOpenSession} onSuccess={onSessionCreated} />
             <UpdateProgram program={program} open={openUpdate} setOpen={setOpenUpdate} />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>

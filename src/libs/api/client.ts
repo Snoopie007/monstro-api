@@ -6,8 +6,21 @@
 export interface ApiClient {
     get: <T>(url: string, params?: Record<string, string | number | boolean | string[]>) => Promise<T>;
     post: (url: string, data?: any) => Promise<unknown>;
+    patch: (url: string, data?: any) => Promise<unknown>;
     put: (url: string, data?: any) => Promise<unknown>;
     delete: (url: string) => Promise<unknown>;
+}
+
+const REQUEST_TIMEOUT_MS = 45000;
+
+function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs: number = REQUEST_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    return fetch(input, {
+        ...init,
+        signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
 }
 
 export const clientsideApiClient = (token?: string): ApiClient => {
@@ -15,7 +28,6 @@ export const clientsideApiClient = (token?: string): ApiClient => {
 
     return {
         get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
-            console.log("endpoint", endpoint);
             // For XRoutes, strip /api from baseUrl
             const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
 
@@ -66,14 +78,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            console.log('[API Client] POST request:', {
-                url: url.toString(),
-                hasToken: !!token,
-                endpoint,
-                isFormData: data instanceof FormData,
-            });
-
-            const response = await fetch(url.toString(), {
+            const response = await fetchWithTimeout(url.toString(), {
                 method: 'POST',
                 headers,
                 body: data instanceof FormData ? data : JSON.stringify(data)
@@ -82,6 +87,35 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('[API Client] Error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText,
+                });
+                throw new Error(`API Error: ${response.status} - ${errorText}`)
+            }
+            return response.json()
+        },
+        patch: async (endpoint: string, data?: Record<string, unknown>) => {
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
+
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetchWithTimeout(url.toString(), {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify(data)
+            })
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[API Client] PATCH Error response:', {
                     status: response.status,
                     statusText: response.statusText,
                     body: errorText,
@@ -151,4 +185,3 @@ export const clientsideApiClient = (token?: string): ApiClient => {
         }
     }
 }
-

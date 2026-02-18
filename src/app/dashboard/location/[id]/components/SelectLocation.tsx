@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/ScrollArea";
-import { SessionLocation } from "@/types/user";
+import { SessionLocation } from "@subtrees/types/user";
 import { useSession } from "@/hooks/useSession";
 import { useRouter } from "next/navigation";
 import { cn } from "@/libs/utils";

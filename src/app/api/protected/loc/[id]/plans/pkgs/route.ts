@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberPlans, planPrograms } from "@/db/schemas";
+import { memberPlans, planPrograms } from "@subtrees/schemas";
 
 export async function GET(
   req: NextRequest,
@@ -24,11 +24,14 @@ export async function GET(
             program: true,
           },
         },
-        pricingOptions: true,
+        pricings: true,
       },
     });
 
-    return NextResponse.json(pkgs, { status: 200 });
+    return NextResponse.json(
+      pkgs.map((plan) => ({ ...plan, pricingOptions: plan.pricings })),
+      { status: 200 }
+    );
   } catch (err) {
     return NextResponse.json({ error: err }, { status: 500 });
   }

@@ -29,6 +29,9 @@
       ],
       "@public/*": [
         "./public/*"
+      ],
+      "@subtrees/*": [
+        "./subtrees/*"
       ]
     }
   },
@@ -43,9 +46,12 @@
     ".archived/StripeReg.tsx",
     ".archived/StripeTaxSettings.tsx",
     "src/app/dashboard/location/[id]/settings/tax/components/schema.ts",
+    "subtrees/schemas",
+    "subtrees/types",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "subtrees/emails"
   ]
 }

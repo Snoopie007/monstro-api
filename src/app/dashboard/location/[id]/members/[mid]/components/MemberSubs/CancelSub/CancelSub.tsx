@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	DialogFooter,
 	Button,
@@ -16,13 +16,14 @@ import {
 	Textarea,
 } from "@/components/forms";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { MemberSubscription } from "@/types/member";
-import { cn, tryCatch } from "@/libs/utils";
+import { MemberSubscription } from "@subtrees/types/member";
 import { useParams } from "next/navigation";
 import { RefundOptions } from "./RefundOptions";
 import { DayFieldPopover } from "./DayFieldPopover";
+import { useSession } from "@/hooks/useSession";
+import { clientsideApiClient } from "@/libs/api/client";
 
 interface CancelSubProps {
 	sub: MemberSubscription;
@@ -32,6 +33,11 @@ interface CancelSubProps {
 
 export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 	const params = useParams();
+	const { data: session } = useSession();
+	const api = useMemo(() => {
+		if (!session?.user?.sbToken) return null;
+		return clientsideApiClient(session.user.sbToken);
+	}, [session?.user?.sbToken]);
 
 	const [loading, setLoading] = useState(false);
 	const [formState, setFormState] = useState({
@@ -48,33 +54,44 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 			return;
 		}
 
+		if (!api) {
+			toast.error("Session not ready. Please try again.");
+			return;
+		}
+
 		if (formState.cancelOption === "custom" && !formState.customDate) {
 			toast.error("Please select a cancellation date");
 			return;
 		}
 
 		setLoading(true);
-		const path = sub.paymentType === "card" ? "subs" : "subs/cash";
-		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/${path}/${sub.id}`, {
-				method: sub.paymentType === "card" ? "DELETE" : "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(formState),
-			})
-		);
 
+		const mode = formState.cancelOption === "now"
+			? "now"
+			: formState.cancelOption === "end"
+				? "end_of_period"
+				: "at_date";
 
+		try {
+			await api.post(`/x/loc/${params.id}/subscriptions/${sub.id}/cancel`, {
+				mode,
+				cancelAt: formState.cancelOption === "custom" ? formState.customDate : null,
+				reason: formState.reason || undefined,
+				refund: {
+					enabled: formState.refundAmount > 0,
+					amountType: formState.refundAmount > 0 ? "full" : undefined,
+					amount: formState.refundAmount > 0 ? formState.refundAmount : undefined,
+				},
+			});
 
-		if (error || !result || !result.ok) {
+			toast.success("Subscription cancellation processed");
+			onOpenChange(false);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to cancel subscription";
+			toast.error(message);
+		} finally {
 			setLoading(false);
-			const errorData = await result?.json();
-			toast.error(errorData.error || "Failed to cancel subscription");
-			return;
 		}
-
-		toast.success("Subscription cancellation processed");
-		onOpenChange(false);
-		setLoading(false);
 	};
 
 	return (
@@ -93,6 +110,7 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 								setFormState((prev) => ({
 									...prev,
 									cancelOption: value as "now" | "end" | "custom",
+									...(value !== "now" ? { refundAmount: 0 } : {}),
 								}))
 							}
 							className="space-y-2 text-sm col-span-3"
@@ -146,7 +164,7 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 						</RadioGroup>
 					</div>
 
-					{sub.stripeSubscriptionId && (
+					{sub.paymentType !== "cash" && formState.cancelOption === "now" && (
 						<RefundOptions
 							onChange={(value) => {
 								setFormState((prev) => ({

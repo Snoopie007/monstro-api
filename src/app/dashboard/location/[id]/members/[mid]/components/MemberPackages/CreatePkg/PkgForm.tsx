@@ -29,7 +29,7 @@ import {
 
 import { useMemberPackages, } from "@/hooks";
 import { cn, formatAmountForDisplay, tryCatch } from "@/libs/utils";
-import { MemberPackage, MemberPlan, MemberPlanPricing, PaymentMethod } from "@/types";
+import { MemberPackage, MemberPlan, MemberPlanPricing, PaymentMethod } from "@subtrees/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon, ChevronRight, Loader2 } from "lucide-react";
@@ -75,7 +75,7 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
         return pkgs.find(p => p.id === selectedPlanId);
     }, [pkgs, selectedPlanId]);
 
-    const pricingOptions = selectedPlan?.pricingOptions || [];
+    const pricingOptions = selectedPlan?.pricings || [];
 
 
 

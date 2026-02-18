@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
-import { memberTags, memberHasTags } from "@/db/schemas";
+import { memberTags, memberHasTags } from "@subtrees/schemas";
 import { eq, and, sql } from "drizzle-orm";
 
 // GET /api/protected/loc/[id]/tags/[tagId] - Get a specific tag

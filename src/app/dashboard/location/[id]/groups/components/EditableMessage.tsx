@@ -1,6 +1,6 @@
 'use client'
 
-import { Message } from "@/types/chats";
+import { Message } from "@subtrees/types/chat";
 import ReactMarkdown from "react-markdown";
 import { useEffect, useRef, useState } from "react";
 

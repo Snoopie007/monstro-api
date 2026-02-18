@@ -179,4 +179,3 @@ export function CustomClosures({ locationId, closures, onRefetch }: CustomClosur
     </Card>
   );
 }
-

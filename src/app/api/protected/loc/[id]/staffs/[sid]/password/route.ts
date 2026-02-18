@@ -2,7 +2,7 @@ import { auth } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
-import { users, accounts } from "@/db/schemas";
+import { users, accounts } from "@subtrees/schemas";
 import bcrypt from "bcryptjs";
 
 type StaffPasswordProps = {
@@ -12,6 +12,10 @@ type StaffPasswordProps = {
 
 export async function PATCH(req: Request, props: { params: Promise<StaffPasswordProps> }) {
   const { sid } = await props.params;
+  const staffId = Number(sid);
+  if (!Number.isInteger(staffId)) {
+    return NextResponse.json({ message: 'Staff not found.' }, { status: 404 });
+  }
   const session = await auth();
   const { password, currentPassword } = await req.json();
 
@@ -26,7 +30,7 @@ export async function PATCH(req: Request, props: { params: Promise<StaffPassword
   try {
     // Look up staff and their associated user
     const staff = await db.query.staffs.findFirst({
-      where: (staffs, { eq }) => eq(staffs.id, sid),
+      where: (staffs, { eq }) => eq(staffs.id, staffId),
       with: {
         user: {
           with: {
@@ -78,7 +82,6 @@ export async function PATCH(req: Request, props: { params: Promise<StaffPassword
     return NextResponse.json({ error: err }, { status: 500 });
   }
 }
-
 
 
 

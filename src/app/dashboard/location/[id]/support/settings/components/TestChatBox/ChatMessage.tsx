@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import { useEffect, useMemo, useRef } from 'react'
 import { ScrollArea } from '@/components/ui'
 
-import { TestChatMessage } from '@/types'
+import { TestChatMessage } from '@subtrees/types'
 import { useBotSettingContext } from '../../provider'
 
 export function TestChatMessages() {

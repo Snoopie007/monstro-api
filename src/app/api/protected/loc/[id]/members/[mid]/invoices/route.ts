@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/db";
-import { memberInvoices, members } from "@/db/schemas";
+import { memberInvoices, members } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { scheduleOneOffInvoiceReminders } from "../../utils";
@@ -119,8 +119,8 @@ export async function POST(
 		}
 		const stripe = new MemberStripePayments(integrations.accountId);
 		stripe.setCustomer(member.stripeCustomerId);
-		let stripeInvoice;
-		let localInvoiceData;
+		let stripeInvoice: { id: string } | null = null;
+		let localInvoiceData: typeof memberInvoices.$inferInsert | null = null;
 
 		if (type === "one-off") {
 			// Create invoice items first
@@ -171,7 +171,7 @@ export async function POST(
 					`Custom invoice for ${member.firstName} ${member.lastName}`,
 				items: items,
 				total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-				subtotal: items.reduce(
+				subTotal: items.reduce(
 					(sum, item) => sum + item.price * item.quantity,
 					0
 				),
@@ -223,7 +223,7 @@ export async function POST(
 					`Recurring invoice for ${member.firstName} ${member.lastName}`,
 				items: items,
 				total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-				subtotal: items.reduce(
+				subTotal: items.reduce(
 					(sum, item) => sum + item.price * item.quantity,
 					0
 				),

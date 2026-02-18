@@ -2,10 +2,10 @@ import { db } from "@/db/db";
 import {
 	users,
 	staffs,
-	staffLocations,
-	staffsLocationRoles,
+	staffsLocations,
+	userRoles,
 	locations,
-} from "@/db/schemas";
+} from "@subtrees/schemas";
 import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { sendEmailViaApi } from "@/libs/server/emails";
@@ -24,27 +24,46 @@ export async function GET(
 
 
 	try {
-		const staffs = await db.query.staffLocations.findMany({
+		const staffs = await db.query.staffsLocations.findMany({
 			where: (staffLocations, { eq }) =>
 				and(eq(staffLocations.locationId, params.id)),
-		with: {
-			staff: {
-				with: {
-					user: {
-						columns: {
-							image: true,
+			with: {
+				staff: {
+					with: {
+						user: {
+							columns: {
+								image: true,
+							},
 						},
 					},
 				},
 			},
-			roles: {
-				with: {
-					role: true,
-				},
-			},
-		},
 		});
-		return NextResponse.json(staffs, { status: 200 });
+
+		const userIds = staffs
+			.map((sl) => sl.staff?.userId)
+			.filter((id): id is string => Boolean(id));
+		const userRolesByUserId = new Map<string, Array<{ id: string; name: string; color: any }>>();
+		if (userIds.length > 0) {
+			const rolesForUsers = await db.query.userRoles.findMany({
+				where: (ur, { inArray }) => inArray(ur.userId, userIds),
+				with: { role: true },
+			});
+			for (const ur of rolesForUsers) {
+				if (!ur.userId || !ur.role) continue;
+				const current = userRolesByUserId.get(ur.userId) ?? [];
+				current.push(ur.role);
+				userRolesByUserId.set(ur.userId, current);
+			}
+		}
+
+		return NextResponse.json(
+			staffs.map((sl) => ({
+				...sl,
+				roles: sl.staff?.userId ? userRolesByUserId.get(sl.staff.userId) ?? [] : [],
+			})),
+			{ status: 200 }
+		);
 	} catch (err) {
 		return NextResponse.json({ error: err }, { status: 500 });
 	}
@@ -89,7 +108,7 @@ export async function POST(
 
 	if (existingUser) {
 		// Check if staff record already exists for this user
-		let staffId: string;
+		let staffId: number;
 		const existingStaff = await db.query.staffs.findFirst({
 			where: (staffs, { eq }) => eq(staffs.userId, existingUser.id),
 		});
@@ -111,23 +130,23 @@ export async function POST(
 
 			// Create staff-location relationship
 			const [staffLocation] = await db
-				.insert(staffLocations)
+				.insert(staffsLocations)
 				.values({
 					staffId: newStaff.id,
 					locationId: params.id,
 				})
 				.returning();
 
-			// Assign role to staff-location
-			await db.insert(staffsLocationRoles).values({
-				staffLocationId: staffLocation.id,
+			// Assign role to user
+			await db.insert(userRoles).values({
+				userId: existingUser.id,
 				roleId: data.role,
 			});
 		} else {
 			staffId = existingStaff.id;
 			
 			// Check if staff-location relationship exists
-			const existingStaffLocation = await db.query.staffLocations.findFirst({
+			const existingStaffLocation = await db.query.staffsLocations.findFirst({
 				where: (staffLocations, { and, eq }) =>
 					and(
 						eq(staffLocations.staffId, existingStaff.id),
@@ -138,24 +157,24 @@ export async function POST(
 			if (!existingStaffLocation) {
 				// Create staff-location relationship
 				const [staffLocation] = await db
-					.insert(staffLocations)
+					.insert(staffsLocations)
 					.values({
 						staffId: existingStaff.id,
 						locationId: params.id,
 					})
 					.returning();
 
-				// Assign role to staff-location
-				await db.insert(staffsLocationRoles).values({
-					staffLocationId: staffLocation.id,
+				// Assign role to user
+				await db.insert(userRoles).values({
+					userId: existingUser.id,
 					roleId: data.role,
 				});
 			} else {
-				// Update role if staff-location exists
+				// Ensure user role exists
 				await db
-					.insert(staffsLocationRoles)
+					.insert(userRoles)
 					.values({
-						staffLocationId: existingStaffLocation.id,
+						userId: existingUser.id,
 						roleId: data.role,
 					})
 					.onConflictDoNothing(); // In case role already assigned
@@ -214,16 +233,16 @@ export async function POST(
 
 		// Create staff-location relationship
 		const [staffLocation] = await db
-			.insert(staffLocations)
+			.insert(staffsLocations)
 			.values({
 				staffId: newStaff.id,
 				locationId: params.id,
 			})
 			.returning();
 
-		// Assign role to staff-location
-		await db.insert(staffsLocationRoles).values({
-			staffLocationId: staffLocation.id,
+		// Assign role to user
+		await db.insert(userRoles).values({
+			userId: newUser.id,
 			roleId: data.role,
 		});
 

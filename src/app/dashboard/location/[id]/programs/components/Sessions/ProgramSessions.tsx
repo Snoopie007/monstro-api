@@ -1,5 +1,5 @@
 'use client'
-import { Program, ProgramSession } from "@/types";
+import { Program, ProgramSession } from "@subtrees/types";
 import { useCallback, useEffect, useState } from "react";
 import {
     Collapsible, CollapsibleContent, CollapsibleTrigger,

@@ -21,7 +21,7 @@ import {
 import { Pencil } from "lucide-react";
 import { PostCard } from "./PostCard";
 import { PostDetailModal } from "./PostDetailModal";
-import { GroupPost } from "@/types/groups";
+import { GroupPost } from "@subtrees/types/group";
 import { useCommunityPosts } from "@/hooks/useCommunityPosts";
 import { CreatePostDialog } from "./CreatePostDialog";
 import { useState, useCallback } from "react";

@@ -1,11 +1,11 @@
 import {
 	PaymentType,
 	TaxRate,
-} from "@/types";
+} from "@subtrees/types";
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { serversideApiClient, ApiClientError } from "@/libs/api/server";
 import { db } from "@/db/db";
-import { groupMembers, integrations, memberPackages, memberSubscriptions, promos } from "@/db/schemas";
+import { groupMembers, integrations, memberPackages, memberSubscriptions, promos } from "@subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import Stripe from "stripe";
 

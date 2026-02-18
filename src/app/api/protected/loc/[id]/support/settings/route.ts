@@ -1,6 +1,6 @@
 import { db } from '@/db/db'
-import { supportAssistants, supportTriggers, BotModel } from '@/db/schemas'
-import { SupportAssistantSettingsRequest } from '@/types'
+import { supportAssistants, supportTriggers, BotModel } from '@subtrees/schemas'
+import { SupportAssistantSettingsRequest } from '@subtrees/types'
 import { eq } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 

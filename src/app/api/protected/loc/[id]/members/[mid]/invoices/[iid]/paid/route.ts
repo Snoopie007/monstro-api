@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberInvoices, transactions, memberSubscriptions, locationState, members, locations } from "@/db/schemas";
+import { memberInvoices, transactions, memberSubscriptions, locationState, members, locations } from "@subtrees/schemas";
 import { eq, and } from "drizzle-orm";
 import { addMonths, addWeeks, addDays, addYears } from "date-fns";
 import { serversideApiClient } from "@/libs/api/server";
@@ -91,7 +91,7 @@ export async function POST(
 				.where(
 					and(
 						eq(transactions.invoiceId, params.iid),
-						eq(transactions.status, "incomplete")
+						eq(transactions.status, "failed")
 					)
 				);
 

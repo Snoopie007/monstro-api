@@ -36,7 +36,7 @@ import {
 } from "@/components/forms";
 import { useSubscriptions } from "@/hooks/usePlans";
 import { UpdateSubPlanSchema } from "@/libs/FormSchemas";
-import { MemberPlan } from "@/types";
+import { MemberPlan } from "@subtrees/types";
 import { Loader2 } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
 import { toast } from "react-toastify";
@@ -73,7 +73,7 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 			currency: sub.currency || "USD",
 			billingAnchor: sub.billingAnchorConfig?.day_of_month || undefined,
 			pricingOptions:
-				sub.pricingOptions?.map((p) => ({
+				sub.pricings?.map((p) => ({
 					id: p.id,
 					name: p.name,
 					price: p.price,
@@ -126,7 +126,7 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 				currency: sub.currency || "USD",
 				billingAnchor: sub.billingAnchorConfig?.day_of_month || undefined,
 				pricingOptions:
-					sub.pricingOptions?.map((p) => ({
+					sub.pricings?.map((p) => ({
 						id: p.id,
 						name: p.name,
 						price: p.price,

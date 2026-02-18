@@ -15,7 +15,7 @@ import {
 } from "@/components/ui"
 import { Textarea, Checkbox } from "@/components/forms"
 import { AlertTriangle, Loader2, Users, CalendarClock } from "lucide-react"
-import { ProgramSession } from "@/types"
+import { ProgramSession } from "@subtrees/types"
 
 interface CancelSessionProps {
     session: ProgramSession

@@ -8,7 +8,7 @@ import { getTOS } from "@/libs/server/MDXParse";
 import {
 	ScrollArea,
 } from "@/components/ui";
-import { MonstroPlan } from "@/types/admin";
+import type { MonstroPlan } from '@/types/monstro';
 import { CompareTable, FAQs } from "../../components";
 
 

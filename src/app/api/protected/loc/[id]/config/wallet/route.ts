@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
-import { wallets } from '@/db/schemas';
+import { wallets } from '@subtrees/schemas';
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;

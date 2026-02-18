@@ -4,7 +4,7 @@ import {
     DialogDescription, DialogFooter, DialogHeader, DialogTitle,
     DialogTrigger, Separator, Skeleton
 } from '@/components/ui'
-import { Wallet as WalletType } from '@/types'
+import { Wallet as WalletType } from '@subtrees/types'
 import { InfoIcon, Loader2 } from 'lucide-react'
 import React, { useState, useCallback, useMemo } from 'react'
 import { cn, formatAmountForDisplay, tryCatch } from '@/libs/utils'

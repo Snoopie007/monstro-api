@@ -34,11 +34,12 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
-import type { MemberInvoice } from '@/types'
+import type { MemberInvoice } from '@subtrees/types'
 import { toast } from 'react-toastify'
 import { Calendar } from '@/components/ui/calendar'
 import { ChevronDownIcon } from 'lucide-react'
 import { mutate } from 'swr'
+import { clientsideApiClient } from '@/libs/api/client'
 
 const MarkPaidSchema = z.object({
     paidAmount: z.string().min(1, 'Amount is required'),
@@ -54,12 +55,14 @@ export const MarkPaid = ({
     setIsOpen,
     invoice,
     params,
+    api,
     onPaid,
 }: {
     isOpen: boolean
     setIsOpen: (isOpen: boolean) => void
     invoice: MemberInvoice
     params: { id: string; mid: string }
+    api: ReturnType<typeof clientsideApiClient> | null
     onPaid: () => void
 }) => {
     const [isLoading, setIsLoading] = useState(false)
@@ -76,26 +79,21 @@ export const MarkPaid = ({
     })
 
     async function onMarkPaid(values: z.infer<typeof MarkPaidSchema>) {
+        if (!api) {
+            toast.error('Session not ready')
+            return
+        }
         setIsLoading(true)
         try {
-            const response = await fetch(
-                `/api/protected/loc/${params.id}/members/${params.mid}/invoices/${invoice.id}/paid`,
+            await api.post(
+                `/x/loc/${params.id}/invoices/${invoice.id}/mark-paid`,
                 {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        paidAmount: parseFloat(values.paidAmount),
-                        paidDate: values.paidDate,
-                        paymentMethod: values.paymentMethod,
-                        notes: values.notes,
-                    }),
+                    paidAmount: parseFloat(values.paidAmount),
+                    paidDate: values.paidDate,
+                    paymentType: values.paymentMethod,
+                    notes: values.notes,
                 }
             )
-
-            if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Failed to mark as paid')
-            }
 
             toast.success('Invoice marked as paid')
             setIsOpen(false)
@@ -104,11 +102,12 @@ export const MarkPaid = ({
             // Also revalidate subscriptions to update status (if invoice is linked to subscription)
             mutate({ url: `members/${params.mid}/subs`, id: params.id })
         } catch (error) {
-            toast.error(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to mark as paid'
-            )
+            const message = error instanceof Error ? error.message : 'Failed to mark as paid'
+            if (message.includes('WALLET_CHARGE_FAILED')) {
+                toast.error('Insufficient wallet balance to process this payment. Please top up wallet first.')
+            } else {
+                toast.error(message)
+            }
         } finally {
             setIsLoading(false)
         }

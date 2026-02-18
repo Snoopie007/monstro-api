@@ -1,4 +1,4 @@
-import { CustomFieldDefinition } from "@/types";
+import { CustomFieldDefinition } from "@/types/member";
 
 export enum FilterInputType {
   TEXT = 'text',

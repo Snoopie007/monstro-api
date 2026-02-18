@@ -1,5 +1,5 @@
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, Button } from "@/components/ui";
-import { MemberPackage } from "@/types";
+import { MemberPackage } from "@subtrees/types";
 import { EllipsisVertical, Play, Pause, PlusIcon } from "lucide-react";
 
 export function PkgActions({ pkg }: { pkg: MemberPackage }) {

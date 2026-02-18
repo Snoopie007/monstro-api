@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { contractTemplates } from '@/db/schemas/ContractTemplates';
+import { contractTemplates } from '@subtrees/schemas/contracts';
 import { eq } from 'drizzle-orm';
 import { hasPermission } from '@/libs/server/permissions';
 

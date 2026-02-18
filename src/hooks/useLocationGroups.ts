@@ -1,5 +1,5 @@
 import { clientsideApiClient } from "@/libs/api/client";
-import { Group } from "@/types";
+import { Group } from "@subtrees/types/group";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useSession } from "./useSession";

@@ -27,7 +27,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateMemberSchema, CreateMemberFormValues } from "../../schema";
 import { CountryCodes } from "@/libs/data";
-import { CountryCode, Member } from "@/types";
+import { Member } from "@subtrees/types";
+import { CountryCode } from "@subtrees/types/other";
 import { Avatar, AvatarImage } from "@/components/ui";
 
 import { toast } from "react-toastify";

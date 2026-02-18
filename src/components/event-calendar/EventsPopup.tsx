@@ -5,7 +5,7 @@ import { format, isSameDay } from "date-fns";
 import { XIcon } from "lucide-react";
 
 import { EventItem } from "../event-calendar";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent } from "@/types/calendar";
 
 interface EventsPopupProps {
 	date: Date;

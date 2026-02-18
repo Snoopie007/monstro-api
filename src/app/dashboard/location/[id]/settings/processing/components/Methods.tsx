@@ -4,7 +4,7 @@ import { tryCatch } from '@/libs/utils';
 import React from 'react'
 import { toast } from 'react-toastify';
 import { useAccountStatus } from '../../../providers';
-import { PaymentType } from '@/types/DatabaseEnums';
+import { PaymentType } from '@subtrees/types/DatabaseEnums';
 import { SettingsBox, SettingContent, SettingsDescription, SettingsTitle } from '../../components';
 type ProcessingMethod = {
     type: PaymentType

@@ -1,5 +1,5 @@
 
-import { Member, SupportAssistant, SupportMessage } from '@/types'
+import { Member, SupportAssistant, SupportMessage } from '@subtrees/types'
 import { format } from 'date-fns';
 import React, { useMemo } from 'react'
 import { useSupport } from '../../providers/SupportProvider';

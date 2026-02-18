@@ -1,7 +1,7 @@
 'use client'
 
 import { Button, Switch } from '@/components/ui'
-import { SupportTrigger } from '@/types'
+import { SupportTrigger } from '@subtrees/types'
 import { Edit2, Loader2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react'
 import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'

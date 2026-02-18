@@ -4,7 +4,7 @@ import { use, useMemo, useState } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
 import { AddProgram } from "./components";
 import ErrorComponent from "@/components/error";
-import { Program } from "@/types";
+import { Program } from "@subtrees/types";
 import Loading from "@/components/loading";
 import { Input } from "@/components/forms/input";
 import { usePermission } from "@/hooks/usePermissions";

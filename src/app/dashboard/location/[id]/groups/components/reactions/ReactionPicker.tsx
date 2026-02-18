@@ -4,7 +4,7 @@ import { Button } from "@/components/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { POST_REACTIONS, POST_QUICK_REACTIONS, toEmojiData } from "@/constants/emojis";
 import { cn } from "@/libs/utils";
-import { ReactionEmoji } from "@/types";
+import { ReactionEmoji } from "@subtrees/types/reactions";
 import { SmilePlus } from "lucide-react";
 import { useState } from "react";
 

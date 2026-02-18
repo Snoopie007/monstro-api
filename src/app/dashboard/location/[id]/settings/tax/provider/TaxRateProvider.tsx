@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { TaxRate } from "@/types/tax";
+import { TaxRate } from "@subtrees/types/tax";
 
 interface TaxRateContextType {
     taxRates: TaxRate[];

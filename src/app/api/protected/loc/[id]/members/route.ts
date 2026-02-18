@@ -21,7 +21,7 @@ import {
     memberHasTags,
     memberCustomFields,
     memberFields,
-} from '@/db/schemas'
+} from '@subtrees/schemas'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { MemberSortableField, sortColumnMap } from '@/types/member'
 import { hasPermission } from "@/libs/server/permissions";

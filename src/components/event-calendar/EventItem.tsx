@@ -10,7 +10,7 @@ import {
 	getBorderRadiusClasses,
 	getEventColorClasses,
 } from "@/libs/calendar";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent } from "@/types/calendar";
 import { cn } from "@/libs/utils";
 
 // Using date-fns format with custom formatting:

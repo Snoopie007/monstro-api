@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -11,15 +11,14 @@ import {
 	DialogBody,
 	MultiDialogContent,
 	Avatar, AvatarImage, Button, Badge,
-	EmptyContent,
 	EmptyHeader,
 	EmptyTitle,
-	EmptyDescription,
 	EmptyMedia,
 	Empty
 } from "@/components/ui";
 import { CalendarEvent } from "@/types/calendar";
-import { SessionManagementDialogProps, Member, MemberWithValidation } from "@/types";
+import { SessionManagementDialogProps, MemberWithValidation } from "@/types/calendar";
+import { Member } from "@subtrees/types/member";
 
 import { Input } from "@/components/forms/";
 import {
@@ -102,13 +101,23 @@ export function SessionManagementDialog({
 
 	const canManage = lid && (onRemoveReservation || onRefreshEvents);
 	const originalData = event?.data;
-	const rid = originalData?.reservationId || originalData?.recurringId || "";
 	const sessionId = originalData?.sessionId;
 
 	// Get existing member IDs to filter from search results
 	const existingMemberIds = useMemo(
 		() => originalData?.members?.map((m) => String(m.memberId)) || [],
 		[originalData?.members]
+	);
+
+	const getMemberReservationId = useCallback(
+		(memberId: string) => {
+			if (!originalData?.memberReservations?.length) return null;
+			const match = originalData.memberReservations.find(
+				(item) => String(item.memberId) === String(memberId)
+			);
+			return match?.reservationId || null;
+		},
+		[originalData?.memberReservations]
 	);
 
 	// Centralized refresh function
@@ -126,6 +135,11 @@ export function SessionManagementDialog({
 	const handleRemoveMember = useCallback(
 		async (memberId: string) => {
 			if (!onRemoveReservation || !event || !originalData) return;
+			const memberReservationId = getMemberReservationId(memberId);
+			if (!memberReservationId) {
+				toast.error("Reservation mapping missing for this member");
+				return;
+			}
 
 			// Create calendar event with attendance data for the removal function
 			const calendarEventWithData: CalendarEvent = {
@@ -134,7 +148,10 @@ export function SessionManagementDialog({
 				start: event.start,
 				end: event.end,
 				duration: 0, // This should be calculated properly
-				data: originalData,
+				data: {
+					...originalData,
+					reservationId: memberReservationId,
+				},
 				staff: event.staff,
 			};
 
@@ -157,7 +174,14 @@ export function SessionManagementDialog({
 				setIsUpdating(false);
 			}
 		},
-		[onRemoveReservation, event, originalData, refreshMemberList, localMembers]
+		[
+			onRemoveReservation,
+			event,
+			originalData,
+			refreshMemberList,
+			localMembers,
+			getMemberReservationId,
+		]
 	);
 
 	// Debounced search function
@@ -481,24 +505,38 @@ export function SessionManagementDialog({
 														{member.memberId}
 													</p>
 												</div>
-												{lid && (
-													<div className="flex items-center gap-1">
-														<CheckinButton
-															memberId={String(member.memberId)}
-															event={{
+													{lid && (
+														<div className="flex items-center gap-1">
+															{(() => {
+																const memberReservationId = getMemberReservationId(
+																	String(member.memberId)
+																);
+																if (!memberReservationId) {
+																	return (
+																		<span className="text-[10px] text-muted-foreground px-2">
+																			No reservation
+																		</span>
+																	);
+																}
+
+																return (
+																	<>
+															<CheckinButton
+																memberId={String(member.memberId)}
+																event={{
 																id: event.id,
 																title: event.title,
 																start: event.start,
 																end: event.end,
 																duration: 0,
-																data: originalData,
-																staff: event.staff,
-															}}
-															lid={lid}
-															rid={rid}
-															onUpdate={handleCheckinUpdate}
-														/>
-														{new Date(event.start) > new Date() && (
+																	data: originalData,
+																	staff: event.staff,
+																}}
+																lid={lid}
+																rid={memberReservationId}
+																onUpdate={handleCheckinUpdate}
+															/>
+															{new Date(event.start) > new Date() && (
 															<Tooltip>
 																<TooltipTrigger asChild>
 																	<Button
@@ -515,10 +553,13 @@ export function SessionManagementDialog({
 																	</Button>
 																</TooltipTrigger>
 																<TooltipContent>Remove member</TooltipContent>
-															</Tooltip>
-														)}
-													</div>
-												)}
+																	</Tooltip>
+															)}
+																	</>
+																);
+															})()}
+														</div>
+													)}
 											</div>
 										))}
 									</div>

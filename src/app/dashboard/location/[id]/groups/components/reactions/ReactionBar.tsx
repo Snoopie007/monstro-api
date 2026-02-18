@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactionCount, ReactionEmoji } from "@/types";
+import { ReactionCount, ReactionEmoji } from "@subtrees/types/reactions";
 import { cn } from "@/libs/utils";
 
 type ReactionBarProps = {

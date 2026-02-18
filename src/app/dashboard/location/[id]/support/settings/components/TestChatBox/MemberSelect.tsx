@@ -6,7 +6,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { Member } from '@/types'
+import { Member } from '@subtrees/types'
 import { ChevronDown, Loader2, Search, User } from 'lucide-react'
 import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'

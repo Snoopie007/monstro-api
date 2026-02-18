@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { programSessions, staffs } from "@/db/schemas";
+import { programSessions, staffs } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 // GET - Get staff assigned to session

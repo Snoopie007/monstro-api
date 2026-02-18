@@ -24,7 +24,6 @@ interface AddReservationProps {
 
 export function AddReservation({ event, onRemoveReservation, lid, rid }: AddReservationProps) {
   const [open, setOpen] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -105,6 +104,7 @@ export function AddReservation({ event, onRemoveReservation, lid, rid }: AddRese
                               rid={String(rid)}
                             />
                             <button
+                              type="button"
                               className="px-2 py-1 rounded text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
                               onClick={() =>
                                 onRemoveReservation &&

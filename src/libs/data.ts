@@ -1,4 +1,4 @@
-import { LocationSettings } from "@/types";
+import { LocationSettings } from "@subtrees/types";
 const DEFAULT_LOCATION_SETTINGS: LocationSettings = {
     theme: 'default',
     passOnFees: false,

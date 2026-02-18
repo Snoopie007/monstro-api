@@ -7,7 +7,7 @@ import {
     members,
     memberTags,
     users,
-} from '@/db/schemas'
+} from '@subtrees/schemas'
 import { auth } from '@/libs/auth/server'
 import { CustomFieldDefinition, MemberListItem } from '@/types/member'
 import { and, eq, inArray, ne } from 'drizzle-orm'

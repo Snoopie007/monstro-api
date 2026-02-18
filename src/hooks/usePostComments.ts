@@ -1,5 +1,5 @@
 import { clientsideApiClient } from "@/libs/api/client";
-import { PostComment } from "@/types/groups";
+import { PostComment } from "@subtrees/types/group";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useSession } from "./useSession";

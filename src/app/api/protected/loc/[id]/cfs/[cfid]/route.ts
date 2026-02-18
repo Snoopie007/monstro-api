@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberFields } from "@/db/schemas";
+import { memberFields } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 

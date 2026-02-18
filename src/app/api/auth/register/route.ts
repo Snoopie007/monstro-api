@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
-import { users, vendors, vendorLevels, accounts } from "@/db/schemas";
+import { users, vendors, vendorLevels, accounts } from "@subtrees/schemas";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 import { generateUsername, generateDiscriminator } from "@/app/api/protected/loc/[id]/members/utils";

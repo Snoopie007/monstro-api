@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { staffs, users } from '@/db/schemas';
+import { staffs, users } from '@subtrees/schemas';
 import { eq } from 'drizzle-orm';
 import S3Bucket from '@/libs/server/s3';
 
@@ -15,10 +15,14 @@ type RouteParams = {
 
 export async function POST(req: NextRequest, props: RouteParams) {
   const { sid } = await props.params;
+  const staffId = Number(sid);
+  if (!Number.isInteger(staffId)) {
+    return NextResponse.json({ error: 'Invalid staff id' }, { status: 400 });
+  }
 
   try {
     const staff = await db.query.staffs.findFirst({
-      where: eq(staffs.id, sid),
+      where: eq(staffs.id, staffId),
       columns: {
         userId: true,
       },
@@ -50,10 +54,14 @@ export async function POST(req: NextRequest, props: RouteParams) {
 
 export async function DELETE(req: NextRequest, props: RouteParams) {
   const { sid } = await props.params;
+  const staffId = Number(sid);
+  if (!Number.isInteger(staffId)) {
+    return NextResponse.json({ error: 'Invalid staff id' }, { status: 400 });
+  }
 
   try {
     const staff = await db.query.staffs.findFirst({
-      where: eq(staffs.id, sid),
+      where: eq(staffs.id, staffId),
       columns: {
         userId: true,
       },

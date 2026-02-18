@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Book, CircleHelp, Mail, Phone, Webcam } from 'lucide-react'
 import Image from 'next/image'
-import { LocationState } from '@/types'
+import { LocationState } from '@subtrees/types'
 
 const SupportButtonStyle = 'text-foreground hover:bg-transparent hover:border-foreground text-[0.8rem] border-foreground/10'
 const SupportURL = 'https://support.monstro-x.com'

@@ -18,7 +18,7 @@ import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { AchievementSchema } from "../../schemas";
 import { useEffect, useState, useRef } from "react";
-import { MemberPlan } from "@/types/member";
+import { MemberPlan } from "@subtrees/types/member";
 import { AchievementTriggers } from "@/libs/data";
 import { Skeleton } from "@/components/ui";
 

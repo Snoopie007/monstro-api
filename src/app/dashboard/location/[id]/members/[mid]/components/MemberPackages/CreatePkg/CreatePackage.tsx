@@ -9,7 +9,7 @@ import {
     ItemTitle
 } from '@/components/ui'
 import { usePackages } from '@/hooks'
-import { MemberPackage } from '@/types'
+import { MemberPackage } from '@subtrees/types'
 import { CircleFadingPlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { VisuallyHidden } from 'react-aria'

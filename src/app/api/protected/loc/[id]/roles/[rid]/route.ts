@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
-import { roleHasPermissions, roles } from '@/db/schemas';
+import { roleHasPermissions, roles } from '@subtrees/schemas';
 import { db } from '@/db/db';
 
 type RoleProps = {

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { and, eq } from "drizzle-orm";
-import { reservationExceptions } from "@/db/schemas";
+import { reservationExceptions } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
 
 type Props = {
@@ -26,21 +26,6 @@ export async function GET(req: NextRequest, props: Props) {
           columns: {
             id: true,
             startOn: true,
-            programName: true,
-          },
-          with: {
-            member: {
-              columns: {
-                id: true,
-                email: true,
-              },
-            },
-          },
-        },
-        recurringReservation: {
-          columns: {
-            id: true,
-            startDate: true,
             programName: true,
           },
           with: {

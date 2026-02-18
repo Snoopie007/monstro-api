@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/db/db";
-import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions, planPrograms } from "@/db/schemas";
+import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions, planPrograms } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { and, count, eq, inArray, or } from "drizzle-orm";
 import { ACTIVE_SUBSCRIPTION_STATUSES, ACTIVE_PACKAGE_STATUSES } from "../../constants";
@@ -62,7 +62,7 @@ export async function PUT(
       where: (plan, { eq }) => eq(plan.id, pid),
       with: {
         planPrograms: true,
-        pricingOptions: true,
+        pricings: true,
       },
     });
 
@@ -119,7 +119,7 @@ export async function PUT(
     };
 
     if (!hasMembers && pricingOptions && Array.isArray(pricingOptions)) {
-      const existingPricing = plan.pricingOptions || [];
+      const existingPricing = plan.pricings || [];
       const existingIds = existingPricing.map(p => p.id);
       const incomingIds = pricingOptions.filter((p: any) => p.id).map((p: any) => p.id);
 
@@ -199,10 +199,10 @@ export async function PUT(
         // Delete removed pricing options
         if (pricingChanges.deleted.length > 0) {
           // Archive Stripe prices if subscription
-          if (plan.type === "recurring" && stripeIntegration && plan.stripeProductId) {
+          if (plan.type === "recurring" && stripeIntegration) {
             const stripe = new MemberStripePayments(String(stripeIntegration.id));
             for (const pricingId of pricingChanges.deleted) {
-              const pricing = plan.pricingOptions?.find(p => p.id === pricingId);
+              const pricing = plan.pricings?.find(p => p.id === pricingId);
               if (pricing?.stripePriceId) {
                 try {
                   await stripe.archivePrice(pricing.stripePriceId);
@@ -223,11 +223,22 @@ export async function PUT(
           let stripePriceId: string | null = null;
 
           // Create Stripe price for subscriptions if integration exists and product is set up
-          if (plan.type === "recurring" && stripeIntegration && plan.stripeProductId && newPricing.interval) {
+          if (plan.type === "recurring" && stripeIntegration && newPricing.interval) {
             const stripe = new MemberStripePayments(String(stripeIntegration.id));
             try {
+              const stripeProduct = await stripe.createStripeProductOnly(
+                {
+                  name: `${plan.name} - ${newPricing.name}`,
+                  description: plan.description || "",
+                },
+                {
+                  locationId: id,
+                  planId: pid,
+                  vendorAccountId: stripeIntegration.accountId,
+                }
+              );
               const stripePrice = await stripe.createStripePrice(
-                plan.stripeProductId,
+                stripeProduct.id,
                 {
                   name: `${plan.name} - ${newPricing.name}`,
                   price: newPricing.price,
@@ -263,16 +274,28 @@ export async function PUT(
 
         // Update modified pricing options
         for (const modifiedPricing of pricingChanges.modified) {
-          const existing = plan.pricingOptions?.find(p => p.id === modifiedPricing.id);
+          const existing = plan.pricings?.find(p => p.id === modifiedPricing.id);
           
           // For subscriptions with Stripe, archive old price and create new one
-          if (plan.type === "recurring" && stripeIntegration && plan.stripeProductId && existing?.stripePriceId) {
+          if (plan.type === "recurring" && stripeIntegration && existing?.stripePriceId) {
             const stripe = new MemberStripePayments(String(stripeIntegration.id));
             try {
               await stripe.archivePrice(existing.stripePriceId);
+
+              const stripeProduct = await stripe.createStripeProductOnly(
+                {
+                  name: `${plan.name} - ${modifiedPricing.name}`,
+                  description: plan.description || "",
+                },
+                {
+                  locationId: id,
+                  planId: pid,
+                  vendorAccountId: stripeIntegration.accountId,
+                }
+              );
               
               const newStripePrice = await stripe.createStripePrice(
-                plan.stripeProductId,
+                stripeProduct.id,
                 {
                   name: `${plan.name} - ${modifiedPricing.name}`,
                   price: modifiedPricing.price,

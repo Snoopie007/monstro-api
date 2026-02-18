@@ -1,5 +1,5 @@
 import { Checkbox } from "@/components/forms/checkbox";
-import { MemberPlan } from "@/types/member";
+import { MemberPlan } from "@subtrees/types/member";
 
 interface PlanCheckboxProps {
     plan: MemberPlan;
@@ -8,11 +8,9 @@ interface PlanCheckboxProps {
 }
 
 
-
-
 export function PlanCheckbox({ plan, isSelected, onToggle }: PlanCheckboxProps) {
     // Get the first pricing option for display
-    const pricing = plan.pricingOptions?.[0];
+    const pricing = plan.pricings?.[0];
     const price = pricing?.price ?? 0;
     const interval = pricing?.interval;
     const intervalThreshold = pricing?.intervalThreshold;

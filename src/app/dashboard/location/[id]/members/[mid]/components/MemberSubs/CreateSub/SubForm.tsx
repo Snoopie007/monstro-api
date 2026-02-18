@@ -20,8 +20,8 @@ import {
     Switch,
 } from "@/components/ui";
 
-import { formatAmountForDisplay, sleep, tryCatch } from "@/libs/utils";
-import { MemberPlan, MemberPlanPricing, MemberSubscription, PaymentMethod } from "@/types";
+import { formatAmountForDisplay, sleep } from "@/libs/utils";
+import { MemberPlan, MemberPlanPricing, MemberSubscription, PaymentMethod } from "@subtrees/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
@@ -32,6 +32,8 @@ import { DurationPicker } from ".";
 import { useMemberStatus } from "../../../providers";
 import { NewSubscriptionSchema } from "../../../schema";
 import { PMSelect } from "../../PMSelect";
+import { useSession } from "@/hooks/useSession";
+import { clientsideApiClient } from "@/libs/api/client";
 
 type SubFormProps = {
     lid: string
@@ -44,6 +46,11 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
 
     const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
     const { paymentMethods } = useMemberStatus()
+    const { data: session } = useSession();
+    const api = useMemo(() => {
+        if (!session?.user?.sbToken) return null;
+        return clientsideApiClient(session.user.sbToken);
+    }, [session?.user?.sbToken]);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [promoCode, setPromoCode] = useState("");
 
@@ -66,41 +73,47 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
         return subs.find(s => s.id === selectedPlanId);
     }, [subs, selectedPlanId]);
 
-    const pricingOptions = selectedPlan?.pricingOptions || [];
+    const pricingOptions = selectedPlan?.pricings || [];
 
     async function onSubmit(v: z.infer<typeof NewSubscriptionSchema>) {
+        if (!api) {
+            toast.error("Session not ready. Please try again.");
+            return;
+        }
         if (paymentType === "card" && !paymentMethod) {
             toast.error("Please select a payment method")
             return
         }
-        const path = paymentType === "card" ? "subs" : "subs/cash"
 
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${mid}/${path}`, {
-                method: "POST",
-                body: JSON.stringify({
-                    ...v,
-                    paymentType,
-                    paymentMethod: paymentMethod,
-                    promoCode: promoCode || undefined,
-                })
-            })
-        )
+        try {
+            const createData = await api.post(`/x/loc/${lid}/subscriptions`, {
+                memberId: mid,
+                pricingId: v.pricingId,
+                paymentType: paymentType === "cash" ? "cash" : (paymentMethod?.type || "card"),
+                startDate: v.startDate,
+                endDate: v.endDate,
+                trialDays: v.trailDays,
+                allowProration: v.allowProration,
+                promoCode: promoCode || undefined,
+            }) as { subscription: MemberSubscription };
 
-        await sleep(1000)
-        if (error || !result || !result?.ok) {
-            if (result) {
-                const data = await result.json()
-                toast.error(data.error || "Failed to create subscription")
+            if (paymentType === "cash") {
+                await api.post(`/x/loc/${lid}/subscriptions/${createData.subscription.id}/activate-cash`, {});
             } else {
-                toast.error("Failed to create subscription")
+                await api.post(`/x/loc/${lid}/subscriptions/${createData.subscription.id}/activate`, {
+                    paymentMethodId: paymentMethod?.id,
+                    confirmNow: true,
+                });
             }
-            return;
+
+            await sleep(500)
+            form.reset()
+            toast.success("Subscription created successfully")
+            onFinish(createData.subscription)
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to create subscription";
+            toast.error(message)
         }
-        form.reset()
-        const data = await result.json()
-        toast.success("Subscription created successfully")
-        onFinish(data)
     }
 
 

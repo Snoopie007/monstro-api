@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/db'
 import { and, eq, gte, lte, or, isNull } from 'drizzle-orm'
-import { reservations } from '@/db/schemas'
+import { reservations } from '@subtrees/schemas'
 
 type Props = {
     params: Promise<{ id: string }>
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest, props: Props) {
         
         for (const program of programs) {
             const sessionsForDay = program.sessions.filter(
-                s => s.day === dayOfWeek && !s.canceled
+                s => s.day === dayOfWeek
             )
             
             for (const session of sessionsForDay) {

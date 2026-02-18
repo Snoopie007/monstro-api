@@ -4,7 +4,7 @@ import { and, eq, gte, lte, SQL } from "drizzle-orm";
 import {
 	transactions,
 	memberLocations,
-} from "@/db/schemas";
+} from "@subtrees/schemas";
 
 type ReportProps = {
 	params: Promise<{ id: string }>;

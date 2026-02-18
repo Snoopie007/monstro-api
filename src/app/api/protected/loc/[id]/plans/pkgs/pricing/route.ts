@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberPlanPricing, memberPlans, memberPackages } from "@/db/schemas";
+import { memberPlanPricing, memberPlans, memberPackages } from "@subtrees/schemas";
 import { eq, and, count, or } from "drizzle-orm";
 import { ACTIVE_PACKAGE_STATUSES } from "../../constants";
 
@@ -44,12 +44,12 @@ export async function GET(req: NextRequest, props: Props) {
         eq(memberPlans.type, "one-time")
       ),
       with: {
-        pricingOptions: true,
+        pricings: true,
       },
     });
 
     const allPricing = plans.flatMap((plan) =>
-      plan.pricingOptions.map((pricing) => ({
+      plan.pricings.map((pricing) => ({
         ...pricing,
         planName: plan.name,
       }))

@@ -25,7 +25,7 @@ import {
   WeekCellsHeight,
 } from "../event-calendar";
 import { useCurrentTimeIndicator } from "@/hooks";
-import type { CalendarEvent, ClosedDate } from "@/types";
+import type { CalendarEvent, ClosedDate } from "@/types/calendar";
 import { EndHour, StartHour } from "./constants";
 import { cn } from "@/libs/utils";
 import { isMultiDayEvent } from "@/libs/calendar";

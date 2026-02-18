@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { and, count, eq, inArray, isNull } from "drizzle-orm";
-import { programSessions, reservations, programs, recurringReservations } from "@/db/schemas";
+import { and, count, eq, inArray } from "drizzle-orm";
+import { programSessions, reservations, programs } from "@subtrees/schemas";
 import { NextResponse, NextRequest } from "next/server";
 import { hasPermission } from "@/libs/server/permissions";
 
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, props: props) {
 	try {
 
 		const sessions = await db.query.programSessions.findMany({
-			where: and(eq(programSessions.programId, pid), eq(programSessions.canceled, false)),
+			where: and(eq(programSessions.programId, pid)),
 			with: {
 				staff: {
 					with: {
@@ -30,22 +30,18 @@ export async function GET(req: NextRequest, props: props) {
 			}
 		});
 
-		// Session counts
+		// Session counts (reservation-only)
 		const sessionIds = sessions.map(session => session.id);
-		const [reservationsCount, recurringReservationsCount] = await Promise.all([
-			db.select({ count: count(), sessionId: reservations.sessionId })
+		const reservationsCount = sessionIds.length > 0
+			? await db.select({ count: count(), sessionId: reservations.sessionId })
 				.from(reservations)
 				.where(inArray(reservations.sessionId, sessionIds))
-				.groupBy(reservations.sessionId),
-			db.select({ count: count(), sessionId: recurringReservations.sessionId })
-				.from(recurringReservations)
-				.where(and(inArray(recurringReservations.sessionId, sessionIds), isNull(recurringReservations.canceledOn)))
-				.groupBy(recurringReservations.sessionId),
-		]);
+				.groupBy(reservations.sessionId)
+			: [];
+
 		const sessionsWithCounts = sessions.map(session => {
 			const rc = reservationsCount.find(r => r.sessionId === session.id)?.count ?? 0;
-			const rrc = recurringReservationsCount.find(r => r.sessionId === session.id)?.count ?? 0;
-			return { ...session, reservationsCount: rc + rrc }
+			return { ...session, reservationsCount: rc }
 		});
 		return NextResponse.json(sessionsWithCounts, { status: 200 });
 	} catch (err) {

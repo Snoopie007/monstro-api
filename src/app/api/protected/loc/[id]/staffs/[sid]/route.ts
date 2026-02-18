@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { staffs, staffsLocationRoles, staffLocations } from '@/db/schemas';
+import { staffs, staffsLocations, userRoles } from '@subtrees/schemas';
 import { db } from '@/db/db';
 import { eq, and } from 'drizzle-orm';
 
@@ -11,31 +11,38 @@ type StaffProps = {
 
 export async function DELETE(req: Request, props: { params: Promise<StaffProps> }) {
   const { id, sid } = await props.params;
+  const staffId = Number(sid);
+  if (!Number.isInteger(staffId)) {
+    return NextResponse.json({ error: 'Invalid staff id' }, { status: 400 });
+  }
 
   try {
     await db.transaction(async (tx) => {
       // First, get the staff location record to get its ID
-      const staffLocation = await tx.query.staffLocations.findFirst({
+      const staffLocation = await tx.query.staffsLocations.findFirst({
         where: and(
-          eq(staffLocations.staffId, sid),
-          eq(staffLocations.locationId, id)
+          eq(staffsLocations.staffId, staffId),
+          eq(staffsLocations.locationId, id)
         )
       });
 
       if (staffLocation) {
-        // Delete roles using the correct staffLocation.id
-        await tx.delete(staffsLocationRoles).where(
-          eq(staffsLocationRoles.staffLocationId, staffLocation.id)
-        );
+        const staff = await tx.query.staffs.findFirst({
+          where: eq(staffs.id, staffId),
+          columns: { userId: true },
+        });
+        if (staff?.userId) {
+          await tx.delete(userRoles).where(eq(userRoles.userId, staff.userId));
+        }
         
         // Delete staff location
-        await tx.delete(staffLocations).where(
-          eq(staffLocations.id, staffLocation.id)
+        await tx.delete(staffsLocations).where(
+          eq(staffsLocations.id, staffLocation.id)
         );
       }
 
       // Delete the staff record
-      await tx.delete(staffs).where(eq(staffs.id, sid));
+      await tx.delete(staffs).where(eq(staffs.id, staffId));
     });
     
     return NextResponse.json({ success: true }, { status: 200 });
@@ -47,13 +54,17 @@ export async function DELETE(req: Request, props: { params: Promise<StaffProps> 
 
 export async function PATCH(req: Request, props: { params: Promise<StaffProps> }) {
   const params = await props.params;
+  const staffId = Number(params.sid);
+  if (!Number.isInteger(staffId)) {
+    return NextResponse.json({ error: 'Invalid staff id' }, { status: 400 });
+  }
 
   const data = await req.json()
   try {
     await db.update(staffs).set({
       ...data,
       updatedAt: new Date()
-    }).where(eq(staffs.id, params.sid))
+    }).where(eq(staffs.id, staffId))
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (err) {
     console.log(err)

@@ -8,7 +8,7 @@ import { CreateSubscription } from '.'
 import { MemberSubItem } from './MemberSubItem'
 import { CircleFadingPlusIcon } from 'lucide-react'
 import { useMemberSubscriptions } from '@/hooks/hooks'
-import { MemberSubscription } from '@/types'
+import { MemberSubscription } from '@subtrees/types'
 
 interface MemberSubsProps {
     params: { id: string; mid: string }

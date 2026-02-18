@@ -1,6 +1,6 @@
 import { eq, desc, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/db";
-import { groupPosts, media } from "@/db/schemas";
+import { groupPosts, media } from "@subtrees/schemas";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request, props: { params: Promise<{ id: string, gid: string }> }) {
@@ -23,7 +23,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, g
                 commentCounts: true,
             },
             with: {
-                user: {
+                author: {
                     columns: {
                         id: true,
                         name: true,

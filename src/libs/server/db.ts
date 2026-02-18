@@ -1,10 +1,10 @@
 
-import { walletUsages } from "@/db/schemas";
+import { walletUsages } from "@subtrees/schemas";
 import { SQL, sql, getTableColumns, eq } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/db/db";
-import { Location, ProgramSession, Wallet } from "@/types";
-import { wallets } from "@/db/schemas";
+import { Location, ProgramSession, Wallet } from "@subtrees/types";
+import { wallets } from "@subtrees/schemas";
 import { VendorStripePayments } from "./stripe";
 import { isBefore } from "date-fns";
 
@@ -123,16 +123,11 @@ async function chargeWallet(location: Location, amount: number, description: str
 
 function getSessionState(session: ProgramSession, mid: string) {
 	const reservations = session.reservations?.length ?? 0;
-	let recurringReservations = 0;
-	if (session.recurringReservations && session.recurringReservations.length > 0) {
-		recurringReservations = session.recurringReservations.filter(rr => rr.exceptions?.length === 0).length;
-	}
-	const availability = (session.program?.capacity!) - (reservations + recurringReservations);
+	const availability = (session.program?.capacity!) - reservations;
 
-	const hasRecurringReservations = session.recurringReservations?.some(r => r.memberId === mid) ?? false;
 	const hasReservations = session.reservations?.some(r => r.memberId === mid) ?? false;
 
-	const isReserved = hasRecurringReservations || hasReservations;
+	const isReserved = hasReservations;
 
 	const isFull = availability <= 0;
 

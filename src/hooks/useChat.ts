@@ -1,7 +1,8 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import { uploadToS3 } from '@/libs/client/s3';
-import { Message, ReactionEmoji } from '@/types';
-import { UploadUrl } from '@/types/other';
+import { Message } from '@subtrees/types/chat';
+import {ReactionEmoji} from '@subtrees/types/reactions';
+import { UploadUrl } from '@subtrees/types/other';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
@@ -162,7 +163,6 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
             chatId: currentChatId,
             senderId,
             content,
-            metadata: {},
             created: new Date(),
             updated: null,
             sender: {
@@ -376,6 +376,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
                     count: 1,
                     userIds: [currentUserId],
                     userNames: [session?.user?.name || 'You'],
+                    created: new Date(),
                   },
                 ],
               };
@@ -600,4 +601,3 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
     refresh,
   };
 };
-

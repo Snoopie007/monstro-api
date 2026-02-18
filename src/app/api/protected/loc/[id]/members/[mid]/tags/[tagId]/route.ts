@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
-import { memberHasTags, members } from "@/db/schemas";
+import { memberHasTags, members } from "@subtrees/schemas";
 import { eq, and, inArray } from "drizzle-orm";
 
 // DELETE /api/protected/loc/[id]/members/[mid]/tags/[tagId] - Remove a specific tag from a member

@@ -21,7 +21,7 @@ import { tryCatch } from '@/libs/utils';
 import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react';
 import { useTaxRates } from '../provider';
-import { TaxRate } from '@/types/tax';
+import { TaxRate } from '@subtrees/types/tax';
 
 interface UpdateTaxRateProps {
     lid: string;

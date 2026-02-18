@@ -6,22 +6,23 @@ import {
     ItemActions,
 } from '@/components/ui'
 import { formatAmountForDisplay } from '@/libs/utils'
-import { PaymentType, Transaction } from '@/types'
+import { PaymentType, Transaction } from '@subtrees/types'
 import { format } from 'date-fns'
 import MemberPaymentActions from './actions'
 
 interface TransactionItemProps {
     transaction: Transaction
     params: { id: string; mid: string }
+    onRefunded?: () => void
 }
 
-export function TransactionItem({ transaction, params }: TransactionItemProps) {
+export function TransactionItem({ transaction, params, onRefunded }: TransactionItemProps) {
 
 
     return (
         <Item variant="muted" className='p-3'>
             <ItemMedia>
-                <Badge transaction={transaction.status} className="capitalize">
+                <Badge variant={transaction.status === 'paid' ? 'success' : transaction.status === 'failed' ? 'destructive' : 'warning'} className="capitalize">
                     {transaction.status}
                 </Badge>
             </ItemMedia>
@@ -40,8 +41,8 @@ export function TransactionItem({ transaction, params }: TransactionItemProps) {
             <ItemActions>
                 <MemberPaymentActions
                     transaction={transaction}
-                    mid={params.mid}
                     lid={params.id}
+                    onRefunded={onRefunded}
                 />
             </ItemActions>
         </Item >
@@ -51,7 +52,7 @@ export function TransactionItem({ transaction, params }: TransactionItemProps) {
 
 function TransactionType({ transaction }: { transaction: Transaction }) {
     switch (transaction.paymentType) {
-        case 'card':
+        case 'card': {
             const card = transaction.metadata?.card;
             if (!card) {
                 return null;
@@ -66,7 +67,8 @@ function TransactionType({ transaction }: { transaction: Transaction }) {
                     </span>
                 </div>
             )
-        case 'us_bank_account':
+        }
+        case 'us_bank_account': {
             const bank = transaction.metadata?.us_bank_account;
             if (!bank) {
                 return null;
@@ -81,6 +83,7 @@ function TransactionType({ transaction }: { transaction: Transaction }) {
                     </span>
                 </div>
             )
+        }
         default:
             return (
                 <span className="capitalize">

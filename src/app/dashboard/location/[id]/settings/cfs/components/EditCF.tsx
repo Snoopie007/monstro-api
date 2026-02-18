@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { MemberField } from "@/types";
+import { MemberField } from "@subtrees/types";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { tryCatch } from "@/libs/utils";

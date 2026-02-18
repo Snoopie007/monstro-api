@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { locationState } from "@/db/schemas";
+import { locationState } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 

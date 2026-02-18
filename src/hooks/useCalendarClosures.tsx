@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ClosedDate } from "@/types";
+import type { ClosedDate } from "@/types/calendar";
 
 export type { ClosedDate };
 

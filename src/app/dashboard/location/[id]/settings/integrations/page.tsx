@@ -5,7 +5,7 @@ import { Button, EmptyMedia, EmptyHeader, Skeleton, Empty, EmptyTitle, EmptyDesc
 import { Input } from "@/components/forms";
 import Link from "next/link";
 import { IntegrationItem } from "./IntegrationItem";
-import { Integration } from "@/types";
+import { Integration } from "@subtrees/types";
 import { Tag } from "lucide-react";
 
 export default function IntegrationPage(props: { params: Promise<{ id: string }> }) {

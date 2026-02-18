@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { MemberTag, MemberTagInsert } from "@/types";
+import { MemberTag, MemberTagInsert } from "@subtrees/types";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 

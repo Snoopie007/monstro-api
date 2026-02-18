@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { locations, locationState, wallets } from "@/db/schemas";
+import { locations, locationState, wallets } from "@subtrees/schemas";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { DEFAULT_LOCATION_SETTINGS } from "@/libs/data";
 

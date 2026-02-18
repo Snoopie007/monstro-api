@@ -1,6 +1,6 @@
 
 import { db } from "@/db/db";
-import { permissions, roleHasPermissions, roles } from "@/db/schemas";
+import { permissions, roleHasPermissions, roles } from "@subtrees/schemas";
 import { NextResponse } from "next/server";
 import { hasPermission, canView } from "@/libs/server/permissions";
 

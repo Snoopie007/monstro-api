@@ -23,7 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Loader2, Info } from "lucide-react";
 import { toast } from "react-toastify";
-import { MemberPackage, MemberSubscription } from "@/types";
+import { MemberPackage, MemberSubscription } from "@subtrees/types";
 import { BirthdayField } from "../../../components/CreateMember";
 
 interface FamilyMemberFormProps {

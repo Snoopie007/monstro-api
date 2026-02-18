@@ -11,7 +11,7 @@ import {
     CustomCommandInput,
 } from '@/components/ui'
 import { tryCatch } from '@/libs/utils'
-import { MemberTag } from '@/types'
+import { MemberTag } from '@subtrees/types'
 import { CheckIcon, Loader2, PlusCircle } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'react-toastify'

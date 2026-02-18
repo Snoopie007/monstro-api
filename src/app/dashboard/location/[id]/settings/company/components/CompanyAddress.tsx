@@ -2,7 +2,7 @@
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
 import { Button } from "@/components/ui";
-import { Location } from "@/types";
+import { Location } from "@subtrees/types";
 import { cn, tryCatch } from "@/libs/utils";
 import { z } from "zod";
 import {

@@ -1,9 +1,9 @@
 'use client'
-import { Member, MemberLocation } from '@/types/member'
+import { Member, MemberLocation } from '@subtrees/types/member'
 import React, { useEffect, useMemo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
-import { Transaction } from '@/types/transaction'
+import { Transaction } from '@subtrees/types/transaction'
 
 type TopSpender = Member & {
     totalAmount: number

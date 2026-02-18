@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { promos, integrations } from "@/db/schemas";
+import { promos, integrations } from "@subtrees/schemas";
 import { desc, eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { VendorStripePayments } from "@/libs/server/stripe";

@@ -1,5 +1,5 @@
 "use client";
-import { Member, MemberLocation, PaymentMethod } from "@/types";
+import { Member, MemberLocation, PaymentMethod } from "@subtrees/types";
 import {
 	createContext,
 	useReducer,

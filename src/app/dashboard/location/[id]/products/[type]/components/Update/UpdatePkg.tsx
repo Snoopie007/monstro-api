@@ -35,7 +35,7 @@ import {
 } from "@/components/forms";
 import { usePackages } from "@/hooks/usePlans";
 import { UpdatePkgPlanSchema } from "@/libs/FormSchemas";
-import { MemberPlan } from "@/types";
+import { MemberPlan } from "@subtrees/types";
 import { Loader2 } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
 import { toast } from "react-toastify";
@@ -71,7 +71,7 @@ export function UpdatePkg({ lid, pkg, open, setOpen }: CreatePlanProps) {
       contractId: pkg.contractId ? String(pkg.contractId) : undefined,
       currency: pkg.currency || "USD",
       pricingOptions:
-        pkg.pricingOptions?.map((p) => ({
+        pkg.pricings?.map((p) => ({
           id: p.id,
           name: p.name,
           price: p.price,
@@ -123,7 +123,7 @@ export function UpdatePkg({ lid, pkg, open, setOpen }: CreatePlanProps) {
         contractId: pkg.contractId ? String(pkg.contractId) : undefined,
         currency: pkg.currency || "USD",
         pricingOptions:
-          pkg.pricingOptions?.map((p) => ({
+          pkg.pricings?.map((p) => ({
             id: p.id,
             name: p.name,
             price: p.price,

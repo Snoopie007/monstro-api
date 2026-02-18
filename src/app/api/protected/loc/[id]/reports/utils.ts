@@ -1,5 +1,5 @@
-import { Transaction } from "@/types/transaction";
-import { MemberLocation, MemberSubscription } from "@/types/member";
+import { Transaction } from "@subtrees/types/transaction";
+import { MemberLocation, MemberSubscription } from "@subtrees/types/member";
 
 const months = [
   "January",

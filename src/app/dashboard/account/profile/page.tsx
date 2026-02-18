@@ -1,4 +1,4 @@
-import { Staff, Vendor } from "@/types";
+import { Staff, Vendor } from "@subtrees/types";
 import { UserEmail, UserProfile } from "./components";
 import { db } from "@/db/db";
 import { auth } from "@/libs/auth/server";
@@ -23,8 +23,12 @@ async function getVendor(id: string): Promise<Vendor | undefined> {
 
 async function getStaff(id: string): Promise<Staff | undefined> {
     try {
+        const staffId = Number(id);
+        if (!Number.isInteger(staffId)) {
+            return undefined;
+        }
         const staff = await db.query.staffs.findFirst({
-            where: (staff, { eq }) => eq(staff.id, id),
+            where: (staff, { eq }) => eq(staff.id, staffId),
             with: {
                 user: true,
             },

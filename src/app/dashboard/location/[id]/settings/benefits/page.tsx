@@ -1,6 +1,6 @@
 import { auth } from '@/libs/auth/server'
 import { db } from '@/db/db'
-import { Vendor } from '@/types'
+import { Vendor } from '@subtrees/types'
 import { Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { cn } from '@/libs/utils'
 import { VendorBadges, VendorRewards } from './components'

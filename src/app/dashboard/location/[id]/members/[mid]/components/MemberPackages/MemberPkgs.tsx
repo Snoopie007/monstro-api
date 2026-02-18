@@ -8,7 +8,7 @@ import {
 } from '@/components/ui'
 import { ChevronsUpDown, CircleFadingPlusIcon } from 'lucide-react'
 import { useMemberPackages } from '@/hooks'
-import { MemberPackage } from '@/types/member'
+import { MemberPackage } from '@subtrees/types/member'
 
 interface MemberPkgProps {
     params: { id: string; mid: string }

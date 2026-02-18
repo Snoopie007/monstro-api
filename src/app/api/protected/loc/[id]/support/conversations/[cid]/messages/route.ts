@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { supportConversations, supportMessages } from "@/db/schemas";
+import { supportConversations, supportMessages } from "@subtrees/schemas";
 import { auth } from "@/libs/auth/server";
 import { broadcastSupportMessage, SupportMessagePayload } from "@/libs/server/broadcast";
 import { desc, eq } from "drizzle-orm";

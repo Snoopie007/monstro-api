@@ -47,9 +47,11 @@ export async function POST(req: NextRequest) {
 		let location = null;
 
 		if (lid) {
+			const vendorId = typeof user.id === "string" ? user.id : null;
+			if (vendorId) {
 			location = await db.query.locations.findFirst({
 				where: (locations, { eq, and }) =>
-					and(eq(locations.vendorId, user.id), eq(locations.id, lid)),
+					and(eq(locations.vendorId, vendorId), eq(locations.id, lid)),
 				columns: {
 					id: true,
 				},
@@ -61,6 +63,7 @@ export async function POST(req: NextRequest) {
 					},
 				},
 			});
+			}
 		}
 
 		const LoginUser = {

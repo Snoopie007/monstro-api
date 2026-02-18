@@ -3,7 +3,7 @@ import EditorToolBar from "./partials/EitorToolbar";
 import { Editor } from "@tiptap/react";
 import { Button } from "@/components/ui/button";
 import { cn, sleep, tryCatch } from "@/libs/utils";
-import { Contract } from "@/types";
+import { Contract } from "@subtrees/types";
 import { MouseEvent, useState } from "react";
 import { toast } from "react-toastify";
 import Link from "next/link";

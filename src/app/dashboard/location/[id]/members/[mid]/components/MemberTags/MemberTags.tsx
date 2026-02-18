@@ -16,7 +16,7 @@ import { useMemberTags } from '@/hooks/useTags'
 import { ChevronsUpDown, Loader2, Tag, XIcon } from 'lucide-react'
 import { useState } from 'react'
 import { CustomTagsSelector } from './CustomTagsSelector'
-import { MemberTag } from '@/types'
+import { MemberTag } from '@subtrees/types'
 import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'
 interface MemberTagsBoxProps {

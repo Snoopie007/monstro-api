@@ -27,7 +27,7 @@ import {
 import { toast } from 'react-toastify'
 import { useMemberPlans } from '@/hooks'
 import Link from 'next/link'
-import { MemberPlan, MemberPlanPricing } from '@/types'
+import { MemberPlan, MemberPlanPricing } from '@subtrees/types'
 import { ImportMemberForm, FieldMapping } from './'
 
 const REQUIRED_FIELDS = [
@@ -60,7 +60,7 @@ export function ImportMembers({ lid }: { lid: string }) {
         return plans?.find((p: MemberPlan) => p.id === selectedPlanId)
     }, [plans, selectedPlanId])
 
-    const pricingOptions = selectedPlan?.pricingOptions || []
+    const pricingOptions = selectedPlan?.pricings || []
 
     // Reset pricing when plan changes
     useEffect(() => {

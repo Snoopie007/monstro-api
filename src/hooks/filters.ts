@@ -1,5 +1,4 @@
-import { MemberListItem } from '@/types'
-import { MemberStatus, TableState } from '@/types/member'
+import { MemberListItem, MemberStatus, TableState } from '@/types/member'
 import { ColumnFiltersState } from '@tanstack/react-table'
 
 export function filterByStatus(

@@ -3,7 +3,7 @@ import {
     Form, FormField, FormItem,
     PasswordField, FormControl, FormMessage, Input
 } from "@/components/forms";
-import { Staff } from "@/types";
+import { Staff } from "@subtrees/types";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui";

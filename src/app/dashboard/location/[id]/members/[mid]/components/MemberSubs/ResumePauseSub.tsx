@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogContent,
@@ -13,10 +13,11 @@ import {
 } from "@/components/ui";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { MemberSubscription } from "@/types/member";
-import { cn, tryCatch } from "@/libs/utils";
+import { MemberSubscription } from "@subtrees/types/member";
 import { useParams } from "next/navigation";
 import { DayFieldPopover } from "./CancelSub/DayFieldPopover";
+import { useSession } from "@/hooks/useSession";
+import { clientsideApiClient } from "@/libs/api/client";
 
 interface ResumePauseSubProps {
 	sub: MemberSubscription;
@@ -26,6 +27,11 @@ interface ResumePauseSubProps {
 
 export function ResumePauseSub({ sub, open, onOpenChange }: ResumePauseSubProps) {
 	const params = useParams();
+	const { data: session } = useSession();
+	const api = useMemo(() => {
+		if (!session?.user?.sbToken) return null;
+		return clientsideApiClient(session.user.sbToken);
+	}, [session?.user?.sbToken]);
 	const [loading, setLoading] = useState(false);
 	const [resumeDate, setResumeDate] = useState<string | undefined>(undefined);
 
@@ -36,24 +42,29 @@ export function ResumePauseSub({ sub, open, onOpenChange }: ResumePauseSubProps)
 			return;
 		}
 
-		setLoading(true);
-		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subs/${sub.id}`, {
-				method: "PATCH",
-				body: JSON.stringify({ resumeDate, pause: true }),
-			})
-		);
-
-		setLoading(false);
-
-		if (error || !result || !result.ok) {
-			const errorData = await result?.json();
-			toast.error(errorData.error || "Failed to pause subscription");
+		if (!api) {
+			toast.error("Session not ready. Please try again.");
 			return;
 		}
 
-		toast.success("Subscription paused");
-		onOpenChange(false);
+		setLoading(true);
+		try {
+			if (sub.status === "active") {
+				await api.post(`/x/loc/${params.id}/subscriptions/${sub.id}/pause`, {});
+				toast.success("Subscription paused");
+			} else {
+				await api.post(`/x/loc/${params.id}/subscriptions/${sub.id}/resume`, {
+					resumeAt: resumeDate,
+				});
+				toast.success("Subscription resumed");
+			}
+			onOpenChange(false);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to update subscription";
+			toast.error(message);
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	return (
@@ -64,7 +75,7 @@ export function ResumePauseSub({ sub, open, onOpenChange }: ResumePauseSubProps)
 				</AlertDialogHeader>
 				<div className="space-y-6">
 					<div className=" space-y-4">
-						{sub.status == "active" ? (
+						{sub.status === "active" ? (
 							<>
 
 

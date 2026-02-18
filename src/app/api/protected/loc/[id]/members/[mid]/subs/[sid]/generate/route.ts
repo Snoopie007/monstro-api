@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberSubscriptions, memberInvoices, locationState } from "@/db/schemas";
+import { memberSubscriptions, memberInvoices, locationState } from "@subtrees/schemas";
 import { eq, and } from "drizzle-orm";
 import { calculatePeriodEnd, calculateTax } from "../../../../utils";
 

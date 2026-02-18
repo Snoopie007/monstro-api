@@ -1,5 +1,5 @@
 'use client'
-import { ProgramSession, Staff } from '@/types'
+import { ProgramSession, Staff } from '@subtrees/types'
 import { useCallback, useState } from 'react'
 import { CancelSession } from './CancelSession'
 import { addMinutes, format } from 'date-fns'

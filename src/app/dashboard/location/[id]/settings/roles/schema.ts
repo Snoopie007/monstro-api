@@ -1,4 +1,4 @@
-import { RoleColor } from '@/types';
+import { RoleColor } from '@subtrees/types';
 import z from 'zod';
 
 const CreateRoleSchema = z.object({

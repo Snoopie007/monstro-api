@@ -1,5 +1,5 @@
 'use client'
-import { Achievement } from "@/types";
+import { Achievement } from "@subtrees/types";
 import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
 
 type StateType = {

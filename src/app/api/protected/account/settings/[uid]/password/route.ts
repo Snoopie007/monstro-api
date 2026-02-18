@@ -2,7 +2,7 @@ import { auth } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
-import { users, accounts } from "@/db/schemas";
+import { users, accounts } from "@subtrees/schemas";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(req: Request, props: { params: Promise<{ uid: string }> }) {
@@ -40,8 +40,12 @@ export async function PATCH(req: Request, props: { params: Promise<{ uid: string
       })
       user = vendor?.user;
     } else {
+      const staffId = Number(uid);
+      if (!Number.isInteger(staffId)) {
+        return NextResponse.json({ message: 'Staff not found.' }, { status: 404 })
+      }
       const staff = await db.query.staffs.findFirst({
-        where: (staff, { eq }) => eq(staff.id, uid),
+        where: (staff, { eq }) => eq(staff.id, staffId),
         with: {
           user: {
             with: {

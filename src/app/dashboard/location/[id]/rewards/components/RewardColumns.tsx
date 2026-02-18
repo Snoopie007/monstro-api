@@ -1,5 +1,5 @@
 
-import { Reward } from "@/types";
+import { Reward } from "@subtrees/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { UpdateReward } from "./UpdateReward";
 

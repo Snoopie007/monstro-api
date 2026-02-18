@@ -5,7 +5,7 @@ import { BotSettings, TestChatBox } from './components'
 import { BotSettingProvider } from './provider'
 import { useAccountStatus } from '../../providers'
 import { AISupportPaywall } from '@/components/paywall/AISupportPaywall'
-import type { SupportAssistant } from '@/types'
+import type { SupportAssistant } from '@subtrees/types'
 
 export function SupportBotSettingsClient({
 	lid,

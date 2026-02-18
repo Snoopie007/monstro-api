@@ -6,7 +6,7 @@ import {
     Button
 } from '@/components/ui'
 import { useMemberTransactions } from '@/hooks/hooks'
-import { Transaction } from '@/types'
+import { Transaction } from '@subtrees/types'
 import { TransactionItem } from './TransactionItem'
 import { CircleFadingPlusIcon } from 'lucide-react'
 
@@ -33,7 +33,12 @@ export function MemberTransactions({ params }: MemberTransactionsProps) {
             {transactions && transactions.length > 0 ? (
                 <div className="space-y-2">
                     {transactions.map((transaction: Transaction) => (
-                        <TransactionItem key={transaction.id} transaction={transaction} params={params} />
+                        <TransactionItem
+                            key={transaction.id}
+                            transaction={transaction}
+                            params={params}
+                            onRefunded={() => mutate()}
+                        />
                     ))}
                 </div>
             ) : (

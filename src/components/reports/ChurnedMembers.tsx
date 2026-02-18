@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
 import { format } from 'date-fns'
 import { Loader2 } from 'lucide-react'
 import { tryCatch } from '@/libs/utils'
-import { MemberSubscription } from '@/types'
+import { MemberSubscription } from '@subtrees/types'
 
 const DummyData: any[] = [
     {

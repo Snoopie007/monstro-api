@@ -26,7 +26,7 @@ import { tryCatch, cn } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 import { useMemberStatus } from "../../providers";
-import { MemberLocationProfile } from "@/types";
+import { MemberLocationProfile } from "@subtrees/types";
 import { MemberInfoSchema } from "../../schema";
 
 

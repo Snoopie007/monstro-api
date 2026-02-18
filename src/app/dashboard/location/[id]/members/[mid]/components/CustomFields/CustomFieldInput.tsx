@@ -21,7 +21,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/libs/utils";
-import { CustomFieldDefinition } from "@/types";
+import { CustomFieldDefinition } from "@/types/member";
 
 
 

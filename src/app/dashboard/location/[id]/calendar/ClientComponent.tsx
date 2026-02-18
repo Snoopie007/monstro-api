@@ -22,7 +22,7 @@ import {
   EventCalendar,
   CalendarDndProvider
 } from "@/components/event-calendar";
-import { CalendarEvent, CalendarView } from "@/types";
+import { CalendarEvent, CalendarView } from "@/types/calendar";
 import { Loader2 } from "lucide-react";
 
 interface CalendarPageClientProps {
@@ -129,21 +129,15 @@ export default function CalendarPageClient({
         throw new Error("Event data is missing");
       }
 
-      const isRecurring = event.data.isRecurring;
-      let url: string;
+      const memberReservationId = event.data.memberReservations?.find(
+        (entry) => String(entry.memberId) === String(memberId)
+      )?.reservationId;
 
-      if (isRecurring) {
-        if (!event.data.recurringId) {
-          throw new Error("Missing recurringId for recurring reservation");
-        }
-        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${event.data.recurringId
-          }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
-      } else {
-        if (!event.data.reservationId) {
-          throw new Error("Missing reservationId for regular reservation");
-        }
-        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${event.data.reservationId}`;
+      if (!memberReservationId) {
+        throw new Error("Reservation mapping missing for selected member");
       }
+
+      const url = `/api/protected/loc/${id}/members/${memberId}/reservations/${memberReservationId}`;
 
       const { result, error } = await tryCatch(
         fetch(url, { method: "DELETE" })

@@ -20,13 +20,15 @@ import {
 } from "@/components/ui"
 
 import { PromoForm } from "./PromoForm"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "react-toastify"
 import { Loader2 } from "lucide-react"
 import { VisuallyHidden } from "@react-aria/visually-hidden"
+import { useSession } from "@/hooks/useSession"
+import { clientsideApiClient } from "@/libs/api/client"
 
 const PromoSchema = z.object({
   code: z.string().min(1).max(50),
@@ -71,6 +73,11 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
   const [open, setOpen] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [pendingSubmission, setPendingSubmission] = useState<z.infer<typeof PromoSchema> | null>(null)
+  const { data: session } = useSession()
+  const api = useMemo(() => {
+    if (!session?.user?.sbToken) return null
+    return clientsideApiClient(session.user.sbToken)
+  }, [session?.user?.sbToken])
   
   // Flatten plans into pricing-level options
   const pricingOptions = plans.flatMap(plan => 
@@ -126,34 +133,30 @@ export function CreatePromo({ lid, plans }: CreatePromoProps) {
   }
 
   async function submitPromo(v: z.infer<typeof PromoSchema>) {
-    try {
-      const response = await fetch(`/api/locations/${lid}/promos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: v.code,
-          type: v.type,
-          value: v.value,
-          duration: v.duration,
-          durationInMonths: v.duration === "repeating" ? v.durationInMonths : undefined,
-          expiresAt: v.expiresAt || undefined,
-          maxRedemptions: v.maxRedemptions || undefined,
-          allowedPlans: v.allowedPlans && v.allowedPlans.length > 0 ? v.allowedPlans : undefined,
-        }),
-      })
+    if (!api) {
+      toast.error("Session not ready. Please try again.")
+      return
+    }
 
-      if (!response.ok) {
-        const data = await response.json()
-        toast.error(data.error || "Failed to create promo")
-        return
-      }
+    try {
+      await api.post(`/x/loc/${lid}/promos`, {
+        code: v.code,
+        type: v.type,
+        value: v.value,
+        duration: v.duration,
+        durationInMonths: v.duration === "repeating" ? v.durationInMonths : undefined,
+        expiresAt: v.expiresAt || undefined,
+        maxRedemptions: v.maxRedemptions || undefined,
+        allowedPlans: v.allowedPlans && v.allowedPlans.length > 0 ? v.allowedPlans : undefined,
+      })
 
       toast.success("Promo code created successfully")
       form.reset()
       setOpen(false)
       window.location.reload()
     } catch (error) {
-      toast.error("Something went wrong, please try again later")
+      const message = error instanceof Error ? error.message : "Something went wrong, please try again later"
+      toast.error(message)
     }
   }
 

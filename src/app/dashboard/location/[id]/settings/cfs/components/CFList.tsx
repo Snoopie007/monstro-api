@@ -16,7 +16,7 @@ import {
 import { Tag } from "lucide-react";
 import { useState } from "react";
 import CFActions from "./CFActions";
-import { MemberField } from "@/types";
+import { MemberField } from "@subtrees/types";
 import EditCF from "./EditCF";
 import { useCustomFields } from "../provider";
 

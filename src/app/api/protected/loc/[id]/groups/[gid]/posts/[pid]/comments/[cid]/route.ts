@@ -1,6 +1,6 @@
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { db } from "@/db/db";
-import { comments } from "@/db/schemas";
+import { comments } from "@subtrees/schemas";
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 

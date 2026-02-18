@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { integrations } from "@/db/schemas";
+import { integrations } from "@subtrees/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";

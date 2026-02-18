@@ -4,7 +4,7 @@ import { admindb, db } from "@/db/db";
 import {
     ScrollArea,
 } from "@/components/ui";
-import { MonstroPlan } from "@/types/admin";
+import { MonstroPlan } from '@/types/monstro';
 import { CompareTable } from "../../../components";
 import { UpgradeSelector } from "./components";
 

@@ -20,7 +20,7 @@ import { cn, sleep, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/hooks/useSession";
-import { Sale } from "@/types/admin";
+import { Sale } from "@/types/sales";
 import { TermsAndConditions } from "@/components/terms";
 import { PasswordField } from "@/components/forms";
 

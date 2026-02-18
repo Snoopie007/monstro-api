@@ -1,10 +1,10 @@
 import { db } from "@/db/db";
-import { and, eq, gte, lte, or, isNull, between } from "drizzle-orm";
-import { reservationExceptions, reservations, recurringReservations, locations } from "@/db/schemas";
+import { and, eq, gte, lte, or } from "drizzle-orm";
+import { reservationExceptions, reservations, locations } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
 import type { CreateExceptionInput, ExceptionInitiator } from "@/types/reservation";
 import { sendHolidayCancellationNotifications, type AffectedMember } from "@/libs/notifications/HolidayCancellation";
-import { addDays, eachDayOfInterval, isSameDay, getDay } from "date-fns";
+import { eachDayOfInterval } from "date-fns";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -57,13 +57,6 @@ export async function GET(req: NextRequest, props: Props) {
             programName: true,
           },
         },
-        recurringReservation: {
-          columns: {
-            id: true,
-            startDate: true,
-            programName: true,
-          },
-        },
         session: {
           columns: {
             id: true,
@@ -112,7 +105,6 @@ export async function POST(req: NextRequest, props: Props) {
 
   const {
     reservationId,
-    recurringReservationId,
     sessionId,
     occurrenceDate,
     endDate,
@@ -145,7 +137,6 @@ export async function POST(req: NextRequest, props: Props) {
         .insert(reservationExceptions)
         .values({
           reservationId,
-          recurringReservationId,
           locationId: params.id,
           sessionId,
           occurrenceDate: startDateObj,
@@ -158,7 +149,6 @@ export async function POST(req: NextRequest, props: Props) {
 
       const cancellationStats = {
         cancelledReservations: 0,
-        recurringExceptionsCreated: 0,
         affectedMembers: [] as AffectedMember[],
       };
 
@@ -232,82 +222,6 @@ export async function POST(req: NextRequest, props: Props) {
         }
       }
 
-      const activeRecurring = await tx.query.recurringReservations.findMany({
-        where: and(
-          eq(recurringReservations.locationId, params.id),
-          eq(recurringReservations.status, 'confirmed'),
-          isNull(recurringReservations.canceledOn)
-        ),
-        with: {
-          member: {
-            columns: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-            },
-          },
-        },
-      });
-
-      const recurringExceptionEntries: Array<{
-        recurringReservationId: string;
-        locationId: string;
-        sessionId: string | null;
-        occurrenceDate: Date;
-        initiator: typeof initiator;
-        reason: string | undefined;
-      }> = [];
-
-      for (const recurring of activeRecurring) {
-        const recurringDay = recurring.sessionDay;
-        if (recurringDay === null || recurringDay === undefined) continue;
-
-        for (const closureDate of closureDates) {
-          const closureDayOfWeek = getDay(closureDate);
-          
-          if (closureDayOfWeek === recurringDay) {
-            recurringExceptionEntries.push({
-              recurringReservationId: recurring.id,
-              locationId: params.id,
-              sessionId: recurring.sessionId,
-              occurrenceDate: closureDate,
-              initiator: initiator,
-              reason: reason || `Cancelled due to ${initiator}`,
-            });
-
-            const existingMember = cancellationStats.affectedMembers.find(
-              m => m.memberId === recurring.member.id
-            );
-
-            if (existingMember) {
-              existingMember.reservations.push({
-                id: recurring.id,
-                className: recurring.programName || 'Class',
-                originalTime: closureDate.toISOString(),
-              });
-            } else if (recurring.member.email) {
-              cancellationStats.affectedMembers.push({
-                memberId: recurring.member.id,
-                email: recurring.member.email,
-                firstName: recurring.member.firstName,
-                lastName: recurring.member.lastName ?? undefined,
-                reservations: [{
-                  id: recurring.id,
-                  className: recurring.programName || 'Class',
-                  originalTime: closureDate.toISOString(),
-                }],
-              });
-            }
-          }
-        }
-      }
-
-      if (recurringExceptionEntries.length > 0) {
-        await tx.insert(reservationExceptions).values(recurringExceptionEntries);
-        cancellationStats.recurringExceptionsCreated = recurringExceptionEntries.length;
-      }
-
       for (const reservation of futureReservations) {
         if (!reservation.member.email) continue;
 
@@ -376,7 +290,6 @@ export async function POST(req: NextRequest, props: Props) {
       exception: result.exception,
       cancellationStats: isClosureType ? {
         cancelledReservations: result.stats.cancelledReservations,
-        recurringExceptionsCreated: result.stats.recurringExceptionsCreated,
         affectedMembersCount: result.stats.affectedMembers.length,
       } : undefined,
       notificationResult,

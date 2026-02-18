@@ -1,5 +1,6 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
-import { CustomFieldType, MemberPlan } from '@/types';
+import { CustomFieldType } from '@/types/member';
+import { MemberPlan } from '@subtrees/types' 
 
 /**
  * Represents a single validation error
@@ -200,8 +201,8 @@ export function validateImportData(
   const validPricingIds = new Set<string>();
   if (options.plans) {
     options.plans.forEach(plan => {
-      if (plan.pricingOptions) {
-        plan.pricingOptions.forEach(pricing => {
+      if (plan.pricings) {
+        plan.pricings.forEach(pricing => {
           if (pricing.id) validPricingIds.add(pricing.id);
         });
       }

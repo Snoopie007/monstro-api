@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui'
 import { useEffect, useRef, useState } from 'react'
 
 import { tryCatch, isGroupedSupportMessage } from '@/libs/utils'
-import { SupportMessage } from '@/types'
+import { SupportMessage } from '@subtrees/types'
 import { format } from 'date-fns'
 import { toast } from 'react-toastify'
 import { useSupportRealtime } from '../../hooks/useSupportRealtime'

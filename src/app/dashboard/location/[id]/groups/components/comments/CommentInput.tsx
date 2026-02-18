@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import { PostComment } from "@/types/groups";
+import { PostComment } from "@subtrees/types/group";
 import { X, Send, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 

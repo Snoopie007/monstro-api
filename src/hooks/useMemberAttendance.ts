@@ -1,6 +1,6 @@
 'use client'
 import { generateTestAttendanceData } from '@/libs/utils'
-import type { AttendanceResponse, ExtendedAttendance, MissedReservation } from '@/types/attendance'
+import type { AttendanceResponse, ExtendedAttendance, MissedReservation } from '@subtrees/types/attendance'
 import { useQuery } from '@tanstack/react-query'
 import { formatDate, subDays } from 'date-fns'
 import { format } from 'date-fns-tz'
@@ -79,7 +79,7 @@ export const useMemberAttendance = (id: string, mid: string) => {
             isCurrentMonth: boolean
             isEmpty: boolean
             attendances?: Array<{
-                programName: string
+                programName: string | null
                 startTime: Date
                 endTime: Date
                 checkInTime: Date

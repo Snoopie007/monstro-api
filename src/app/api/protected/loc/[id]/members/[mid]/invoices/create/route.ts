@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberInvoices, members, transactions, memberSubscriptions } from "@/db/schemas";
+import { memberInvoices, members, transactions, memberSubscriptions } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/server/stripe";
@@ -112,7 +112,7 @@ export async function POST(
           invoiceId: newInvoice.id,
           description: `${subscription.pricing?.plan?.name ?? 'Unknown Plan'}${pricingName} - Recurring Payment`,
           type: "inbound",
-          status: "incomplete",
+          status: "failed",
           paymentType: subscription.paymentType,
           total: price,
           currency: subscription.pricing?.currency || subscription.pricing?.plan?.currency || "usd",
@@ -180,7 +180,7 @@ export async function POST(
             invoiceId: newInvoice.id,
             description: `Manual invoice - ${type}`,
             type: "inbound",
-            status: "incomplete",
+            status: "failed",
             paymentType: localInvoiceData.paymentType,
             total: localInvoiceData.total,
             currency: localInvoiceData.currency,

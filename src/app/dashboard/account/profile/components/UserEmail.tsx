@@ -1,11 +1,12 @@
 'use client'
 import { Input } from "@/components/forms/input";
 import { useState } from "react";
-import { Staff, Vendor } from "@/types";
+import { Staff } from "@subtrees/types/staff";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui";
 import { Loader2 } from "lucide-react";
+import { Vendor } from "@subtrees/types/vendor";
 
 export function UserEmail({ user }: { user: Vendor | Staff }) {
     const [newEmail, setNewEmail] = useState<string>(user.email || "");

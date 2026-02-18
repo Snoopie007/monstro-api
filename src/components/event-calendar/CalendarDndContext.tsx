@@ -24,7 +24,7 @@ import {
 import { addMinutes, differenceInMinutes } from "date-fns";
 
 import { EventItem } from "./EventItem";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent } from "@/types/calendar";
 
 // Define the context type
 type CalendarDndContextType = {

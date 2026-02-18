@@ -1,4 +1,3 @@
-
 export type Partner = {
     name: string,
     logo: string,
@@ -12,5 +11,3 @@ export type Partner = {
         scope: string | string[]
     }
 }
-
-

@@ -6,7 +6,7 @@ import {
 } from '@/components/ui'
 
 import { useMemberAchievements } from '@/hooks'
-import { MemberAchievement } from '@/types'
+import { MemberAchievement } from '@subtrees/types'
 import { format } from 'date-fns'
 import { TrophyIcon } from 'lucide-react'
 import Image from 'next/image'

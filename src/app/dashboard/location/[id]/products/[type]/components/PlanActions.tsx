@@ -16,7 +16,7 @@ import {
     AlertDialogAction,
 } from "@/components/ui";
 import { cn, tryCatch } from "@/libs/utils";
-import { MemberPlan } from "@/types";
+import { MemberPlan } from "@subtrees/types";
 import { MoreVertical, Pencil, Archive, RotateCcw } from "lucide-react";
 import { toast } from "react-toastify";
 import { useState } from "react";

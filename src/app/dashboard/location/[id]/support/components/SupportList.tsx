@@ -20,7 +20,7 @@ import {
 } from '@/components/ui'
 import { Input } from '@/components/forms'
 import { RefreshCw, Settings } from 'lucide-react'
-import { SupportConversation, SupportConversationStatus } from '@/types/'
+import { SupportConversation, SupportConversationStatus } from '@subtrees/types'
 import { formatDistance } from 'date-fns'
 import { useSupport } from '../providers'
 import { cn } from '@/libs/utils'

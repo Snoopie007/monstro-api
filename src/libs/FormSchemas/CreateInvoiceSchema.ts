@@ -1,4 +1,4 @@
-import { PaymentTypeEnum } from "@/db/schemas/DatabaseEnums";
+import { PaymentTypeEnum } from "@subtrees/schemas/DatabaseEnums";
 import { z } from "zod";
 
 export const InvoiceItemSchema = z.object({

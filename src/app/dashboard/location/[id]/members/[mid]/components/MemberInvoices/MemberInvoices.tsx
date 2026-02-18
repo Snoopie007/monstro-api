@@ -19,17 +19,24 @@ import {
 
 import { useMemberInvoices } from "@/hooks";
 import { formatAmountForDisplay } from "@/libs/utils";
-import type { MemberInvoice } from "@/types";
+import type { MemberInvoice } from "@subtrees/types";
 import { format } from "date-fns";
 import { CircleFadingPlusIcon, EllipsisVerticalIcon, CheckCircle2, Clock } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { MarkPaid } from "./MarkPaid";
+import { useSession } from "@/hooks/useSession";
+import { clientsideApiClient } from "@/libs/api/client";
 interface MemberInvoiceProps {
 	params: { id: string; mid: string };
 }
 export function MemberInvoices({ params }: MemberInvoiceProps) {
 	const { invoices, mutate } = useMemberInvoices(params.id, params.mid);
+	const { data: session } = useSession();
+	const api = useMemo(() => {
+		if (!session?.user?.sbToken) return null;
+		return clientsideApiClient(session.user.sbToken);
+	}, [session?.user?.sbToken]);
 
 	return (
 		<div className="space-y-2">
@@ -57,6 +64,7 @@ export function MemberInvoices({ params }: MemberInvoiceProps) {
 							key={invoice.id} 
 							invoice={invoice} 
 							params={params}
+							api={api}
 							onPaid={mutate}
 						/>
 					))}
@@ -81,30 +89,25 @@ export function MemberInvoices({ params }: MemberInvoiceProps) {
 function InvoiceItem({ 
 	invoice, 
 	params,
+	api,
 	onPaid 
 }: { 
 	invoice: MemberInvoice;
 	params: { id: string; mid: string };
+	api: ReturnType<typeof clientsideApiClient> | null;
 	onPaid: () => void;
 }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isSending, setIsSending] = useState(false);
 
 	async function handleMarkSent() {
+		if (!api) {
+			toast.error("Session not ready");
+			return;
+		}
 		setIsSending(true);
 		try {
-			const response = await fetch(
-				`/api/protected/loc/${params.id}/members/${params.mid}/invoices/${invoice.id}/send`,
-				{
-					method: "PATCH",
-					headers: { "Content-Type": "application/json" },
-				}
-			);
-
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || "Failed to mark as sent");
-			}
+			await api.post(`/x/loc/${params.id}/invoices/${invoice.id}/send`, {});
 
 			toast.success("Invoice marked as sent");
 			onPaid();
@@ -171,6 +174,7 @@ function InvoiceItem({
 							setIsOpen={setIsOpen}
 							invoice={invoice}
 							params={params}
+							api={api}
 							onPaid={onPaid}
 						/>
 					)}

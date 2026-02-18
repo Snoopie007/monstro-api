@@ -3,7 +3,7 @@ import {
     createContext, useContext, ReactElement,
     ReactNode, useReducer
 } from "react";
-import { MemberField } from "@/types";
+import { MemberField } from "@subtrees/types";
 
 type StateType = {
     fields: MemberField[];

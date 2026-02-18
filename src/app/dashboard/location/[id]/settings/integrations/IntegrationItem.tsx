@@ -2,7 +2,7 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle }
 import { Button } from '@/components/ui/button'
 import { useIntegrations } from '@/hooks';
 import { cn, tryCatch } from '@/libs/utils';
-import { Integration } from '@/types';
+import { Integration } from '@subtrees/types';
 import { Loader2, Trash2 } from 'lucide-react';
 import Image from 'next/image'
 import React, { useState } from 'react'

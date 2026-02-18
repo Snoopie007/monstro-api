@@ -1,5 +1,5 @@
 import { db } from '@/db/db';
-import { accounts, sessions, users } from '@/db/schemas';
+import { accounts, sessions, userRoles, users } from '@subtrees/schemas';
 import bcrypt from 'bcryptjs';
 import { customSession, multiSession } from "better-auth/plugins";
 import { APIError, betterAuth } from 'better-auth';
@@ -101,11 +101,11 @@ export const auth = betterAuth({
 							},
 						},
 					},
-				staff: {
-					columns: {
-						id: true,
-						phone: true,
-					},
+					staff: {
+						columns: {
+							id: true,
+							phone: true,
+						},
 						with: {
 							staffLocations: {
 								columns: {
@@ -116,19 +116,6 @@ export const auth = betterAuth({
 										columns: {
 											id: true,
 											name: true,
-										},
-									},
-									roles: {
-										with: {
-											role: {
-												with: {
-													permissions: {
-														with: {
-															permission: true,
-														},
-													},
-												},
-											},
 										},
 									},
 								},
@@ -178,11 +165,32 @@ export const auth = betterAuth({
 				};
 			} else if (userData.staff) {
 				// Staff logic
-				const transformedLocations = userData.staff.staffLocations.map((staffLocation: any) => {
+				const roleAssignments = await db.query.userRoles.findMany({
+					where: (ur, { eq }) => eq(ur.userId, userData.id),
+					with: {
+						role: {
+							with: {
+								permissions: {
+									with: {
+										permission: true,
+									},
+								},
+							},
+						},
+					},
+				});
+
+				const transformedLocations = userData.staff.staffLocations.map((staffLocation) => {
+					const rolesForLocation = roleAssignments
+						.map((assignment) => assignment.role)
+						.filter((role): role is NonNullable<typeof role> => Boolean(role));
+
 					const permissions = new Set<string>();
-					staffLocation.roles.forEach((roleAssignment: any) => {
-						roleAssignment.role.permissions.forEach((rp: any) => {
-							permissions.add(rp.permission.name);
+					rolesForLocation.forEach((role) => {
+						role.permissions.forEach((rp) => {
+							if (rp.permission) {
+								permissions.add(rp.permission.name);
+							}
 						});
 					});
 
@@ -190,7 +198,7 @@ export const auth = betterAuth({
 						id: staffLocation.location.id,
 						name: staffLocation.location.name,
 						status: staffLocation.status,
-						roles: staffLocation.roles.map((r: any) => r.role),
+						roles: rolesForLocation,
 						permissions: Array.from(permissions),
 					};
 				});
@@ -198,7 +206,7 @@ export const auth = betterAuth({
 			userPayload = {
 				phone: userData.staff.phone,
 				image: userData.image,
-				staffId: userData.staff.id,
+				staffId: String(userData.staff.id),
 				role: "staff",
 				locations: transformedLocations,
 			};

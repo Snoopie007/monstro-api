@@ -1,4 +1,4 @@
-import { SupportTool } from '@/types'
+import { SupportTool } from '@subtrees/types'
 
 export const DEFAULT_SUPPORT_TOOLS: SupportTool[] = [
     // {

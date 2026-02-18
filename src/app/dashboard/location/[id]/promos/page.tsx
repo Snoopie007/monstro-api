@@ -1,5 +1,5 @@
 import { db } from '@/db/db'
-import { memberPlans, memberPlanPricing } from '@/db/schemas'
+import { memberPlans, memberPlanPricing } from '@subtrees/schemas'
 import { PromosList, CreatePromo } from './components'
 import { eq, and } from 'drizzle-orm'
 
@@ -24,10 +24,10 @@ async function fetchPlans(lid: string) {
         eq(p.archived, false)
       ),
       with: {
-        pricingOptions: true,
+        pricings: true,
       },
     })
-    return plans
+    return plans.map((plan) => ({ ...plan, pricingOptions: plan.pricings }))
   } catch (error) {
     console.error('Error fetching plans:', error)
     return []

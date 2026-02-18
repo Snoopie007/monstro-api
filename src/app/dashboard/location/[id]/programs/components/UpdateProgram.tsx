@@ -24,7 +24,7 @@ import { usePrograms } from "@/hooks/usePrograms";
 import { toast } from "react-toastify";
 import { UpdateProgramSchema } from "../schemas";
 import { useStaffLocations } from "@/hooks/useStaffs";
-import { Program } from "@/types";
+import { Program } from "@subtrees/types";
 export interface UpdateProgramProps {
 
     open: boolean;
@@ -37,6 +37,7 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
     const pid = program.id;
     const { sls } = useStaffLocations(lid);
     const { mutate } = usePrograms(lid);
+    const programColor = (program as Program & { color?: number }).color ?? 1;
     // Initialize form with default values that match your program structure
     const form = useForm<z.infer<typeof UpdateProgramSchema>>({
         resolver: zodResolver(UpdateProgramSchema),
@@ -46,8 +47,8 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
             capacity: program?.capacity || 0,
             minAge: program?.minAge || 0,
             maxAge: program?.maxAge || 0,
-            instructorId: program?.instructorId || undefined,
-            color: program?.color ?? 1
+            instructorId: program?.instructorId ? String(program.instructorId) : undefined,
+            color: programColor
         },
         mode: "onChange",
     });
@@ -61,12 +62,11 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                 capacity: program.capacity || 0,
                 minAge: program.minAge || 0,
                 maxAge: program.maxAge || 0,
-                instructorId: program.instructorId || undefined,
-                color: program.color ?? 1
+                instructorId: program.instructorId ? String(program.instructorId) : undefined,
+                color: programColor
             });
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [program, open]);
+    }, [form, open, program, programColor]);
 
     async function submitForm(v: z.infer<typeof UpdateProgramSchema>) {
         try {
@@ -163,7 +163,7 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                                                     const staff = s.staff;
                                                     if (!staff) return null;
                                                     return (
-                                                        <SelectItem key={staff.id} value={staff.id}>
+												<SelectItem key={staff.id} value={String(staff.id)}>
                                                             {staff.firstName} {staff.lastName}
                                                         </SelectItem>
                                                     )
