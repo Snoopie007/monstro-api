@@ -1,7 +1,7 @@
+import type { users } from "../schemas/users";
 import type { Member } from "./member";
-import type { Vendor } from "./vendor";
-import type { users } from "@subtrees/schemas";
 import type { Staff } from "./staff";
+import type { Vendor } from "./vendor";
 
 export type User = typeof users.$inferSelect & {
     vendor?: Vendor;
