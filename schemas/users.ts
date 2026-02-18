@@ -1,5 +1,5 @@
-import { text, timestamp, pgTable, uuid, index, boolean, unique, integer } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { boolean, index, integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -25,6 +25,7 @@ export const userNotifications = pgTable("user_notifications", {
     deviceName: text("device_name"),
     enabled: boolean("enabled").notNull().default(true),
     lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    nativeToken: text("native_token"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
