@@ -1,4 +1,4 @@
-import { memberTags, memberHasTags } from "@subtrees/schemas";
+import { memberHasTags, memberTags } from "../schemas/tags";
 
 export type MemberTag = typeof memberTags.$inferSelect & {
   memberCount?: number; // For admin display showing how many members have this tag

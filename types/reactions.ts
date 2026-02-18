@@ -1,4 +1,4 @@
-import type { reactions } from "@subtrees/schemas";
+import type { reactions } from "../schemas/chat";
 import type { User } from "./user";
 
 
@@ -27,5 +27,5 @@ export type ReactionCount = {
     count: number;
     userNames: string[];
     userIds: string[];
-    created: Date;
+    created?: Date;
 }

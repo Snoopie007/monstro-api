@@ -7,20 +7,20 @@ import {
     memberReferrals,
     members,
     memberSubscriptions,
-  } from '../schemas'
-  import { memberLocations } from '../schemas/MemberLocation'
-  import type { MemberPointsHistory } from './achievement'
-  import type { Contract, MemberContract } from './contract'
-  import type { PaymentType } from './DatabaseEnums'
-  import type { FamilyMember } from './FamilyMember'
-  import type { Location } from './location'
-  import type { MigrateMember } from './MigrateMember'
-  import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
-  import type { PlanProgram, Program } from './program'
-  import type { User } from './user'
-  import type { MemberInvoice } from './invoices'
-  
-  export type Member = typeof members.$inferSelect & {
+} from '../schemas'
+import { memberLocations } from '../schemas/MemberLocation'
+import type { MemberPointsHistory } from './achievement'
+import type { Contract, MemberContract } from './contract'
+import type { PaymentType } from './DatabaseEnums'
+import type { FamilyMember } from './FamilyMember'
+import type { MemberInvoice } from './invoices'
+import type { Location } from './location'
+import type { MigrateMember } from './MigrateMember'
+import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
+import type { PlanProgram, Program } from './program'
+import type { User } from './user'
+
+export type Member = typeof members.$inferSelect & {
     user?: User
     familyMembers?: FamilyMember[]
     relatedByFamily?: FamilyMember[]
@@ -230,4 +230,3 @@ import {
     members: MemberListItem[]
     customFields: CustomFieldDefinition[]
   }
-  

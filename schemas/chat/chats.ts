@@ -7,9 +7,9 @@ import {
     text,
     timestamp,
 } from "drizzle-orm/pg-core";
-import { groups } from "./groups";
 import { locations } from "../locations";
 import { users } from "../users";
+import { groups } from "./groups";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -36,10 +36,10 @@ export const chatMembers = pgTable("chat_members", {
 export const messages = pgTable("messages", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('msg_')`),
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-    senderId: text("sender_id").references(() => users.id, { onDelete: "set null" }),
+    senderId: text("sender_id").notNull().references(() => users.id, { onDelete: "set null" }),
     replyId: text("reply_id").references((): any => messages.id, { onDelete: "set null" }),
     content: text("content"),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    // metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

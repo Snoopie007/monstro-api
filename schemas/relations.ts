@@ -9,7 +9,6 @@ import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
 import {
 	locations, locationState,
-	wallets, walletUsages
 } from "./locations";
 import { memberLocations } from "./MemberLocation";
 import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions } from "./MemberPlans";
@@ -18,10 +17,8 @@ import {
 	memberContracts,
 	memberCustomFields,
 	memberFields,
-	memberHasTags,
 	memberReferrals,
 	members,
-	memberTags,
 } from "./members";
 import { migrateMembers } from "./MigrateMembers";
 import { memberPaymentMethods, paymentMethods } from "./PaymentMethods";
@@ -31,10 +28,12 @@ import { reservationExceptions, reservations } from "./reservations";
 import { memberRewards, rewards } from "./rewards";
 import { sessions } from "./sessions";
 import { staffs, staffsLocations } from "./staffs";
+import { memberHasTags, memberTags } from "./tags";
 import { taxRates } from "./tax";
 import { transactions } from "./transactions";
 import { userNotifications, users } from "./users";
 import { supportPlans, vendors } from "./vendors";
+import { wallets, walletUsages } from "./wallets";
 
 // Chat tables
 import { chatMembers, chats, messages } from "./chat/chats";
@@ -49,8 +48,8 @@ import { reactions } from "./chat/reactions";
 import { supportAssistants } from "./SupportAssistants";
 import { supportConversations, supportMessages } from "./SupportConversations";
 import { supportTriggers } from "./SupportTriggers";
-import { vendorReferrals } from "./VendorReferrals";
 import { vendorLevels } from "./VendorProgress";
+import { vendorReferrals } from "./VendorReferrals";
 
 // ============================================================================
 // USER RELATIONS
@@ -336,25 +335,25 @@ export const walletRelations = relations(wallets, ({ one, many }) => ({
 
 export const vendorsRelations = relations(vendors, ({ one, many }) => ({
 	user: one(users, {
-	  fields: [vendors.userId],
-	  references: [users.id],
+		fields: [vendors.userId],
+		references: [users.id],
 	}),
 	locations: many(locations),
 	vendorLevel: one(vendorLevels, {
-	  fields: [vendors.id],
-	  references: [vendorLevels.vendorId],
+		fields: [vendors.id],
+		references: [vendorLevels.vendorId],
 	}),
 	referrals: many(vendorReferrals, { relationName: "referrals" }),
 	referee: one(vendorReferrals, {
-	  fields: [vendors.id],
-	  references: [vendorReferrals.referralId],
-	  relationName: "referee",
+		fields: [vendors.id],
+		references: [vendorReferrals.referralId],
+		relationName: "referee",
 	}),
 	supportPlans: one(supportPlans, {
-	  fields: [vendors.id],
-	  references: [supportPlans.vendorId],
+		fields: [vendors.id],
+		references: [supportPlans.vendorId],
 	}),
-  }));
+}));
 
 // ============================================================================
 // STAFF RELATIONS
