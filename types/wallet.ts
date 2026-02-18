@@ -1,4 +1,4 @@
-import { wallets, walletUsages } from "@subtrees/schemas";
+import { wallets, walletUsages } from "../schemas/wallets";
 import type { Location } from "./location";
 
 export type Wallet = typeof wallets.$inferSelect & {

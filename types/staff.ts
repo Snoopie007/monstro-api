@@ -1,6 +1,5 @@
-import type { staffs } from "@subtrees/schemas";
-import type { permissions, roles } from "@subtrees/schemas/permissions";
-import type { staffsLocations } from "../schemas/staffs";
+import type { permissions, roles } from "../schemas/permissions";
+import type { staffs, staffsLocations } from "../schemas/staffs";
 import type { User } from "./user";
 
 export type Permission = typeof permissions.$inferSelect;
