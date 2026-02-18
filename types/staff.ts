@@ -1,6 +1,7 @@
 import type { permissions, roles } from "../schemas/permissions";
 import type { staffs, staffsLocations } from "../schemas/staffs";
 import type { User } from "./user";
+import type { Location } from "./location";
 
 export type Permission = typeof permissions.$inferSelect;
 export type Role = typeof roles.$inferSelect & {
