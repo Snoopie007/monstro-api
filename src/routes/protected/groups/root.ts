@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
 import { z } from "zod";
-import type { ReactionCounts } from "@subtrees/types/";
-import { groupPosts, reactionCounts } from "@subtrees/schemas";
+import type { ReactionCount } from "@subtrees/types/";
+import { reactionCounts } from "@subtrees/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 
 const GetGroupProps = {
@@ -45,7 +45,7 @@ export const groupRoutes = new Elysia({ prefix: 'groups' })
 
                 const postIds = posts.map(p => p.id) || [];
 
-                let reactions: ReactionCounts[] = [];
+                let reactions: ReactionCount[] = [];
 
                 if (postIds.length > 0) {
                     reactions = await db.select().from(reactionCounts).where(and(

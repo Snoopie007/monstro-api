@@ -35,4 +35,5 @@ export * from "./vendors";
 export * from "./verifications";
 // Export all relations from the relations file
 export * from "./relations";
+export * from "./wallets";
 
