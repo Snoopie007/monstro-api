@@ -1,17 +1,16 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	integer,
+	jsonb,
+	pgTable,
 	text,
 	timestamp,
-	pgTable,
-	jsonb,
-	integer,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { vendors } from "./vendors";
-import { LocationStatusEnum } from "./DatabaseEnums";
 import type { LocationSettings } from "../types";
-import { contractTemplates } from "./contracts";
+import { LocationStatusEnum } from "./DatabaseEnums";
+import { vendors } from "./vendors";
 
 export const locations = pgTable("locations", {
 	id: uuid("id")
@@ -48,9 +47,7 @@ export const locationState = pgTable("location_state", {
 		.primaryKey()
 		.references(() => locations.id, { onDelete: "cascade" }),
 	planId: integer("plan_id").notNull().default(1),
-	waiverId: text("waiver_id").references(() => contractTemplates.id, {
-		onDelete: "set null",
-	}),
+	waiverId: text("waiver_id"),
 	agreeToTerms: boolean("agree_to_terms").notNull().default(false),
 	lastRenewalDate: timestamp("last_renewal_date", {
 		withTimezone: true,
