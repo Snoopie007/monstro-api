@@ -1,7 +1,7 @@
 // schema/reactions.ts
-import type { ReactionEmoji } from '@subtrees/types';
 import { sql } from 'drizzle-orm';
-import { check, index, jsonb, pgTable, pgView, text, timestamp, unique, integer } from 'drizzle-orm/pg-core';
+import { check, index, integer, jsonb, pgTable, pgView, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import type { ReactionEmoji } from '../../types/reactions';
 import { users } from '../users';
 
 
@@ -35,14 +35,14 @@ export const reactionCounts = pgView('reaction_counts', {
 }).existing();
 
 export const userReactions = pgView('user_reactions').as((qb) =>
-	qb.select({
-		id: reactions.id,
-		userId: reactions.userId,
-		ownerType: reactions.ownerType,
-		ownerId: reactions.ownerId,
-		display: sql<string>`emoji->>'value'`.as('display'),
-		name: sql<string>`emoji->>'name'`.as('name'),
-		type: sql<string>`emoji->>'type'`.as('type'),
-		created: reactions.created,
-	}).from(reactions)
+    qb.select({
+        id: reactions.id,
+        userId: reactions.userId,
+        ownerType: reactions.ownerType,
+        ownerId: reactions.ownerId,
+        display: sql<string>`emoji->>'value'`.as('display'),
+        name: sql<string>`emoji->>'name'`.as('name'),
+        type: sql<string>`emoji->>'type'`.as('type'),
+        created: reactions.created,
+    }).from(reactions)
 );

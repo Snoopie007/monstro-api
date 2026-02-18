@@ -8,19 +8,17 @@ import {
     members,
     memberSubscriptions,
 } from '../schemas'
-import { memberInvoices } from '../schemas/invoice'
 import { memberLocations } from '../schemas/MemberLocation'
 import type { MemberPointsHistory } from './achievement'
 import type { Contract, MemberContract } from './contract'
 import type { PaymentType } from './DatabaseEnums'
 import type { FamilyMember } from './FamilyMember'
+import type { MemberInvoice } from './invoices'
 import type { Location } from './location'
 import type { MigrateMember } from './MigrateMember'
 import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { PlanProgram, Program } from './program'
 import type { User } from './user'
-import type { Invoice } from './invoices'
-import { ColumnFiltersState } from '@/libs/table-utils'
 
 export type Member = typeof members.$inferSelect & {
     user?: User
@@ -36,15 +34,13 @@ export type Member = typeof members.$inferSelect & {
 
 
 
-
-
 export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
     plan?: MemberPlan
 }
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
     child?: MemberSubscription
-    invoices?: Invoice[]
+    invoices?: MemberInvoice[]
     plan?: MemberPlan
     pricing?: MemberPlanPricing
     contract?: MemberContract
@@ -82,21 +78,13 @@ export type BillingCycleAnchorConfig = {
 }
 
 export type MemberPlan = typeof memberPlans.$inferSelect & {
-    contract?: Contract | undefined
+    contract?: Contract | null
     billingAnchorConfig: BillingCycleAnchorConfig | null
     planPrograms?: PlanProgram[]
     pricings?: MemberPlanPricing[]
-    pricingOptions?: MemberPlanPricing[]
-    stripeProductId?: string | null
     member?: Member
 }
 
-export type MemberInvoice = typeof memberInvoices.$inferSelect & {
-    member?: Member
-    location?: Location
-    memberPackage?: MemberPackage | null
-    memberSubscription?: MemberSubscription | null
-}
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
     location?: Location
@@ -127,9 +115,11 @@ export type FamilyPlan = {
     packageId?: number
 }
 
+
+
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
     member?: Member
-    referred?: Member
+    referredMember?: Member
     location?: Location
 }
 
@@ -166,7 +156,6 @@ export type CustomFieldDefinition = MemberField & {
     placeholder?: string
     helpText?: string
 }
-
 
 export type MemberSortableField =
     | 'created'
@@ -242,54 +231,3 @@ export type LocationMembersResponse = {
     customFields: CustomFieldDefinition[]
 }
 
-export type MemberStatus =
-    | 'active' | 'incomplete' | 'past_due' | 'canceled'
-    | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired' | 'archived'
-
-export interface TableState {
-    page: number
-    pageSize: number
-    columnFilters: ColumnFiltersState
-    searchQuery: string
-    selectedTags: string[]
-    tagOperator: 'AND' | 'OR'
-    sorting: { id: string; direction: 'asc' | 'desc' }[]
-}
-
-export interface TabConfig {
-    id: string
-    name: string
-    statusFilter: MemberStatus[]
-    removable: boolean
-    state: TableState
-}
-
-export interface SavedTabConfig {
-    id: string
-    name: string
-    statusFilter: MemberStatus[]
-    columnFilters: ColumnFiltersState
-    searchQuery: string
-    selectedTags: string[]
-    tagOperator: 'AND' | 'OR'
-    sorting: { id: string; direction: 'asc' | 'desc' }[]
-}
-
-export interface MembersTabState extends TabConfig {
-    filteredData: {
-        members: MemberListItem[]
-        count: number
-        customFields: CustomFieldDefinition[]
-    }
-}
-
-export interface TabParams {
-    id: string
-    page: number
-    pageSize: number
-    searchQuery: string
-    selectedTags: string[]
-    columnFilters: ColumnFiltersState
-    tagOperator: 'AND' | 'OR'
-    sorting: { id: string; direction: 'asc' | 'desc' }[]
-}

@@ -1,8 +1,14 @@
+import {
+  vendorBadges, vendorClaimedRewards,
+  vendorLevels, vendorRewards
+} from "../schemas/VendorProgress";
+import { vendorReferrals } from "../schemas/VendorReferrals";
+import {
+  supportPlans, vendors
+} from "../schemas/vendors";
 
-import { supportPlans, vendorBadges, vendorClaimedRewards, vendorLevels, vendorRewards, vendors } from "@subtrees/schemas";
-import type { VendorReferral } from "./vendor/VendorReferral";
-import type { User } from "./user";
 import type { Location } from "./location";
+import type { User } from "./user";
 
 
 
@@ -11,6 +17,11 @@ export type Vendor = typeof vendors.$inferSelect & {
   vendorLevel?: VendorLevel;
   user?: User;
   locations?: Location[];
+}
+
+export type VendorReferral = typeof vendorReferrals.$inferSelect & {
+  vendor?: Vendor;
+  referred?: Partial<Vendor>;
 }
 
 
