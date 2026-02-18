@@ -27,5 +27,5 @@ export type ReactionCount = {
     count: number;
     userNames: string[];
     userIds: string[];
-    created: Date;
+    created?: Date;
 }

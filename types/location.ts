@@ -1,9 +1,7 @@
 import type {
   MemberInvoice,
   MemberSubscription,
-  MemberReferral,
   PaymentType,
-  MemberPointsHistory,
   Program,
   TaxRate,
   Transaction,
@@ -17,13 +15,13 @@ export type Location = typeof locations.$inferSelect & {
   programs?: Program[];
   memberInvoices?: MemberInvoice[];
   memberSubscriptions?: MemberSubscription[];
-  pointsHistory?: MemberPointsHistory[];
-  referrals?: MemberReferral[];
   transactions?: Transaction[];
   wallet?: Wallet;
-  taxRates?: TaxRate[];
   memberPlans?: MemberPlan[];
+  taxRates?: TaxRate[];
+  taxRate?: TaxRate;
 };
+
 
 export type LocationState = typeof locationState.$inferSelect & {
   settings: LocationSettings;
@@ -38,6 +36,7 @@ export type HolidaySettings = {
   advanceBlockDays: number;
   autoNotifyMembers: boolean;
 };
+
 
 export type LocationSettings = {
   theme: 'default';

@@ -1,6 +1,6 @@
+import { contractTemplates, memberContracts } from "../schemas";
 import type { Location } from "./location";
 import type { Member, MemberPackage, MemberSubscription } from "./member";
-import { contractTemplates, memberContracts } from "../schemas";
 
 export type Contract = typeof contractTemplates.$inferSelect & {
     location?: Location;
