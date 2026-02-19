@@ -29,6 +29,7 @@ interface PreviewStepProps {
     isImporting: boolean
     setIsImporting: Dispatch<SetStateAction<boolean>>
     includeCustomFields: boolean
+    pricingIdMapping?: Record<string, Record<string, string>>
 }
 
 const displayFields = [
@@ -57,6 +58,7 @@ export function PreviewStep({
     isImporting,
     setIsImporting,
     includeCustomFields,
+    pricingIdMapping,
 }: PreviewStepProps) {
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
     const [pricingId, setPricingId] = useState<string | null>(null)
@@ -75,9 +77,10 @@ export function PreviewStep({
                 ...newCustomFields.filter(f => f.selected).map(f => ({ key: f.csvColumn, type: f.fieldType }))
             ],
             plans: plans || [],
-            isLoadingPlans
+            isLoadingPlans,
+            pricingIdMapping,
         })
-    }, [fullData, fieldMapping, customFieldMapping, existingCustomFields, newCustomFields, plans, isLoadingPlans])
+    }, [fullData, fieldMapping, customFieldMapping, existingCustomFields, newCustomFields, plans, isLoadingPlans, pricingIdMapping])
 
     const { totalRows, validRows, invalidRows, errorsByRow } = validationResult
 
@@ -95,7 +98,17 @@ export function PreviewStep({
 
     const getMappedValue = (row: Record<string, string>, fieldKey: string) => {
         const csvColumn = fieldMapping[fieldKey]
-        return csvColumn ? row[csvColumn] || '-' : '-'
+        if (!csvColumn) return '-'
+        
+        const rawValue = row[csvColumn] || '-'
+        
+        // For pricingPlanId, translate CSV value to pricing ID if mapping exists
+        if (fieldKey === 'pricingPlanId' && pricingIdMapping?.[csvColumn]) {
+            const mappedId = pricingIdMapping[csvColumn][rawValue]
+            return mappedId || rawValue
+        }
+        
+        return rawValue
     }
 
     const getCustomFieldValue = (row: Record<string, string>, fieldId: string) => {
@@ -117,15 +130,18 @@ export function PreviewStep({
     const totalCustomFieldsCount = mappedExistingFields.length + selectedNewFields.length
 
     async function handleImport() {
-        if (!file) {
-            toast.error('No file selected')
+        if (!fullData.length) {
+            toast.error('No parsed rows available to import')
             return
         }
 
         setIsImporting(true)
 
         const formData = new FormData()
-        formData.append('file', file)
+        if (file) {
+            formData.append('file', file)
+        }
+        formData.append('rows', JSON.stringify(fullData))
         formData.append('fieldMapping', JSON.stringify(fieldMapping))
         // Only pass pricingId when pricingPlanId is NOT mapped (per-row assignment)
         if (pricingId && !fieldMapping.pricingPlanId) {
@@ -135,6 +151,11 @@ export function PreviewStep({
             formData.append('planType', selectedPlan.type)
         }
         formData.append('requirePayment', requirePayment.toString())
+
+        // Pass pricing ID mapping if available (for AI-matched pricing)
+        if (pricingIdMapping && Object.keys(pricingIdMapping).length > 0) {
+            formData.append('pricingIdMapping', JSON.stringify(pricingIdMapping))
+        }
 
         // Only send custom field data if toggle is enabled
         if (includeCustomFields) {
@@ -558,7 +579,7 @@ export function PreviewStep({
                 size='lg'
                 className='w-full'
                 onClick={handleImport}
-                disabled={isImporting || !file || isLoadingPlans}
+                disabled={isImporting || fullData.length === 0 || isLoadingPlans}
             >
                 {isLoadingPlans ? (
                     <>

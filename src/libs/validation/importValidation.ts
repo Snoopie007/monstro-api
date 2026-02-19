@@ -182,6 +182,7 @@ export interface ValidateImportDataOptions {
   allowEmptyOptionalFields?: boolean;
   plans?: MemberPlan[];
   isLoadingPlans?: boolean;
+  pricingIdMapping?: Record<string, Record<string, string>>; // columnName -> csvValue -> pricingId
 }
 
 export function validateImportData(
@@ -282,10 +283,14 @@ export function validateImportData(
     // Validate pricingPlanId if mapped (only when plans are loaded)
     const pricingPlanIdColumn = fieldMapping['pricingPlanId'];
     if (pricingPlanIdColumn && !options.isLoadingPlans) {
-      const value = row[pricingPlanIdColumn];
+      const csvValue = row[pricingPlanIdColumn];
 
-      if (value && value !== '') {
-        const pricingId = String(value).trim();
+      if (csvValue && csvValue !== '') {
+        const rawValue = String(csvValue).trim();
+
+        // Translate CSV value to pricing ID using AI mapping if available
+        const columnMapping = options.pricingIdMapping?.[pricingPlanIdColumn];
+        const pricingId = columnMapping?.[rawValue] || rawValue;
 
         // Check if the pricing ID exists in valid options
         if (!validPricingIds.has(pricingId)) {
@@ -293,8 +298,8 @@ export function validateImportData(
             rowIndex,
             column: pricingPlanIdColumn,
             fieldKey: 'pricingPlanId',
-            value,
-            error: `Invalid Pricing Plan ID: "${pricingId}". This ID does not match any existing pricing option in your location.`,
+            value: csvValue,
+            error: `Invalid Pricing Plan ID: "${rawValue}". This ID does not match any existing pricing option in your location.`,
           };
           rowErrors.push(error);
           errors.push(error);
