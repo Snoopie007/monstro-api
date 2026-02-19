@@ -23,6 +23,7 @@ export const userNotifications = pgTable("user_notifications", {
     token: text("token").notNull().unique(),
     deviceModelId: text("device_model_id"),
     deviceName: text("device_name"),
+    nativeToken: text("native_token").unique(),
     enabled: boolean("enabled").notNull().default(true),
     lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
