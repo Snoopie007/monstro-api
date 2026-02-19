@@ -7,11 +7,11 @@ import {
     userMomentsRoutes,
     userChatsRoutes,
     userSupportRoutes,
+    userNotificationRoutes,
 } from './users';
 import { friendsRoutes } from './friends';
 import { mediaRoutes } from './medias';
 import { stripeRoutes } from './stripe';
-import { userNotificationRoutes } from './notifications';
 import { groupRoutes } from './groups';
 import { locationsRoutes } from './locations';
 import { userAccountsRoutes } from './users/accounts';
@@ -36,7 +36,6 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(friendsRoutes)
     .use(searchRoutes)
     .use(mediaRoutes)
-    .use(userNotificationRoutes)
     .use(groupRoutes)
     .group('/users/:uid', (app) => {
         app.use(userSupportRoutes);
@@ -44,6 +43,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(userFeedsRoutes);
         app.use(userMomentsRoutes);
         app.use(userChatsRoutes);
+        app.use(userNotificationRoutes);
         return app;
     })
     .group('/member/:mid', (app) => {

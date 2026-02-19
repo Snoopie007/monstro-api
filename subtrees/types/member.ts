@@ -32,6 +32,14 @@ export type Member = typeof members.$inferSelect & {
   referredBy?: MemberReferral
 }
 
+export type MemberAddress = {
+  line1: string
+  line2: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+}
 
 
 export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {

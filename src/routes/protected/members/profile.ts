@@ -65,6 +65,60 @@ export function memberProfile(app: Elysia) {
             return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
         }
     }, MemberProfileProps)
+    app.group("/address", (app) => {
+        app.get("/", async ({ status, params }) => {
+            const { mid } = params;
+            try {
+                const member = await db.query.members.findFirst({
+                    where: eq(members.id, mid),
+                    columns: {
+                        addresses: true,
+                    },
+                });
+                if (!member) {
+                    return status(404, { error: "Member not found" });
+                }
+                return status(200, { addresses: member.addresses });
+            } catch (error) {
+                console.error(error);
+                return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
+            }
+        }, {
+            params: t.Object({
+                mid: t.String(),
+            }),
+        })
+        app.patch("/", async ({ status, params, body }) => {
+            const { mid } = params;
+            const { index, address } = body;
+            try {
+                await db.update(members).set({
+                    addresses: [address]
+                }).where(eq(members.id, mid));
+                return status(200, { success: true });
+            } catch (error) {
+                console.error(error);
+                return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
+            }
+        }, {
+            params: t.Object({
+                mid: t.String(),
+            }),
+            body: t.Object({
+                index: t.Number(),
+                address: t.Object({
+                    line1: t.String(),
+                    line2: t.String(),
+                    city: t.String(),
+                    state: t.String(),
+                    postalCode: t.String(),
+                    country: t.String(),
+                }),
+            }),
+        })
+        return app;
+    })
+
     app.patch('/completed', async ({ status, params }) => {
         const { mid } = params;
         try {
