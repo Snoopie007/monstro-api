@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { MemberStripePayments, VendorStripePayments } from "@/libs/server/stripe";
-import { eq } from "drizzle-orm";
+import { MemberStripePayments } from "@/libs/server/stripe";
+import { and, eq } from "drizzle-orm";
 import { transactions } from "@subtrees/schemas";
 import Stripe from "stripe";
 
@@ -74,8 +74,18 @@ export async function PUT(req: Request, props: { params: Promise<TransactionProp
 			throw new Error("Only completed incoming transactions can be refunded");
 		}
 
-		let stripeRefunded: Stripe.Response<Stripe.Refund> | null = null;
+		let stripeRefunded: Stripe.Refund | null = null;
 		if (transaction.paymentType === "card") {
+			const integrations = await db.query.integrations.findFirst({
+				where: (integrations, { eq, and }) => and(
+					eq(integrations.locationId, params.id),
+					eq(integrations.service, "stripe")
+				),
+			});
+			if (!integrations || !integrations.accountId) {
+				throw new Error("Stripe integration not found");
+			}
+			const stripe = new MemberStripePayments(integrations.accountId);
 
 			// Get the actual Stripe charge ID for refund
 			let stripeChargeId: string | null = null;
@@ -99,32 +109,18 @@ export async function PUT(req: Request, props: { params: Promise<TransactionProp
 
 				// Use customer-based Stripe instance for subscriptions
 
-				const integrations = await db.query.integrations.findFirst({
-					where: (integrations, { eq, and }) => and(
-						eq(integrations.locationId, params.id),
-						eq(integrations.service, "stripe")
-					),
-				});
-				if (!integrations || !integrations.accountId) {
-					throw new Error("Stripe integration not found");
-				}
 				if (!member.stripeCustomerId) {
 					throw new Error("Stripe customer not found");
 				}
-				const stripe = new MemberStripePayments(integrations.accountId);
 				stripe.setCustomer(member.stripeCustomerId);
 
-				stripeRefunded = await stripe.refund(stripeChargeId);
+				stripeRefunded = await stripe.createRefund({ charge: stripeChargeId });
 			} else {
 				stripeChargeId = transaction.metadata?.chargeId as string;
 				if (!stripeChargeId) {
 					throw new Error("Stripe charge ID not found for package transaction");
 				}
-
-				// For package-based transactions, refund directly using charge ID
-				// without needing a Stripe customer, since packages are one-time payments
-				const stripe = new VendorStripePayments();
-				stripeRefunded = await stripe.refund(stripeChargeId);
+				stripeRefunded = await stripe.createRefund({ charge: stripeChargeId });
 			}
 		}
 		if (stripeRefunded) {
