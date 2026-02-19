@@ -95,7 +95,7 @@ export function SelectSourceStep({
                 <div className='space-y-3'>
                     <div className='text-sm font-medium'>Upload your file</div>
                     {file ? (
-                        <div className='flex flex-row items-center justify-between bg-foreground/5 rounded-lg px-4 py-3 border border-foreground/10'>
+                        <div className='flex flex-row items-center justify-between rounded-lg border border-foreground/15 bg-foreground/5 px-4 py-3 dark:border-foreground/25 dark:bg-foreground/10'>
                             <p className='flex text-sm items-center gap-2'>
                                 <FileIcon className='size-4 text-muted-foreground' />
                                 <span className='truncate'>{file.name}</span>
@@ -125,15 +125,15 @@ export function SelectSourceStep({
                             }}
                             onDrop={handleDrop}
                             onDragOver={(event) => event.preventDefault()}
-                            className='flex h-40 cursor-pointer items-center justify-center rounded-lg border border-dashed border-foreground/20 hover:border-foreground/40 transition-colors'
+                            className='flex h-44 w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-foreground/30 bg-foreground/[0.02] transition-colors hover:border-foreground/50 hover:bg-foreground/[0.04] dark:border-foreground/40 dark:bg-foreground/[0.05] dark:hover:border-foreground/60 dark:hover:bg-foreground/[0.08]'
                         >
                             <div className='text-center space-y-2'>
-                                <FileSpreadsheet className='size-8 mx-auto text-muted-foreground' />
-                                <p className='text-sm'>
+                                <FileSpreadsheet className='mx-auto size-8 text-foreground/80 dark:text-foreground/90' />
+                                <p className='text-sm font-medium text-foreground'>
                                     Drag and drop, or{' '}
-                                    <span className='text-primary font-medium'>browse</span> your files
+                                    <span className='font-semibold text-primary'>browse</span> your files
                                 </p>
-                                <p className='text-xs text-muted-foreground'>
+                                <p className='text-xs text-muted-foreground dark:text-foreground/75'>
                                     Supports CSV, XLS, XLSX
                                 </p>
                             </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
+import { Dispatch, SetStateAction, useCallback, useMemo } from 'react'
 import { CheckCircle2, AlertCircle, HelpCircle, Sparkles, Loader2 } from 'lucide-react'
 import { Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 import { cn } from '@/libs/utils'
@@ -12,7 +12,7 @@ import { AiDataQualityPanel } from './AiDataQualityPanel'
 import type { CustomFieldDefinition } from '@/types/member'
 import type { NewCustomField } from '@/types/migration'
 import type { MigrationAnalysisResult } from '@/hooks/useMigrations'
-import { REQUIRED_FIELDS, OPTIONAL_FIELDS } from '@/constants/migration'
+import { REQUIRED_FIELDS, OPTIONAL_FIELDS, AUTO_APPLY_AI_CONFIDENCE } from '@/constants/migration'
 
 interface MapFieldsStepProps {
     headers: string[]
@@ -63,7 +63,7 @@ export function MapFieldsStep({
     const customMappedCount = existingCustomFields.filter(field => customFieldMapping[field.id]).length
     const optionalMappedCount = OPTIONAL_FIELDS.filter(field => fieldMapping[field.key]).length
 
-    const getMappedColumns = () => {
+    const mappedColumns = useMemo(() => {
         const mapped = new Set<string>()
         Object.values(fieldMapping).forEach(col => {
             if (col) mapped.add(col)
@@ -72,21 +72,40 @@ export function MapFieldsStep({
             if (col) mapped.add(col)
         })
         return mapped
-    }
+    }, [fieldMapping, customFieldMapping])
 
-    const mappedColumns = getMappedColumns()
-
-    const getAvailableHeaders = (currentValue: string | undefined) => {
+    const getAvailableHeaders = useCallback((currentValue: string | undefined) => {
         return headers.filter(h => h && (h === currentValue || !mappedColumns.has(h)))
-    }
+    }, [headers, mappedColumns])
 
-    const applyAiSuggestions = () => {
+    const aiSuggestionByField = useMemo(() => {
+        const suggestions: Record<string, { csvHeader: string; confidence: number; reasoning: string }> = {}
+
+        if (!aiAnalysisResult?.columnMapping) return suggestions
+
+        for (const [csvHeader, mapping] of Object.entries(aiAnalysisResult.columnMapping)) {
+            if (!mapping.suggestedField) continue
+
+            const existing = suggestions[mapping.suggestedField]
+            if (!existing || mapping.confidence > existing.confidence) {
+                suggestions[mapping.suggestedField] = {
+                    csvHeader,
+                    confidence: mapping.confidence,
+                    reasoning: mapping.reasoning,
+                }
+            }
+        }
+
+        return suggestions
+    }, [aiAnalysisResult])
+
+    const applyAiSuggestions = useCallback(() => {
         if (!aiAnalysisResult?.columnMapping) return
         
         const newMapping: Record<string, string> = { ...fieldMapping }
         
         for (const [csvHeader, mapping] of Object.entries(aiAnalysisResult.columnMapping)) {
-            if (mapping.suggestedField && mapping.confidence >= 0.7) {
+            if (mapping.suggestedField && mapping.confidence >= AUTO_APPLY_AI_CONFIDENCE) {
                 const existingMapping = Object.entries(newMapping).find(([, col]) => col === csvHeader)
                 if (existingMapping) {
                     delete newMapping[existingMapping[0]]
@@ -96,28 +115,17 @@ export function MapFieldsStep({
         }
         
         setFieldMapping(newMapping)
-    }
+    }, [aiAnalysisResult, fieldMapping, setFieldMapping])
 
-    const getAiSuggestionForField = (fieldKey: string): { csvHeader: string; confidence: number; reasoning: string } | null => {
-        if (!aiAnalysisResult?.columnMapping) return null
-        
-        for (const [csvHeader, mapping] of Object.entries(aiAnalysisResult.columnMapping)) {
-            if (mapping.suggestedField === fieldKey) {
-                return {
-                    csvHeader,
-                    confidence: mapping.confidence,
-                    reasoning: mapping.reasoning,
-                }
-            }
-        }
-        return null
-    }
-
-    const getConfidenceColor = (confidence: number) => {
+    const getConfidenceColor = useCallback((confidence: number) => {
         if (confidence >= 0.9) return 'text-green-500'
-        if (confidence >= 0.7) return 'text-yellow-500'
+        if (confidence >= AUTO_APPLY_AI_CONFIDENCE) return 'text-yellow-500'
         return 'text-orange-500'
-    }
+    }, [])
+
+    const highConfidenceSuggestionCount = useMemo(() => {
+        return Object.values(aiAnalysisResult?.columnMapping || {}).filter(m => m.confidence >= AUTO_APPLY_AI_CONFIDENCE).length
+    }, [aiAnalysisResult])
 
     const valueIssueEntries = Object.entries(aiAnalysisResult?.valueIssues || {})
     const aiIssuesCount = valueIssueEntries.reduce((sum, [, issues]) => sum + issues.length, 0)
@@ -135,7 +143,7 @@ export function MapFieldsStep({
                 isAiAnalyzing={isAiAnalyzing}
                 onAiAnalyze={onAiAnalyze}
                 onApplySuggestions={applyAiSuggestions}
-                highConfidenceCount={Object.values(aiAnalysisResult?.columnMapping || {}).filter(m => m.confidence >= 0.7).length}
+                highConfidenceCount={highConfidenceSuggestionCount}
             />
 
             <AiDataQualityPanel
@@ -170,7 +178,7 @@ export function MapFieldsStep({
                     {REQUIRED_FIELDS.map((field) => {
                         const isMapped = !!fieldMapping[field.key]
                         const availableHeaders = getAvailableHeaders(fieldMapping[field.key])
-                        const aiSuggestion = getAiSuggestionForField(field.key)
+                        const aiSuggestion = aiSuggestionByField[field.key] || null
 
                         return (
                             <div
@@ -266,7 +274,7 @@ export function MapFieldsStep({
                     {OPTIONAL_FIELDS.map((field) => {
                         const isMapped = !!fieldMapping[field.key]
                         const availableHeaders = getAvailableHeaders(fieldMapping[field.key])
-                        const aiSuggestion = getAiSuggestionForField(field.key)
+                        const aiSuggestion = aiSuggestionByField[field.key] || null
 
                         return (
                             <div

@@ -21,7 +21,7 @@ import type { ImportSource, NewCustomField } from '@/types/migration'
 import { useCsvDataset } from '@/hooks/migration/useCsvDataset'
 import { useMigrationAnalysis } from '@/hooks/migration/useMigrationAnalysis'
 import { useMigrationFixes } from '@/hooks/migration/useMigrationFixes'
-import { AUTO_MAP_PATTERNS } from '@/constants/migration'
+import { AUTO_MAP_PATTERNS, AUTO_APPLY_AI_CONFIDENCE } from '@/constants/migration'
 
 interface ImportStepperPageProps {
     lid: string
@@ -190,7 +190,7 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
 
         const autoMappings: Record<string, string> = {}
         for (const [csvHeader, mapping] of Object.entries(result.columnMapping)) {
-            if (mapping.suggestedField && mapping.confidence >= 0.75) {
+            if (mapping.suggestedField && mapping.confidence >= AUTO_APPLY_AI_CONFIDENCE) {
                 autoMappings[mapping.suggestedField] = csvHeader
             }
         }

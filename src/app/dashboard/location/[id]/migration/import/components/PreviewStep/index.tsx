@@ -13,6 +13,7 @@ import { useMemberPlans } from '@/hooks'
 import type { MemberPlan, MemberPlanPricing } from '@subtrees/types'
 import type { CustomFieldDefinition } from '@/types/member'
 import type { NewCustomField } from '@/types/migration'
+import { REQUIRED_FIELDS } from '@/constants/migration'
 import { useMigrationPreview } from '@/hooks/migration/useMigrationPreview'
 import { ValidationWarningBanner } from './ValidationWarningBanner'
 import { PreviewDataTable } from './PreviewDataTable'
@@ -89,6 +90,7 @@ export function PreviewStep({
     })
 
     const { totalRows, validRows, invalidRows, errorsByRow } = validationResult
+    const requiredMappedCount = REQUIRED_FIELDS.filter(field => fieldMapping[field.key]).length
 
     // Derived state for selected plan and pricing options
     const selectedPlan = useMemo(() => plans?.find((p: MemberPlan) => p.id === selectedPlanId), [plans, selectedPlanId])
@@ -228,7 +230,7 @@ export function PreviewStep({
                         <FileSpreadsheet className='size-5 text-blue-500' />
                     </div>
                     <div>
-                        <div className='text-2xl font-semibold'>{Object.keys(fieldMapping).length}</div>
+                        <div className='text-2xl font-semibold'>{requiredMappedCount}</div>
                         <div className='text-xs text-muted-foreground'>Required</div>
                     </div>
                 </div>

@@ -13,6 +13,8 @@ export const AUTO_MAP_PATTERNS: Record<string, string[]> = {
 
 export const FILE_TYPES = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .csv'
 
+export const AUTO_APPLY_AI_CONFIDENCE = 0.75
+
 
 export const REQUIRED_FIELDS = [
     { key: 'firstName', label: 'First Name', description: 'Member\'s first name' },

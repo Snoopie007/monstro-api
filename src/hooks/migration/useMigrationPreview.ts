@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { validateImportData } from '@/libs/validation/importValidation'
 import type { MemberPlan } from '@subtrees/types'
 import type { CustomFieldDefinition } from '@/types/member'
@@ -55,7 +55,7 @@ export function useMigrationPreview({
 
     const totalCustomFieldsCount = mappedExistingFields.length + selectedNewFields.length
 
-    const getMappedValue = (row: Record<string, string>, fieldKey: string) => {
+    const getMappedValue = useCallback((row: Record<string, string>, fieldKey: string) => {
         const csvColumn = fieldMapping[fieldKey]
         if (!csvColumn) return '-'
 
@@ -67,12 +67,12 @@ export function useMigrationPreview({
         }
 
         return rawValue
-    }
+    }, [fieldMapping, pricingIdMapping])
 
-    const getCustomFieldValue = (row: Record<string, string>, fieldId: string) => {
+    const getCustomFieldValue = useCallback((row: Record<string, string>, fieldId: string) => {
         const csvColumn = customFieldMapping[fieldId]
         return csvColumn ? row[csvColumn] || '-' : '-'
-    }
+    }, [customFieldMapping])
 
     return {
         validationResult,

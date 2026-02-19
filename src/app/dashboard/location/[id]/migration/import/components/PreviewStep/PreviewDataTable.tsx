@@ -75,9 +75,12 @@ export function PreviewDataTable({
                         {previewData.map((row, rowIndex) => {
                             const rowErrors = errorsByRow.get(rowIndex) || []
                             const errorsByColumn = new Map(rowErrors.map(e => [e.column, e.error]))
+                            const rowKey = Object.entries(row)
+                                .map(([key, value]) => `${key}:${value}`)
+                                .join('|')
 
                             return (
-                                <TableRow key={Object.values(row).join('|')}>
+                                <TableRow key={rowKey}>
                                     {displayFields
                                         .filter(field => !field.optional || fieldMapping[field.key])
                                         .map((field) => {
