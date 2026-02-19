@@ -131,6 +131,12 @@ export async function PUT(req: Request, props: { params: Promise<TransactionProp
 		return NextResponse.json({ success: true }, { status: 200 });
 	} catch (err) {
 		console.log(err);
+		if (err instanceof Error && (err as Error & { code?: string }).code === "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE") {
+			return NextResponse.json({
+				error: err.message,
+				code: "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE",
+			}, { status: 400 });
+		}
 		return NextResponse.json({ error: err }, { status: 500 });
 	}
 }
