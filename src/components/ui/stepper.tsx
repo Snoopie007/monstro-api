@@ -38,6 +38,7 @@ export interface IStepperItemContextValue {
 export interface IStepperRootProps {
     children: React.ReactNode
     defaultValue?: number
+    onStepChange?: (step: number) => void
     orientation?: InteractiveStepperOrientation
     className?: string
 }
@@ -122,6 +123,7 @@ export const InteractiveStepperRoot = React.forwardRef<
         {
             children,
             defaultValue = 1,
+            onStepChange,
             orientation = 'horizontal',
             className = '',
             ...props
@@ -129,6 +131,10 @@ export const InteractiveStepperRoot = React.forwardRef<
         ref
     ) => {
         const [currentStep, setCurrentStep] = useState(defaultValue)
+
+        React.useEffect(() => {
+            onStepChange?.(currentStep)
+        }, [currentStep, onStepChange])
 
         const totalSteps = React.Children.toArray(children).filter(
             (child) =>
@@ -396,10 +402,10 @@ export const InteractiveStepperIndicator = React.forwardRef<
             'border border-foreground/10 bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 w-9 p-1 flex flex-col items-center text-center gap-1 z-10 rounded-full shrink-0',
     }
 
-    let indicatorClasses
+    let indicatorClasses: string
 
     if (state === 'completed') indicatorClasses = classes.completed
-    else if (state == 'active') indicatorClasses = classes.active
+    else if (state === 'active') indicatorClasses = classes.active
     else indicatorClasses = classes.inactive
 
     const builtIndicatorClasses = cn(

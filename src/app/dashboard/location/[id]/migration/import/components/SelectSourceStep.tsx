@@ -4,7 +4,8 @@ import { useRef } from 'react'
 import { FileSpreadsheet, Zap, FileIcon, XIcon, CheckIcon } from 'lucide-react'
 import { cn } from '@/libs/utils'
 import { Badge, Button } from '@/components/ui'
-import type { ImportSource } from './ImportStepperPage'
+import type { ImportSource } from '@/types/migration'
+import { FILE_TYPES } from '@/constants/migration'
 
 interface SelectSourceStepProps {
     importSource: ImportSource
@@ -12,8 +13,6 @@ interface SelectSourceStepProps {
     file: File | undefined
     onFileChange: (file: File | undefined) => void
 }
-
-const FILE_TYPES = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .csv'
 
 export function SelectSourceStep({
     importSource,
@@ -23,7 +22,7 @@ export function SelectSourceStep({
 }: SelectSourceStepProps) {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    function handleDrop(e: React.DragEvent<HTMLElement>) {
         e.preventDefault()
         if (file) return
         const droppedFiles = e.dataTransfer.files
@@ -115,8 +114,15 @@ export function SelectSourceStep({
                             </Button>
                         </div>
                     ) : (
-                        <div
+                        <button
+                            type='button'
                             onClick={() => fileInputRef.current?.click()}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault()
+                                    fileInputRef.current?.click()
+                                }
+                            }}
                             onDrop={handleDrop}
                             onDragOver={(event) => event.preventDefault()}
                             className='flex h-40 cursor-pointer items-center justify-center rounded-lg border border-dashed border-foreground/20 hover:border-foreground/40 transition-colors'
@@ -131,7 +137,7 @@ export function SelectSourceStep({
                                     Supports CSV, XLS, XLSX
                                 </p>
                             </div>
-                        </div>
+                        </button>
                     )}
                     <input
                         ref={fileInputRef}
