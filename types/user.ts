@@ -1,4 +1,4 @@
-import type { users } from "../schemas/users";
+import type { userNotifications, users } from "../schemas/users";
 import type { Member } from "./member";
 import type { Staff } from "./staff";
 import type { Vendor } from "./vendor";
@@ -39,4 +39,10 @@ export type ExtendedUser = Partial<User> & {
     updatedAt: Date;
     emailVerified: boolean;
 };
+
+
+export type UserNotification = typeof userNotifications.$inferSelect & {
+    user?: User;
+}
+
 
