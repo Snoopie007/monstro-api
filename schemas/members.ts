@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { primaryKey, text, timestamp, pgTable, boolean, jsonb, unique, uuid } from 'drizzle-orm/pg-core'
 import { locations } from './locations'
 import { users } from './users'
+import type { MemberAddress } from '../types/member'
 import {
 	MemberRelationshipEnum, CustomFieldTypeEnum,
 	FamilyMemberStatusEnum
@@ -18,6 +19,7 @@ export const members = pgTable('members', {
 	phone: text('phone'),
 	referralCode: text('referral_code').notNull(),
 	gender: text('gender'),
+	addresses: jsonb('addresses').$type<MemberAddress[]>().notNull().default(sql`'[]'::jsonb`),
 	dob: timestamp('dob', { withTimezone: true, mode: 'date' }).default(sql`NULL`),
 	stripeCustomerId: text('stripe_customer_id'),
 	setupCompleted: boolean('setup_completed').notNull().default(false),

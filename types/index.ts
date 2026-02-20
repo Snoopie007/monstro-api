@@ -29,6 +29,5 @@ export * from "./tag";
 export * from "./tax";
 export * from "./transaction";
 export * from "./user";
-export * from "./vendor";
 export * from "./wallet";
-
+export * from "./vendor";
