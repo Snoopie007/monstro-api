@@ -72,6 +72,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     price: sub.pricing.price,
                     currency: sub.pricing.currency,
                     interval: sub.pricing.interval!,
+                    intervalThreshold: sub.pricing.intervalThreshold!,
                 },
                 ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
             };
@@ -86,7 +87,10 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             } else {
                 await scheduleRecursiveRenewal({
                     startDate: nextBillingAt,
-                    data: payload,
+                    data: {
+                        ...payload,
+                        recurrenceCount: 1,
+                    },
                 });
             }
         }

@@ -12,35 +12,35 @@ export function testRoutes(app: Elysia) {
 
 
             try {
-                const integration = await db.query.integrations.findFirst({
-                    where: (integration, { eq, and }) =>
-                        and(
-                            eq(
-                                integration.locationId,
-                                "acc_BpT7jEb3Q16nOPL3vo7qlw"
-                            ),
-                            eq(integration.service, "stripe")
-                        ),
-                });
-                if (!integration) {
-                    set.status = 404;
-                    return { error: "Integration not found" };
-                }
-                const stripe = new MemberStripePayments(integration.accountId);
-                stripe.setCustomer("cus_TjU6Twx5tNTTLs");
-                const res = await stripe.createPaymentIntent(
-                    1000,
-                    "pm_1SzrBsEiUYeMOEsWYAMcyFeM"
-                );
+                // const integration = await db.query.integrations.findFirst({
+                //     where: (integration, { eq, and }) =>
+                //         and(
+                //             eq(
+                //                 integration.locationId,
+                //                 "acc_BpT7jEb3Q16nOPL3vo7qlw"
+                //             ),
+                //             eq(integration.service, "stripe")
+                //         ),
+                // });
+                // if (!integration) {
+                //     set.status = 404;
+                //     return { error: "Integration not found" };
+                // }
+                // const stripe = new MemberStripePayments(integration.accountId);
+                // stripe.setCustomer("cus_TjU6Twx5tNTTLs");
+                // const res = await stripe.createPaymentIntent(
+                //     1000,
+                //     "pm_1SzrBsEiUYeMOEsWYAMcyFeM"
+                // );
 
-                return { ok: true, result: res };
+                return { ok: true, result: "test" };
             } catch (error: any) {
                 if (error instanceof Stripe.errors.StripeError) {
                     switch (error.type) {
                         case "StripeCardError":
                             const paymentIntent = error.payment_intent;
                             const lastError = paymentIntent?.last_payment_error;
-                            console.log(error.code);
+
                             await paymentQueue.add("retry:wallet", {
                                 paymentIntentId: paymentIntent?.id,
                                 attempts: 0,

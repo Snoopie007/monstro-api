@@ -183,6 +183,7 @@ export async function locationReservations(app: Elysia) {
                         throw new Error("Failed to create reservation");
                     }
                     if (pkg) {
+
                         await tx.update(memberPackages).set({
                             totalClassAttended: Math.max((pkg?.totalClassAttended || 0) + 1, 0)
                         }).where(eq(memberPackages.id, memberPlanId));

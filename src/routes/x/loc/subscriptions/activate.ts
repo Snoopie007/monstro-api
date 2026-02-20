@@ -103,6 +103,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     price: sub.pricing.price,
                     currency: sub.pricing.currency,
                     interval: sub.pricing.interval!,
+                    intervalThreshold: sub.pricing.intervalThreshold!,
                 },
                 ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
             };
@@ -117,7 +118,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             } else {
                 await scheduleRecursiveRenewal({
                     startDate: nextBillingAt,
-                    data: payload,
+                    data: {
+                        ...payload,
+                        recurrenceCount: 1,
+                    },
                 });
             }
 
@@ -332,6 +336,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 price: sub.pricing.price,
                 currency: sub.pricing.currency,
                 interval: sub.pricing.interval!,
+                intervalThreshold: sub.pricing.intervalThreshold!,
             },
             ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
         };
@@ -352,7 +357,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 await withTimeout(
                     scheduleRecursiveRenewal({
                         startDate: nextBillingAt,
-                        data: payload,
+                        data: {
+                            ...payload,
+                            recurrenceCount: 1,
+                        },
                     }),
                     15000,
                     "Redis timeout scheduling recursive renewal"
