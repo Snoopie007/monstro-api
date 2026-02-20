@@ -35,6 +35,5 @@ export const userNotifications = pgTable("user_notifications", {
     index("idx_user_notifications_enabled").on(t.enabled).where(sql`${t.enabled} = true`),
     index("idx_user_notifications_token").on(t.token),
     index("idx_user_notifications_native_token").on(t.nativeToken),
-    unique('user_notifications_user_device_unique').on(t.userId, t.deviceId),
 ]);
 
