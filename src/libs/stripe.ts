@@ -57,7 +57,7 @@ abstract class BaseStripePayments {
 
     constructor(key: string) {
         this._stripe = new Stripe(key, {
-            apiVersion: STRIPE_API_VERSION,
+            apiVersion: STRIPE_API_VERSION as any,
             timeout: 30000,
             maxNetworkRetries: 1,
             appInfo: {
@@ -638,34 +638,83 @@ class MemberStripePayments extends BaseStripePayments {
         payment_intent?: string;
         charge?: string;
         amount?: number;
-        reverseTransfer?: boolean;
-        allowNoReverseTransferFallback?: boolean;
     }): Promise<Stripe.Refund> {
-        const requestedReverseTransfer = params.reverseTransfer ?? true;
-        const buildPayload = (reverseTransfer: boolean): Stripe.RefundCreateParams => ({
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
+
+        const refundContext = await this.resolveRefundContext(params);
+        const availableBalance = await this.getConnectedAvailableBalance(refundContext.currency);
+        if (availableBalance - refundContext.amount < 0) {
+            const error = new Error("Connected Stripe account has insufficient available balance to reverse this transfer.");
+            (error as Error & { code?: string }).code = "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE";
+            throw error;
+        }
+
+        return this._stripe.refunds.create({
             ...(params.payment_intent && { payment_intent: params.payment_intent }),
             ...(params.charge && { charge: params.charge }),
             ...(typeof params.amount === "number" && params.amount > 0 && { amount: params.amount }),
             refund_application_fee: false,
-            reverse_transfer: reverseTransfer,
+            reverse_transfer: true,
             reason: "requested_by_customer",
         });
+    }
 
-        try {
-            return await this._stripe.refunds.create(buildPayload(requestedReverseTransfer));
-        } catch (error) {
-            const canFallback =
-                requestedReverseTransfer
-                && (params.allowNoReverseTransferFallback ?? true)
-                && error instanceof Stripe.errors.StripeInvalidRequestError
-                && /reverse_transfer|insufficient funds/i.test(error.message || "");
+    private async getConnectedAvailableBalance(currency: string): Promise<number> {
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
 
-            if (!canFallback) {
-                throw error;
+        const balance = await this._stripe.balance.retrieve({}, {
+            stripeAccount: this._accountId,
+        });
+
+        const normalizedCurrency = currency.toLowerCase();
+        return balance.available
+            .filter((entry) => entry.currency.toLowerCase() === normalizedCurrency)
+            .reduce((sum, entry) => sum + entry.amount, 0);
+    }
+
+    private async resolveRefundContext(params: {
+        payment_intent?: string;
+        charge?: string;
+        amount?: number;
+    }): Promise<{ amount: number; currency: string }> {
+        if (typeof params.amount === "number" && params.amount > 0) {
+            if (params.charge) {
+                const charge = await this._stripe.charges.retrieve(params.charge);
+                if ("deleted" in charge && charge.deleted) {
+                    throw new Error("Charge not found for refund");
+                }
+                return { amount: params.amount, currency: charge.currency };
             }
 
-            return await this._stripe.refunds.create(buildPayload(false));
+            if (params.payment_intent) {
+                const paymentIntent = await this._stripe.paymentIntents.retrieve(params.payment_intent);
+                return { amount: params.amount, currency: paymentIntent.currency };
+            }
+
+            throw new Error("Either charge or payment_intent is required to determine refund currency");
         }
+
+        if (params.charge) {
+            const charge = await this._stripe.charges.retrieve(params.charge);
+            if ("deleted" in charge && charge.deleted) {
+                throw new Error("Charge not found for refund");
+            }
+            return { amount: charge.amount, currency: charge.currency };
+        }
+
+        if (params.payment_intent) {
+            const paymentIntent = await this._stripe.paymentIntents.retrieve(params.payment_intent);
+            const amount = paymentIntent.amount_received && paymentIntent.amount_received > 0
+                ? paymentIntent.amount_received
+                : paymentIntent.amount;
+            return { amount, currency: paymentIntent.currency };
+        }
+
+        throw new Error("Either charge or payment_intent is required to create a refund");
     }
 
 

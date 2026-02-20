@@ -10,6 +10,7 @@ import { locMembers } from './loc/locMembers';
 import { xSubscriptions } from './loc/subscriptions/root';
 import { xPromos } from './loc/promos/root';
 import { xTransactions } from './loc/transactions/root';
+import { xMigrations } from './loc/migrate/root';
 
 export const XRoutes = new Elysia()
     .use(AuthXMiddleware)
@@ -23,6 +24,7 @@ export const XRoutes = new Elysia()
         app.use(xSubscriptions);
         app.use(xPromos);
         app.use(xTransactions);
+        app.use(xMigrations);
         app.group('/members', (app) => app.use(locMembers));
         return app;
     })
