@@ -24,7 +24,6 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                 transactionId?: string;
                 paymentIntentId?: string;
                 amount?: number;
-                message?: string;
             } = { executed: false };
 
             if (refund?.enabled) {
@@ -47,79 +46,73 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                     .orderBy(desc(transactions.chargeDate), desc(transactions.created))
                     .limit(1);
 
-                if (latestPaidTransaction) {
-                    const paymentIntentId = latestPaidTransaction.paymentIntentId
-                        || (latestPaidTransaction.metadata as { paymentIntentId?: string } | null)?.paymentIntentId;
-
-                    if (paymentIntentId) {
-                        const integration = await db.query.integrations.findFirst({
-                            where: (integration, { and, eq }) => and(
-                                eq(integration.locationId, lid),
-                                eq(integration.service, "stripe")
-                            ),
-                            columns: {
-                                accountId: true,
-                            },
-                        });
-
-                        if (!integration?.accountId) {
-                            refundResult = {
-                                executed: false,
-                                message: "Stripe integration not found",
-                            };
-                        } else {
-                            const stripe = new MemberStripePayments(integration.accountId);
-                            const requestedAmount =
-                                refund.amountType === "partial" && typeof refund.amount === "number"
-                                    ? Math.max(0, Math.min(refund.amount, latestPaidTransaction.total))
-                                    : latestPaidTransaction.total;
-
-                            if (requestedAmount > 0) {
-                                try {
-                                    await stripe.createRefund({
-                                        payment_intent: paymentIntentId,
-                                        amount: requestedAmount,
-                                    });
-
-                                    await db.update(transactions).set({
-                                        refunded: true,
-                                        refundedAmount: requestedAmount,
-                                        updated: new Date(),
-                                    }).where(eq(transactions.id, latestPaidTransaction.id));
-
-                                    refundResult = {
-                                        executed: true,
-                                        transactionId: latestPaidTransaction.id,
-                                        paymentIntentId,
-                                        amount: requestedAmount,
-                                    };
-                                } catch (error) {
-                                    refundResult = {
-                                        executed: false,
-                                        message: error instanceof Error
-                                            ? error.message
-                                            : "Failed to process refund",
-                                    };
-                                }
-                            } else {
-                                refundResult = {
-                                    executed: false,
-                                    message: "Refund amount must be greater than 0",
-                                };
-                            }
-                        }
-                    } else {
-                        refundResult = {
-                            executed: false,
-                            message: "No payment intent found for latest transaction",
-                        };
-                    }
-                } else {
-                    refundResult = {
-                        executed: false,
-                        message: "No paid transaction found for this subscription",
-                    };
+                if (!latestPaidTransaction) {
+                    return status(400, { error: "No paid transaction found for this subscription" });
                 }
+
+                const paymentIntentId = latestPaidTransaction.paymentIntentId
+                    || (latestPaidTransaction.metadata as { paymentIntentId?: string } | null)?.paymentIntentId;
+
+                if (!paymentIntentId) {
+                    return status(400, { error: "No payment intent found for latest transaction" });
+                }
+
+                const integration = await db.query.integrations.findFirst({
+                    where: (integration, { and, eq }) => and(
+                        eq(integration.locationId, lid),
+                        eq(integration.service, "stripe")
+                    ),
+                    columns: {
+                        accountId: true,
+                    },
+                });
+
+                if (!integration?.accountId) {
+                    return status(404, { error: "Stripe integration not found" });
+                }
+
+                const stripe = new MemberStripePayments(integration.accountId);
+                const requestedAmount =
+                    refund.amountType === "partial" && typeof refund.amount === "number"
+                        ? Math.max(0, Math.min(refund.amount, latestPaidTransaction.total))
+                        : latestPaidTransaction.total;
+
+                if (requestedAmount <= 0) {
+                    return status(400, { error: "Refund amount must be greater than 0" });
+                }
+
+                try {
+                    await stripe.createRefund({
+                        payment_intent: paymentIntentId,
+                        amount: requestedAmount,
+                    });
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : "Failed to process refund";
+                    const code = typeof error === "object"
+                        && error !== null
+                        && "code" in error
+                        && typeof (error as { code?: unknown }).code === "string"
+                        ? (error as { code: string }).code
+                        : undefined;
+
+                    return status(409, {
+                        error: message,
+                        ...(code ? { code } : {}),
+                    });
+                }
+
+                await db.update(transactions).set({
+                    refunded: true,
+                    refundedAmount: requestedAmount,
+                    updated: new Date(),
+                }).where(eq(transactions.id, latestPaidTransaction.id));
+
+                refundResult = {
+                    executed: true,
+                    transactionId: latestPaidTransaction.id,
+                    paymentIntentId,
+                    amount: requestedAmount,
+                };
             }
 
             await db.update(memberSubscriptions).set({
