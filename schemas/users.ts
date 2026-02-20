@@ -1,5 +1,5 @@
-import { text, timestamp, pgTable, uuid, index, boolean, unique, integer } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { boolean, index, integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -20,9 +20,9 @@ export const userNotifications = pgTable("user_notifications", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     platform: text("platform", { enum: ["ios", "android"] }).notNull(),
-    token: text("token").notNull().unique(),
-    deviceModelId: text("device_model_id"),
-    deviceName: text("device_name"),
+    token: text("token").notNull(),
+    nativeToken: text("native_token").notNull(),
+    deviceId: text("device_id").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -32,4 +32,7 @@ export const userNotifications = pgTable("user_notifications", {
     index("idx_user_notifications_user_platform").on(t.userId, t.platform),
     index("idx_user_notifications_enabled").on(t.enabled).where(sql`${t.enabled} = true`),
     index("idx_user_notifications_token").on(t.token),
+    index("idx_user_notifications_native_token").on(t.nativeToken),
+    unique("unique_user_notification_device_id").on(t.userId, t.deviceId),
 ]);
+
