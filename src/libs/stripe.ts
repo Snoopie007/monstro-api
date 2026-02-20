@@ -1,6 +1,6 @@
 import type { PaymentType } from "@subtrees/types";
 
-import { addMonths } from "date-fns";
+import { addMonths, addYears } from "date-fns";
 import Stripe from "stripe";
 import { BASE_MONSTRO_X_URL } from "@subtrees/emails/_shared/data";
 
@@ -337,8 +337,10 @@ abstract class BaseStripePayments {
 }
 
 class VendorStripePayments extends BaseStripePayments {
+    private _secretKey: string;
     constructor(secretKey?: string) {
         super(secretKey || process.env.STRIPE_SECRET_KEY!);
+        this._secretKey = secretKey || process.env.STRIPE_SECRET_KEY!;
     }
 
     /**
@@ -381,6 +383,88 @@ class VendorStripePayments extends BaseStripePayments {
         };
     }
 
+    /**
+     * Create a reserve hold strip do not provide this in the sdk.
+     * @param accountId - The account id
+     * @param percentage - The percentage of the hold
+     * @param lid - The location id
+     * @returns The reserve hold
+     */
+    async createReserveHold(props: {
+        accountId: string;
+        amount: number;
+        lid: string;
+        releaseAfter: Date;
+        source?: 'card' | 'bank_account';
+    }) {
+
+        const { accountId, amount, lid, releaseAfter, source } = props;
+        const res = await fetch("https://api.stripe.com/v1/reserve/holds", {
+            method: "POST",
+            headers: {
+                Authorization: `Basic ${Buffer.from(this._secretKey + ":").toString("base64")}`,
+                "Stripe-Version": "2026-01-28.preview",
+                "Stripe-Account": accountId,
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: JSON.stringify({
+                amount,
+                currency: "usd",
+                release_schedule: {
+                    release_after: Math.floor(releaseAfter.getTime() / 1000),
+                },
+                metadata: {
+                    lid
+                },
+                ...(source && { source_type: source }),
+            }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            console.log(data);
+        }
+        return data;
+    }
+
+    /**
+     * Create a reserve plan
+     * @param accountId - The account id
+     * @param percentage - The percentage of the hold
+     * @param lid - The location id
+     * @returns The reserve plan
+     */
+    async createReservePlan(accountId: string, percentage: number, lid: string) {
+
+        const now = new Date();
+        const expiresOn = addYears(now, 1);
+        const res = await fetch("https://api.stripe.com/v1/reserve/holds", {
+            method: "POST",
+            headers: {
+                Authorization: `Basic ${Buffer.from(this._secretKey + ":").toString("base64")}`,
+                'Stripe-Version': "2026-01-28.preview",
+                'Stripe-Account': accountId,
+                'Content-Type': "application/x-www-form-urlencoded",
+            },
+            body: JSON.stringify({
+                percentage,
+                type: "rolling_release",
+                currency: "usd",
+                rolling_release: {
+                    days_after_charge: 7,
+                },
+                metadata: {
+                    lid
+                }
+            }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            console.log(data);
+        }
+        return data;
+    }
 
     async createScaleUpgrade(
         metadata: Record<string, any>,
