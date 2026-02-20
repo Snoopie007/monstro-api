@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 import { cn } from '@/libs/utils'
 import type { CustomFieldType } from '@/types/member'
-import type { NewCustomField } from './ImportStepperPage'
+import type { NewCustomField } from '@/types/migration'
 
 interface UnmappedColumnsSectionProps {
     newCustomFields: NewCustomField[]
@@ -125,9 +125,9 @@ export function UnmappedColumnsSection({
                             <div className='flex-1 min-w-0'>
                                 <div className='flex items-center gap-1 flex-wrap'>
                                     {field.sampleValues.length > 0 ? (
-                                        field.sampleValues.map((value, idx) => (
+                                        field.sampleValues.map((value) => (
                                             <Badge
-                                                key={idx}
+                                                key={`${field.csvColumn}-${value}`}
                                                 variant='secondary'
                                                 className='text-[10px] px-1.5 py-0 max-w-[100px] truncate font-normal'
                                             >

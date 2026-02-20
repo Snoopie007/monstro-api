@@ -1,14 +1,18 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
-import { CheckCircle2, AlertCircle, Loader2, HelpCircle } from 'lucide-react'
+import { Dispatch, SetStateAction, useCallback, useMemo } from 'react'
+import { CheckCircle2, AlertCircle, HelpCircle, Sparkles, Loader2 } from 'lucide-react'
 import { Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 import { cn } from '@/libs/utils'
 import { Badge } from '@/components/ui'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui'
 import { UnmappedColumnsSection } from './UnmappedColumnsSection'
+import { AiMappingPanel } from './AiMappingPanel'
+import { AiDataQualityPanel } from './AiDataQualityPanel'
 import type { CustomFieldDefinition } from '@/types/member'
-import type { NewCustomField } from './ImportStepperPage'
+import type { NewCustomField } from '@/types/migration'
+import type { MigrationAnalysisResult } from '@/hooks/useMigrations'
+import { REQUIRED_FIELDS, OPTIONAL_FIELDS, AUTO_APPLY_AI_CONFIDENCE } from '@/constants/migration'
 
 interface MapFieldsStepProps {
     headers: string[]
@@ -23,38 +27,16 @@ interface MapFieldsStepProps {
     previewData: Record<string, string>[]
     includeCustomFields: boolean
     setIncludeCustomFields: Dispatch<SetStateAction<boolean>>
+    aiAnalysisResult?: MigrationAnalysisResult | null
+    aiAnalysisError?: string | null
+    isAiAnalyzing?: boolean
+    onAiAnalyze?: () => Promise<void>
+    onApplyAiFixes?: () => void
+    aiFixesPendingCount?: number
+    aiFixesAppliedCount?: number
 }
 
-const requiredFields = [
-    { key: 'firstName', label: 'First Name', description: 'Member\'s first name' },
-    { key: 'lastName', label: 'Last Name', description: 'Member\'s last name' },
-    { key: 'email', label: 'Email', description: 'Member\'s email address' },
-    { key: 'phone', label: 'Phone', description: 'Member\'s phone number' },
-    { key: 'lastRenewalDate', label: 'Last Renewal Date', description: 'Date of last membership renewal (YYYY-MM-DD)' },
-]
 
-const optionalFields = [
-    {
-        key: 'pricingPlanId',
-        label: 'Pricing Plan ID',
-        description: 'Auto-assign members to pricing options via CSV values (advanced)',
-        tooltip: 'When mapped, each member will be automatically assigned to the pricing option specified in this column. This disables manual plan selection in the next step. Values should be valid pricing option IDs from your existing plans.'
-    },
-    { key: 'classCredits', label: 'Class Credits', description: 'Number of class credits (optional)' },
-    {
-        key: 'paymentTermsLeft',
-        label: 'Payment Terms Left',
-        description: 'Remaining payment terms (optional)',
-        tooltip: 'If Term End Date is also provided, it will take precedence over this value'
-    },
-    { key: 'backdateStartDate', label: 'Backdate Start Date', description: 'Original start date for backdating (YYYY-MM-DD, optional)' },
-    {
-        key: 'termEndDate',
-        label: 'Term End Date',
-        description: 'End date of current plan term (YYYY-MM-DD, optional)',
-        tooltip: 'If provided, this will override the Payment Terms Left value'
-    },
-]
 
 export function MapFieldsStep({
     headers,
@@ -69,13 +51,19 @@ export function MapFieldsStep({
     previewData,
     includeCustomFields,
     setIncludeCustomFields,
+    aiAnalysisResult,
+    aiAnalysisError,
+    isAiAnalyzing,
+    onAiAnalyze,
+    onApplyAiFixes,
+    aiFixesPendingCount = 0,
+    aiFixesAppliedCount = 0,
 }: MapFieldsStepProps) {
-    const requiredMappedCount = requiredFields.filter(field => fieldMapping[field.key]).length
+    const requiredMappedCount = REQUIRED_FIELDS.filter(field => fieldMapping[field.key]).length
     const customMappedCount = existingCustomFields.filter(field => customFieldMapping[field.id]).length
-    const optionalMappedCount = optionalFields.filter(field => fieldMapping[field.key]).length
+    const optionalMappedCount = OPTIONAL_FIELDS.filter(field => fieldMapping[field.key]).length
 
-    // Get all mapped columns to exclude from dropdowns
-    const getMappedColumns = () => {
+    const mappedColumns = useMemo(() => {
         const mapped = new Set<string>()
         Object.values(fieldMapping).forEach(col => {
             if (col) mapped.add(col)
@@ -84,17 +72,89 @@ export function MapFieldsStep({
             if (col) mapped.add(col)
         })
         return mapped
-    }
+    }, [fieldMapping, customFieldMapping])
 
-    const mappedColumns = getMappedColumns()
-
-    // Get available headers for a specific field (current value + unmapped)
-    const getAvailableHeaders = (currentValue: string | undefined) => {
+    const getAvailableHeaders = useCallback((currentValue: string | undefined) => {
         return headers.filter(h => h && (h === currentValue || !mappedColumns.has(h)))
-    }
+    }, [headers, mappedColumns])
+
+    const aiSuggestionByField = useMemo(() => {
+        const suggestions: Record<string, { csvHeader: string; confidence: number; reasoning: string }> = {}
+
+        if (!aiAnalysisResult?.columnMapping) return suggestions
+
+        for (const [csvHeader, mapping] of Object.entries(aiAnalysisResult.columnMapping)) {
+            if (!mapping.suggestedField) continue
+
+            const existing = suggestions[mapping.suggestedField]
+            if (!existing || mapping.confidence > existing.confidence) {
+                suggestions[mapping.suggestedField] = {
+                    csvHeader,
+                    confidence: mapping.confidence,
+                    reasoning: mapping.reasoning,
+                }
+            }
+        }
+
+        return suggestions
+    }, [aiAnalysisResult])
+
+    const applyAiSuggestions = useCallback(() => {
+        if (!aiAnalysisResult?.columnMapping) return
+        
+        const newMapping: Record<string, string> = { ...fieldMapping }
+        
+        for (const [csvHeader, mapping] of Object.entries(aiAnalysisResult.columnMapping)) {
+            if (mapping.suggestedField && mapping.confidence >= AUTO_APPLY_AI_CONFIDENCE) {
+                const existingMapping = Object.entries(newMapping).find(([, col]) => col === csvHeader)
+                if (existingMapping) {
+                    delete newMapping[existingMapping[0]]
+                }
+                newMapping[mapping.suggestedField] = csvHeader
+            }
+        }
+        
+        setFieldMapping(newMapping)
+    }, [aiAnalysisResult, fieldMapping, setFieldMapping])
+
+    const getConfidenceColor = useCallback((confidence: number) => {
+        if (confidence >= 0.9) return 'text-green-500'
+        if (confidence >= AUTO_APPLY_AI_CONFIDENCE) return 'text-yellow-500'
+        return 'text-orange-500'
+    }, [])
+
+    const highConfidenceSuggestionCount = useMemo(() => {
+        return Object.values(aiAnalysisResult?.columnMapping || {}).filter(m => m.confidence >= AUTO_APPLY_AI_CONFIDENCE).length
+    }, [aiAnalysisResult])
+
+    const valueIssueEntries = Object.entries(aiAnalysisResult?.valueIssues || {})
+    const aiIssuesCount = valueIssueEntries.reduce((sum, [, issues]) => sum + issues.length, 0)
+    const aiIssueColumnsCount = valueIssueEntries.filter(([, issues]) => issues.length > 0).length
+    const aiIssueExamples = valueIssueEntries
+        .flatMap(([columnName, issues]) => issues.map(issue => ({ columnName, ...issue })))
+        .slice(0, 3)
 
     return (
         <div className='space-y-8'>
+            <AiMappingPanel
+                headersCount={headers.length}
+                aiAnalysisResult={aiAnalysisResult}
+                aiAnalysisError={aiAnalysisError}
+                isAiAnalyzing={isAiAnalyzing}
+                onAiAnalyze={onAiAnalyze}
+                onApplySuggestions={applyAiSuggestions}
+                highConfidenceCount={highConfidenceSuggestionCount}
+            />
+
+            <AiDataQualityPanel
+                aiIssuesCount={aiIssuesCount}
+                aiIssueColumnsCount={aiIssueColumnsCount}
+                aiIssueExamples={aiIssueExamples}
+                aiFixesPendingCount={aiFixesPendingCount}
+                aiFixesAppliedCount={aiFixesAppliedCount}
+                onApplyAiFixes={onApplyAiFixes}
+            />
+
             {/* Required Fields Section */}
             <div className='space-y-4'>
                 <div className='flex items-center justify-between'>
@@ -106,18 +166,19 @@ export function MapFieldsStep({
                     </div>
                     <div className={cn(
                         'text-sm font-medium px-3 py-1 rounded-full',
-                        requiredMappedCount === requiredFields.length
+                        requiredMappedCount === REQUIRED_FIELDS.length
                             ? 'bg-green-500/10 text-green-600'
                             : 'bg-foreground/5 text-muted-foreground'
                     )}>
-                        {requiredMappedCount}/{requiredFields.length} mapped
+                        {requiredMappedCount}/{REQUIRED_FIELDS.length} mapped
                     </div>
                 </div>
 
                 <div className='space-y-2'>
-                    {requiredFields.map((field) => {
+                    {REQUIRED_FIELDS.map((field) => {
                         const isMapped = !!fieldMapping[field.key]
                         const availableHeaders = getAvailableHeaders(fieldMapping[field.key])
+                        const aiSuggestion = aiSuggestionByField[field.key] || null
 
                         return (
                             <div
@@ -142,6 +203,28 @@ export function MapFieldsStep({
                                         <Badge variant='destructive' className='text-[10px] px-1.5 py-0'>Required</Badge>
                                     </div>
                                     <div className='text-xs text-muted-foreground'>{field.description}</div>
+                                    {aiSuggestion && !isMapped && (
+                                        <div className='flex items-center gap-1.5 mt-1'>
+                                            <Sparkles className={cn('size-3', getConfidenceColor(aiSuggestion.confidence))} />
+                                            <span className='text-xs text-muted-foreground'>
+                                                AI suggests: <span className='font-medium'>{aiSuggestion.csvHeader}</span>
+                                            </span>
+                                            <Badge variant='outline' className='text-[10px] h-4 px-1'>
+                                                {Math.round(aiSuggestion.confidence * 100)}%
+                                            </Badge>
+                                        </div>
+                                    )}
+                                    {aiSuggestion && isMapped && fieldMapping[field.key] === aiSuggestion.csvHeader && (
+                                        <div className='flex items-center gap-1.5 mt-1'>
+                                            <Sparkles className='size-3 text-emerald-500' />
+                                            <span className='text-xs text-muted-foreground'>
+                                                AI mapped this column
+                                            </span>
+                                            <Badge variant='outline' className='text-[10px] h-4 px-1 text-muted-foreground border-border'>
+                                                {Math.round(aiSuggestion.confidence * 100)}% confidence
+                                            </Badge>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className='flex-1 max-w-[200px]'>
                                     <Select
@@ -183,14 +266,15 @@ export function MapFieldsStep({
                             ? 'bg-blue-500/10 text-blue-600'
                             : 'bg-foreground/5 text-muted-foreground'
                     )}>
-                        {optionalMappedCount}/{optionalFields.length} mapped
+                        {optionalMappedCount}/{OPTIONAL_FIELDS.length} mapped
                     </div>
                 </div>
 
                 <div className='space-y-2'>
-                    {optionalFields.map((field) => {
+                    {OPTIONAL_FIELDS.map((field) => {
                         const isMapped = !!fieldMapping[field.key]
                         const availableHeaders = getAvailableHeaders(fieldMapping[field.key])
+                        const aiSuggestion = aiSuggestionByField[field.key] || null
 
                         return (
                             <div
@@ -227,6 +311,28 @@ export function MapFieldsStep({
                                         )}
                                     </div>
                                     <div className='text-xs text-muted-foreground'>{field.description}</div>
+                                    {aiSuggestion && !isMapped && (
+                                        <div className='flex items-center gap-1.5 mt-1'>
+                                            <Sparkles className={cn('size-3', getConfidenceColor(aiSuggestion.confidence))} />
+                                            <span className='text-xs text-muted-foreground'>
+                                                AI suggests: <span className='font-medium'>{aiSuggestion.csvHeader}</span>
+                                            </span>
+                                            <Badge variant='outline' className='text-[10px] h-4 px-1'>
+                                                {Math.round(aiSuggestion.confidence * 100)}%
+                                            </Badge>
+                                        </div>
+                                    )}
+                                    {aiSuggestion && isMapped && fieldMapping[field.key] === aiSuggestion.csvHeader && (
+                                        <div className='flex items-center gap-1.5 mt-1'>
+                                            <Sparkles className='size-3 text-emerald-500' />
+                                            <span className='text-xs text-muted-foreground'>
+                                                AI mapped this column
+                                            </span>
+                                            <Badge variant='outline' className='text-[10px] h-4 px-1 text-muted-foreground border-border'>
+                                                {Math.round(aiSuggestion.confidence * 100)}% confidence
+                                            </Badge>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className='flex-1 max-w-[200px]'>
                                     <Select

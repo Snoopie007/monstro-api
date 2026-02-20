@@ -1,12 +1,13 @@
 'use client'
 
-import { RefObject, useEffect, useState } from 'react'
+import { RefObject } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { IStepperMethods } from '@/components/ui/stepper'
 
 interface StepperFooterProps {
     stepperRef: RefObject<(HTMLDivElement & IStepperMethods) | null>
+    currentStep: number
     isStep1Valid: boolean | null | undefined
     isStep2Valid: boolean
     isImporting: boolean
@@ -14,22 +15,11 @@ interface StepperFooterProps {
 
 export function StepperFooter({
     stepperRef,
+    currentStep,
     isStep1Valid,
     isStep2Valid,
     isImporting,
 }: StepperFooterProps) {
-    const [currentStep, setCurrentStep] = useState(1)
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (stepperRef.current) {
-                setCurrentStep(stepperRef.current.currentStep)
-            }
-        }, 100)
-
-        return () => clearInterval(interval)
-    }, [stepperRef])
-
     const handleNext = () => {
         stepperRef.current?.nextStep()
     }

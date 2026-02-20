@@ -12,9 +12,6 @@ interface CalendarFiltersProps {
   onFilterChange: (planIds: string[]) => void;
 }
 
-
-
-
 export function CalendarFilters({
   locationId,
   selectedPlanIds,
@@ -40,14 +37,6 @@ export function CalendarFilters({
     }
   };
 
-  if (error) {
-    return (
-      <div className="text-sm text-muted-foreground text-center py-4">
-        Failed to load plans
-      </div>
-    );
-  }
-
   const allSelected = useMemo(() => {
     if (!plans) return false;
     return selectedPlanIds.length === plans.length;
@@ -57,6 +46,14 @@ export function CalendarFilters({
     if (!plans) return false;
     return selectedPlanIds.length > 0 && selectedPlanIds.length < plans.length;
   }, [selectedPlanIds, plans]);
+
+  if (error) {
+    return (
+      <div className="text-sm text-muted-foreground text-center py-4">
+        Failed to load plans
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-foreground/10 bg-background p-4 space-y-4">

@@ -1,21 +1,23 @@
 'use client'
 
-import { Dispatch, SetStateAction, useState, useMemo, useEffect } from 'react'
-import { Loader2, Users, FileSpreadsheet, CheckCircle2, Plus, Layers, ChevronDown, AlertCircle } from 'lucide-react'
+import { Dispatch, SetStateAction, useState, useMemo } from 'react'
+import { Loader2, Users, FileSpreadsheet, CheckCircle2, Plus, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/libs/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 import { Label, Switch } from '@/components/forms'
 import { Badge } from '@/components/ui'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/ToolTip'
 import { toast } from 'react-toastify'
 import { tryCatch, formatAmountForDisplay } from '@/libs/utils'
 import { useMemberPlans } from '@/hooks'
-import { validateImportData } from '@/libs/validation/importValidation'
 import type { MemberPlan, MemberPlanPricing } from '@subtrees/types'
 import type { CustomFieldDefinition } from '@/types/member'
-import type { NewCustomField } from './ImportStepperPage'
+import type { NewCustomField } from '@/types/migration'
+import { REQUIRED_FIELDS } from '@/constants/migration'
+import { useMigrationPreview } from '@/hooks/migration/useMigrationPreview'
+import { ValidationWarningBanner } from './ValidationWarningBanner'
+import { PreviewDataTable } from './PreviewDataTable'
+import { ValidationErrorsAccordion } from './ValidationErrorsAccordion'
 
 interface PreviewStepProps {
     lid: string
@@ -29,6 +31,7 @@ interface PreviewStepProps {
     isImporting: boolean
     setIsImporting: Dispatch<SetStateAction<boolean>>
     includeCustomFields: boolean
+    pricingIdMapping?: Record<string, Record<string, string>>
 }
 
 const displayFields = [
@@ -57,6 +60,7 @@ export function PreviewStep({
     isImporting,
     setIsImporting,
     includeCustomFields,
+    pricingIdMapping,
 }: PreviewStepProps) {
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
     const [pricingId, setPricingId] = useState<string | null>(null)
@@ -65,67 +69,47 @@ export function PreviewStep({
     const [expandedAccordion, setExpandedAccordion] = useState<number | null>(null)
     const { plans, isLoading: isLoadingPlans } = useMemberPlans(lid)
 
-    // Validation
-    const validationResult = useMemo(() => {
-        return validateImportData(fullData, {
-            fieldMapping,
-            customFieldMapping,
-            customFields: [
-                ...existingCustomFields.map(f => ({ key: f.id, type: f.type })),
-                ...newCustomFields.filter(f => f.selected).map(f => ({ key: f.csvColumn, type: f.fieldType }))
-            ],
-            plans: plans || [],
-            isLoadingPlans
-        })
-    }, [fullData, fieldMapping, customFieldMapping, existingCustomFields, newCustomFields, plans, isLoadingPlans])
+    const {
+        validationResult,
+        mappedExistingFields,
+        selectedNewFields,
+        totalCustomFieldsCount,
+        getMappedValue,
+        getCustomFieldValue,
+    } = useMigrationPreview({
+        fullData,
+        previewData,
+        fieldMapping,
+        customFieldMapping,
+        existingCustomFields,
+        newCustomFields,
+        includeCustomFields,
+        plans: plans || [],
+        isLoadingPlans,
+        pricingIdMapping,
+    })
 
     const { totalRows, validRows, invalidRows, errorsByRow } = validationResult
+    const requiredMappedCount = REQUIRED_FIELDS.filter(field => fieldMapping[field.key]).length
 
     // Derived state for selected plan and pricing options
-    const selectedPlan = useMemo(() => {
-        return plans?.find((p: MemberPlan) => p.id === selectedPlanId)
-    }, [plans, selectedPlanId])
+    const selectedPlan = useMemo(() => plans?.find((p: MemberPlan) => p.id === selectedPlanId), [plans, selectedPlanId])
 
     const pricingOptions = selectedPlan?.pricings || []
 
-    // Reset pricing when plan changes
-    useEffect(() => {
-        setPricingId(null)
-    }, [selectedPlanId])
-
-    const getMappedValue = (row: Record<string, string>, fieldKey: string) => {
-        const csvColumn = fieldMapping[fieldKey]
-        return csvColumn ? row[csvColumn] || '-' : '-'
-    }
-
-    const getCustomFieldValue = (row: Record<string, string>, fieldId: string) => {
-        const csvColumn = customFieldMapping[fieldId]
-        return csvColumn ? row[csvColumn] || '-' : '-'
-    }
-
-    // Get mapped existing custom fields (only when includeCustomFields is enabled)
-    const mappedExistingFields = includeCustomFields
-        ? existingCustomFields.filter(f => customFieldMapping[f.id])
-        : []
-
-    // Get selected new custom fields (only when includeCustomFields is enabled)
-    const selectedNewFields = includeCustomFields
-        ? newCustomFields.filter(f => f.selected)
-        : []
-
-    // Count total custom fields
-    const totalCustomFieldsCount = mappedExistingFields.length + selectedNewFields.length
-
     async function handleImport() {
-        if (!file) {
-            toast.error('No file selected')
+        if (!fullData.length) {
+            toast.error('No parsed rows available to import')
             return
         }
 
         setIsImporting(true)
 
         const formData = new FormData()
-        formData.append('file', file)
+        if (file) {
+            formData.append('file', file)
+        }
+        formData.append('rows', JSON.stringify(fullData))
         formData.append('fieldMapping', JSON.stringify(fieldMapping))
         // Only pass pricingId when pricingPlanId is NOT mapped (per-row assignment)
         if (pricingId && !fieldMapping.pricingPlanId) {
@@ -135,6 +119,11 @@ export function PreviewStep({
             formData.append('planType', selectedPlan.type)
         }
         formData.append('requirePayment', requirePayment.toString())
+
+        // Pass pricing ID mapping if available (for AI-matched pricing)
+        if (pricingIdMapping && Object.keys(pricingIdMapping).length > 0) {
+            formData.append('pricingIdMapping', JSON.stringify(pricingIdMapping))
+        }
 
         // Only send custom field data if toggle is enabled
         if (includeCustomFields) {
@@ -214,16 +203,7 @@ export function PreviewStep({
 
     return (
         <div className='space-y-6'>
-            {/* Validation Warning */}
-            {invalidRows > 0 && (
-                <div className='p-4 rounded-lg bg-amber-500/5 border border-amber-500/20 flex items-start gap-3'>
-                    <AlertCircle className='size-5 text-amber-600 flex-shrink-0 mt-0.5' />
-                    <div>
-                        <div className='text-sm font-medium text-amber-600'>{invalidRows} row{invalidRows > 1 ? 's' : ''} will be skipped</div>
-                        <p className='text-xs text-amber-600/70 mt-1'>These rows contain invalid data and will not be imported</p>
-                    </div>
-                </div>
-            )}
+            <ValidationWarningBanner invalidRows={invalidRows} />
 
             {/* Stats */}
             <div className={cn('grid gap-4', includeCustomFields ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3')}>
@@ -250,7 +230,7 @@ export function PreviewStep({
                         <FileSpreadsheet className='size-5 text-blue-500' />
                     </div>
                     <div>
-                        <div className='text-2xl font-semibold'>{Object.keys(fieldMapping).length}</div>
+                        <div className='text-2xl font-semibold'>{requiredMappedCount}</div>
                         <div className='text-xs text-muted-foreground'>Required</div>
                     </div>
                 </div>
@@ -278,168 +258,24 @@ export function PreviewStep({
                 )}
             </div>
 
-            {/* Preview Table */}
-            <div className='space-y-3'>
-                <div className='text-sm font-medium'>
-                    Data Preview <span className='text-muted-foreground font-normal'>(showing first {previewData.length} rows)</span>
-                </div>
-                <div className='border border-foreground/10 rounded-lg overflow-hidden overflow-x-auto'>
-                    <Table>
-                        <TableHeader>
-                            <TableRow className='bg-foreground/5'>
-                                {displayFields
-                                    .filter(field => !field.optional || fieldMapping[field.key])
-                                    .map((field) => (
-                                        <TableHead key={field.key} className='text-xs font-medium whitespace-nowrap'>
-                                            {field.label}
-                                        </TableHead>
-                                    ))}
-                                {mappedExistingFields.map((field) => (
-                                    <TableHead key={field.id} className='text-xs font-medium whitespace-nowrap'>
-                                        <span className='flex items-center gap-1'>
-                                            {field.name}
-                                            <Badge variant='secondary' className='text-[9px] px-1 py-0'>custom</Badge>
-                                        </span>
-                                    </TableHead>
-                                ))}
-                                {selectedNewFields.map((field) => (
-                                    <TableHead key={field.csvColumn} className='text-xs font-medium whitespace-nowrap'>
-                                        <span className='flex items-center gap-1'>
-                                            {field.fieldName}
-                                            <Badge className='text-[9px] px-1 py-0 bg-purple-500'>new</Badge>
-                                        </span>
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {previewData.map((row, rowIndex) => {
-                                const rowErrors = errorsByRow.get(rowIndex) || []
-                                const errorsByColumn = new Map(rowErrors.map(e => [e.column, e.error]))
-                                
-                                return (
-                                    <TableRow key={`row-${rowIndex}`}>
-                                        {displayFields
-                                            .filter(field => !field.optional || fieldMapping[field.key])
-                                            .map((field) => {
-                                                const csvColumn = fieldMapping[field.key]
-                                                const error = csvColumn ? errorsByColumn.get(csvColumn) : undefined
-                                                const cellContent = getMappedValue(row, field.key)
+            <PreviewDataTable
+                previewData={previewData}
+                displayFields={displayFields}
+                fieldMapping={fieldMapping}
+                customFieldMapping={customFieldMapping}
+                mappedExistingFields={mappedExistingFields}
+                selectedNewFields={selectedNewFields}
+                errorsByRow={errorsByRow}
+                getMappedValue={getMappedValue}
+                getCustomFieldValue={getCustomFieldValue}
+            />
 
-                                                return (
-                                                    <TableCell
-                                                        key={field.key}
-                                                        className={cn(
-                                                            'text-sm whitespace-nowrap',
-                                                            error && 'bg-red-500/10 text-red-500'
-                                                        )}
-                                                    >
-                                                        {error ? (
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <span className='cursor-help underline'>{cellContent}</span>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>{error}</TooltipContent>
-                                                            </Tooltip>
-                                                        ) : (
-                                                            cellContent
-                                                        )}
-                                                    </TableCell>
-                                                )
-                                            })}
-                                        {mappedExistingFields.map((field) => {
-                                            const csvColumn = customFieldMapping[field.id]
-                                            const error = csvColumn ? errorsByColumn.get(csvColumn) : undefined
-                                            const cellContent = getCustomFieldValue(row, field.id)
-
-                                            return (
-                                                <TableCell
-                                                    key={field.id}
-                                                    className={cn(
-                                                        'text-sm whitespace-nowrap',
-                                                        error && 'bg-red-500/10 text-red-500'
-                                                    )}
-                                                >
-                                                    {error ? (
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <span className='cursor-help underline'>{cellContent}</span>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>{error}</TooltipContent>
-                                                        </Tooltip>
-                                                    ) : (
-                                                        cellContent
-                                                    )}
-                                                </TableCell>
-                                            )
-                                        })}
-                                        {selectedNewFields.map((field) => {
-                                            const error = errorsByColumn.get(field.csvColumn)
-                                            const cellContent = row[field.csvColumn] || '-'
-                                            
-                                            return (
-                                                <TableCell 
-                                                    key={field.csvColumn} 
-                                                    className={cn(
-                                                        'text-sm whitespace-nowrap',
-                                                        error && 'bg-red-500/10 text-red-500'
-                                                    )}
-                                                >
-                                                    {error ? (
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <span className='cursor-help underline'>{cellContent}</span>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>{error}</TooltipContent>
-                                                        </Tooltip>
-                                                    ) : (
-                                                        cellContent
-                                                    )}
-                                                </TableCell>
-                                            )
-                                        })}
-                                    </TableRow>
-                                )
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-
-            {/* Validation Issues */}
-            {invalidRows > 0 && (
-                <div className='space-y-2'>
-                    <div className='text-sm font-medium text-amber-600'>Rows That Will Be Skipped</div>
-                    <div className='border border-foreground/10 rounded-lg overflow-hidden'>
-                        {Array.from(errorsByRow.entries()).map(([rowNum, errors]) => (
-                            <div key={`error-row-${rowNum}`} className='border-b border-foreground/10 last:border-b-0'>
-                                <button
-                                    type='button'
-                                    onClick={() => setExpandedAccordion(expandedAccordion === rowNum ? null : rowNum)}
-                                    className='w-full flex items-center justify-between p-3 hover:bg-foreground/5 transition-colors'
-                                >
-                                    <div className='flex items-center gap-2'>
-                                        <AlertCircle className='size-4 text-amber-600' />
-                                        <span className='text-sm font-medium'>Row {rowNum + 1}</span>
-                                        <Badge variant='secondary' className='text-xs'>{errors.length} error{errors.length > 1 ? 's' : ''}</Badge>
-                                    </div>
-                                    <ChevronDown className={cn('size-4 transition-transform', expandedAccordion === rowNum && 'rotate-180')} />
-                                </button>
-                                {expandedAccordion === rowNum && (
-                                    <div className='px-3 pb-3 space-y-2 bg-foreground/5'>
-                                        {errors.map((error, idx) => (
-                                            <div key={`error-${rowNum}-${idx}`} className='text-xs space-y-1'>
-                                                <div className='font-medium text-foreground'>{error.column}</div>
-                                                <div className='text-muted-foreground'>{error.error}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+            <ValidationErrorsAccordion
+                invalidRows={invalidRows}
+                expandedAccordion={expandedAccordion}
+                setExpandedAccordion={setExpandedAccordion}
+                errorsByRow={errorsByRow}
+            />
 
             {/* New Fields Summary */}
             {selectedNewFields.length > 0 ? (
@@ -475,7 +311,10 @@ export function PreviewStep({
                             </Label>
                             <Select
                                 value={selectedPlanId || ''}
-                                onValueChange={setSelectedPlanId}
+                                onValueChange={(value) => {
+                                    setSelectedPlanId(value)
+                                    setPricingId(null)
+                                }}
                             >
                                 <SelectTrigger className='border-foreground/10'>
                                     <SelectValue placeholder='Select a plan' />
@@ -558,7 +397,7 @@ export function PreviewStep({
                 size='lg'
                 className='w-full'
                 onClick={handleImport}
-                disabled={isImporting || !file || isLoadingPlans}
+                disabled={isImporting || fullData.length === 0 || isLoadingPlans}
             >
                 {isLoadingPlans ? (
                     <>

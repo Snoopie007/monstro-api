@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
-import Papa from 'papaparse'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
+import { Loader2 } from 'lucide-react'
 import {
     InteractiveStepper,
     InteractiveStepperItem,
@@ -15,64 +16,86 @@ import { SelectSourceStep } from './SelectSourceStep'
 import { MapFieldsStep } from './MapFieldsStep'
 import { PreviewStep } from './PreviewStep'
 import { StepperFooter } from './StepperFooter'
-import type { CustomFieldDefinition, CustomFieldType } from '@/types/member'
-
-export type ImportSource = 'csv' | 'gohighlevel' | null
-
-export interface NewCustomField {
-    csvColumn: string
-    fieldName: string
-    fieldType: CustomFieldType
-    selected: boolean
-    sampleValues: string[]
-}
+import type { CustomFieldDefinition } from '@/types/member'
+import type { ImportSource, NewCustomField } from '@/types/migration'
+import { useCsvDataset } from '@/hooks/migration/useCsvDataset'
+import { useMigrationAnalysis } from '@/hooks/migration/useMigrationAnalysis'
+import { useMigrationFixes } from '@/hooks/migration/useMigrationFixes'
+import { AUTO_MAP_PATTERNS, AUTO_APPLY_AI_CONFIDENCE } from '@/constants/migration'
 
 interface ImportStepperPageProps {
     lid: string
 }
 
-// Infer field type from CSV values
-function inferFieldType(values: string[]): CustomFieldType {
-    const nonEmpty = values.filter(v => v?.trim())
-    if (nonEmpty.length === 0) return 'text'
-
-    // Check if all values are dates (YYYY-MM-DD or common formats)
-    const datePattern = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$/
-    if (nonEmpty.every(v => datePattern.test(v))) return 'date'
-
-    // Check if all values are numbers
-    if (nonEmpty.every(v => !isNaN(Number(v)) && v.trim() !== '')) return 'number'
-
-    // Check if all values are boolean-like
-    const boolValues = ['true', 'false', 'yes', 'no', '1', '0']
-    if (nonEmpty.every(v => boolValues.includes(v.toLowerCase()))) return 'boolean'
-
-    // Check if limited unique values (might be select)
-    const unique = new Set(nonEmpty.map(v => v.toLowerCase()))
-    if (unique.size <= 5 && nonEmpty.length >= 3) return 'select'
-
-    return 'text'
+type MappingFormValues = {
+    fieldMapping: Record<string, string>
+    customFieldMapping: Record<string, string>
+    includeCustomFields: boolean
 }
 
 export function ImportStepperPage({ lid }: ImportStepperPageProps) {
     const stepperRef = useRef<HTMLDivElement & IStepperMethods>(null)
-
+    const [currentStep, setCurrentStep] = useState(1)
     const [importSource, setImportSource] = useState<ImportSource>(null)
-    const [file, setFile] = useState<File | undefined>(undefined)
-    const [csvHeaders, setCsvHeaders] = useState<string[]>([])
-    const [csvPreviewData, setCsvPreviewData] = useState<Record<string, string>[]>([])
-    const [csvFullData, setCsvFullData] = useState<Record<string, string>[]>([])
-    const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({})
     const [isImporting, setIsImporting] = useState(false)
 
-    // Custom fields state
     const [existingCustomFields, setExistingCustomFields] = useState<CustomFieldDefinition[]>([])
-    const [customFieldMapping, setCustomFieldMapping] = useState<Record<string, string>>({})
     const [newCustomFields, setNewCustomFields] = useState<NewCustomField[]>([])
     const [isLoadingCustomFields, setIsLoadingCustomFields] = useState(true)
-    const [includeCustomFields, setIncludeCustomFields] = useState(false)
 
-    // Fetch existing custom field definitions
+    const mappingForm = useForm<MappingFormValues>({
+        defaultValues: {
+            fieldMapping: {},
+            customFieldMapping: {},
+            includeCustomFields: false,
+        },
+    })
+
+    const fieldMapping = useWatch({ control: mappingForm.control, name: 'fieldMapping' }) || {}
+    const customFieldMapping = useWatch({ control: mappingForm.control, name: 'customFieldMapping' }) || {}
+    const includeCustomFields = useWatch({ control: mappingForm.control, name: 'includeCustomFields' }) || false
+
+    const setFieldMapping = useCallback((value: React.SetStateAction<Record<string, string>>) => {
+        const current = mappingForm.getValues('fieldMapping') || {}
+        const next = typeof value === 'function' ? value(current) : value
+        mappingForm.setValue('fieldMapping', next)
+    }, [mappingForm])
+
+    const setCustomFieldMapping = useCallback((value: React.SetStateAction<Record<string, string>>) => {
+        const current = mappingForm.getValues('customFieldMapping') || {}
+        const next = typeof value === 'function' ? value(current) : value
+        mappingForm.setValue('customFieldMapping', next)
+    }, [mappingForm])
+
+    const setIncludeCustomFields = useCallback((value: React.SetStateAction<boolean>) => {
+        const current = mappingForm.getValues('includeCustomFields') || false
+        const next = typeof value === 'function' ? value(current) : value
+        mappingForm.setValue('includeCustomFields', next)
+    }, [mappingForm])
+
+    const {
+        file,
+        headers,
+        originalRows,
+        rows,
+        previewRows,
+        setRows,
+        setPreviewRows,
+        onFileChange,
+        reset: resetDataset,
+        deriveNewCustomFields,
+    } = useCsvDataset()
+
+    const analysis = useMigrationAnalysis(lid)
+    const fixes = useMigrationFixes({
+        analysisResult: analysis.aiAnalysisResult,
+        fieldMapping,
+        rows,
+        originalRows,
+        setRows,
+        setPreviewRows,
+    })
+
     useEffect(() => {
         async function fetchCustomFields() {
             try {
@@ -90,154 +113,145 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
         fetchCustomFields()
     }, [lid])
 
-    const handleFileChange = useCallback((newFile: File | undefined) => {
-        setFile(newFile)
+    const getMappedColumns = useCallback(() => {
+        const mapped = new Set<string>()
+        Object.values(fieldMapping).forEach(col => {
+            if (col) mapped.add(col)
+        })
+        Object.values(customFieldMapping).forEach(col => {
+            if (col) mapped.add(col)
+        })
+        return mapped
+    }, [fieldMapping, customFieldMapping])
 
-        if (!newFile) {
-            setCsvHeaders([])
-            setCsvPreviewData([])
-            setCsvFullData([])
-            setFieldMapping({})
-            setCustomFieldMapping({})
-            setNewCustomFields([])
-            return
+    const initializedFileKeyRef = useRef<string | null>(null)
+
+    useEffect(() => {
+        if (!file || !headers.length || !originalRows.length) return
+
+        const fileKey = `${file.name}-${file.size}-${file.lastModified}`
+        if (initializedFileKeyRef.current === fileKey) return
+        initializedFileKeyRef.current = fileKey
+
+        const autoMapping: Record<string, string> = {}
+        const lowerHeaders = headers.map(h => h.toLowerCase())
+
+        for (const [field, patterns] of Object.entries(AUTO_MAP_PATTERNS)) {
+            const matchIndex = lowerHeaders.findIndex(h => patterns.includes(h))
+            if (matchIndex !== -1) {
+                autoMapping[field] = headers[matchIndex]
+            }
         }
 
-        Papa.parse(newFile, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-                const headers = (results.meta.fields || []).filter(h => h)
-                const allData = results.data as Record<string, string>[]
-                const previewData = allData.slice(0, 10)
+        setFieldMapping(autoMapping)
+        setNewCustomFields(deriveNewCustomFields(new Set(Object.values(autoMapping))))
+    }, [file, headers, originalRows, setFieldMapping, deriveNewCustomFields])
 
-                setCsvHeaders(headers)
-                setCsvPreviewData(previewData)
-                setCsvFullData(allData)
+    useEffect(() => {
+        if (headers.length === 0) return
 
-                // Auto-map fields that match common patterns
-                const autoMapping: Record<string, string> = {}
-                const lowerHeaders = headers.map(h => h.toLowerCase())
+        const mappedColumns = getMappedColumns()
+        const nextDefaults = deriveNewCustomFields(mappedColumns)
 
-                const fieldPatterns: Record<string, string[]> = {
-                    firstName: ['firstname', 'first_name', 'first name', 'fname'],
-                    lastName: ['lastname', 'last_name', 'last name', 'lname'],
-                    email: ['email', 'e-mail', 'emailaddress', 'email_address'],
-                    phone: ['phone', 'phonenumber', 'phone_number', 'mobile', 'cell'],
-                    lastRenewalDate: ['lastrenewaldate', 'last_renewal_date', 'renewal_date', 'renewaldate'],
-                    // Auto-mapping for optional fields
-                    classCredits: ['classcredits', 'class_credits', 'credits', 'remaining_credits', 'class credits'],
-                    paymentTermsLeft: ['paymenttermsleft', 'payment_terms_left', 'terms_left', 'payments_remaining', 'terms remaining'],
-                    backdateStartDate: ['backdate', 'backdate_start', 'backdate_start_date', 'original_start', 'start_date_backdate'],
-                    termEndDate: ['term_end_date', 'termenddate', 'end_date', 'plan_end_date', 'membership_end'],
-                    pricingPlanId: ['pricing_plan_id', 'pricingplanid', 'plan_id', 'planid', 'pricing_id', 'pricingid', 'pricingoptionid', 'pricing_option_id'],
-                }
-
-                for (const [field, patterns] of Object.entries(fieldPatterns)) {
-                    const matchIndex = lowerHeaders.findIndex(h => patterns.includes(h))
-                    if (matchIndex !== -1) {
-                        autoMapping[field] = headers[matchIndex]
-                    }
-                }
-
-                setFieldMapping(autoMapping)
-
-                // Initialize new custom fields from unmapped columns
-                const mappedColumns = new Set(Object.values(autoMapping))
-                const unmappedHeaders = headers.filter(h => !mappedColumns.has(h))
-
-                const newFields: NewCustomField[] = unmappedHeaders.map(header => {
-                    const columnValues = allData.slice(0, 20).map(row => row[header])
-                    return {
-                        csvColumn: header,
-                        fieldName: header.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                        fieldType: inferFieldType(columnValues),
-                        selected: false,
-                        sampleValues: columnValues.filter(v => v?.trim()).slice(0, 3),
-                    }
-                })
-
-                setNewCustomFields(newFields)
-            },
-            error: (error) => {
-                console.error('CSV parsing error:', error)
-            },
+        setNewCustomFields(prev => {
+            const existingByColumn = new Map(prev.map(f => [f.csvColumn, f]))
+            return nextDefaults.map(field => existingByColumn.get(field.csvColumn) || field)
         })
-    }, [])
+    }, [headers, getMappedColumns, deriveNewCustomFields])
+
+    const resetMappingState = useCallback(() => {
+        mappingForm.reset({
+            fieldMapping: {},
+            customFieldMapping: {},
+            includeCustomFields: false,
+        })
+        setNewCustomFields([])
+    }, [mappingForm])
+
+    const handleFileChange = useCallback((nextFile: File | undefined) => {
+        analysis.resetAnalysis()
+        fixes.resetAppliedCount()
+        initializedFileKeyRef.current = null
+        onFileChange(nextFile)
+
+        if (!nextFile) {
+            resetMappingState()
+        }
+    }, [analysis, fixes, onFileChange, resetMappingState])
+
+    const handleAiAnalysis = useCallback(async () => {
+        // TODO: WALLET BALANCE CHECK
+        // Before calling AI analysis, check if the location has sufficient
+        // wallet balance. Show a message if balance is too low.
+        const result = await analysis.runAnalysis({ headers, rows })
+        if (!result?.columnMapping) return
+
+        fixes.resetAppliedCount()
+
+        const autoMappings: Record<string, string> = {}
+        for (const [csvHeader, mapping] of Object.entries(result.columnMapping)) {
+            if (mapping.suggestedField && mapping.confidence >= AUTO_APPLY_AI_CONFIDENCE) {
+                autoMappings[mapping.suggestedField] = csvHeader
+            }
+        }
+
+        if (Object.keys(autoMappings).length > 0) {
+            setFieldMapping(prev => ({ ...prev, ...autoMappings }))
+        }
+    }, [analysis, headers, rows, fixes, setFieldMapping])
 
     const handleSourceSelect = useCallback((source: ImportSource) => {
         setImportSource(source)
         if (source !== 'csv') {
-            setFile(undefined)
-            setCsvHeaders([])
-            setCsvPreviewData([])
-            setCsvFullData([])
-            setFieldMapping({})
-            setCustomFieldMapping({})
-            setNewCustomFields([])
+            resetDataset()
+            analysis.resetAnalysis()
+            fixes.resetAppliedCount()
+            resetMappingState()
         }
-    }, [])
-
-    // Compute unmapped columns (excluding required mappings and custom field mappings)
-    const getMappedColumns = useCallback(() => {
-        const mapped = new Set<string>()
-        Object.values(fieldMapping).forEach(col => col && mapped.add(col))
-        Object.values(customFieldMapping).forEach(col => col && mapped.add(col))
-        return mapped
-    }, [fieldMapping, customFieldMapping])
-
-    // Update newCustomFields when mappings change
-    useEffect(() => {
-        if (csvHeaders.length === 0) return
-
-        const mappedColumns = getMappedColumns()
-        const unmappedHeaders = csvHeaders.filter(h => !mappedColumns.has(h))
-
-        setNewCustomFields(prev => {
-            // Keep existing selections for columns that are still unmapped
-            const existingByColumn = new Map(prev.map(f => [f.csvColumn, f]))
-
-            return unmappedHeaders.map(header => {
-                const existing = existingByColumn.get(header)
-                if (existing) return existing
-
-                const columnValues = csvFullData.slice(0, 20).map(row => row[header])
-                return {
-                    csvColumn: header,
-                    fieldName: header.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                    fieldType: inferFieldType(columnValues),
-                    selected: false,
-                    sampleValues: columnValues.filter(v => v?.trim()).slice(0, 3),
-                }
-            })
-        })
-    }, [csvHeaders, csvFullData, getMappedColumns])
+    }, [resetDataset, analysis, fixes, resetMappingState])
 
     const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'lastRenewalDate']
-    const isStep1Valid = importSource === 'csv' && file && csvHeaders.length > 0
+    const isStep1Valid = importSource === 'csv' && file && headers.length > 0
     const isStep2Valid = requiredFields.every(field => fieldMapping[field])
 
     return (
-        <div className='flex flex-col h-[calc(100vh-200px)]'>
+        <div className='relative flex h-[calc(100vh-200px)] flex-col'>
+            {analysis.isAiAnalyzing ? (
+                <div className='absolute inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm'>
+                    <div className='flex flex-col items-center gap-4 rounded-lg border border-foreground/10 bg-background/95 p-8 shadow-xl'>
+                        <div className='relative'>
+                            <Loader2 className='size-10 animate-spin text-foreground' />
+                        </div>
+                        <div className='text-center'>
+                            <p className='text-sm font-medium'>Analyzing your CSV</p>
+                            <p className='mt-1 text-xs text-muted-foreground'>
+                                AI is mapping columns and detecting data patterns...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
             <InteractiveStepper
                 ref={stepperRef}
                 defaultValue={1}
+                onStepChange={setCurrentStep}
                 orientation='horizontal'
                 className='flex-1 overflow-y-auto py-1'
             >
-                <InteractiveStepperItem key="step-1">
+                <InteractiveStepperItem key='step-1'>
                     <InteractiveStepperIndicator />
                     <InteractiveStepperTitle>Select Source</InteractiveStepperTitle>
                     <InteractiveStepperSeparator />
                 </InteractiveStepperItem>
 
-                <InteractiveStepperItem key="step-2">
+                <InteractiveStepperItem key='step-2'>
                     <InteractiveStepperIndicator />
                     <InteractiveStepperTitle>Map Fields</InteractiveStepperTitle>
                     <InteractiveStepperSeparator />
                 </InteractiveStepperItem>
 
-                <InteractiveStepperItem key="step-3">
+                <InteractiveStepperItem key='step-3'>
                     <InteractiveStepperIndicator />
                     <InteractiveStepperTitle>Preview & Import</InteractiveStepperTitle>
                 </InteractiveStepperItem>
@@ -253,7 +267,7 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
 
                 <InteractiveStepperContent step={2} className='overflow-auto'>
                     <MapFieldsStep
-                        headers={csvHeaders}
+                        headers={headers}
                         fieldMapping={fieldMapping}
                         setFieldMapping={setFieldMapping}
                         existingCustomFields={existingCustomFields}
@@ -262,9 +276,16 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
                         newCustomFields={newCustomFields}
                         setNewCustomFields={setNewCustomFields}
                         isLoadingCustomFields={isLoadingCustomFields}
-                        previewData={csvPreviewData}
+                        previewData={previewRows}
                         includeCustomFields={includeCustomFields}
                         setIncludeCustomFields={setIncludeCustomFields}
+                        aiAnalysisResult={analysis.aiAnalysisResult}
+                        aiAnalysisError={analysis.aiAnalysisError}
+                        isAiAnalyzing={analysis.isAiAnalyzing}
+                        onAiAnalyze={handleAiAnalysis}
+                        onApplyAiFixes={fixes.applyAiFixes}
+                        aiFixesPendingCount={fixes.pendingAiFixCount}
+                        aiFixesAppliedCount={fixes.aiFixesAppliedCount}
                     />
                 </InteractiveStepperContent>
 
@@ -272,8 +293,8 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
                     <PreviewStep
                         lid={lid}
                         file={file}
-                        previewData={csvPreviewData}
-                        fullData={csvFullData}
+                        previewData={previewRows}
+                        fullData={rows}
                         fieldMapping={fieldMapping}
                         customFieldMapping={customFieldMapping}
                         existingCustomFields={existingCustomFields}
@@ -281,12 +302,14 @@ export function ImportStepperPage({ lid }: ImportStepperPageProps) {
                         isImporting={isImporting}
                         setIsImporting={setIsImporting}
                         includeCustomFields={includeCustomFields}
+                        pricingIdMapping={analysis.pricingIdMapping}
                     />
                 </InteractiveStepperContent>
             </InteractiveStepper>
 
             <StepperFooter
                 stepperRef={stepperRef}
+                currentStep={currentStep}
                 isStep1Valid={isStep1Valid}
                 isStep2Valid={isStep2Valid}
                 isImporting={isImporting}

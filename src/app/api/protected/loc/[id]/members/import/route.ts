@@ -15,10 +15,15 @@ export async function POST(
 
     const data = await request.formData()
     const file = data.get('file')
+    const rowsRaw = data.get('rows')
     const pricingId = data.get('pricingId')
     const planType = data.get('planType') as 'recurring' | 'one-time' | null
     const fieldMapping = JSON.parse(data.get('fieldMapping') as string)
     const requirePayment = data.get('requirePayment') === 'true'
+    const pricingIdMappingRaw = data.get('pricingIdMapping')
+    const pricingIdMapping: Record<string, Record<string, string>> = pricingIdMappingRaw
+        ? JSON.parse(pricingIdMappingRaw as string)
+        : {}
 
     // Parse custom field data
     const customFieldMappingRaw = data.get('customFieldMapping')
@@ -29,13 +34,6 @@ export async function POST(
     const newCustomFieldsRaw = data.get('newCustomFields')
     const newCustomFields: Array<{ csvColumn: string; fieldName: string; fieldType: string }> =
         newCustomFieldsRaw ? JSON.parse(newCustomFieldsRaw as string) : []
-
-    if (!file || !(file instanceof Blob)) {
-        return NextResponse.json(
-            { status: 'fail', message: 'No file uploaded' },
-            { status: 400 }
-        )
-    }
 
     // Example: Looping over each record
     const location = await db.query.locations.findFirst({
@@ -71,13 +69,25 @@ export async function POST(
             ),
         }
 
-        const arrayBuffer = await file.arrayBuffer()
-        const content = new TextDecoder('utf-8').decode(arrayBuffer)
+		let records: Record<string, string>[] = []
 
-		const { data: records } = Papa.parse<Record<string, string>>(content.trim(), {
-			header: true,
-			skipEmptyLines: true,
-		});
+		if (rowsRaw) {
+			records = JSON.parse(rowsRaw as string) as Record<string, string>[]
+		} else if (file && file instanceof Blob) {
+			const arrayBuffer = await file.arrayBuffer()
+			const content = new TextDecoder('utf-8').decode(arrayBuffer)
+
+			const parsed = Papa.parse<Record<string, string>>(content.trim(), {
+				header: true,
+				skipEmptyLines: true,
+			})
+			records = parsed.data
+		} else {
+			return NextResponse.json(
+				{ status: 'fail', message: 'No import data provided' },
+				{ status: 400 }
+			)
+		}
 
 		const insertMembers: Array<typeof migrateMembers.$inferInsert> = [];
 
@@ -151,10 +161,15 @@ export async function POST(
 			}
 
 			// Extract pricingId from CSV if mapped, otherwise use the global pricingId
+			// Use AI pricing mapping to translate CSV values to actual pricing IDs
 			let rowPricingId: string | null = null;
 			if (pricingPlanIdColumn) {
-				const csvValue = record[pricingPlanIdColumn];
-				rowPricingId = csvValue ? csvValue.trim() : null;
+				const csvValue = record[pricingPlanIdColumn]?.trim();
+				if (csvValue) {
+					// Check if we have an AI-generated mapping for this column/value
+					const columnMapping = pricingIdMapping[pricingPlanIdColumn];
+					rowPricingId = columnMapping?.[csvValue] || csvValue;
+				}
 			} else if (pricingId) {
 				rowPricingId = pricingId.toString();
 			}
