@@ -7,58 +7,35 @@ import { eq } from "drizzle-orm";
 export async function userNotificationRoutes(app: Elysia) {
 
     app.group('/notifications', (app) => {
-        app.get('/', async ({ status, params }) => {
-            const { uid } = params;
-            try {
-                const notifications = await db.query.userNotifications.findMany({
-                    where: eq(userNotifications.userId, uid),
-                });
-                return status(200, notifications);
-            } catch (error) {
-                console.error(error);
-                return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
-            }
-        }, {
-            params: t.Object({
-                uid: t.String(),
-            }),
-        })
+
 
 
         app.post('/', async ({ body, status, params }) => {
             const { uid } = params;
-            const data = body;
-            if (!data.token) {
-                return status(400, { message: "Push token is required" });
-            }
+            const { deviceId, ...other } = body;
+
             const today = new Date();
             try {
                 const [notification] = await db.insert(userNotifications).values({
+                    id: deviceId,
                     userId: uid,
-                    ...data,
-                    enabled: true,
+                    ...other,
                     created: today,
                 }).onConflictDoUpdate({
-                    target: [userNotifications.userId, userNotifications.deviceId],
+                    target: [userNotifications.id],
                     set: {
                         updated: today,
                         lastSeen: today,
-                        nativeToken: data.nativeToken,
-                        token: data.token,
-                        enabled: true,
+                        nativeToken: other.nativeToken,
+                        token: other.token,
+                        enabled: other.enabled,
                     },
-                }).returning({
-                    id: userNotifications.id,
-                    userId: userNotifications.userId,
-                    platform: userNotifications.platform,
-                    deviceModelId: userNotifications.deviceModelId,
-                    deviceName: userNotifications.deviceName,
-                    enabled: userNotifications.enabled,
-                    lastSeen: userNotifications.lastSeen,
-                    created: userNotifications.created,
-                    updated: userNotifications.updated,
-                })
-                return status(200, notification);
+                }).returning()
+                if (!notification) {
+                    return status(500, { message: "Failed to create notification" });
+                }
+                const { token, nativeToken, ...rest } = notification;
+                return status(200, rest);
             } catch (error) {
                 console.error(error);
                 return status(500, { message: "Internal server error" });
@@ -72,33 +49,37 @@ export async function userNotificationRoutes(app: Elysia) {
                 deviceModelId: t.Union([t.String(), t.Null()]),
                 deviceName: t.String(),
                 deviceId: t.String(),
+                enabled: t.Boolean(),
                 platform: t.Union([t.Literal("ios"), t.Literal("android")]),
                 nativeToken: t.Optional(t.Union([t.String(), t.Null()])),
             }),
         });
 
-        app.patch('/:nid', async ({ body, status, params }) => {
+        app.get('/:nid', async ({ status, params }) => {
             const { nid } = params;
-            const updates = body;
             try {
-                await db.update(userNotifications).set(updates).where(eq(userNotifications.id, nid));
-                return status(200, { success: true });
+                const notification = await db.query.userNotifications.findFirst({
+                    where: eq(userNotifications.id, nid),
+                    columns: {
+                        nativeToken: false,
+                        token: false,
+                    }
+                });
+                if (!notification) {
+                    return status(404, { message: "Notification not found" });
+                }
+                return status(200, notification);
             } catch (error) {
                 console.error(error);
                 return status(500, { message: "Internal server error" });
             }
         }, {
             params: t.Object({
-                uid: t.String(),
                 nid: t.String(),
+                uid: t.String(),
             }),
-            body: t.Object({
-                nativeToken: t.Optional(t.String()),
-                token: t.Optional(t.String()),
-                deviceId: t.Optional(t.String()),
-                enabled: t.Optional(t.Boolean()),
-            }),
-        });
+        })
+
         return app;
     })
 
