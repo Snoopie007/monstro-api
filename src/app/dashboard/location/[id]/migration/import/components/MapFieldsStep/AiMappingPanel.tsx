@@ -1,7 +1,7 @@
 'use client'
 
-import { AlertCircle, CheckCircle2, Loader2, Sparkles, Wand2 } from 'lucide-react'
-import { Badge } from '@/components/ui'
+import { AlertCircle, CheckCircle2, HelpCircle, Loader2, Sparkles, Wand2 } from 'lucide-react'
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui'
 import { Button } from '@/components/ui/button'
 import type { MigrationAnalysisResult } from '@/hooks/useMigrations'
 
@@ -30,6 +30,20 @@ export function AiMappingPanel({
                 <div className='flex items-center gap-2'>
                     <Sparkles className='size-4 text-primary' />
                     <span className='text-sm font-medium'>AI Column Mapping</span>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                type='button'
+                                className='inline-flex items-center text-muted-foreground transition-colors hover:text-foreground'
+                                aria-label='AI mapping wallet requirement info'
+                            >
+                                <HelpCircle className='size-3.5' />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side='top' className='max-w-72 text-left'>
+                            Make sure your location wallet has funds before running AI analysis.
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
                 {aiAnalysisResult ? (
                     <Badge variant='outline' className='text-xs'>
