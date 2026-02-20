@@ -48,7 +48,7 @@ type MemberPaymentOptions = {
 
 
 const isProd = process.env.BUN_ENV === "production";
-const STRIPE_API_VERSION = "2025-12-15.clover";
+const STRIPE_API_VERSION = "2026-01-28.clover";
 
 
 abstract class BaseStripePayments {
@@ -403,7 +403,7 @@ class VendorStripePayments extends BaseStripePayments {
             method: "POST",
             headers: {
                 Authorization: `Basic ${Buffer.from(this._secretKey + ":").toString("base64")}`,
-                "Stripe-Version": "2026-01-28.preview",
+                "Stripe-Version": STRIPE_API_VERSION,
                 "Stripe-Account": accountId,
                 "Content-Type": "application/x-www-form-urlencoded",
             },
@@ -436,13 +436,11 @@ class VendorStripePayments extends BaseStripePayments {
      */
     async createReservePlan(accountId: string, percentage: number, lid: string) {
 
-        const now = new Date();
-        const expiresOn = addYears(now, 1);
         const res = await fetch("https://api.stripe.com/v1/reserve/holds", {
             method: "POST",
             headers: {
                 Authorization: `Basic ${Buffer.from(this._secretKey + ":").toString("base64")}`,
-                'Stripe-Version': "2026-01-28.preview",
+                'Stripe-Version': STRIPE_API_VERSION,
                 'Stripe-Account': accountId,
                 'Content-Type': "application/x-www-form-urlencoded",
             },
