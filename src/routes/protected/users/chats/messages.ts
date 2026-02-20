@@ -9,7 +9,7 @@ import {
 } from "@/libs/messages";
 import type {
     Media, Message,
-    ReactionCounts, MessageReply
+    ReactionCount, MessageReply
 } from "@subtrees/types";
 import { and, eq, inArray } from "drizzle-orm";
 import { Elysia, t, type Context } from "elysia";
@@ -68,7 +68,7 @@ export function messageRoute(app: Elysia) {
             const messageIds = messageRows.map(m => m.id);
 
             // Fetch reactions in bulk
-            let reactionsByMessage: Record<string, ReactionCounts[]> = {};
+            let reactionsByMessage: Record<string, ReactionCount[]> = {};
             if (messageIds.length > 0) {
                 const reactions = await db.select().from(reactionCounts).where(and(
                     eq(reactionCounts.ownerType, 'message'),
@@ -82,7 +82,7 @@ export function messageRoute(app: Elysia) {
                     if (!acc[messageId]) acc[messageId] = [];
                     acc[messageId].push(reaction);
                     return acc;
-                }, {} as Record<string, ReactionCounts[]>);
+                }, {} as Record<string, ReactionCount[]>);
             }
 
             // Gather reply IDs and get their info (id/content/senderId)

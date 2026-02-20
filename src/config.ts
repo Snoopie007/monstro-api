@@ -51,7 +51,7 @@ export const redisConfig = {
     // Connection timeout
     connectTimeout: 10000,
     // Enable offline queue to handle connection issues gracefully
-    enableOfflineQueue: false,
+    enableOfflineQueue: true,
 }
 
 // Server configuration

@@ -8,18 +8,17 @@ import {
   members,
   memberSubscriptions,
 } from '../schemas'
-import { memberInvoices } from '../schemas/invoice'
 import { memberLocations } from '../schemas/MemberLocation'
 import type { MemberPointsHistory } from './achievement'
 import type { Contract, MemberContract } from './contract'
 import type { PaymentType } from './DatabaseEnums'
 import type { FamilyMember } from './FamilyMember'
+import type { MemberInvoice } from './invoices'
 import type { Location } from './location'
 import type { MigrateMember } from './MigrateMember'
 import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { PlanProgram, Program } from './program'
 import type { User } from './user'
-import type { Invoice } from './invoices'
 
 export type Member = typeof members.$inferSelect & {
   user?: User
@@ -33,8 +32,14 @@ export type Member = typeof members.$inferSelect & {
   referredBy?: MemberReferral
 }
 
-
-
+export type MemberAddress = {
+  line1: string
+  line2: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+}
 
 
 export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
@@ -43,7 +48,7 @@ export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
   child?: MemberSubscription
-  invoices?: Invoice[]
+  invoices?: MemberInvoice[]
   plan?: MemberPlan
   pricing?: MemberPlanPricing
   contract?: MemberContract

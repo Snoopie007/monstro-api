@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { primaryKey, text, timestamp, pgTable, boolean, jsonb, unique, uuid } from 'drizzle-orm/pg-core'
 import { locations } from './locations'
 import { users } from './users'
+import type { MemberAddress } from '../types/member'
 import {
 	MemberRelationshipEnum, CustomFieldTypeEnum,
 	FamilyMemberStatusEnum
@@ -18,6 +19,7 @@ export const members = pgTable('members', {
 	phone: text('phone'),
 	referralCode: text('referral_code').notNull(),
 	gender: text('gender'),
+	addresses: jsonb('addresses').$type<MemberAddress[]>().notNull().default(sql`'[]'::jsonb`),
 	dob: timestamp('dob', { withTimezone: true, mode: 'date' }).default(sql`NULL`),
 	stripeCustomerId: text('stripe_customer_id'),
 	setupCompleted: boolean('setup_completed').notNull().default(false),
@@ -64,20 +66,6 @@ export const familyMembers = pgTable('family_members', {
 	updated: timestamp('updated_at', { withTimezone: true }),
 })
 
-export const memberTags = pgTable('member_tags', {
-	id: text('id').primaryKey().notNull().default(sql`uuid_base62('tag_')`),
-	name: text('name').notNull(),
-	locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
-	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-	updated: timestamp('updated_at', { withTimezone: true }),
-})
-
-export const memberHasTags = pgTable('member_has_tags', {
-	memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
-	tagId: text('tag_id').notNull().references(() => memberTags.id, { onDelete: 'cascade' }),
-	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, t => [primaryKey({ columns: [t.memberId, t.tagId] })])
-
 export const memberFields = pgTable('member_fields', {
 	id: text('id').primaryKey().notNull().default(sql`uuid_base62()`),
 	name: text('name').notNull(),
@@ -100,7 +88,3 @@ export const memberCustomFields = pgTable('member_custom_fields', {
 	primaryKey({ columns: [t.memberId, t.customFieldId] }),
 	unique('mcf_member_field_unique').on(t.memberId, t.customFieldId),
 ])
-
-
-
-
