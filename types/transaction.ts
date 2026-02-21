@@ -18,10 +18,6 @@ export type TransactionMetadata = {
 } & Record<string, unknown>;
 
 
-export type TransactionFees = {
-  stripeFee: number;
-  monstroFee: number;
-}
 export type Transaction = typeof transactions.$inferSelect & {
   type: TransactionType;
   paymentType: PaymentType;
@@ -31,3 +27,14 @@ export type Transaction = typeof transactions.$inferSelect & {
   invoice?: MemberInvoice;
 };
 export type NewTransaction = typeof transactions.$inferInsert;
+
+
+export type ChargeDetails = {
+  total: number;
+  subTotal: number;
+  unitCost: number;
+  tax: number;
+  monstroFee: number;
+  stripeFee: number;
+  applicationFeeAmount: number;
+}
