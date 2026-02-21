@@ -20,7 +20,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                 invoice: {
                     columns: {
                         id: true,
-                        memberSubscriptionId: true,
+                        memberPlanId: true,
                     },
                 },
             },
@@ -43,7 +43,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             (typeof txMeta.memberSubscriptionId === "string" && txMeta.memberSubscriptionId)
             || (typeof txMeta.subscriptionId === "string" && txMeta.subscriptionId)
             || null;
-        const subscriptionFromInvoice = transaction.invoice?.memberSubscriptionId || null;
+        const subscriptionFromInvoice = transaction.invoice?.memberPlanId || null;
 
         if (subscriptionFromMeta || subscriptionFromInvoice) {
             return status(409, {
@@ -199,7 +199,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                 invoice: {
                     columns: {
                         id: true,
-                        memberSubscriptionId: true,
+                        memberPlanId: true,
                     },
                 },
             },
@@ -226,7 +226,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             (typeof txMeta.memberSubscriptionId === "string" && txMeta.memberSubscriptionId)
             || (typeof txMeta.subscriptionId === "string" && txMeta.subscriptionId)
             || null;
-        const subscriptionFromInvoice = transaction.invoice?.memberSubscriptionId || null;
+        const subscriptionFromInvoice = transaction.invoice?.memberPlanId || null;
 
         if (subscriptionFromMeta || subscriptionFromInvoice) {
             return status(409, {

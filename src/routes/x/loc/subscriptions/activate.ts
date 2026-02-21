@@ -206,94 +206,90 @@ export async function activateSubscriptionRoutes(app: Elysia) {
 
         try {
             await db.transaction(async (tx) => {
-            const lineItems = [{
-                name: planName,
-                description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
-                quantity: 1,
-                price: billedAmount,
-            }];
+                const lineItems = [{
+                    name: planName,
+                    description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
+                    quantity: 1,
+                    price: billedAmount,
+                    discount: discountAmount,
+                }];
 
-            const [invoice] = await tx.insert(memberInvoices).values({
-                memberId: sub.memberId,
-                locationId: lid,
-                memberSubscriptionId: sub.id,
-                description: sub.pricing.downpayment
-                    ? `Downpayment for ${planName}`
-                    : `${sub.pricing.name} - Billing Period`,
-                items: lineItems,
-                subTotal: chargeDetails.subTotal,
-                total: chargeDetails.total,
-                tax: chargeDetails.tax,
-                discount: discountAmount,
-                currency: sub.pricing.currency,
-                status: "paid",
-                paid: true,
-                sentAt: new Date(),
-                dueDate: new Date(),
-                paymentType: paymentMethod.type,
-                invoiceType: "recurring",
-                forPeriodStart: new Date(sub.currentPeriodStart),
-                forPeriodEnd: new Date(sub.currentPeriodEnd),
-                metadata: {
-                    type: "from-subscription",
-                    subscriptionId: sub.id,
-                    collectionMethod: "charge_automatically",
+                const [invoice] = await tx.insert(memberInvoices).values({
+                    memberId: sub.memberId,
+                    locationId: lid,
+                    memberPlanId: sub.id,
+                    description: sub.pricing.downpayment
+                        ? `Downpayment for ${planName}`
+                        : `${sub.pricing.name} - Billing Period`,
+                    items: lineItems,
+                    subTotal: chargeDetails.subTotal,
+                    total: chargeDetails.total,
+                    tax: chargeDetails.tax,
+                    currency: sub.pricing.currency,
+                    status: "paid",
+                    paid: true,
+                    sentAt: new Date(),
+                    dueDate: new Date(),
+                    paymentType: paymentMethod.type,
+                    invoiceType: "recurring",
+                    forPeriodStart: new Date(sub.currentPeriodStart),
+                    forPeriodEnd: new Date(sub.currentPeriodEnd),
+                    metadata: {
+                        type: "from-subscription",
+                        subscriptionId: sub.id,
+                        collectionMethod: "charge_automatically",
+                        paymentIntentId,
+                    },
+                }).returning();
+
+                await tx.update(memberSubscriptions).set({
+                    status: "active",
+                    stripePaymentId: paymentMethod.stripeId,
+                    metadata: {
+                        ...(sub.metadata || {}),
+                        hasPaidDownpayment: !!sub.pricing.downpayment,
+                        ...(promoMeta && {
+                            promo: {
+                                ...promoMeta,
+                                applied: true,
+                            },
+                        }),
+                    },
+                }).where(eq(memberSubscriptions.id, sub.id));
+
+                await tx.insert(transactions).values({
+                    description: `Payment for ${planName}`,
+                    items: [{ name: planName, quantity: 1, price: billedAmount, discount: discountAmount }],
+                    type: "inbound",
+                    total: chargeDetails.total,
+                    subTotal: chargeDetails.subTotal,
+                    tax: chargeDetails.tax,
+                    status: "paid",
+                    locationId: lid,
+                    memberId: sub.memberId,
+                    invoiceId: invoice?.id,
+                    paymentType: paymentMethod.type,
+                    paymentMethodId: paymentMethod.stripeId,
                     paymentIntentId,
-                },
-            }).returning();
+                    chargeDate: new Date(),
+                    currency: sub.pricing.currency,
+                    metadata: {
+                        memberSubscriptionId: sub.id,
+                        paymentIntentId,
+                    },
+                });
 
-            await tx.update(memberSubscriptions).set({
-                status: "active",
-                stripePaymentId: paymentMethod.stripeId,
-                metadata: {
-                    ...(sub.metadata || {}),
-                    hasPaidDownpayment: !!sub.pricing.downpayment,
-                    ...(promoMeta && {
-                        promo: {
-                            ...promoMeta,
-                            applied: true,
-                        },
-                    }),
-                },
-            }).where(eq(memberSubscriptions.id, sub.id));
-
-            await tx.insert(transactions).values({
-                description: `Payment for ${planName}`,
-                items: [{ name: planName, quantity: 1, price: billedAmount, discount: discountAmount }],
-                type: "inbound",
-                total: chargeDetails.total,
-                subTotal: chargeDetails.subTotal,
-                tax: chargeDetails.tax,
-                fees: {
-                    stripeFee: chargeDetails.stripeFee,
-                    monstroFee: chargeDetails.monstroFee,
-                },
-                status: "paid",
-                locationId: lid,
-                memberId: sub.memberId,
-                invoiceId: invoice?.id,
-                paymentType: paymentMethod.type,
-                paymentMethodId: paymentMethod.stripeId,
-                paymentIntentId,
-                chargeDate: new Date(),
-                currency: sub.pricing.currency,
-                metadata: {
-                    memberSubscriptionId: sub.id,
-                    paymentIntentId,
-                },
-            });
-
-            await tx.update(memberLocations).set({
-                status: "active",
-                updated: new Date(),
-            }).where(and(eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
-
-            if (promoMeta?.id && !promoMeta.applied) {
-                await tx.update(promos).set({
-                    redemptionCount: sql`${promos.redemptionCount} + 1`,
+                await tx.update(memberLocations).set({
+                    status: "active",
                     updated: new Date(),
-                }).where(eq(promos.id, promoMeta.id));
-            }
+                }).where(and(eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
+
+                if (promoMeta?.id && !promoMeta.applied) {
+                    await tx.update(promos).set({
+                        redemptionCount: sql`${promos.redemptionCount} + 1`,
+                        updated: new Date(),
+                    }).where(eq(promos.id, promoMeta.id));
+                }
             });
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to persist activation records";

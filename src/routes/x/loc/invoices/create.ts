@@ -70,6 +70,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                 description: sub.pricing.plan?.description || "",
                 quantity: 1,
                 price: sub.pricing.price,
+                discount,
             }];
 
             const { subtotal, total } = calcTotals(lineItems, tax, discount);
@@ -77,13 +78,12 @@ export async function createInvoiceRoutes(app: Elysia) {
             const [invoice] = await db.insert(memberInvoices).values({
                 memberId,
                 locationId: lid,
-                memberSubscriptionId: sub.id,
+                memberPlanId: sub.id,
                 description: description || `${sub.pricing.plan?.name || "Subscription"} billing period`,
                 items: lineItems,
                 subTotal: subtotal,
                 total,
                 tax,
-                discount,
                 currency: sub.pricing.currency || sub.pricing.plan?.currency || "usd",
                 status: "draft",
                 dueDate: dueDate ? new Date(dueDate) : new Date(sub.currentPeriodEnd),
@@ -151,13 +151,12 @@ export async function createInvoiceRoutes(app: Elysia) {
             const [createdInvoice] = await db.insert(memberInvoices).values({
                 memberId,
                 locationId: lid,
-                memberSubscriptionId: subscriptionId || null,
+                memberPlanId: subscriptionId || null,
                 description: description || `Invoice for ${member.firstName} ${member.lastName}`,
                 items: invoiceItems,
                 subTotal: subtotal,
                 total,
                 tax,
-                discount,
                 currency: "usd",
                 status: "draft",
                 dueDate: dueDate ? new Date(dueDate) : new Date(),

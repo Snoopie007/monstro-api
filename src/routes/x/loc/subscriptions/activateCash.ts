@@ -25,7 +25,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         if (!isTrialing) {
             const existingDraft = await db.query.memberInvoices.findFirst({
                 where: (inv, { and, eq }) => and(
-                    eq(inv.memberSubscriptionId, sid),
+                    eq(inv.memberPlanId, sid),
                     eq(inv.status, "draft")
                 ),
             });
@@ -41,13 +41,12 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                 const [invoice] = await db.insert(memberInvoices).values({
                     memberId: sub.memberId,
                     locationId: lid,
-                    memberSubscriptionId: sid,
+                    memberPlanId: sid,
                     description: `${sub.pricing.name} - Billing Period`,
                     items: lineItems,
                     subTotal: sub.pricing.price,
                     total: sub.pricing.price,
                     tax: 0,
-                    discount: 0,
                     currency: sub.pricing.currency,
                     status: "draft",
                     dueDate: new Date(sub.currentPeriodEnd),

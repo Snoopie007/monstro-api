@@ -14,7 +14,7 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
         const { pid } = params;
         try {
             const invoices = await db.query.memberInvoices.findMany({
-                where: (mi, { eq }) => eq(mi.memberSubscriptionId, pid),
+                where: (mi, { eq }) => eq(mi.memberPlanId, pid),
                 with: {
                     member: true,
                 },

@@ -26,9 +26,9 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
 
         let walletChargeMetadata: Record<string, unknown> | null = null;
 
-        if (invoice.memberSubscriptionId) {
+        if (invoice.memberPlanId) {
             const sub = await db.query.memberSubscriptions.findFirst({
-                where: (s, { eq }) => eq(s.id, invoice.memberSubscriptionId!),
+                where: (s, { eq }) => eq(s.id, invoice.memberPlanId!),
                 with: {
                     pricing: true,
                 },
@@ -130,9 +130,9 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 });
             }
 
-            if (invoice.memberSubscriptionId) {
+            if (invoice.memberPlanId) {
                 const sub = await tx.query.memberSubscriptions.findFirst({
-                    where: (s, { eq }) => eq(s.id, invoice.memberSubscriptionId!),
+                    where: (s, { eq }) => eq(s.id, invoice.memberPlanId!),
                     with: {
                         pricing: true,
                     },
@@ -153,7 +153,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     if (sub.paymentType === "cash") {
                         const existingDraft = await tx.query.memberInvoices.findFirst({
                             where: (inv, { and, eq }) => and(
-                                eq(inv.memberSubscriptionId, sub.id),
+                                eq(inv.memberPlanId, sub.id),
                                 eq(inv.status, "draft")
                             ),
                         });
@@ -164,17 +164,17 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 description: "Subscription renewal",
                                 quantity: 1,
                                 price: sub.pricing.price,
+                                discount: 0,
                             }];
                             const [nextInvoice] = await tx.insert(memberInvoices).values({
                                 memberId: sub.memberId,
                                 locationId: sub.locationId,
-                                memberSubscriptionId: sub.id,
+                                memberPlanId: sub.id,
                                 description: `${sub.pricing.name} - Billing Period`,
                                 items: lineItems,
                                 subTotal: sub.pricing.price,
                                 total: sub.pricing.price,
                                 tax: 0,
-                                discount: 0,
                                 currency: sub.pricing.currency,
                                 status: "draft",
                                 dueDate: new Date(nextEnd),

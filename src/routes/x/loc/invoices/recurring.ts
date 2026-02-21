@@ -33,7 +33,7 @@ export async function recurringInvoiceRoutes(app: Elysia) {
 
             const invoice = await db.query.memberInvoices.findFirst({
                 where: (inv, { and, eq }) => and(
-                    eq(inv.memberSubscriptionId, subscriptionId),
+                    eq(inv.memberPlanId, subscriptionId),
                     eq(inv.memberId, memberId),
                     eq(inv.locationId, locationId),
                 ),

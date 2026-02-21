@@ -159,10 +159,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     paymentType: selectedPaymentMethod!.type,
                     paymentMethodId: selectedPaymentMethod!.stripeId,
                     paymentIntentId,
-                    fees: {
-                        stripeFee: chargeDetails.stripeFee,
-                        monstroFee: chargeDetails.monstroFee,
-                    },
                     chargeDate: new Date(),
                     metadata: {
                         ...((existingTransaction?.metadata as Record<string, unknown> | null) || {}),
