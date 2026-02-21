@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
 import {
+    memberInvoices,
     memberLocations, memberPaymentMethods,
     memberSubscriptions, migrateMembers,
     transactions
@@ -103,13 +104,6 @@ export function migrateSubRoutes(app: Elysia) {
                 ],
             });
 
-            const currentPeriodStart = migrate.lastRenewalDay ? new Date(migrate.lastRenewalDay) : new Date();
-
-            const currentPeriodEnd = calculateThresholdDate({
-                startDate: currentPeriodStart,
-                threshold: pricing.intervalThreshold,
-                interval: pricing.interval,
-            })
 
             const { taxRates, locationState, integrations } = location;
 
@@ -120,61 +114,22 @@ export function migrateSubRoutes(app: Elysia) {
 
             const stripe = new MemberStripePayments(integration.accountId);
             stripe.setCustomer(member.stripeCustomerId);
-            const metadata = {
-                locationId: lid,
-                memberId: mid,
-            };
 
-            const planName = `${pricing.plan.name}/${pricing.name}`;
+
 
             const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
+
+            const currentPeriodStart = migrate.lastRenewalDay ?
+                new Date(migrate.lastRenewalDay) : new Date();
+
+            const currentPeriodEnd = calculateThresholdDate({
+                startDate: currentPeriodStart,
+                threshold: pricing.intervalThreshold,
+                interval: pricing.interval,
+            })
+
             let nextBillingDate: Date = currentPeriodStart;
 
-            let paymentIntentId: string | undefined = undefined;
-            if (isToday(currentPeriodStart)) {
-                const isGrowthPlan = locationState.planId === 3;
-                const chargeDetails = calculateChargeDetails({
-                    amount: pricing.price,
-                    taxRate: taxRate?.percentage ?? 0,
-                    usagePercent: locationState.usagePercent || 0,
-                    paymentType: paymentMethod.type,
-                    isRecurring: !isGrowthPlan,
-                    passOnFees: locationState.settings?.passOnFees || false,
-                });
-
-                const productName = pricing.name;
-                const description = `Payment for ${pricing.name}`;
-                const { id } = await stripe.processPayment({
-
-                    ...chargeDetails,
-                    paymentMethodId,
-                    currency: pricing.currency,
-                    description,
-                    productName,
-                    metadata: metadata,
-                });
-                paymentIntentId = id;
-
-                await db.insert(transactions).values({
-                    description,
-                    items: [{ name: planName, quantity: 1, price: pricing.price }],
-                    type: "inbound",
-                    ...chargeDetails,
-                    fees: {
-                        stripeFee: chargeDetails.stripeFee,
-                        monstroFee: chargeDetails.monstroFee,
-                    },
-                    paymentMethodId: paymentMethodId,
-                    status: paymentIntentId ? "paid" : "failed",
-                    locationId: lid,
-                    memberId: mid,
-                    paymentType: paymentMethod.type,
-                    chargeDate: today,
-                    currency: pricing.currency,
-                });
-            } else {
-                nextBillingDate = currentPeriodEnd!;
-            }
 
             let cancelAt: Date | undefined = migrate?.endDate ? new Date(migrate?.endDate) : undefined;
             if (!cancelAt && migrate.paymentTermsLeft && pricing.interval) {
@@ -185,7 +140,9 @@ export function migrateSubRoutes(app: Elysia) {
                 })
             }
 
-            const backdateStartDate = migrate.backdateStartDate ? new Date(migrate.backdateStartDate) : undefined;
+            const backdateStartDate =
+                migrate.backdateStartDate ?
+                    new Date(migrate.backdateStartDate) : undefined;
 
 
 
@@ -196,13 +153,13 @@ export function migrateSubRoutes(app: Elysia) {
                     currentPeriodEnd,
                     locationId: lid,
                     memberId: mid,
+                    cancelAt,
                     classCredits: migrate.classCredits || 0,
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentMethod.type,
-                    status: paymentIntentId ? 'active' : 'past_due',
+                    status: 'incomplete',
                     stripePaymentId: paymentMethod.stripeId,
                 }).returning();
-                // Insert transaction
 
                 await tx.update(memberLocations).set({
                     status: "active",
@@ -222,6 +179,64 @@ export function migrateSubRoutes(app: Elysia) {
             if (!sub) {
                 return status(500, { error: "Failed to create subscription" });
             }
+            if (isToday(currentPeriodStart)) {
+                const productName = pricing.name;
+                const description = `Payment for ${pricing.name}`;
+
+                const isGrowthPlan = locationState.planId === 3;
+                const chargeDetails = calculateChargeDetails({
+                    amount: pricing.price,
+                    taxRate: taxRate?.percentage ?? 0,
+                    usagePercent: locationState.usagePercent || 0,
+                    paymentType: paymentMethod.type,
+                    isRecurring: !isGrowthPlan,
+                    passOnFees: locationState.settings?.passOnFees || false,
+                });
+
+
+
+                const [invoice] = await db.insert(memberInvoices).values({
+                    description,
+                    items: [{
+                        name: productName,
+                        quantity: 1,
+                        price: chargeDetails.unitCost
+                    }],
+                    memberPlanId: sub.id,
+                    memberId: mid,
+                    locationId: lid,
+                    ...chargeDetails,
+                    forPeriodStart: currentPeriodStart,
+                    forPeriodEnd: currentPeriodEnd,
+                    currency: pricing.currency,
+                    dueDate: new Date(),
+                }).returning({
+                    id: memberInvoices.id
+                });
+
+
+                if (!invoice) {
+                    return status(500, { error: "Failed to create invoice" });
+                }
+                await stripe.processPayment({
+                    ...chargeDetails,
+                    paymentMethodId,
+                    currency: pricing.currency,
+                    description,
+                    productName,
+                    metadata: {
+                        locationId: lid,
+                        memberId: mid,
+                        memberPlanId: pricing.id,
+                        invoiceId: invoice.id,
+                    },
+                });
+
+            } else {
+                nextBillingDate = currentPeriodEnd;
+            }
+
+
             if (["month", "year"].includes(pricing.interval)) {
                 const payload: SubscriptionJobData = {
                     sid: sub.id,
@@ -252,6 +267,8 @@ export function migrateSubRoutes(app: Elysia) {
                         startDate: nextBillingDate,
                         interval: pricing.interval,
                         data: payload,
+                    }).catch((error) => {
+                        console.error("Error scheduling cron renewal:", error);
                     });
                 } else {
                     scheduleRecursiveRenewal({
@@ -260,6 +277,8 @@ export function migrateSubRoutes(app: Elysia) {
                             ...payload,
                             recurrenceCount: 1,
                         },
+                    }).catch((error) => {
+                        console.error("Error scheduling recursive renewal:", error);
                     });
                 }
 

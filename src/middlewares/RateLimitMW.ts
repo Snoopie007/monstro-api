@@ -4,6 +4,7 @@ export function RateLimitMiddleware() {
     const requests = new Map<string, number[]>();
 
     return new Elysia().onBeforeHandle(({ headers, set }) => {
+
         const ip = headers['x-forwarded-for'] || 'unknown';
         const now = Date.now();
         const windowMs = 60 * 1000; // 1 minute

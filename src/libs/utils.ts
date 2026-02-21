@@ -8,7 +8,7 @@ import { db } from "@/db/db";
 import { migrateMembers } from "subtrees/schemas";
 import { eq } from "drizzle-orm";
 import type { AuthAdditionalData } from "@subtrees/types/auth";
-
+import type { ChargeDetails } from "@subtrees/types";
 
 async function tryCatch<T, E = Error>(
     promise: Promise<T>
@@ -284,8 +284,7 @@ function calculateStripeFeeAmount(amount: number, paymentType: PaymentType, isRe
 }
 
 
-
-type CalculateChargeDetailsProps = {
+export type CalculateChargeDetailsProps = {
     amount: number;
     discount?: number;
     taxRate: number;
@@ -294,17 +293,7 @@ type CalculateChargeDetailsProps = {
     isRecurring: boolean;
     passOnFees: boolean;
 }
-
-type ChargeDetailsReturn = {
-    total: number;
-    subTotal: number;
-    unitCost: number;
-    tax: number;
-    monstroFee: number;
-    stripeFee: number;
-    applicationFeeAmount: number;
-}
-function calculateChargeDetails(props: CalculateChargeDetailsProps): ChargeDetailsReturn {
+function calculateChargeDetails(props: CalculateChargeDetailsProps): ChargeDetails {
     const { amount, discount, taxRate, usagePercent, paymentType, isRecurring, passOnFees } = props;
     let price = Math.max(0, amount - (discount || 0));
 

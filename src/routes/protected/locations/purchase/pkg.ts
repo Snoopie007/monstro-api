@@ -1,11 +1,10 @@
 import { db } from "@/db/db";
 import {
-    memberLocations, memberPackages,
-    memberPaymentMethods, transactions
+    memberPackages, memberInvoices,
+    memberPaymentMethods
 } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
-import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -164,10 +163,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     ],
                 });
 
-                const metadata = {
-                    locationId: lid,
-                    memberId: mid,
-                };
+
 
                 stripe.setCustomer(member.stripeCustomerId);
 
@@ -206,7 +202,7 @@ export function purchasePkgRoutes(app: Elysia) {
                         }
                     }
                 }
-                const today = new Date();
+
                 const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
 
                 const { settings, usagePercent } = locationState;
@@ -222,54 +218,42 @@ export function purchasePkgRoutes(app: Elysia) {
                     isRecurring: false,
                     passOnFees: settings?.passOnFees || false,
                 });
-                const { id: paymentIntentId } = await stripe.processPayment({
+
+
+
+                const now = new Date();
+
+                const [invoice] = await db.insert(memberInvoices).values({
+                    ...chargeDetails,
+                    description,
+                    items: [{ name: productName, quantity: 1, price: chargeDetails.unitCost, discount }],
+                    memberId: mid,
+                    locationId: lid,
+                    memberPlanId,
+                    paymentType: paymentMethod.type,
+                    currency: pricing.currency,
+                    dueDate: now,
+                }).returning({ id: memberInvoices.id });
+
+
+                if (!invoice) {
+                    return status(500, { error: "Failed to create invoice" });
+                }
+
+                await stripe.processPayment({
                     ...chargeDetails,
                     paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.currency,
                     description,
                     productName,
                     metadata: {
-                        memberPackageId: memberPlanId,
-                        ...metadata,
-                    },
-                });
-                await db.transaction(async (tx) => {
-
-                    await tx.insert(transactions).values({
-                        description,
-                        items: [{ name: productName, quantity: 1, price: pricing.price, discount }],
-                        type: "inbound",
-                        ...chargeDetails,
-                        status: paymentIntentId ? "paid" : "failed",
+                        memberPlanId,
+                        invoiceId: invoice.id,
                         locationId: lid,
                         memberId: mid,
-                        paymentMethodId: paymentMethod.stripeId,
-                        paymentType: paymentMethod.type,
-                        chargeDate: today,
-                        currency: pricing.plan.currency,
-                        paymentIntentId: paymentIntentId,
-                        metadata: {
-                            memberPackageId: memberPlanId,
-                        },
-                        fees: {
-                            stripeFee: chargeDetails.stripeFee,
-                            monstroFee: chargeDetails.monstroFee,
-                        },
-                    });
-
-                    if (paymentIntentId) {
-                        await tx.update(memberPackages).set({
-                            status: "active",
-                        }).where(eq(memberPackages.id, memberPlanId));
-                    }
-                    await tx.update(memberLocations).set({
-                        status: "active",
-                        updated: new Date(),
-                    }).where(and(
-                        eq(memberLocations.memberId, mid),
-                        eq(memberLocations.locationId, lid)
-                    ));
+                    },
                 });
+
 
                 return status(200, { status: "active" });
             } catch (error) {

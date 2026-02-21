@@ -13,7 +13,7 @@ import { members } from "./members";
 import { memberInvoices } from "./invoice";
 import { paymentMethods } from "./PaymentMethods";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionMetadata, TransactionFees } from "../types";
+import type { TransactionMetadata } from "../types";
 import type { InvoiceItem } from "../types/invoices";
 
 
@@ -22,13 +22,15 @@ export const transactions = pgTable("transactions", {
 	description: text("description"),
 	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
-	fees: jsonb("fees").$type<TransactionFees>(),
+	applicationFeeAmount: integer("application_fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
 	paymentMethodId: text("payment_method_id").references(() => paymentMethods.stripeId, { onDelete: "set null" }),
 	paymentIntentId: text("payment_intent_id").unique(),
 	total: integer("total").notNull().default(0),
 	subTotal: integer("sub_total").notNull().default(0),
 	disputeReason: text("dispute_reason"),
+	failedReason: text("failed_reason"),
+	failedCode: text("failed_code"),
 	status: TransactionStatusEnum("status").notNull().default("failed"),
 	memberId: text("member_id").references(() => members.id, { onDelete: "cascade" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),

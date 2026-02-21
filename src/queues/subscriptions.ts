@@ -2,7 +2,10 @@
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
 import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@subtrees/bullmq/types";
+import { sleep } from "bun";
 
+const MAX_SCHEDULER_ATTEMPTS = 3;
+const SCHEDULER_RETRY_DELAY_MS = 500;
 
 export const subQueue = new Queue('subscriptions', {
     connection: redisConfig,
@@ -12,6 +15,7 @@ export const subQueue = new Queue('subscriptions', {
         removeOnComplete: true,
     }
 });
+
 subQueue.on('error', (err) => {
     console.error('Subscription renewal error:', err);
 });
@@ -42,16 +46,30 @@ export async function scheduleCronBasedRenewal({
         pattern = `${UTCMinute} ${UTCHour} ${UTCDate} * *`;
     } else if (interval === "year") {
         pattern = `${UTCMinute} ${UTCHour} ${UTCDate} * *`;
-    }
+    };
 
-    return await subQueue.upsertJobScheduler(`renewal:static:${sid}`, {
-        pattern,
-        utc: true,
-        // startDate: new Date(),
-    }, {
-        name: `renewal:static:${sid}`,
-        data: data,
-    });
+
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= MAX_SCHEDULER_ATTEMPTS; attempt++) {
+        try {
+            await subQueue.upsertJobScheduler(`renewal:static:${sid}`, {
+                pattern,
+                utc: true,
+                startDate: new Date(startDate),
+            }, {
+                name: `renewal:static:${sid}`,
+                data: data,
+            });
+            return;
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            console.error(` attempt ${attempt}/${MAX_SCHEDULER_ATTEMPTS} failed:`, lastError.message);
+            if (attempt < MAX_SCHEDULER_ATTEMPTS) {
+                await sleep(SCHEDULER_RETRY_DELAY_MS * attempt);
+            }
+        }
+    }
+    throw lastError ?? new Error("scheduleCronBasedRenewal failed");
 }
 
 export async function scheduleRecursiveRenewal({
@@ -62,10 +80,23 @@ export async function scheduleRecursiveRenewal({
     data: RecursiveSubscriptionJobData;
 }) {
     const { sid } = data;
-    await subQueue.add('renewal:recursive', data, {
-        jobId: `renewal:recursive:${sid}`,
-        delay: Math.max(0, startDate.getTime() - Date.now()),
-    });
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= MAX_SCHEDULER_ATTEMPTS; attempt++) {
+        try {
+            await subQueue.add('renewal:recursive', data, {
+                jobId: `renewal:recursive:${sid}`,
+                delay: Math.max(0, startDate.getTime() - Date.now()),
+            });
+            return;
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            console.error(`attempt ${attempt}/${MAX_SCHEDULER_ATTEMPTS} failed:`, lastError.message);
+            if (attempt < MAX_SCHEDULER_ATTEMPTS) {
+                await sleep(SCHEDULER_RETRY_DELAY_MS * attempt);
+            }
+        }
+    }
+    throw lastError ?? new Error("scheduleRecursiveRenewal failed");
 }
 
 export async function removeRenewalJobs(sid: string) {

@@ -200,10 +200,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(404, { error: "Payment method not found" });
                 }
 
-                const metadata = {
-                    locationId: lid,
-                    memberId: mid,
-                };
+
 
 
                 const now = new Date();
@@ -258,94 +255,46 @@ export function purchaseSubRoutes(app: Elysia) {
                 const productName = pricing.name;
                 const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
 
-                const invoiceData = {
+
+                const [invoice] = await db.insert(memberInvoices).values({
                     description,
                     items: [{
                         name: productName,
                         quantity: 1,
                         price: chargeDetails.unitCost,
+                        discount,
                     }],
+                    memberPlanId,
                     memberId: mid,
                     locationId: lid,
-                    memberSubscriptionId: memberPlanId,
                     ...chargeDetails,
                     forPeriodStart: startDate,
                     forPeriodEnd: currentPeriodEnd,
-                    discount,
                     currency: pricing.currency,
                     dueDate: startDate,
-                }
-
-                let invoiceId: string | null = null;
-                const [invoice] = await db.insert(memberInvoices).values({
-                    ...invoiceData,
-                    status: 'unpaid',
                 }).returning({
                     id: memberInvoices.id
                 });
-                if (invoice) {
-                    invoiceId = invoice.id;
+
+                if (!invoice) {
+                    return status(500, { error: "Failed to create invoice" });
                 }
 
-                const { id: paymentIntentId } = await stripe.processPayment({
+                await stripe.processPayment({
                     ...chargeDetails,
                     paymentMethodId: paymentMethod.stripeId,
                     currency: pricing.currency,
                     description,
                     productName,
                     metadata: {
-                        memberSubscriptionId: memberPlanId,
-                        ...metadata,
+                        memberPlanId,
+                        invoiceId: invoice.id,
+                        locationId: lid,
+                        memberId: mid,
                     },
                 });
 
-                await db.transaction(async (tx) => {
-
-                    await tx.update(memberSubscriptions).set({
-                        status: paymentIntentId ? 'active' : 'past_due',
-                        stripePaymentId: paymentMethod.stripeId,
-                        metadata: {
-                            hasPaidDownpayment: pricing.downpayment && paymentIntentId,
-                        },
-                    }).where(eq(memberSubscriptions.id, memberPlanId));
-                    await tx.insert(transactions).values({
-                        description,
-                        items: [{ name: productName, quantity: 1, price: pricing.price, discount }],
-                        type: "inbound",
-                        ...chargeDetails,
-                        invoiceId,
-                        fees: {
-                            stripeFee: chargeDetails.stripeFee,
-                            monstroFee: chargeDetails.monstroFee,
-                        },
-                        status: paymentIntentId ? "paid" : "failed",
-                        locationId: lid,
-                        memberId: mid,
-                        paymentMethodId: paymentMethod.stripeId,
-                        paymentType: paymentMethod.type,
-                        chargeDate: now,
-                        currency: pricing.currency,
-                        metadata: {
-                            memberSubscriptionId: memberPlanId,
-                        },
-                    });
-                    if (paymentIntentId && invoiceId) {
-                        await tx.update(memberInvoices).set({
-                            status: "paid",
-                            paid: true,
-                        }).where(eq(memberInvoices.id, invoiceId));
-                    }
-                    await tx.update(memberLocations).set({
-                        status: "active",
-                    }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
-                });
-
-
-                // Schedule renewal
-                if (!paymentIntentId) {
-                    return status(200, { status: 'past_due' });
-                }
-
+                // Schedule cron or recursive renewal
                 if (pricing.interval && pricing.intervalThreshold) {
                     const nextBillingDate = new Date(currentPeriodEnd);
                     if (["month", "year"].includes(pricing.interval)) {
@@ -382,6 +331,8 @@ export function purchaseSubRoutes(app: Elysia) {
                                 startDate: nextBillingDate,
                                 interval: pricing.interval,
                                 data: payload,
+                            }).catch((error) => {
+                                console.error("Error scheduling cron renewal:", error);
                             });
                         } else {
 
@@ -391,12 +342,14 @@ export function purchaseSubRoutes(app: Elysia) {
                                     ...payload,
                                     recurrenceCount: 1,
                                 },
+                            }).catch((error) => {
+                                console.error("Error scheduling recursive renewal:", error);
                             });
                         }
                     }
                 }
 
-                return status(200, { status: 'active' });
+                return status(200, { success: true });
             } catch (error) {
                 console.log(error);
                 if (error instanceof Stripe.errors.StripeError) {
