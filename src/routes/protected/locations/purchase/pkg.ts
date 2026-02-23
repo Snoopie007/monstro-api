@@ -163,8 +163,6 @@ export function purchasePkgRoutes(app: Elysia) {
                     ],
                 });
 
-
-
                 stripe.setCustomer(member.stripeCustomerId);
 
                 let discount: number = 0;
@@ -218,8 +216,6 @@ export function purchasePkgRoutes(app: Elysia) {
                     isRecurring: false,
                     passOnFees: settings?.passOnFees || false,
                 });
-
-
 
                 const now = new Date();
 

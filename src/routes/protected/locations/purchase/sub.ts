@@ -200,9 +200,6 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(404, { error: "Payment method not found" });
                 }
 
-
-
-
                 const now = new Date();
                 const startDate = new Date(currentPeriodStart);
 
@@ -265,6 +262,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         price: chargeDetails.unitCost,
                         discount,
                     }],
+                    status: "draft",
                     memberPlanId,
                     memberId: mid,
                     locationId: lid,
