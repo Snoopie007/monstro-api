@@ -1,49 +1,44 @@
-import type { Holiday } from "@/app/dashboard/location/[id]/settings/closures/schemas";
-
-// Month abbreviation to number mapping
-const MONTHS: Record<string, number> = {
-  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
-  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
-};
-
-// Day of week abbreviation to number mapping (0 = Sunday)
-const DAYS_OF_WEEK: Record<string, number> = {
-  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
-};
+import type { HolidayWithPattern } from "@subtrees/constants/data";
 
 /**
  * Parse a holiday pattern string
- * Format: "N:DOW:MMM"
- *   Fixed: "N:day:MMM" (e.g., "1:day:jan")
- *   Relative: "N:DOW:MMM" (e.g., "3:mon:jan" or "L:mon:may")
+ * Format: "N:DOW:month"
+ *   Fixed: "N:day:month" (e.g., "1:day:0")
+ *   Relative: "N:DOW:month" (e.g., "3:1:0" or "L:1:4")
+ *   month is zero-based (0=January, 11=December)
  */
 type ParsedPattern = {
-  isFixed: boolean;
   month: number;
-  day?: number;           // For fixed dates
-  occurrence?: number | 'last';  // For relative dates
-  dayOfWeek?: number;     // For relative dates
+  day: number;
+  dow: 'day' | number;
 };
 
 function parsePattern(pattern: string): ParsedPattern {
-  const [n, dow, month] = pattern.toLowerCase().split(':');
-  const monthNum = MONTHS[month];
+  const [nStr, dowStr, monthStr] = pattern.split(':');
 
-  if (dow === 'day') {
-    // Fixed date pattern
-    return {
-      isFixed: true,
-      month: monthNum,
-      day: parseInt(n, 10),
-    };
+  if (!nStr || !dowStr || !monthStr) {
+    throw new Error(`Invalid holiday pattern: ${pattern}`);
   }
 
-  // Relative date pattern
+  const month = Number.parseInt(monthStr, 10);
+  if (!Number.isInteger(month) || month < 0 || month > 11) {
+    throw new Error(`Invalid holiday month in pattern: ${pattern}`);
+  }
+
+  const day = nStr.toUpperCase() === 'L' ? -1 : Number.parseInt(nStr, 10);
+  if (!Number.isInteger(day) || day === 0 || day < -1 || day > 31) {
+    throw new Error(`Invalid holiday day in pattern: ${pattern}`);
+  }
+
+  const dow = dowStr === 'day' ? 'day' : Number.parseInt(dowStr, 10);
+  if (dow !== 'day' && (!Number.isInteger(dow) || dow < 0 || dow > 6)) {
+    throw new Error(`Invalid holiday day-of-week in pattern: ${pattern}`);
+  }
+
   return {
-    isFixed: false,
-    month: monthNum,
-    occurrence: n === 'l' ? 'last' : parseInt(n, 10),
-    dayOfWeek: DAYS_OF_WEEK[dow],
+    month,
+    day,
+    dow,
   };
 }
 
@@ -52,24 +47,24 @@ function parsePattern(pattern: string): ParsedPattern {
  * Handles both fixed-date holidays (e.g., Christmas on Dec 25)
  * and relative holidays (e.g., Thanksgiving on 4th Thursday of November).
  */
-export function getHolidayDate(holiday: Holiday, year: number): Date {
+export function getHolidayDate(holiday: HolidayWithPattern, year: number): Date {
   const parsed = parsePattern(holiday.pattern);
 
-  if (parsed.isFixed) {
-    return new Date(year, parsed.month - 1, parsed.day!);
+  if (parsed.dow === 'day') {
+    return new Date(year, parsed.month, parsed.day);
   }
 
-  if (parsed.occurrence === 'last') {
-    return getLastWeekdayOfMonth(year, parsed.month, parsed.dayOfWeek!);
+  if (parsed.day === -1) {
+    return getLastWeekdayOfMonth(year, parsed.month, parsed.dow);
   }
 
-  return getNthWeekdayOfMonth(year, parsed.month, parsed.dayOfWeek!, parsed.occurrence as number);
+  return getNthWeekdayOfMonth(year, parsed.month, parsed.dow, parsed.day);
 }
 
 /**
  * Find the nth occurrence of a weekday in a month
  * @param year - The year
- * @param month - The month (1-12)
+ * @param month - The month (0-11)
  * @param dayOfWeek - The day of week (0=Sunday, 6=Saturday)
  * @param n - Which occurrence (1=first, 2=second, etc.)
  */
@@ -79,23 +74,20 @@ function getNthWeekdayOfMonth(
   dayOfWeek: number,
   n: number
 ): Date {
-  // Start at the first day of the month
-  const firstOfMonth = new Date(year, month - 1, 1);
+  const firstOfMonth = new Date(year, month, 1);
   const firstDayOfWeek = firstOfMonth.getDay();
 
-  // Calculate days until the first occurrence of the target weekday
   const daysUntilTarget = (dayOfWeek - firstDayOfWeek + 7) % 7;
 
-  // Calculate the day of the month for the nth occurrence
   const day = 1 + daysUntilTarget + (n - 1) * 7;
 
-  return new Date(year, month - 1, day);
+  return new Date(year, month, day);
 }
 
 /**
  * Find the last occurrence of a weekday in a month
  * @param year - The year
- * @param month - The month (1-12)
+ * @param month - The month (0-11)
  * @param dayOfWeek - The day of week (0=Sunday, 6=Saturday)
  */
 function getLastWeekdayOfMonth(
@@ -103,21 +95,19 @@ function getLastWeekdayOfMonth(
   month: number,
   dayOfWeek: number
 ): Date {
-  // Get the last day of the month (day 0 of next month)
-  const lastDay = new Date(year, month, 0);
+  const lastDay = new Date(year, month + 1, 0);
   const lastDayOfWeek = lastDay.getDay();
 
-  // Calculate how many days to go back to reach the target weekday
   const daysBack = (lastDayOfWeek - dayOfWeek + 7) % 7;
 
-  return new Date(year, month - 1, lastDay.getDate() - daysBack);
+  return new Date(year, month, lastDay.getDate() - daysBack);
 }
 
 /**
  * Get all holiday dates for a given year
  */
 export function getAllHolidayDates(
-  holidays: Holiday[],
+  holidays: HolidayWithPattern[],
   year: number
 ): Map<number, Date> {
   const dateMap = new Map<number, Date>();
@@ -134,7 +124,7 @@ export function getAllHolidayDates(
  */
 export function isHoliday(
   date: Date,
-  holidays: Holiday[],
+  holidays: HolidayWithPattern[],
   blockedHolidayIds: number[]
 ): boolean {
   const year = date.getFullYear();

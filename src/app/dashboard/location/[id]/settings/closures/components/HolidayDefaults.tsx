@@ -9,8 +9,9 @@ import { Loader2 } from "lucide-react";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator } from "@/components/ui";
 import { Checkbox, Form, FormField, FormItem, FormLabel, FormDescription, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Input, FormControl } from "@/components/forms";
 import { tryCatch } from "@/libs/utils";
-import { COMMON_HOLIDAYS, HolidayDefaultsSchema, type HolidayDefaultsFormData } from "../schemas";
+import { HolidayDefaultsSchema, type HolidayDefaultsFormData } from "../schemas";
 import type { HolidaySettings } from "@subtrees/types/location";
+import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
 
 interface HolidayDefaultsProps {
   locationId: string;
@@ -21,21 +22,10 @@ interface HolidayDefaultsProps {
 export function HolidayDefaults({ locationId, initialSettings, onUpdate }: HolidayDefaultsProps) {
   const [saving, setSaving] = useState(false);
 
-  // Map legacy string IDs to new integer IDs
-  const LEGACY_ID_MAP: Record<string, number> = {
-    new_years: 1, mlk_day: 2, presidents_day: 3, memorial_day: 4,
-    independence_day: 5, labor_day: 6, columbus_day: 7, veterans_day: 8,
-    thanksgiving: 9, christmas_eve: 10, christmas: 11, new_years_eve: 12,
-  };
-
-  const normalizedBlockedHolidays = (initialSettings?.blockedHolidays || [])
-    .map(id => typeof id === 'string' ? LEGACY_ID_MAP[id] : id)
-    .filter((id): id is number => typeof id === 'number');
-
   const form = useForm<HolidayDefaultsFormData>({
     resolver: zodResolver(HolidayDefaultsSchema),
     defaultValues: {
-      blockedHolidays: normalizedBlockedHolidays,
+      blockedHolidays: initialSettings?.blockedHolidays || [],
       defaultBehavior: initialSettings?.defaultBehavior || 'block_all',
       advanceBlockDays: initialSettings?.advanceBlockDays || 7,
       autoNotifyMembers: initialSettings?.autoNotifyMembers ?? true,
@@ -195,4 +185,3 @@ export function HolidayDefaults({ locationId, initialSettings, onUpdate }: Holid
     </Card>
   );
 }
-

@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { and, eq, gte, lte, or } from "drizzle-orm";
 import { reservationExceptions, locationState } from "@subtrees/schemas";
 import { NextRequest, NextResponse } from "next/server";
-import { COMMON_HOLIDAYS } from "@/app/dashboard/location/[id]/settings/closures/schemas";
+import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
 import { getHolidayDate } from "@/libs/holidays";
 import type { HolidaySettings, HolidayBehavior } from "@subtrees/types/location";
 
