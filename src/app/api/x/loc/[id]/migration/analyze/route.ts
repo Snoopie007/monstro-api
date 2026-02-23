@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ApiClientError, serversideApiClient } from "@/libs/api/server"
+import { logNextRouteError, logNextRouteWarning } from "@/libs/observability/next-api"
 
 export async function POST(
     request: NextRequest,
@@ -28,6 +29,12 @@ export async function POST(
         return NextResponse.json(result)
     } catch (error) {
         if (error instanceof ApiClientError) {
+            logNextRouteWarning("/api/x/loc/[id]/migration/analyze", "Downstream monstro-api request failed", {
+                status: error.status,
+                endpoint: error.endpoint,
+                body: error.body,
+            })
+
             const payload = typeof error.body === "object" && error.body !== null
                 ? error.body
                 : { error: String(error.body || error.message) }
@@ -35,7 +42,7 @@ export async function POST(
             return NextResponse.json(payload, { status: error.status })
         }
 
-        console.error("Migration analysis error:", error)
+        logNextRouteError("/api/x/loc/[id]/migration/analyze", error)
         
         if (error instanceof Error) {
             return NextResponse.json(

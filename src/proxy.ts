@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "./libs/auth/server";
+import { logNextRouteError } from "@/libs/observability/next-api";
 
 const publicPaths = ["/login", "/join", "/callbacks", "/api/webhooks"];
 
@@ -72,7 +73,7 @@ export default async function proxy(req: NextRequest) {
 
 		return NextResponse.next();
 	} catch (error) {
-		console.error("Middleware error:", error);
+		logNextRouteError("proxy", error);
 		return NextResponse.json(
 			{ message: "Internal Server Error" },
 			{ status: 500 }
