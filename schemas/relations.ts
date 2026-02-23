@@ -189,10 +189,6 @@ export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
 		fields: [memberInvoices.memberId],
 		references: [members.id],
 	}),
-	subscription: one(memberSubscriptions, {
-		fields: [memberInvoices.memberSubscriptionId],
-		references: [memberSubscriptions.id],
-	}),
 	location: one(locations, {
 		fields: [memberInvoices.locationId],
 		references: [locations.id],
