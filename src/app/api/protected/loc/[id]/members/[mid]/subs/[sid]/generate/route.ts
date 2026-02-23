@@ -73,7 +73,7 @@ export async function POST(
 		// Check if invoice already exists for next period
 		const existingInvoice = await db.query.memberInvoices.findFirst({
 			where: and(
-				eq(memberInvoices.memberSubscriptionId, params.sid),
+				eq(memberInvoices.memberPlanId, params.sid),
 				eq(memberInvoices.status, "draft")
 			),
 		});
@@ -85,56 +85,8 @@ export async function POST(
 			);
 		}
 
-		// Use pricing.price for tax calculation
-		const price = subscription.pricing?.price || 0;
-		const tax = calculateTax(price, location.taxRates);
-
-		// // Use same utility functions as subscription creation
-		// const newTransaction = createTransaction(
-		//   subscription.plan,
-		//   {
-		//     memberId: params.mid,
-		//     locationId: params.id,
-		//     paymentType: subscription.paymentType,
-		//   },
-		//   tax
-		// );
-
-		// const newInvoice = {
-		//   ...createInvoice(
-		//     subscription.plan,
-		//     {
-		//       memberId: params.mid,
-		//       locationId: params.id,
-		//       paymentType: subscription.paymentType,
-		//     },
-		//     tax
-		//   ),
-		//   forPeriodStart: nextPeriodStart,
-		//   forPeriodEnd: nextPeriodEnd,
-		//   dueDate: nextPeriodEnd,
-		//   memberSubscriptionId: subscription.id,
-		//   invoiceType: "recurring" as const,
-		//   paymentMethod: "manual" as const,
-		// };
-
 		// Create invoice and transaction, then update subscription billing dates
 		await db.transaction(async (tx) => {
-			// const [{ invoiceId }] = await tx
-			//   .insert(memberInvoices)
-			//   .values({
-
-			//     status: "draft",
-			//     memberSubscriptionId: subscription.id,
-			//   }).returning({ invoiceId: memberInvoices.id });
-
-			// await tx.insert(transactions).values({
-			//   ...newTransaction,
-			//   invoiceId,
-			//   subscriptionId: subscription.id,
-			//   status: "incomplete",
-			//   paymentType: subscription.paymentType,
-			// });
 
 			// Move subscription billing dates forward for next period
 			await tx
@@ -165,4 +117,3 @@ export async function POST(
 		);
 	}
 }
-

@@ -27,7 +27,6 @@ export async function POST(
       type,
       paymentType,
       tax,
-      discount,
       selectedSubscriptionId,
     } = body;
 
@@ -72,7 +71,7 @@ export async function POST(
       const subscriptionInvoiceData = {
         memberId: params.mid,
         locationId: params.id,
-        memberSubscriptionId: subscription.id,
+        memberPlanId: subscription.id,
         description: `${subscription.pricing?.plan?.name ?? 'Unknown Plan'}${pricingName} - Billing Period`,
         items: [{
           name: (subscription.pricing?.plan?.name ?? '') + pricingName,
@@ -81,9 +80,8 @@ export async function POST(
           price: price,
         }],
         total: price,
-        subtotal: price,
+        subTotal: price,
         tax: 0,
-        discount: 0,
         currency: subscription.pricing?.currency || subscription.pricing?.plan?.currency || "usd",
         status: "draft" as const,
         dueDate: new Date(subscription.currentPeriodEnd),
@@ -105,26 +103,27 @@ export async function POST(
           .values(subscriptionInvoiceData)
           .returning();
 
-        // Create incomplete transaction
-        await tx.insert(transactions).values({
-          memberId: params.mid,
-          locationId: params.id,
-          invoiceId: newInvoice.id,
-          description: `${subscription.pricing?.plan?.name ?? 'Unknown Plan'}${pricingName} - Recurring Payment`,
-          type: "inbound",
-          status: "failed",
-          paymentType: subscription.paymentType,
-          total: price,
-          currency: subscription.pricing?.currency || subscription.pricing?.plan?.currency || "usd",
-          created: new Date(),
-          subTotal: price,
-          items: [{
-            productId: subscription.pricing?.plan?.id ?? '',
-            amount: price,
-            tax: 0,
-            quantity: 1,
-        }],
-        });
+        if (subscription.paymentType === "cash") {
+          await tx.insert(transactions).values({
+            memberId: params.mid,
+            locationId: params.id,
+            invoiceId: newInvoice.id,
+            description: `${subscription.pricing?.plan?.name ?? 'Unknown Plan'}${pricingName} - Recurring Payment`,
+            type: "inbound",
+            status: "failed",
+            paymentType: subscription.paymentType,
+            total: price,
+            currency: subscription.pricing?.currency || subscription.pricing?.plan?.currency || "usd",
+            created: new Date(),
+            subTotal: price,
+            items: [{
+              productId: subscription.pricing?.plan?.id ?? '',
+              amount: price,
+              tax: 0,
+              quantity: 1,
+            }],
+          });
+        }
 
         return newInvoice;
       });
@@ -147,12 +146,11 @@ export async function POST(
           `Custom invoice for ${member.firstName} ${member.lastName}`,
         items: items,
         total: items.reduce((sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number), 0),
-        subtotal: items.reduce(
+        subTotal: items.reduce(
           (sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number),
           0
         ),
         tax: tax || 0,
-        discount: discount || 0,
         currency: "usd",
         status: "draft" as const,
         dueDate: dueDate ? new Date(dueDate) : new Date(),
@@ -277,12 +275,11 @@ export async function POST(
             `Custom invoice for ${member.firstName} ${member.lastName}`,
           items: items,
           total: items.reduce((sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number), 0),
-          subtotal: items.reduce(
+          subTotal: items.reduce(
             (sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number),
             0
           ),
           tax: tax || 0,
-          discount: discount || 0,
           currency: "usd",
           status: "draft" as const,
           dueDate: dueDate ? new Date(dueDate) : new Date(),
@@ -338,12 +335,11 @@ export async function POST(
             `Recurring invoice for ${member.firstName} ${member.lastName}`,
           items: items,
           total: items.reduce((sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number), 0),
-          subtotal: items.reduce(
+          subTotal: items.reduce(
             (sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number),
             0
           ),
           tax: tax || 0,
-          discount: discount || 0,
           currency: "usd",
           status: "draft" as const,
           dueDate: new Date(recurringSettings.startDate),

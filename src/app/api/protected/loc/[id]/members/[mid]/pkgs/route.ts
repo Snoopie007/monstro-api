@@ -1,11 +1,11 @@
 import { db } from "@/db/db";
-import { memberLocations, memberPackages, memberPlanPricing, transactions, promos } from "@subtrees/schemas";
+import { memberLocations, memberPackages, memberPlanPricing, memberInvoices, promos } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { eq, and, sql } from "drizzle-orm";
 
 import { PaymentType } from "@subtrees/types";
 import { NextRequest, NextResponse } from "next/server";
-import { addUserToGroup, calculateExpiresAt, calculateStripeFeeAmount, calculateTax, validatePromoForCheckout } from "../../utils";
+import { calculateExpiresAt, calculateStripeFeeAmount, calculateTax, validatePromoForCheckout } from "../../utils";
 
 type Props = {
 	params: Promise<{
@@ -170,82 +170,90 @@ export async function POST(req: NextRequest, props: Props) {
 			subTotal += applicationFeeAmount;
 		}
 
-		const { clientSecret } = await stripe.createPaymentIntent(total, applicationFeeAmount, {
-			paymentMethod: paymentMethod.id,
-			currency: plan.currency,
-			description: `Payment for ${plan.name} - ${pricing.name}`,
-			productName: plan.name,
-			unitCost: subTotal,
-			tax: tax,
-			metadata: {
-				planId: plan.id,
-				pricingId: pricing.id,
-				startDate: today,
-				locationId: id,
-				memberId: mid,
-			},
-		});
+        const { pkg, invoiceId } = await db.transaction(async (tx) => {
+            const CommonData = {
+                locationId: id,
+                memberId: mid,
+                paymentType,
+            }
 
+            const [pkg] = await tx.insert(memberPackages).values({
+                ...CommonData,
+                stripePaymentId: null,
+                memberPlanId: plan.id,
+                memberPlanPricingId: pricing.id,
+                promoId,
+                ...data,
+                status: "incomplete",
+                startDate,
+                expireDate,
+                makeUpCredits: 0,
+                allowMakeUpCarryOver: false,
+            }).returning();
 
+            const [invoice] = await tx.insert(memberInvoices).values({
+                memberId: mid,
+                locationId: id,
+                memberPlanId: pkg.id,
+                description: `Payment for ${plan.name} - ${pricing.name}`,
+                items: [{
+                    name: `${plan.name} - ${pricing.name}`,
+                    price: discountedPrice,
+                    quantity: 1,
+                }],
+                status: "draft",
+                paymentType: paymentMethod.type as PaymentType,
+                invoiceType: "one-off",
+                subTotal: discountedPrice,
+                total,
+                tax,
+                currency: plan.currency,
+                dueDate: new Date(),
+                metadata: {
+                    packageId: pkg.id,
+                    pricingId: pricing.id,
+                },
+            }).returning({
+                id: memberInvoices.id,
+            });
 
-
-		const pkg = await db.transaction(async (tx) => {
-			const CommonData = {
-				locationId: id,
-				memberId: mid,
-				paymentType,
-			}
-
-			const [pkg] = await tx.insert(memberPackages).values({
-				...CommonData,
-				stripePaymentId: clientSecret.split("_secret_")[0] || null,
-				memberPlanId: plan.id,
-				memberPlanPricingId: pricing.id,
-				promoId,
-				...data,
-				status: "active",
-				startDate,
-				expireDate,
-				makeUpCredits: 0,
-				allowMakeUpCarryOver: false,
-			}).returning();
-
-			/** Create Transaction */
-			await tx.insert(transactions).values({
-				description: `One time payment for ${plan.name} - ${pricing.name}`,
-				...CommonData,
-				tax,
-				type: "inbound",
-				items: [{
-					productId: plan.id,
-					amount: discountedPrice,
-					tax: tax,
-					quantity: 1,
-				}],
-				status: "paid",
-				subTotal: discountedPrice,
-				total,
-				currency: plan.currency,
-				metadata: {
-					packageId: pkg.id,
-					pricingId: pricing.id,
-				},
-			});
-
-			await tx
-				.update(memberLocations)
-				.set({
-					status: "active",
-					updated: new Date(),
-				})
-				.where(
+            await tx
+                .update(memberLocations)
+                .set({
+                    status: "incomplete",
+                    updated: new Date(),
+                })
+                .where(
 					and(
 						eq(memberLocations.memberId, mid),
 						eq(memberLocations.locationId, id)
 					)
 				);
-			return pkg;
-		});
+            return { pkg, invoiceId: invoice.id };
+        });
+
+        const { clientSecret } = await stripe.createPaymentIntent(total, applicationFeeAmount, {
+            paymentMethod: paymentMethod.id,
+            currency: plan.currency,
+            description: `Payment for ${plan.name} - ${pricing.name}`,
+            productName: plan.name,
+            unitCost: subTotal,
+            tax,
+            metadata: {
+                invoiceId,
+                memberPlanId: pkg.id,
+                locationId: id,
+                memberId: mid,
+                planId: plan.id,
+                pricingId: pricing.id,
+                startDate: today.toISOString(),
+            },
+        });
+
+        await db.update(memberPackages).set({
+            stripePaymentId: clientSecret.split("_secret_")[0] || null,
+            updated: new Date(),
+        }).where(eq(memberPackages.id, pkg.id));
 
 		// Increment redemption count if promo was used
 		if (promoId) {
@@ -254,12 +262,7 @@ export async function POST(req: NextRequest, props: Props) {
 				.where(eq(promos.id, promoId));
 		}
 
-		// Add user to group if plan has a groupId
-		if (plan.groupId && member.userId) {
-			await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
-		}
-
-		return NextResponse.json({ ...pkg, plan, pricing }, { status: 200 });
+        return NextResponse.json({ ...pkg, stripePaymentId: clientSecret.split("_secret_")[0] || null, plan, pricing }, { status: 200 });
 	} catch (err) {
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });

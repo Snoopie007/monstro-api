@@ -62,8 +62,12 @@ export async function POST(
 		// TODO: Get actual user ID from auth session
 		const currentUserId = "system"; // Placeholder - implement proper auth
 
-		// Transaction: update invoice + UPDATE existing incomplete transaction + update subscription
+		// Transaction: update invoice + update/insert transaction + update subscription
 		await db.transaction(async (tx) => {
+			const existingTransaction = await tx.query.transactions.findFirst({
+				where: eq(transactions.invoiceId, params.iid),
+			});
+
 			// Update invoice status to "paid"
 			await tx
 				.update(memberInvoices)
@@ -74,32 +78,50 @@ export async function POST(
 				})
 				.where(eq(memberInvoices.id, params.iid));
 
-			// UPDATE the existing incomplete transaction (don't create new one)
-			await tx
-				.update(transactions)
-				.set({
+			const baseMetadata = {
+				notes: notes || "",
+				confirmedBy: currentUserId,
+				markedPaidAt: new Date().toISOString(),
+			};
+
+			if (existingTransaction) {
+				await tx
+					.update(transactions)
+					.set({
+						status: "paid",
+						paymentType: paymentMethod,
+						chargeDate: paidDate ? new Date(paidDate) : new Date(),
+						updated: new Date(),
+						metadata: {
+							...((existingTransaction.metadata as Record<string, unknown>) || {}),
+							...baseMetadata,
+						},
+					})
+					.where(eq(transactions.id, existingTransaction.id));
+			} else {
+				await tx.insert(transactions).values({
+					memberId: invoice.memberId,
+					locationId: invoice.locationId,
+					invoiceId: invoice.id,
+					description: invoice.description || "Invoice payment",
+					type: "inbound",
 					status: "paid",
 					paymentType: paymentMethod,
+					total: invoice.total,
+					subTotal: invoice.subTotal,
+					tax: invoice.tax,
+					currency: invoice.currency || "usd",
 					chargeDate: paidDate ? new Date(paidDate) : new Date(),
-					updated: new Date(),
-					metadata: {
-						notes: notes || "",
-						confirmedBy: currentUserId,
-						markedPaidAt: new Date().toISOString(),
-					},
-				})
-				.where(
-					and(
-						eq(transactions.invoiceId, params.iid),
-						eq(transactions.status, "failed")
-					)
-				);
+					items: (invoice.items || []) as any,
+					metadata: baseMetadata,
+				});
+			}
 
 			// If invoice is linked to a subscription, mark subscription as active AND move billing period forward
-			if (invoice.memberSubscriptionId) {
+			if (invoice.memberPlanId) {
 				// Fetch the subscription to get plan and pricing details
 				const subscription = await tx.query.memberSubscriptions.findFirst({
-					where: eq(memberSubscriptions.id, invoice.memberSubscriptionId),
+					where: eq(memberSubscriptions.id, invoice.memberPlanId),
 					with: { pricing: { with: { plan: true } } },
 				});
 
@@ -144,7 +166,7 @@ export async function POST(
 							makeUpCredits: makeUpCreditsValue,
 							updated: new Date(),
 						})
-						.where(eq(memberSubscriptions.id, invoice.memberSubscriptionId));
+						.where(eq(memberSubscriptions.id, invoice.memberPlanId));
 				} else {
 					// Fallback: just set to active if we can't calculate next period
 					await tx
@@ -153,7 +175,7 @@ export async function POST(
 							status: "active",
 							updated: new Date(),
 						})
-						.where(eq(memberSubscriptions.id, invoice.memberSubscriptionId));
+						.where(eq(memberSubscriptions.id, invoice.memberPlanId));
 				}
 			}
 		});
