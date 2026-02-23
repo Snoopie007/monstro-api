@@ -81,8 +81,11 @@ export async function locationSessions(app: Elysia) {
                     const utcStartTime = fromZonedTime(startTime, location.timezone);
                     const utcEndTime = fromZonedTime(endTime, location.timezone);
 
-                    const isBlocked = isDateBlockedByHolidays(sessionDate, holidays?.blockedHolidays ?? [], COMMON_HOLIDAYS);
-                    if (isBlocked) {
+                    const isHoliday = isDateBlockedByHolidays(
+                        sessionDate,
+                        holidays?.blockedHolidays ?? [],
+                        COMMON_HOLIDAYS);
+                    if (isHoliday) {
                         return;
                     }
                     const r = reservations.filter((r) => r.sessionId === session.id);
