@@ -20,8 +20,8 @@ export function useInvoiceReminder(subscription: MemberSubscription) {
     async function checkExistingInvoice() {
       try {
         const hasExistingInvoice = memberInvoices.some(
-          (inv: { memberSubscriptionId?: string; status?: string }) => {
-            return inv.memberSubscriptionId === subscription.id && 
+          (inv: { memberPlanId?: string; status?: string }) => {
+            return inv.memberPlanId === subscription.id && 
               (inv.status === 'draft' || inv.status === 'paid');
           }
         );

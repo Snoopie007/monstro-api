@@ -176,7 +176,6 @@ export async function POST(
 					0
 				),
 				tax: 0, // Default tax amount - can be updated later when tax calculation is implemented
-				discount: 0, // Default discount amount - can be updated later when discount calculation is implemented
 				currency: "usd",
 				status: "draft" as const,
 				dueDate: dueDate ? new Date(dueDate) : new Date(),
@@ -228,7 +227,6 @@ export async function POST(
 					0
 				),
 				tax: 0, // Default tax amount - can be updated later when tax calculation is implemented
-				discount: 0, // Default discount amount - can be updated later when discount calculation is implemented
 				currency: "usd",
 				status: "draft" as const,
 				dueDate: new Date(recurringSettings.startDate),
