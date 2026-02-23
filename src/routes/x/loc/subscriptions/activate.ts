@@ -8,10 +8,8 @@ import {
 } from "@/queues/subscriptions";
 import {
     memberInvoices,
-    memberLocations,
     memberSubscriptions,
     promos,
-    transactions,
 } from "@subtrees/schemas";
 import type { SubscriptionJobData } from "@subtrees/bullmq/types";
 import { and, eq, sql } from "drizzle-orm";
@@ -171,6 +169,45 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             passOnFees: sub.location.locationState?.settings?.passOnFees ?? false,
         });
 
+        const lineItems = [{
+            name: planName,
+            description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
+            quantity: 1,
+            price: billedAmount,
+            discount: discountAmount,
+        }];
+
+        const [invoice] = await db.insert(memberInvoices).values({
+            memberId: sub.memberId,
+            locationId: lid,
+            memberPlanId: sub.id,
+            description: sub.pricing.downpayment
+                ? `Downpayment for ${planName}`
+                : `${sub.pricing.name} - Billing Period`,
+            items: lineItems,
+            subTotal: chargeDetails.subTotal,
+            total: chargeDetails.total,
+            tax: chargeDetails.tax,
+            currency: sub.pricing.currency,
+            status: "draft",
+            dueDate: new Date(),
+            paymentType: paymentMethod.type,
+            invoiceType: "recurring",
+            forPeriodStart: new Date(sub.currentPeriodStart),
+            forPeriodEnd: new Date(sub.currentPeriodEnd),
+            metadata: {
+                type: "from-subscription",
+                subscriptionId: sub.id,
+                collectionMethod: "charge_automatically",
+            },
+        }).returning({
+            id: memberInvoices.id,
+        });
+
+        if (!invoice) {
+            return status(500, { error: "Failed to create invoice for activation" });
+        }
+
         let paymentIntentId: string;
 
         try {
@@ -185,6 +222,8 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         lid,
                         locationId: lid,
                         memberId: sub.memberId,
+                        invoiceId: invoice.id,
+                        memberPlanId: sub.id,
                         memberSubscriptionId: sub.id,
                     },
                     productName: planName,
@@ -208,44 +247,19 @@ export async function activateSubscriptionRoutes(app: Elysia) {
 
         try {
             await db.transaction(async (tx) => {
-                const lineItems = [{
-                    name: planName,
-                    description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
-                    quantity: 1,
-                    price: billedAmount,
-                    discount: discountAmount,
-                }];
-
-                const [invoice] = await tx.insert(memberInvoices).values({
-                    memberId: sub.memberId,
-                    locationId: lid,
-                    memberPlanId: sub.id,
-                    description: sub.pricing.downpayment
-                        ? `Downpayment for ${planName}`
-                        : `${sub.pricing.name} - Billing Period`,
-                    items: lineItems,
-                    subTotal: chargeDetails.subTotal,
-                    total: chargeDetails.total,
-                    tax: chargeDetails.tax,
-                    currency: sub.pricing.currency,
-                    status: "paid",
-                    paid: true,
+                await tx.update(memberInvoices).set({
+                    status: "sent",
                     sentAt: new Date(),
-                    dueDate: new Date(),
-                    paymentType: paymentMethod.type,
-                    invoiceType: "recurring",
-                    forPeriodStart: new Date(sub.currentPeriodStart),
-                    forPeriodEnd: new Date(sub.currentPeriodEnd),
+                    updated: new Date(),
                     metadata: {
                         type: "from-subscription",
                         subscriptionId: sub.id,
                         collectionMethod: "charge_automatically",
                         paymentIntentId,
                     },
-                }).returning();
+                }).where(eq(memberInvoices.id, invoice.id));
 
                 await tx.update(memberSubscriptions).set({
-                    status: "active",
                     stripePaymentId: paymentMethod.stripeId,
                     metadata: {
                         ...(sub.metadata || {}),
@@ -259,33 +273,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     },
                 }).where(eq(memberSubscriptions.id, sub.id));
 
-                await tx.insert(transactions).values({
-                    description: `Payment for ${planName}`,
-                    items: [{ name: planName, quantity: 1, price: billedAmount, discount: discountAmount }],
-                    type: "inbound",
-                    total: chargeDetails.total,
-                    subTotal: chargeDetails.subTotal,
-                    tax: chargeDetails.tax,
-                    status: "paid",
-                    locationId: lid,
-                    memberId: sub.memberId,
-                    invoiceId: invoice?.id,
-                    paymentType: paymentMethod.type,
-                    paymentMethodId: paymentMethod.stripeId,
-                    paymentIntentId,
-                    chargeDate: new Date(),
-                    currency: sub.pricing.currency,
-                    metadata: {
-                        memberSubscriptionId: sub.id,
-                        paymentIntentId,
-                    },
-                });
-
-                await tx.update(memberLocations).set({
-                    status: "active",
-                    updated: new Date(),
-                }).where(and(eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
-
                 if (promoMeta?.id && !promoMeta.applied) {
                     await tx.update(promos).set({
                         redemptionCount: sql`${promos.redemptionCount} + 1`,
@@ -294,7 +281,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 }
             });
         } catch (error) {
-            const message = error instanceof Error ? error.message : "Failed to persist activation records";
+            const message = error instanceof Error ? error.message : "Failed to persist activation metadata";
             console.error("[x/subscriptions/activate] db transaction failed after payment", {
                 lid,
                 sid,
@@ -307,7 +294,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             });
 
             return status(500, {
-                error: "Activation payment succeeded but database update failed",
+                error: "Activation payment succeeded but post-payment update failed",
                 code: "ACTIVATION_DB_WRITE_FAILED",
                 details: { message, paymentIntentId },
             });
@@ -379,7 +366,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         }
 
         return status(200, {
-            status: "active",
+            status: "processing",
             paymentIntentId,
             nextBillingAt,
             scheduledJobKey: `renewal:${sub.id}`,

@@ -107,29 +107,31 @@ export async function createInvoiceRoutes(app: Elysia) {
                 return status(500, { error: "Failed to create invoice" });
             }
 
-            await db.insert(transactions).values({
-                memberId,
-                locationId: lid,
-                invoiceId: invoice.id,
-                description: description || `${sub.pricing.plan?.name || "Subscription"} payment`,
-                type: "inbound",
-                status: PENDING_TRANSACTION_STATUS,
-                paymentType: PENDING_TRANSACTION_PAYMENT_TYPE,
-                total,
-                subTotal: subtotal,
-                tax,
-                currency: sub.pricing.currency || "usd",
-                metadata: {
-                    intendedPaymentType: sub.paymentType,
-                    collectionMethod,
-                },
-                items: lineItems.map((item) => ({
-                    name: item.name,
-                    amount: item.price,
-                    quantity: item.quantity,
-                    tax: 0,
-                })),
-            });
+            if (sub.paymentType === "cash") {
+                await db.insert(transactions).values({
+                    memberId,
+                    locationId: lid,
+                    invoiceId: invoice.id,
+                    description: description || `${sub.pricing.plan?.name || "Subscription"} payment`,
+                    type: "inbound",
+                    status: PENDING_TRANSACTION_STATUS,
+                    paymentType: PENDING_TRANSACTION_PAYMENT_TYPE,
+                    total,
+                    subTotal: subtotal,
+                    tax,
+                    currency: sub.pricing.currency || "usd",
+                    metadata: {
+                        intendedPaymentType: sub.paymentType,
+                        collectionMethod,
+                    },
+                    items: lineItems.map((item) => ({
+                        name: item.name,
+                        amount: item.price,
+                        quantity: item.quantity,
+                        tax: 0,
+                    })),
+                });
+            }
 
             return status(201, { invoice });
         }
@@ -190,41 +192,44 @@ export async function createInvoiceRoutes(app: Elysia) {
             return status(500, { error: "Failed to create invoice" });
         }
 
-        try {
-            await db.insert(transactions).values({
-                memberId,
-                locationId: lid,
-                invoiceId: invoice.id,
-                description: description || `Invoice payment`,
-                type: "inbound",
-                status: PENDING_TRANSACTION_STATUS,
-                paymentType: PENDING_TRANSACTION_PAYMENT_TYPE,
-                total,
-                subTotal: subtotal,
-                tax,
-                currency: "usd",
-                metadata: {
-                    intendedPaymentType: paymentType,
-                    collectionMethod,
-                },
-                items: invoiceItems.map((item) => ({
-                    name: item.name,
-                    amount: item.price,
-                    quantity: item.quantity,
-                    tax: 0,
-                })),
-            });
-        } catch (error) {
-            console.error("[x/invoices:create] Transaction insert threw", {
-                locationId: lid,
-                memberId,
-                invoiceId: invoice.id,
-                paymentType,
-                message: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-                error,
-            });
-            throw error;
+        const intendedPaymentType = paymentType || "card";
+        if (intendedPaymentType === "cash") {
+            try {
+                await db.insert(transactions).values({
+                    memberId,
+                    locationId: lid,
+                    invoiceId: invoice.id,
+                    description: description || `Invoice payment`,
+                    type: "inbound",
+                    status: PENDING_TRANSACTION_STATUS,
+                    paymentType: PENDING_TRANSACTION_PAYMENT_TYPE,
+                    total,
+                    subTotal: subtotal,
+                    tax,
+                    currency: "usd",
+                    metadata: {
+                        intendedPaymentType,
+                        collectionMethod,
+                    },
+                    items: invoiceItems.map((item) => ({
+                        name: item.name,
+                        amount: item.price,
+                        quantity: item.quantity,
+                        tax: 0,
+                    })),
+                });
+            } catch (error) {
+                console.error("[x/invoices:create] Transaction insert threw", {
+                    locationId: lid,
+                    memberId,
+                    invoiceId: invoice.id,
+                    paymentType,
+                    message: error instanceof Error ? error.message : String(error),
+                    stack: error instanceof Error ? error.stack : undefined,
+                    error,
+                });
+                throw error;
+            }
         }
 
         return status(201, { invoice });
