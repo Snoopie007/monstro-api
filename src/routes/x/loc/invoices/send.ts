@@ -3,12 +3,9 @@ import { MemberStripePayments } from "@/libs/stripe";
 import { calculateChargeDetails } from "@/libs/utils";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { and, eq } from "drizzle-orm";
-import { memberInvoices, transactions } from "@subtrees/schemas";
-import {
-    PENDING_TRANSACTION_STATUS,
-    scheduleInvoiceReminderAndOverdue,
-} from "./shared";
+import { eq } from "drizzle-orm";
+import { memberInvoices } from "@subtrees/schemas";
+import { scheduleInvoiceReminderAndOverdue } from "./shared";
 
 export async function sendInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/send", async ({ params, body, status }) => {
@@ -130,52 +127,24 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     locationId: lid,
                     memberId: invoice.memberId,
                     invoiceId: invoice.id,
+                    memberPlanId: invoice.memberPlanId || "",
                 },
                 productName: invoice.description || "Invoice",
                 currency: invoice.currency || "usd",
             });
 
-            await db.transaction(async (tx) => {
-                const existingTransaction = await tx.query.transactions.findFirst({
-                    where: (tr, { and, eq }) => and(
-                        eq(tr.invoiceId, iid),
-                        eq(tr.locationId, lid),
-                        eq(tr.status, PENDING_TRANSACTION_STATUS)
-                    ),
-                    columns: {
-                        metadata: true,
-                    },
-                });
-
-                await tx.update(memberInvoices).set({
-                    status: "paid",
-                    paid: true,
-                    sentAt: new Date(),
-                    updated: new Date(),
-                }).where(eq(memberInvoices.id, iid));
-
-                await tx.update(transactions).set({
-                    status: "paid",
-                    paymentType: selectedPaymentMethod!.type,
-                    paymentMethodId: selectedPaymentMethod!.stripeId,
-                    paymentIntentId,
-                    chargeDate: new Date(),
-                    metadata: {
-                        ...((existingTransaction?.metadata as Record<string, unknown> | null) || {}),
-                        collectionMethod: "charge_automatically",
-                        paymentIntentId,
-                    },
-                    updated: new Date(),
-                }).where(and(eq(transactions.invoiceId, iid), eq(transactions.status, PENDING_TRANSACTION_STATUS)));
-            });
+            await db.update(memberInvoices).set({
+                status: "sent",
+                sentAt: new Date(),
+                updated: new Date(),
+            }).where(eq(memberInvoices.id, iid));
 
             return status(200, {
                 success: true,
-                message: "Invoice charged automatically",
+                message: "Automatic charge initiated",
                 invoice: {
                     id: iid,
-                    status: "paid",
-                    paid: true,
+                    status: "sent",
                 },
                 paymentIntentId,
             });
