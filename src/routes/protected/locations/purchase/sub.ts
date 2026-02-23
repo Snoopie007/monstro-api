@@ -241,14 +241,15 @@ export function purchaseSubRoutes(app: Elysia) {
 
 
                 const { usagePercent, settings } = locationState;
-                const isGrowthPlan = locationState.planId === 3;
+
+                const noGrowthPlan = [1, 2].includes(locationState.planId);
                 const chargeDetails = calculateChargeDetails({
                     amount: pricing.downpayment || pricing.price,
                     discount,
                     taxRate: taxRate?.percentage ?? 0,
                     usagePercent: usagePercent || 0,
                     paymentType: paymentMethod.type,
-                    isRecurring: isGrowthPlan ? false : pricing.downpayment ? false : true,
+                    isRecurring: noGrowthPlan,
                     passOnFees: settings?.passOnFees || false,
                 });
 

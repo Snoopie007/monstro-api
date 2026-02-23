@@ -3,7 +3,6 @@ import {
     memberInvoices,
     memberLocations, memberPaymentMethods,
     memberSubscriptions, migrateMembers,
-    transactions
 } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
@@ -183,13 +182,13 @@ export function migrateSubRoutes(app: Elysia) {
                 const productName = pricing.name;
                 const description = `Payment for ${pricing.name}`;
 
-                const isGrowthPlan = locationState.planId === 3;
+                const noGrowthPlan = [1, 2].includes(locationState.planId);
                 const chargeDetails = calculateChargeDetails({
                     amount: pricing.price,
                     taxRate: taxRate?.percentage ?? 0,
                     usagePercent: locationState.usagePercent || 0,
                     paymentType: paymentMethod.type,
-                    isRecurring: !isGrowthPlan,
+                    isRecurring: noGrowthPlan,
                     passOnFees: locationState.settings?.passOnFees || false,
                 });
 

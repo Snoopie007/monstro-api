@@ -157,10 +157,8 @@ async function handleCharge(event: Stripe.Event) {
         items: invoice.items ?? [],
         type: "inbound",
         status: charge.paid ? "paid" : "failed",
-        ...(charge.paid ? {} : {
-            failedReason: charge.failure_message,
-            failedCode: charge.failure_code,
-        }),
+        failedReason: charge.failure_message,
+        failedCode: charge.failure_code,
         locationId,
         memberId,
         paymentMethodId: charge.payment_method,
@@ -182,6 +180,4 @@ async function handleCharge(event: Stripe.Event) {
             status: charge.paid ? "active" : "past_due",
         }).where(eq(memberSubscriptions.id, memberPlanId));
     }
-
-
 }
