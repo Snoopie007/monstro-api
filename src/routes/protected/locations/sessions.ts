@@ -4,7 +4,7 @@ import { addDays, addMinutes } from "date-fns";
 import { Elysia, t } from "elysia";
 import { fromZonedTime } from 'date-fns-tz';
 import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
-import { isDateBlockedByHolidays } from "@/libs/holidays";
+import { findBlockedHoliday } from "@/libs/holidays";
 const SessionsProps = {
     params: t.Object({
         lid: t.String(),
@@ -81,13 +81,11 @@ export async function locationSessions(app: Elysia) {
                     const utcStartTime = fromZonedTime(startTime, location.timezone);
                     const utcEndTime = fromZonedTime(endTime, location.timezone);
 
-                    const isHoliday = isDateBlockedByHolidays(
+                    const blockedHoliday = findBlockedHoliday(
                         sessionDate,
                         holidays?.blockedHolidays ?? [],
                         COMMON_HOLIDAYS);
-                    if (isHoliday) {
-                        return;
-                    }
+
                     const r = reservations.filter((r) => r.sessionId === session.id);
                     sessions.push({
                         ...session,
@@ -95,6 +93,7 @@ export async function locationSessions(app: Elysia) {
                         program: program,
                         startTime,
                         endTime,
+                        holidayName: blockedHoliday?.name ?? undefined,
                         availability: program.capacity - r.length,
                         utcStartTime,
                         utcEndTime,

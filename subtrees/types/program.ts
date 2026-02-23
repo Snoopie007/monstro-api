@@ -37,4 +37,5 @@ export type ExtendedProgramSession = ProgramSession & {
   endTime: Date;
   utcStartTime: Date;
   utcEndTime: Date;
+  holidayName?: string;
 }
