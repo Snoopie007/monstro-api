@@ -2,8 +2,9 @@ import { db } from "@/db/db";
 import type { ExtendedProgramSession } from "@subtrees/types";
 import { addDays, addMinutes } from "date-fns";
 import { Elysia, t } from "elysia";
-import { fromZonedTime, toZonedTime } from 'date-fns-tz';
-
+import { fromZonedTime } from 'date-fns-tz';
+import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
+import { isDateBlockedByHolidays } from "@/libs/holidays";
 const SessionsProps = {
     params: t.Object({
         lid: t.String(),
@@ -33,10 +34,14 @@ export async function locationSessions(app: Elysia) {
                 columns: {
                     timezone: true,
                 },
+                with: {
+                    locationState: true,
+                },
             });
             if (!location) {
                 return status(404, { error: "Location not found" });
             }
+
 
             const programs = await db.query.programs.findMany({
                 where: (programs, { inArray }) => inArray(programs.id, programIdsArray),
@@ -55,8 +60,8 @@ export async function locationSessions(app: Elysia) {
             });
 
 
-            console.log(location.timezone);
 
+            const holidays = location.locationState?.settings.holidays;
             const sessions: ExtendedProgramSession[] = [];
 
             programs.forEach((program) => {
@@ -76,6 +81,10 @@ export async function locationSessions(app: Elysia) {
                     const utcStartTime = fromZonedTime(startTime, location.timezone);
                     const utcEndTime = fromZonedTime(endTime, location.timezone);
 
+                    const isBlocked = isDateBlockedByHolidays(sessionDate, holidays?.blockedHolidays ?? [], COMMON_HOLIDAYS);
+                    if (isBlocked) {
+                        return;
+                    }
                     const r = reservations.filter((r) => r.sessionId === session.id);
                     sessions.push({
                         ...session,
@@ -98,3 +107,6 @@ export async function locationSessions(app: Elysia) {
         }
     }, SessionsProps)
 }
+
+
+

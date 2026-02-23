@@ -38,6 +38,8 @@ export type HolidaySettings = {
 };
 
 
+
+
 export type LocationSettings = {
   theme: 'default';
   passOnFees: boolean;
