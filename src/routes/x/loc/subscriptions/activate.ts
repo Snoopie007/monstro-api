@@ -159,13 +159,15 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
         const planName = `${sub.pricing.plan?.name || "Plan"}/${sub.pricing.name}`;
         const billedAmount = sub.pricing.downpayment || sub.pricing.price;
+        const locationState = sub.location?.locationState;
+        const isGrowthPlan = locationState?.planId === 3;
         const chargeDetails = calculateChargeDetails({
             amount: billedAmount,
             discount: discountAmount,
             taxRate: taxRate?.percentage ?? 0,
             usagePercent: sub.location.locationState?.usagePercent ?? 0,
             paymentType: paymentMethod.type,
-            isRecurring: !sub.pricing.downpayment,
+            isRecurring: isGrowthPlan ? false : !sub.pricing.downpayment,
             passOnFees: sub.location.locationState?.settings?.passOnFees ?? false,
         });
 
