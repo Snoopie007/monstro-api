@@ -186,4 +186,26 @@ const RETRIABLE_PG_CODES = [
     '55P03',   // lock_not_available
 ];
 
-export { CountryCodes, TimeZones, Regions, Industries, RETRIABLE_PG_CODES };
+
+export type HolidayWithPattern = {
+    id: number;
+    name: string;
+    pattern: string;  // "N:dow:month" e.g. "1:day:0", "3:1:0", "L:1:4"
+};
+
+const COMMON_HOLIDAYS: HolidayWithPattern[] = [
+    { id: 1, name: "New Year's Day", pattern: '1:day:0' },
+    { id: 2, name: "MLK Day", pattern: '3:1:0' },
+    { id: 3, name: "Presidents' Day", pattern: '3:1:1' },
+    { id: 4, name: "Memorial Day", pattern: 'L:1:4' },
+    { id: 5, name: "Independence Day", pattern: '4:day:6' },
+    { id: 6, name: "Labor Day", pattern: '1:1:8' },
+    { id: 7, name: "Columbus Day", pattern: '2:1:9' },
+    { id: 8, name: "Veterans Day", pattern: '11:day:10' },
+    { id: 9, name: "Thanksgiving", pattern: '4:4:10' },
+    { id: 10, name: "Christmas Eve", pattern: '24:day:11' },
+    { id: 11, name: "Christmas Day", pattern: '25:day:11' },
+    { id: 12, name: "New Year's Eve", pattern: '31:day:11' },
+];
+
+export { CountryCodes, TimeZones, Regions, Industries, RETRIABLE_PG_CODES, COMMON_HOLIDAYS };
