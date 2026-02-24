@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
     index,
-    jsonb,
+    integer,
     pgTable,
     primaryKey,
     text,
@@ -27,6 +27,9 @@ export const chats = pgTable("chats", {
 export const chatMembers = pgTable("chat_members", {
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    last_message_id: text("last_message_id").references(() => messages.id, { onDelete: "set null" }),
+    last_active_at: timestamp("last_active_at", { withTimezone: true }).notNull().defaultNow(),
+    unread_count: integer("unread_count").notNull().default(0),
     joined: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
     primaryKey({ columns: [t.chatId, t.userId] }),

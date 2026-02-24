@@ -54,6 +54,13 @@ export async function locationReservations(app: Elysia) {
                         email: true,
                         phone: true,
                         timezone: true,
+                    },
+                    with: {
+                        locationState: {
+                            columns: {
+                                planId: true,
+                            }
+                        }
                     }
                 });
 
@@ -198,12 +205,19 @@ export async function locationReservations(app: Elysia) {
                     }
                     return res;
                 });
-                const success = await chargeWallet({
-                    lid,
-                    vendorId: location.vendorId,
-                    amount: autoReschedule ? 1000 : 1500,
-                    description: `Automation fee for ${session.programName}`,
-                });
+
+
+                // No growth charge 10 cents per reservation
+                const noGrowthPlan = [1, 2].includes(location.locationState?.planId);
+                let success = false;
+                if (noGrowthPlan) {
+                    success = await chargeWallet({
+                        lid,
+                        vendorId: location.vendorId,
+                        amount: 1000,
+                        description: `Reservation fee for ${session.programName}`,
+                    });
+                }
 
                 if (success) {
                     await scheduleClassReminderJobs({
@@ -217,7 +231,6 @@ export async function locationReservations(app: Elysia) {
                         autoReschedule: autoReschedule ?? false,
                     });
                 }
-
                 return status(200, { success: true, data: reservation });
             } catch (err) {
                 console.error(err);
