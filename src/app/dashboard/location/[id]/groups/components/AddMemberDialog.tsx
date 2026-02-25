@@ -138,6 +138,8 @@ export function ChatMembersDialog({
                     created: new Date(),
                     updated: null,
                     isChild: false,
+                    lastSeen: new Date(),
+                    isOnline: false,
                 },
             };
             setMembers([...members, newChatMember]);

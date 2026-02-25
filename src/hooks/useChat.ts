@@ -16,12 +16,14 @@ type ChatMode =
 interface UseChatOptions {
   mode: ChatMode | null;
   enabled?: boolean;
+  enablePresence?: boolean;
 }
 
 interface UseChatReturn {
   messages: Message[];
   chatId: string | null;
   isConnected: boolean;
+  onlineUsers: string[];
   isLoading: boolean;
   error: string | null;
   sendMessage: (content: string, files?: File[]) => Promise<Message>;
@@ -37,8 +39,9 @@ const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).su
 
 // ============== Hook ==============
 
-export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn => {
+export const useChat = ({ mode, enabled = true, enablePresence = false }: UseChatOptions): UseChatReturn => {
   const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
 
   // ============== State ==============
 
@@ -48,6 +51,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
   const [resolvedChatId, setResolvedChatId] = useState<string | null>(null);
   const [optimisticMessage, setOptimisticMessage] = useState<Message | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   // ============== Derived Values ==============
@@ -103,8 +107,24 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
     }
   }, [modeType, socialLocationId, socialToUserId, session?.user?.sbToken]);
 
+  const normalizeMessages = useCallback((messagesData: Message[]): Message[] => {
+    return messagesData.map(msg => ({
+      ...msg,
+      media: msg.medias || [],
+    }));
+  }, []);
+
+  const fetchMessagesForChat = useCallback(
+    async (chatId: string, sbToken: string, userId: string): Promise<Message[]> => {
+      const api = clientsideApiClient(sbToken);
+      const messagesData = await api.get<Message[]>(`/protected/users/${userId}/chats/${chatId}/messages`);
+      return normalizeMessages(messagesData);
+    },
+    [normalizeMessages]
+  );
+
   const loadMessages = useCallback(async (chatId: string): Promise<void> => {
-    if (!session?.user?.sbToken) {
+    if (!session?.user?.sbToken || !currentUserId) {
       setError('No authentication token');
       return;
     }
@@ -112,23 +132,15 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
     try {
       setIsLoading(true);
       setError(null);
-
-      const api = clientsideApiClient(session.user.sbToken);
-      const messagesData = await api.get<Message[]>(`/protected/chats/${chatId}/messages`);
-
-      setMessages(
-        messagesData.map(msg => ({
-          ...msg,
-          media: msg.medias || [],
-        }))
-      );
+      const hydratedMessages = await fetchMessagesForChat(chatId, session.user.sbToken, currentUserId);
+      setMessages(hydratedMessages);
     } catch (err) {
       console.error('Error loading messages:', err);
       setError('Failed to load messages');
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user?.sbToken]);
+  }, [session?.user?.sbToken, currentUserId, fetchMessagesForChat]);
 
   const sendMessage = useCallback(
     async (content: string, files?: File[]): Promise<Message> => {
@@ -221,7 +233,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
 
         // Send to API
         const api = clientsideApiClient(session.user.sbToken);
-        const enrichedMessage = await api.post(`/protected/chats/${currentChatId}/messages`, {
+        const enrichedMessage = await api.post(`/protected/users/${session.user.id}/chats/${currentChatId}/messages`, {
           content,
           files: uploadedFiles,
         }) as any;
@@ -264,7 +276,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
       try {
         const api = clientsideApiClient(session.user.sbToken);
         const updatedMessage = await api.put(
-          `/protected/chats/${resolvedChatId}/messages/${messageId}`,
+          `/protected/users/${session.user.id}/chats/${resolvedChatId}/messages/${messageId}`,
           { content: content.trim() }
         ) as any;
 
@@ -281,7 +293,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
         throw err;
       }
     },
-    [resolvedChatId, session?.user?.sbToken, loadMessages]
+    [resolvedChatId, session?.user?.sbToken, session?.user?.id, loadMessages]
   );
 
   const deleteMessage = useCallback(
@@ -295,7 +307,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
 
       try {
         const api = clientsideApiClient(session.user.sbToken);
-        await api.delete(`/protected/chats/${resolvedChatId}/messages/${messageId}`);
+        await api.delete(`/protected/users/${session.user.id}/chats/${resolvedChatId}/messages/${messageId}`);
       } catch (err) {
         if (messageToDelete) {
           setMessages(prev =>
@@ -308,7 +320,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
         throw err;
       }
     },
-    [resolvedChatId, session?.user?.sbToken, messages]
+    [resolvedChatId, session?.user?.sbToken, session?.user?.id, messages]
   );
 
   const toggleReaction = useCallback(
@@ -420,6 +432,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
       setMessages([]);
       setIsConnected(false);
       setResolvedChatId(null);
+      setOnlineUsers([]);
       return;
     }
 
@@ -428,6 +441,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
       setMessages([]);
       setIsConnected(false);
       setResolvedChatId(null);
+      setOnlineUsers([]);
       return;
     }
 
@@ -435,6 +449,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
       setMessages([]);
       setIsConnected(false);
       setResolvedChatId(null);
+      setOnlineUsers([]);
       return;
     }
 
@@ -469,19 +484,12 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
 
       setResolvedChatId(chatId);
 
-      // Load messages inline to avoid dependency issues
       try {
         setIsLoading(true);
         setError(null);
-        const api = clientsideApiClient(sbToken);
-        const messagesData = await api.get<Message[]>(`/protected/chats/${chatId}/messages`);
+        const hydratedMessages = await fetchMessagesForChat(chatId, sbToken, session.user.id);
         if (!mounted) return;
-        setMessages(
-          messagesData.map(msg => ({
-            ...msg,
-            media: msg.medias || [],
-          }))
-        );
+        setMessages(hydratedMessages);
       } catch (err) {
         console.error('Error loading messages:', err);
         if (mounted) setError('Failed to load messages');
@@ -495,9 +503,31 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
       channel = supabaseClient.channel(`chat:${chatId}`, {
         config: {
           private: true,
+          presence: enablePresence && session?.user?.id
+            ? { key: session.user.id }
+            : undefined,
           broadcast: { ack: false, self: false },
         },
       });
+
+      if (enablePresence) {
+        channel.on('presence', { event: 'sync' }, () => {
+          if (!mounted) return;
+          const state = channel?.presenceState() ?? {};
+          const online = Object.keys(state);
+          setOnlineUsers(online);
+        });
+
+        channel.on('presence', { event: 'join' }, ({ key }) => {
+          if (!mounted) return;
+          setOnlineUsers(prev => (prev.includes(key) ? prev : [...prev, key]));
+        });
+
+        channel.on('presence', { event: 'leave' }, ({ key }) => {
+          if (!mounted) return;
+          setOnlineUsers(prev => prev.filter(userId => userId !== key));
+        });
+      }
 
       // Listen for new messages
       channel.on('broadcast', { event: 'new_message' }, payload => {
@@ -552,6 +582,12 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
         if (!mounted) return;
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
+          if (enablePresence && session?.user?.id) {
+            void channel?.track({
+              user_id: session.user.id,
+              online_at: new Date().toISOString(),
+            });
+          }
         } else if (status === 'CHANNEL_ERROR') {
           setIsConnected(false);
           setError('Failed to connect to chat');
@@ -573,6 +609,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
         channel.unsubscribe();
         supabaseClient.removeChannel(channel);
       }
+      setOnlineUsers([]);
     };
   }, [
     enabled,
@@ -582,8 +619,11 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
     socialFromUserId,
     socialToUserId,
     socialLocationId,
+    enablePresence,
     supabaseClient,
     findChat,
+    fetchMessagesForChat,
+    session?.user?.id,
   ]);
 
   // ============== Return ==============
@@ -592,6 +632,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
     messages: displayMessages,
     chatId: resolvedChatId,
     isConnected,
+    onlineUsers,
     isLoading,
     error,
     sendMessage,

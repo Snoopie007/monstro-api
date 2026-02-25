@@ -3,7 +3,7 @@
 import { useConversationListListener } from '@/hooks/useConversationListListener';
 import { useSession } from "@/hooks/useSession";
 import { clientsideApiClient } from "@/libs/api/client";
-import { Chat } from "@subtrees/types/chat";
+import { Chat, ChatMember } from "@subtrees/types/chat";
 import {
     createContext,
     ReactNode,
@@ -16,18 +16,23 @@ import {
 type StateType = {
     chats: Chat[];
     currentChat: Chat | null;
+    isCurrentChatAtBottom: boolean;
 }
 
 const initialState: StateType = {
     chats: [],
-    currentChat: null
+    currentChat: null,
+    isCurrentChatAtBottom: false,
 }
 
 // Action definitions using Discriminated Unions
 type Action = 
     | { type: 'SET_CHATS'; payload: Chat[] }
     | { type: 'SET_CURRENT_CHAT'; payload: Chat | null }
+    | { type: 'SET_CHAT_VIEWPORT'; payload: { chatId: string; isAtBottom: boolean } }
     | { type: 'UPDATE_CHAT_TIMESTAMP'; payload: { chatId: string; timestamp: string } }
+    | { type: 'UPDATE_CHAT_MEMBER'; payload: { chatId: string; userId: string; update: Partial<ChatMember> } }
+    | { type: 'INCREMENT_UNREAD'; payload: { chatId: string; userId: string } }
     | { type: 'ADD_CHAT'; payload: Chat }
 
 // Reducer
@@ -36,7 +41,13 @@ const reducer = (state: StateType, action: Action): StateType => {
         case 'SET_CHATS':
             return { ...state, chats: action.payload }
         case 'SET_CURRENT_CHAT':
-            return { ...state, currentChat: action.payload }
+            return { ...state, currentChat: action.payload, isCurrentChatAtBottom: false }
+        case 'SET_CHAT_VIEWPORT': {
+            const { chatId, isAtBottom } = action.payload;
+            if (state.currentChat?.id !== chatId) return state;
+            if (state.isCurrentChatAtBottom === isAtBottom) return state;
+            return { ...state, isCurrentChatAtBottom: isAtBottom };
+        }
         case 'UPDATE_CHAT_TIMESTAMP': {
             const { chatId, timestamp } = action.payload;
             const chatIndex = state.chats.findIndex(c => c.id === chatId);
@@ -58,6 +69,58 @@ const reducer = (state: StateType, action: Action): StateType => {
             
             return { ...state, chats: updatedChats };
         }
+        case 'UPDATE_CHAT_MEMBER': {
+            const { chatId, userId, update } = action.payload;
+            const chats = state.chats.map(chat => {
+                if (chat.id !== chatId || !chat.chatMembers) return chat;
+                return {
+                    ...chat,
+                    chatMembers: chat.chatMembers.map(member =>
+                        member.userId === userId ? { ...member, ...update } : member
+                    ),
+                };
+            });
+
+            const currentChat =
+                state.currentChat?.id === chatId && state.currentChat.chatMembers
+                    ? {
+                        ...state.currentChat,
+                        chatMembers: state.currentChat.chatMembers.map(member =>
+                            member.userId === userId ? { ...member, ...update } : member
+                        ),
+                    }
+                    : state.currentChat;
+
+            return { ...state, chats, currentChat };
+        }
+        case 'INCREMENT_UNREAD': {
+            const { chatId, userId } = action.payload;
+            const chats = state.chats.map(chat => {
+                if (chat.id !== chatId || !chat.chatMembers) return chat;
+                return {
+                    ...chat,
+                    chatMembers: chat.chatMembers.map(member =>
+                        member.userId === userId
+                            ? { ...member, unreadCount: (member.unreadCount ?? 0) + 1 }
+                            : member
+                    ),
+                };
+            });
+
+            const currentChat =
+                state.currentChat?.id === chatId && state.currentChat.chatMembers
+                    ? {
+                        ...state.currentChat,
+                        chatMembers: state.currentChat.chatMembers.map(member =>
+                            member.userId === userId
+                                ? { ...member, unreadCount: (member.unreadCount ?? 0) + 1 }
+                                : member
+                        ),
+                    }
+                    : state.currentChat;
+
+            return { ...state, chats, currentChat };
+        }
         case 'ADD_CHAT': {
             const newChat = action.payload;
             if (state.chats.some(c => c.id === newChat.id)) return state;
@@ -77,6 +140,8 @@ interface GroupsContextType {
     state: StateType;
     setChats: (chats: Chat[]) => void;
     setCurrentChat: (chat: Chat | null) => void;
+    setCurrentChatViewport: (chatId: string, isAtBottom: boolean) => void;
+    updateChatMember: (chatId: string, userId: string, update: Partial<ChatMember>) => void;
 }
 
 // Create Context
@@ -90,7 +155,8 @@ interface GroupsProviderProps {
 export function GroupsProvider({ children, chats }: GroupsProviderProps) {
     const [state, dispatch] = useReducer(reducer, {
         chats: chats,
-        currentChat: null
+        currentChat: null,
+        isCurrentChatAtBottom: false,
     });
     const { data: session } = useSession();
 
@@ -101,6 +167,10 @@ export function GroupsProvider({ children, chats }: GroupsProviderProps) {
     const setCurrentChat = (chat: Chat | null) => {
         dispatch({ type: 'SET_CURRENT_CHAT', payload: chat });
     };
+
+    const setCurrentChatViewport = useCallback((chatId: string, isAtBottom: boolean) => {
+        dispatch({ type: 'SET_CHAT_VIEWPORT', payload: { chatId, isAtBottom } });
+    }, []);
     
     const updateChatTimestamp = useCallback((chatId: string, timestamp: string) => {
         dispatch({ type: 'UPDATE_CHAT_TIMESTAMP', payload: { chatId, timestamp } });
@@ -110,9 +180,12 @@ export function GroupsProvider({ children, chats }: GroupsProviderProps) {
         dispatch({ type: 'ADD_CHAT', payload: chat });
     }, []);
 
+    const updateChatMember = useCallback((chatId: string, userId: string, update: Partial<ChatMember>) => {
+        dispatch({ type: 'UPDATE_CHAT_MEMBER', payload: { chatId, userId, update } });
+    }, []);
+
     // Handle realtime updates
     const handleRealtimeUpdate = useCallback(async (payload: any) => {
-        console.log('🎯 Received realtime update:', payload);  // Add this
         const { message } = payload;
         const chatId = message?.chatId;
         
@@ -122,6 +195,24 @@ export function GroupsProvider({ children, chats }: GroupsProviderProps) {
         if (exists) {
             // Update existing conversation timestamp to move it to top
             updateChatTimestamp(chatId, message?.created);
+
+            if (
+                message?.senderId &&
+                session?.user?.id &&
+                message.senderId !== session.user.id
+            ) {
+                const isActiveChat = state.currentChat?.id === chatId;
+                const shouldIncrementUnread = !isActiveChat || !state.isCurrentChatAtBottom;
+
+                if (!shouldIncrementUnread) {
+                    return;
+                }
+
+                dispatch({
+                    type: 'INCREMENT_UNREAD',
+                    payload: { chatId, userId: session.user.id },
+                });
+            }
         } else {
             // New chat - fetch details
             try {
@@ -140,14 +231,16 @@ export function GroupsProvider({ children, chats }: GroupsProviderProps) {
                 console.error('Failed to handle new chat:', err);
             }
         }
-    }, [state.chats, updateChatTimestamp, addChat, session?.user?.sbToken, session?.user?.member?.id]);
+    }, [state.chats, state.currentChat?.id, state.isCurrentChatAtBottom, updateChatTimestamp, addChat, session?.user?.id, session?.user?.sbToken, session?.user?.member?.id]);
 
     useConversationListListener(handleRealtimeUpdate);
 
     const value = {
         state,
         setChats,
-        setCurrentChat
+        setCurrentChat,
+        setCurrentChatViewport,
+        updateChatMember,
     };
 
     return (
@@ -163,13 +256,16 @@ export function useGroups() {
         throw new Error('useGroups must be used within a GroupsProvider');
     }
     
-    const { state, setChats, setCurrentChat } = context;
-    const { chats, currentChat } = state;
+    const { state, setChats, setCurrentChat, setCurrentChatViewport, updateChatMember } = context;
+    const { chats, currentChat, isCurrentChatAtBottom } = state;
 
     return {
         chats,
         currentChat,
+        isCurrentChatAtBottom,
         setChats,
-        setCurrentChat
+        setCurrentChat,
+        setCurrentChatViewport,
+        updateChatMember,
     };
 }
