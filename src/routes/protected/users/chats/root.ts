@@ -2,6 +2,7 @@ import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
 import { chatMembers, chats } from "subtrees/schemas";
 import { messageRoute } from "./messages";
+import { eq } from "drizzle-orm";
 const UserChatsProps = {
     params: t.Object({
         uid: t.String(),
@@ -185,6 +186,27 @@ export function userChatsRoutes(app: Elysia) {
                 params: t.Object({
                     uid: t.String(),
                     cid: t.String(),
+                }),
+            })
+            app.patch('/member', async ({ params, body, status, ...ctx }) => {
+                const { cid } = params;
+                const { memberId } = body;
+                try {
+                    await db.update(chatMembers).set({
+                        lastMessageId: lastMessageId,
+                    }).where(eq(chatMembers.chatId, cid), eq(chatMembers.userId, memberId));
+                } catch (error) {
+                    console.error(error);
+                    status(500, { error: 'Internal server error' });
+                    return { error: 'Internal server error' }
+                }
+            }, {
+                params: t.Object({
+                    cid: t.String(),
+                }),
+                body: t.Object({
+                    memberId: t.String(),
+                    lastMessageId: t.String(),
                 }),
             })
             app.use(messageRoute);
