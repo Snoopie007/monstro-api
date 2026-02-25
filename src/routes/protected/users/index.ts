@@ -4,3 +4,4 @@ export * from './accounts';
 export * from './chats';
 export * from './support';
 export * from './notifications';
+export * from './online';
