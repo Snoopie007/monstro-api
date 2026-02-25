@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // import ReactComponentName from "react-scan/react-component-name/webpack";
 
@@ -62,4 +63,6 @@ const nextConfig: NextConfig = {
 	// },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+});

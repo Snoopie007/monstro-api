@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "./libs/auth/server";
+import { logNextRouteError } from "@/libs/observability/next-api";
+import { CORRELATION_ID_HEADER } from "@/libs/observability/correlation";
 
 const publicPaths = ["/login", "/join", "/callbacks", "/api/webhooks"];
 
@@ -72,7 +74,9 @@ export default async function proxy(req: NextRequest) {
 
 		return NextResponse.next();
 	} catch (error) {
-		console.error("Middleware error:", error);
+		logNextRouteError("proxy", error, {
+			correlationId: req.headers.get(CORRELATION_ID_HEADER) || undefined,
+		});
 		return NextResponse.json(
 			{ message: "Internal Server Error" },
 			{ status: 500 }

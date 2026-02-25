@@ -4,6 +4,7 @@ import {
 } from "@subtrees/types";
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { serversideApiClient, ApiClientError } from "@/libs/api/server";
+import { logNextRouteError, logNextRouteWarning } from "@/libs/observability/next-api";
 import { db } from "@/db/db";
 import { groupMembers, integrations, memberPackages, memberSubscriptions, promos } from "@subtrees/schemas";
 import { and, eq } from "drizzle-orm";
@@ -136,14 +137,14 @@ async function scheduleRecurringInvoiceReminders(params: {
 		return {success: true};
 	} catch (error) {
 		if (error instanceof ApiClientError && error.status === 404) {
-			console.warn('Skipping recurring invoice reminder scheduling: no invoice found yet for subscription', {
+			logNextRouteWarning('/api/protected/loc/[id]/members', 'Skipping recurring invoice reminder scheduling: no invoice found yet for subscription', {
 				subscriptionId: params.subscriptionId,
 				locationId: params.locationId,
 				details: error.body,
 			});
 			return { success: false, skipped: true, reason: 'invoice_not_found' };
 		}
-		console.error('Failed to schedule recurring invoice reminders:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'scheduleRecurringInvoiceReminders' });
 		throw error;
 	}
 }
@@ -178,7 +179,7 @@ async function cancelRecurringInvoiceReminders(params: {
 		await apiClient.delete(`/x/loc/${params.locationId}/invoices/recurring/${params.subscriptionId}`);
 		return {success: true};
 	} catch (error) {
-		console.error('Failed to cancel recurring invoice reminders:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'cancelRecurringInvoiceReminders' });
 		throw error;
 	}
 }
@@ -197,7 +198,7 @@ async function cancelInvoiceReminders(params: {
 		
 		return { success: true };
 	} catch (error) {
-		console.error('Failed to cancel invoice reminders:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'cancelInvoiceReminders' });
 		throw error;
 	}
 }
@@ -223,7 +224,7 @@ async function scheduleClassReminders(params: {
 
 		return { success: true };
 	} catch (error) {
-		console.error('Failed to schedule class reminders:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'scheduleClassReminders' });
 		throw error;
 	}
 }
@@ -241,7 +242,7 @@ async function scheduleRecurringClassReminders(params: {
 
 		return { success: true };
 	} catch (error) {
-		console.error('Failed to schedule recurring class reminders:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'scheduleRecurringClassReminders' });
 		throw error;
 	}
 }
@@ -260,7 +261,7 @@ async function cancelClassReminders(params: {
 
 		return { success: true };
 	} catch (error) {
-		console.error('Failed to cancel class reminders:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'cancelClassReminders' });
 		throw error;
 	}
 }
@@ -274,7 +275,7 @@ async function cancelMissedClassReminder(params: {
 		await apiClient.delete(`/x/loc/${params.locationId}/class/missed/${params.reservationId}`);
 		return { success: true };
 	} catch (error) {
-		console.error('Failed to cancel missed class reminder:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'cancelMissedClassReminder' });
 		throw error;
 	}
 }
@@ -288,7 +289,7 @@ async function cancelRecurringClassReminders(params: {
 		await apiClient.delete(`/x/loc/${params.locationId}/class/recurring/${params.recurringReservationId}`);
 		return { success: true };
 	} catch (error) {
-		console.error('Failed to cancel recurring class reminders:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'cancelRecurringClassReminders' });
 		throw error;
 	}
 }
@@ -314,10 +315,10 @@ async function addUserToGroup(params: {
 			role: "member",
 		}).onConflictDoNothing();
 
-		console.log(`👥 Added user ${userId} to group ${groupId}`);
+		logNextRouteWarning('/api/protected/loc/[id]/members', 'Added user to group', { userId, groupId });
 		return { success: true, added: true };
 	} catch (error) {
-		console.error('Failed to add user to group:', error);
+		logNextRouteError('/api/protected/loc/[id]/members', error, { action: 'addUserToGroup', userId, groupId });
 		// Don't throw - group membership failure shouldn't fail the checkout
 		return { success: false, added: false, error };
 	}
@@ -479,12 +480,12 @@ async function validatePromoForCheckout(params: {
 				}
 				return promoError(400, "PROMO_CODE_NOT_FOUND_IN_STRIPE", "Promo code no longer exists in Stripe");
 			}
-			console.error("Promo Stripe validation failed", {
+			logNextRouteError('/api/protected/loc/[id]/members', error, {
+				action: 'promoStripeValidation',
 				locationId,
 				promoId: promo.id,
 				stripeCouponId: promo.stripeCouponId,
 				stripePromoId: promo.stripePromoId,
-				error,
 			});
 			return promoError(500, "PROMO_STRIPE_VALIDATION_FAILED", "Failed to validate promo against Stripe");
 		}

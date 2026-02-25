@@ -124,6 +124,9 @@ export function ChatMembersDialog({
                 chatId: chatId,
                 userId: selectedMember.userId,
                 joined: new Date(),
+                lastActiveAt: new Date(),
+                unreadCount: 0,
+                lastMessageId: null,
                 user: {
                     id: selectedMember.id,
                     name: `${selectedMember.firstName} ${selectedMember.lastName}`,

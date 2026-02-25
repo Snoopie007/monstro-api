@@ -5,6 +5,7 @@ import "@public/globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
 import Script from "next/script";
+import ClientObservability from "@/components/observability/ClientObservability";
 
 export const metadata: Metadata = {
 	title: "Monstro",
@@ -42,6 +43,7 @@ export default async function RootLayout({
 					/>
 				)}
 				<body className={"font-roboto"}>
+					<ClientObservability />
 					{/* <Monitoring
                         apiKey="-OqpEnrUNsFguu-tRoISM0H5Lgsx7qIo" // Safe to expose publically
                         url="https://monitoring.react-scan.com/api/v1/ingest"
