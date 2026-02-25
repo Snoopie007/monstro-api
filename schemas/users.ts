@@ -9,11 +9,15 @@ export const users = pgTable("users", {
     image: text("image"),
     username: text("username").notNull(),
     isChild: boolean("is_child").notNull().default(false),
+    lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    isOnline: boolean("is_online").notNull().default(false),
     discriminator: integer("discriminator").notNull(), // 4-digit number as string
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
     unique("unique_username_discriminator").on(t.username, t.discriminator),
+    index("idx_users_last_seen").on(t.lastSeen),
+    index("idx_users_is_online").on(t.isOnline),
 ]);
 
 export const userNotifications = pgTable("user_notifications", {
@@ -25,7 +29,6 @@ export const userNotifications = pgTable("user_notifications", {
     deviceId: text("device_id").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
-    isOnline: boolean("is_online").notNull().default(false),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
