@@ -91,9 +91,6 @@ export const RRClassSchema = z.object({
     }),
     memberPlanId: z.string(),
     lid: z.string(),
-    location: z.object({
-        timezone: z.string(),
-    }).and(LocationSchema),
     session: z.object({
         programId: z.string(),
         programName: z.string(),
