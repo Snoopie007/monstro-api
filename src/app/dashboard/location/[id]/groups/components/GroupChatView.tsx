@@ -7,7 +7,7 @@ import { formatMessageTimestamp, getDateLabel, isGroupedMessage } from "@/libs/u
 import { User } from "@subtrees/types";
 import { Message } from "@subtrees/types/chat";
 import { isSameDay } from "date-fns";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { ChatActions } from "./ChatActions";
 import { EditableMessage } from "./EditableMessage";
@@ -18,14 +18,35 @@ import { ChatReactions, ChatReactionSheet } from "./reactions";
 import { MessageMedia } from "./MessageMedia";
 import { UploadingMessage } from "./UploadingMessage";
 
+const PRESENCE_HEARTBEAT_MS = 30 * 1000;
+
 export function GroupChatView({ lid }: { lid: string }) {
-    const {currentChat} = useGroups()
+    const { currentChat, updateChatMember, setCurrentChatViewport } = useGroups()
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const readSentinelRef = useRef<HTMLDivElement>(null);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const pendingMarkReadRef = useRef(false);
+    const lastLastSeenAtRef = useRef<Date | null>(null);
     const { data: session } = useSession();
-    const { messages, sendMessage, editMessage, deleteMessage, toggleReaction, isLoading } = useChat({
+    const { messages, sendMessage, editMessage, deleteMessage, toggleReaction, isLoading, onlineUsers } = useChat({
         mode: currentChat?.id ? { type: 'direct', chatId: currentChat.id } : null,
         enabled: !!currentChat?.id,
+        enablePresence: true,
     });
+
+    const currentUserId = session?.user?.id;
+
+    const currentChatMember = useMemo(() => {
+        if (!currentChat || !currentUserId) return null;
+        return currentChat.chatMembers?.find(member => member.userId === currentUserId) ?? null;
+    }, [currentChat, currentUserId]);
+
+    const lastReadMessageId = currentChatMember?.lastMessageId ?? null;
+
+    const presenceCount = useMemo(() => {
+        if (!currentUserId) return onlineUsers.length;
+        return onlineUsers.filter(userId => userId !== currentUserId).length;
+    }, [onlineUsers, currentUserId]);
     
     const senderLookup = useMemo(() => {
         if (!currentChat?.chatMembers) return {};
@@ -49,6 +70,135 @@ export function GroupChatView({ lid }: { lid: string }) {
     const handleSendMessage = async (content: string, files: File[]) => {
         await sendMessage(content, files);
     };
+
+    const markRead = useCallback(async () => {
+        if (!currentChat?.id || !currentUserId || messages.length === 0) return;
+        if (pendingMarkReadRef.current) return;
+
+        const lastMessage = messages.at(-1);
+        if (!lastMessage?.id) return;
+        if (lastReadMessageId === lastMessage.id) return;
+
+        pendingMarkReadRef.current = true;
+        try {
+            const response = await fetch(`/api/protected/chats/${currentChat.id}/markread`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lastMessageId: lastMessage.id,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to mark read');
+            }
+
+            updateChatMember(currentChat.id, currentUserId, {
+                lastMessageId: lastMessage.id,
+                unreadCount: 0,
+            });
+        } catch (error) {
+            console.error('Failed to mark group chat as read:', error);
+        } finally {
+            pendingMarkReadRef.current = false;
+        }
+    }, [currentChat?.id, currentUserId, messages, lastReadMessageId, updateChatMember]);
+
+    const updateLastSeen = useCallback(async () => {
+        if (!currentChat?.id || !currentUserId) return;
+
+        const now = new Date();
+        const last = lastLastSeenAtRef.current;
+        if (last && now.getTime() - last.getTime() < 15 * 60 * 1000) return;
+
+        try {
+            const response = await fetch(`/api/protected/chats/${currentChat.id}/lastseen`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lastActiveAt: now.toISOString(),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update last seen');
+            }
+
+            lastLastSeenAtRef.current = now;
+            updateChatMember(currentChat.id, currentUserId, { lastActiveAt: now });
+        } catch (error) {
+            console.error('Failed to update last seen for group chat:', error);
+        }
+    }, [currentChat?.id, currentUserId, updateChatMember]);
+
+    const updatePresenceState = useCallback(async (isOnline: boolean) => {
+        if (!currentChat?.id) return;
+
+        try {
+            const response = await fetch(`/api/protected/chats/${currentChat.id}/lastseen`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    isOnline,
+                    ...(isOnline ? {} : { lastSeenAt: new Date().toISOString() }),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update presence state');
+            }
+        } catch (error) {
+            console.error('Failed to update presence state for group chat:', error);
+        }
+    }, [currentChat?.id]);
+
+    useEffect(() => {
+        if (!currentChat?.id || !readSentinelRef.current || !scrollAreaRef.current) return;
+        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (!viewport) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const isAtBottom = entries.some(entry => entry.isIntersecting);
+                setCurrentChatViewport(currentChat.id, isAtBottom);
+                if (isAtBottom) {
+                    void markRead();
+                }
+            },
+            {
+                root: viewport,
+                threshold: 0.95,
+            }
+        );
+
+        observer.observe(readSentinelRef.current);
+
+        return () => {
+            setCurrentChatViewport(currentChat.id, false);
+            observer.disconnect();
+        };
+    }, [currentChat?.id, markRead, setCurrentChatViewport]);
+
+    useEffect(() => {
+        if (!currentChat?.id) return;
+
+        void updatePresenceState(true);
+        const interval = window.setInterval(() => {
+            void updatePresenceState(true);
+        }, PRESENCE_HEARTBEAT_MS);
+
+        return () => {
+            window.clearInterval(interval);
+            void updatePresenceState(false);
+            void updateLastSeen();
+        };
+    }, [currentChat?.id, updateLastSeen, updatePresenceState]);
     
     const handleOpenReactionPicker = useCallback((message: Message) => {
         setSelectedMessageForReaction(message);
@@ -128,6 +278,12 @@ export function GroupChatView({ lid }: { lid: string }) {
             <div className="flex flex-row items-center justify-between">
               <div className="flex flex-row items-center gap-2">
                 <span className="text-sm font-bold">{currentChat?.name ?? currentChat?.group?.name}</span>
+                {presenceCount > 0 && (
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        {presenceCount} viewing
+                    </span>
+                )}
               </div>
               <ChatActions 
                 lid={lid} 
@@ -150,7 +306,7 @@ export function GroupChatView({ lid }: { lid: string }) {
                 </div>  
                 ) : (
                 <>
-                    <ScrollArea className="flex-1 w-full px-4">
+                    <ScrollArea ref={scrollAreaRef} className="flex-1 w-full px-4">
                         <div className="space-y-1 py-4">
                         {messages?.length === 0 ? (
                             <div className="text-center text-sm text-muted-foreground py-8">
@@ -273,6 +429,7 @@ export function GroupChatView({ lid }: { lid: string }) {
                             })
                         )}
                         <div ref={messagesEndRef} />
+                        <div ref={readSentinelRef} className="h-1 w-full" />
                         </div>
                     </ScrollArea>
                     <div className="flex-shrink-0 p-4">

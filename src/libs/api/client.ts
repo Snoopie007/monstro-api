@@ -109,10 +109,10 @@ export const clientsideApiClient = (token?: string): ApiClient => {
     const url = buildUrl(endpoint, options?.params);
     const hasFormData = typeof FormData !== "undefined" && options?.data instanceof FormData;
     const correlationId = createCorrelationId();
-    const headers = withCorrelationIdHeader(
-      hasFormData ? createHeaders(false) : createHeaders(method !== "GET" && method !== "DELETE"),
-      correlationId,
-    );
+    const baseHeaders = hasFormData
+      ? createHeaders(false)
+      : createHeaders(method !== "GET" && method !== "DELETE");
+    const headers = withCorrelationIdHeader(baseHeaders, correlationId);
     const startedAt = Date.now();
 
     logApiClientCall({

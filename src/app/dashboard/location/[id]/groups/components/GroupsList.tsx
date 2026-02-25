@@ -1,6 +1,7 @@
 'use client'
 import { Input } from "@/components/forms"
 import { Avatar, AvatarFallback, ScrollArea } from "@/components/ui"
+import { useSession } from "@/hooks/useSession"
 import { useState } from "react"
 import { useGroups } from "./GroupsProvider"
 import { Chat } from "@subtrees/types/chat"
@@ -8,6 +9,8 @@ import { CreateGroupModal } from "./CreateGroupModal"
 import { Plus } from "lucide-react"
 export function GroupsList({ lid }: { lid: string }) {
     const [search, setSearch] = useState<string>('')
+    const { data: session } = useSession();
+    const currentUserId = session?.user?.id;
     const { chats } = useGroups();
 
     return (
@@ -17,7 +20,7 @@ export function GroupsList({ lid }: { lid: string }) {
                 {chats.length > 0 && (
                     <CreateGroupModal
                         trigger={
-                            <button className="p-1 rounded-md hover:bg-foreground/10 transition-colors">
+                            <button type="button" className="p-1 rounded-md hover:bg-foreground/10 transition-colors">
                                 <Plus className="size-5 text-muted-foreground hover:text-foreground" />
                             </button>
                         }
@@ -49,9 +52,9 @@ export function GroupsList({ lid }: { lid: string }) {
                                 <CreateGroupModal />
                             </div>
                         ) : (
-                            <div className="space-y-2">
-                                {chats.map((chat) => (
-                                    <GroupItem key={chat.id} chat={chat} />
+                                <div className="space-y-2">
+                                    {chats.map((chat) => (
+                                    <GroupItem key={chat.id} chat={chat} currentUserId={currentUserId} />
                                 ))}
                             </div>
                         )}
@@ -61,17 +64,28 @@ export function GroupsList({ lid }: { lid: string }) {
     );
 }
 
-function GroupItem({ chat }: { chat: Chat }) {
+function GroupItem({ chat, currentUserId }: { chat: Chat; currentUserId?: string }) {
     const { setCurrentChat } = useGroups();
+    const unreadCount = currentUserId
+        ? (chat.chatMembers?.find(member => member.userId === currentUserId)?.unreadCount ?? 0)
+        : 0;
+    const hasUnread = unreadCount > 0;
+
     return (
-        <li
-            key={chat.id}
-            className="cursor-pointer"
+        <button
+            type="button"
+            className="cursor-pointer w-full text-left"
             onClick={() => {
                 setCurrentChat(chat);
             }}
         >
-            <div className="flex flex-row flex-1 justify-between items-center hover:bg-accent/50 rounded-lg p-2">
+            <div
+                className={`flex flex-row flex-1 justify-between items-center rounded-lg p-2 transition-colors ${
+                    hasUnread
+                        ? 'bg-accent/60 hover:bg-accent/70 border border-accent/70'
+                        : 'hover:bg-accent/50 border border-transparent'
+                }`}
+            >
                 <Avatar className="size-6 mr-4">
                     <AvatarFallback>
                         {chat.group?.name?.charAt(0) || '?'}
@@ -79,7 +93,7 @@ function GroupItem({ chat }: { chat: Chat }) {
                 </Avatar>
                 <div className="space-y-0 w-full">
                     <div className="text-sm  flex flex-row gap-2 justify-between items-center w-full">
-                        <span className="font-medium flex flex-row gap-1 items-center justify-between w-full">
+                        <span className={`flex flex-row gap-1 items-center justify-between w-full ${hasUnread ? 'font-semibold text-foreground' : 'font-medium'}`}>
                             <div className="flex flex-row gap-1 items-center">
                                 <span>
                                     {chat.name ?? chat.group?.name}
@@ -87,16 +101,24 @@ function GroupItem({ chat }: { chat: Chat }) {
                             </div>
                         </span>
                     </div>
-                    <div className="text-[0.7rem] text-muted-foreground flex flex-row gap-2 justify-between items-center">
+                    <div className={`text-[0.7rem] flex flex-row gap-2 justify-between items-center ${hasUnread ? 'text-foreground/90' : 'text-muted-foreground'}`}>
                         <div className="flex flex-row gap-1 items-center">
                             <span>{chat.group?.description || 'No description'}</span>
                         </div>
-                        <span className=" text-muted-foreground">
-                            {chat.group?.created.toLocaleDateString()}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            {hasUnread && (
+                                <span
+                                    className="inline-flex h-2.5 w-2.5 rounded-full bg-orange-500"
+                                    title="Unread messages"
+                                />
+                            )}
+                            <span className={hasUnread ? 'font-medium text-foreground/80' : 'text-muted-foreground'}>
+                                {chat.group?.created.toLocaleDateString()}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </li>
+        </button>
     )
 }
