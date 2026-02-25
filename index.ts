@@ -10,8 +10,8 @@ import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
 
 const CORS_CONFIG = {
 	origin: "*",
-	methods: ["GET", "POST", "PUT", "DELETE"],
-	allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Key"],
+	methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+	allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Key", "x-correlation-id"],
 };
 
 const app = new Elysia({
