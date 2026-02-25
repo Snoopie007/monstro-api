@@ -9,6 +9,10 @@ import {
   logApiClientCall,
   logApiClientResponse,
 } from "@/libs/observability/logger";
+import {
+  createCorrelationId,
+  withCorrelationIdHeader,
+} from "@/libs/observability/correlation";
 import { getSupabaseJWT } from "../server/supabase";
 
 export interface ApiClient {
@@ -74,6 +78,7 @@ async function throwApiError(params: {
   endpoint: string;
   method: string;
   url: string;
+  correlationId: string;
   startedAt: number;
 }): Promise<never> {
   const body = await parseResponseBody(params.response);
@@ -83,6 +88,7 @@ async function throwApiError(params: {
     client: "server",
     method: params.method,
     url: params.url,
+    correlationId: params.correlationId,
     status: params.response.status,
     durationMs: Date.now() - params.startedAt,
     responseData: body,
@@ -97,24 +103,29 @@ async function throwApiError(params: {
   );
 }
 
-export const serversideApiClient = (): ApiClient => {
+export const serversideApiClient = (options?: { correlationId?: string }): ApiClient => {
   const baseUrl = process.env.MONSTRO_API_URL || "http://localhost:3000";
+  const rootCorrelationId = options?.correlationId || createCorrelationId();
 
   return {
     get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
       const method = "GET";
       const url = toUrl(baseUrl, endpoint, params);
+      const correlationId = rootCorrelationId;
+      const headers = withCorrelationIdHeader(undefined, correlationId);
       const startedAt = Date.now();
 
       logApiClientCall({
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
+        requestHeaders: headers,
       });
 
-      const response = await fetch(url.toString());
+      const response = await fetch(url.toString(), { headers });
       if (!response.ok) {
-        await throwApiError({ response, endpoint, method, url: url.toString(), startedAt });
+        await throwApiError({ response, endpoint, method, url: url.toString(), correlationId, startedAt });
       }
 
       const payload = await parseResponseBody(response);
@@ -122,6 +133,7 @@ export const serversideApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         responseData: payload,
@@ -131,6 +143,7 @@ export const serversideApiClient = (): ApiClient => {
     },
     post: async (endpoint: string, data?: Record<string, unknown>) => {
       const method = "POST";
+      const correlationId = rootCorrelationId;
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -145,6 +158,8 @@ export const serversideApiClient = (): ApiClient => {
         }
       }
 
+      const headersWithCorrelation = withCorrelationIdHeader(headers, correlationId);
+
       const url = toUrl(baseUrl, endpoint);
       const startedAt = Date.now();
 
@@ -152,18 +167,19 @@ export const serversideApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         requestData: data,
-        requestHeaders: headers,
+        requestHeaders: headersWithCorrelation,
       });
 
       const response = await fetch(url.toString(), {
         method,
-        headers,
+        headers: headersWithCorrelation,
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        await throwApiError({ response, endpoint, method, url: url.toString(), startedAt });
+        await throwApiError({ response, endpoint, method, url: url.toString(), correlationId, startedAt });
       }
 
       const payload = await parseResponseBody(response);
@@ -171,6 +187,7 @@ export const serversideApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         responseData: payload,
@@ -180,6 +197,7 @@ export const serversideApiClient = (): ApiClient => {
     },
     delete: async (endpoint: string) => {
       const method = "DELETE";
+      const correlationId = rootCorrelationId;
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -196,6 +214,8 @@ export const serversideApiClient = (): ApiClient => {
         }
       }
 
+      const headersWithCorrelation = withCorrelationIdHeader(headers, correlationId);
+
       const url = toUrl(baseUrl, endpoint);
       const startedAt = Date.now();
 
@@ -203,16 +223,17 @@ export const serversideApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
-        requestHeaders: headers,
+        correlationId,
+        requestHeaders: headersWithCorrelation,
       });
 
       const response = await fetch(url.toString(), {
         method,
-        headers,
+        headers: headersWithCorrelation,
       });
 
       if (!response.ok) {
-        await throwApiError({ response, endpoint, method, url: url.toString(), startedAt });
+        await throwApiError({ response, endpoint, method, url: url.toString(), correlationId, startedAt });
       }
 
       const payload = await parseResponseBody(response);
@@ -220,6 +241,7 @@ export const serversideApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         responseData: payload,
@@ -234,9 +256,10 @@ export const serversideApiClient = (): ApiClient => {
  * Service-to-service API client that always uses service role key
  * Use this for background tasks like scheduling emails where user auth isn't needed
  */
-export const serviceApiClient = (): ApiClient => {
+export const serviceApiClient = (options?: { correlationId?: string }): ApiClient => {
   const baseUrl = process.env.MONSTRO_API_URL || "http://localhost:3000";
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  const rootCorrelationId = options?.correlationId || createCorrelationId();
 
   const getHeaders = () => ({
     "Content-Type": "application/json",
@@ -247,19 +270,21 @@ export const serviceApiClient = (): ApiClient => {
     get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
       const method = "GET";
       const url = toUrl(baseUrl, endpoint, params);
-      const headers = getHeaders();
+      const correlationId = rootCorrelationId;
+      const headers = withCorrelationIdHeader(getHeaders(), correlationId);
       const startedAt = Date.now();
 
       logApiClientCall({
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         requestHeaders: headers,
       });
 
       const response = await fetch(url.toString(), { headers });
       if (!response.ok) {
-        await throwApiError({ response, endpoint, method, url: url.toString(), startedAt });
+        await throwApiError({ response, endpoint, method, url: url.toString(), correlationId, startedAt });
       }
 
       const payload = await parseResponseBody(response);
@@ -267,6 +292,7 @@ export const serviceApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         responseData: payload,
@@ -277,13 +303,15 @@ export const serviceApiClient = (): ApiClient => {
     post: async (endpoint: string, data?: Record<string, unknown>) => {
       const method = "POST";
       const url = toUrl(baseUrl, endpoint);
-      const headers = getHeaders();
+      const correlationId = rootCorrelationId;
+      const headers = withCorrelationIdHeader(getHeaders(), correlationId);
       const startedAt = Date.now();
 
       logApiClientCall({
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         requestData: data,
         requestHeaders: headers,
       });
@@ -295,7 +323,7 @@ export const serviceApiClient = (): ApiClient => {
       });
 
       if (!response.ok) {
-        await throwApiError({ response, endpoint, method, url: url.toString(), startedAt });
+        await throwApiError({ response, endpoint, method, url: url.toString(), correlationId, startedAt });
       }
 
       const payload = await parseResponseBody(response);
@@ -303,6 +331,7 @@ export const serviceApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         responseData: payload,
@@ -313,13 +342,15 @@ export const serviceApiClient = (): ApiClient => {
     delete: async (endpoint: string) => {
       const method = "DELETE";
       const url = toUrl(baseUrl, endpoint);
-      const headers = getHeaders();
+      const correlationId = rootCorrelationId;
+      const headers = withCorrelationIdHeader(getHeaders(), correlationId);
       const startedAt = Date.now();
 
       logApiClientCall({
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         requestHeaders: headers,
       });
 
@@ -329,7 +360,7 @@ export const serviceApiClient = (): ApiClient => {
       });
 
       if (!response.ok) {
-        await throwApiError({ response, endpoint, method, url: url.toString(), startedAt });
+        await throwApiError({ response, endpoint, method, url: url.toString(), correlationId, startedAt });
       }
 
       const payload = await parseResponseBody(response);
@@ -337,6 +368,7 @@ export const serviceApiClient = (): ApiClient => {
         client: "server",
         method,
         url: url.toString(),
+        correlationId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         responseData: payload,

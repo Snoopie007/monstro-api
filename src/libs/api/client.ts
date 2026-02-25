@@ -7,6 +7,10 @@ import {
   logApiClientCall,
   logApiClientResponse,
 } from "@/libs/observability/logger";
+import {
+  createCorrelationId,
+  withCorrelationIdHeader,
+} from "@/libs/observability/correlation";
 
 export interface ApiClient {
   get: <T>(url: string, params?: Record<string, string | number | boolean | string[]>) => Promise<T>;
@@ -104,13 +108,18 @@ export const clientsideApiClient = (token?: string): ApiClient => {
   ): Promise<unknown> => {
     const url = buildUrl(endpoint, options?.params);
     const hasFormData = typeof FormData !== "undefined" && options?.data instanceof FormData;
-    const headers = hasFormData ? createHeaders(false) : createHeaders(method !== "GET" && method !== "DELETE");
+    const correlationId = createCorrelationId();
+    const headers = withCorrelationIdHeader(
+      hasFormData ? createHeaders(false) : createHeaders(method !== "GET" && method !== "DELETE"),
+      correlationId,
+    );
     const startedAt = Date.now();
 
     logApiClientCall({
       client: "browser",
       method,
       url: url.toString(),
+      correlationId,
       requestData: options?.data,
       requestHeaders: headers,
     });
@@ -143,6 +152,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
         client: "browser",
         method,
         url: url.toString(),
+        correlationId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         responseData: payload,
@@ -163,6 +173,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
         client: "browser",
         method,
         url: url.toString(),
+        correlationId,
         status: 0,
         durationMs: Date.now() - startedAt,
         errorMessage: extractErrorMessage(error) || "Network error",

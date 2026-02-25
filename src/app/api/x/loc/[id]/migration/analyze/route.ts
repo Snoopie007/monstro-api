@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { ApiClientError, serversideApiClient } from "@/libs/api/server"
 import { logNextRouteError, logNextRouteWarning } from "@/libs/observability/next-api"
+import { CORRELATION_ID_HEADER } from "@/libs/observability/correlation"
 
 export async function POST(
     request: NextRequest,
@@ -8,6 +9,7 @@ export async function POST(
 ) {
     const params = await props.params
     const locationId = params.id
+    const correlationId = request.headers.get(CORRELATION_ID_HEADER) || undefined
 
     try {
         const body = await request.json()
@@ -20,7 +22,7 @@ export async function POST(
             )
         }
 
-        const api = serversideApiClient()
+        const api = serversideApiClient({ correlationId })
         const result = await api.post(
             `/x/loc/${locationId}/migration/analyze`,
             { csvData, headers }
@@ -30,6 +32,7 @@ export async function POST(
     } catch (error) {
         if (error instanceof ApiClientError) {
             logNextRouteWarning("/api/x/loc/[id]/migration/analyze", "Downstream monstro-api request failed", {
+                correlationId,
                 status: error.status,
                 endpoint: error.endpoint,
                 body: error.body,
@@ -42,7 +45,7 @@ export async function POST(
             return NextResponse.json(payload, { status: error.status })
         }
 
-        logNextRouteError("/api/x/loc/[id]/migration/analyze", error)
+        logNextRouteError("/api/x/loc/[id]/migration/analyze", error, { correlationId })
         
         if (error instanceof Error) {
             return NextResponse.json(

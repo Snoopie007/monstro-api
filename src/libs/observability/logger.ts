@@ -1,6 +1,8 @@
 type LogLevel = "info" | "warn" | "error";
 type ApiClientSide = "browser" | "server";
 
+import { forwardLogToSentry } from "@/libs/observability/sentry";
+
 const MAX_DEPTH = 5;
 const MAX_ARRAY_ITEMS = 20;
 const MAX_OBJECT_KEYS = 50;
@@ -158,8 +160,6 @@ export function extractErrorMessage(input: unknown): string | undefined {
 }
 
 function emit(level: LogLevel, source: string, event: string, payload: Record<string, unknown>): void {
-  if (!shouldLog()) return;
-
   const base = {
     timestamp: new Date().toISOString(),
     source,
@@ -167,7 +167,19 @@ function emit(level: LogLevel, source: string, event: string, payload: Record<st
   };
 
   const message = `[obs][${source}] ${event}`;
-  const data = { ...base, ...sanitizeForLogging(payload) as Record<string, unknown> };
+  const data = { ...base, ...(sanitizeForLogging(payload) as Record<string, unknown>) };
+
+  if (level === "error" || level === "warn") {
+    forwardLogToSentry({
+      level,
+      source,
+      event,
+      message,
+      payload: data,
+    });
+  }
+
+  if (!shouldLog()) return;
 
   if (level === "error") {
     console.error(message, data);
@@ -184,6 +196,7 @@ export function logApiClientCall(params: {
   client: ApiClientSide;
   method: string;
   url: string;
+  correlationId?: string;
   requestData?: unknown;
   requestHeaders?: unknown;
   context?: Record<string, unknown>;
@@ -192,6 +205,7 @@ export function logApiClientCall(params: {
     client: params.client,
     method: params.method,
     url: params.url,
+    correlationId: params.correlationId,
     requestData: params.requestData,
     requestHeaders: params.requestHeaders,
     context: params.context,
@@ -202,6 +216,7 @@ export function logApiClientResponse(params: {
   client: ApiClientSide;
   method: string;
   url: string;
+  correlationId?: string;
   status: number;
   durationMs: number;
   responseData?: unknown;
@@ -218,6 +233,7 @@ export function logApiClientResponse(params: {
     client: params.client,
     method: params.method,
     url: params.url,
+    correlationId: params.correlationId,
     status: params.status,
     durationMs: params.durationMs,
     errorMessage: params.errorMessage,

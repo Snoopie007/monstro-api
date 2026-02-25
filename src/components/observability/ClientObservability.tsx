@@ -7,8 +7,26 @@ import {
   logApiClientResponse,
   logFrontendRuntimeError,
 } from "@/libs/observability/logger";
+import {
+  createCorrelationId,
+  getCorrelationIdFromHeaders,
+  withCorrelationIdHeader,
+} from "@/libs/observability/correlation";
 
 const FETCH_PATCH_KEY = "__monstroFetchPatched";
+const CORRELATION_HEADER_BLOCKLIST_HOSTS = ["api.novu.co", "novu.co"];
+
+function shouldAttachCorrelationHeader(rawUrl: string): boolean {
+  try {
+    const resolvedUrl = new URL(rawUrl, window.location.origin);
+    const hostname = resolvedUrl.hostname.toLowerCase();
+    return !CORRELATION_HEADER_BLOCKLIST_HOSTS.some(
+      (blockedHost) => hostname === blockedHost || hostname.endsWith(`.${blockedHost}`),
+    );
+  } catch {
+    return true;
+  }
+}
 
 function toHeadersObject(headers?: HeadersInit): Record<string, string> | undefined {
   if (!headers) return undefined;
@@ -86,24 +104,38 @@ export default function ClientObservability() {
         const method = init?.method || (input instanceof Request ? input.method : "GET");
         const url = input instanceof Request ? input.url : String(input);
         const startedAt = Date.now();
+        const headerSource = init?.headers || (input instanceof Request ? input.headers : undefined);
+        const shouldAttachHeader = shouldAttachCorrelationHeader(url);
+        const correlationId = shouldAttachHeader
+          ? getCorrelationIdFromHeaders(headerSource) || createCorrelationId()
+          : undefined;
+        const headersWithCorrelationId = correlationId
+          ? withCorrelationIdHeader(headerSource, correlationId)
+          : new Headers(headerSource);
+        const nextInit: RequestInit = {
+          ...init,
+          headers: headersWithCorrelationId,
+        };
 
         logApiClientCall({
           client: "browser",
           method,
           url,
+          correlationId,
           requestData: parseRequestBody(init?.body),
-          requestHeaders: toHeadersObject(init?.headers),
+          requestHeaders: toHeadersObject(headersWithCorrelationId),
           context: { source: "window.fetch" },
         });
 
         try {
-          const response = await originalFetch(input, init);
+          const response = await originalFetch(input, nextInit);
           const responseData = await parseResponsePayload(response.clone());
 
           logApiClientResponse({
             client: "browser",
             method,
             url,
+            correlationId,
             status: response.status,
             durationMs: Date.now() - startedAt,
             responseData,
@@ -117,6 +149,7 @@ export default function ClientObservability() {
             client: "browser",
             method,
             url,
+            correlationId,
             status: 0,
             durationMs: Date.now() - startedAt,
             errorMessage: extractErrorMessage(error) || "Network error",
