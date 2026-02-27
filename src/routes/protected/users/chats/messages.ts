@@ -28,7 +28,7 @@ const PostProps = {
     body: t.Object({
         content: t.Optional(t.String()),
         tempId: t.Optional(t.String()),
-        activeUserIds: t.Array(t.String()),
+        activeUsersIds: t.Array(t.String()),
         replyId: t.Optional(t.String()),
         files: t.Optional(t.Array(t.Object({
             fileName: t.String(),
@@ -150,7 +150,7 @@ export function messageRoute(app: Elysia) {
     app.post('/messages', async ({ params, body, set }) => {
 
         const { cid, uid } = params;
-        const { content, files, replyId, activeUserIds, tempId } = body;
+        const { content, files, replyId, activeUsersIds, tempId } = body;
 
         if (!content && (!files || files.length === 0)) {
             set.status = 400;
@@ -229,12 +229,12 @@ export function messageRoute(app: Elysia) {
 
             let inactiveUserIds: string[] = chat?.chatMembers
                 .map(m => m.userId)
-                .filter(userId => !activeUserIds.includes(userId)) || [];
+                .filter(userId => !activeUsersIds.includes(userId)) || [];
             // update the last message id for active user ids the chat members
             await db.update(chatMembers).set({
                 lastMessageId: newMessage.id,
             }).where(and(
-                inArray(chatMembers.userId, activeUserIds),
+                inArray(chatMembers.userId, activeUsersIds),
                 eq(chatMembers.chatId, cid)
             ));
 
