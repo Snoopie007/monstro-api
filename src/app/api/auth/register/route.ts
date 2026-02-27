@@ -5,7 +5,7 @@ import { users, vendors, vendorLevels, accounts } from "@subtrees/schemas";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 import { generateUsername, generateDiscriminator } from "@/app/api/protected/loc/[id]/members/utils";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 
 export async function POST(req: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    const normalizedEmail = data.email.toLowerCase();
+    const normalizedEmail = data.email.trim().toLowerCase();
 
     try {
         const user = await db.query.users.findFirst({
@@ -34,9 +34,48 @@ export async function POST(req: NextRequest) {
                 discriminator: generateDiscriminator(),
             }).returning({ id: users.id })
 
-            await tx.update(accounts).set({
-                password: hashedPassword,
-            }).where(eq(accounts.userId, id))
+            const credentialAccount = await tx.query.accounts.findFirst({
+                where: (account, { and, eq }) => and(
+                    eq(account.userId, id),
+                    eq(account.provider, "credential")
+                ),
+                columns: {
+                    userId: true,
+                },
+            });
+
+            if (credentialAccount) {
+                await tx.update(accounts).set({
+                    password: hashedPassword,
+                    type: "email",
+                    accountId: normalizedEmail,
+                }).where(and(
+                    eq(accounts.userId, id),
+                    eq(accounts.provider, "credential")
+                ));
+            } else {
+                await tx.insert(accounts).values({
+                    userId: id,
+                    password: hashedPassword,
+                    provider: "credential",
+                    type: "email",
+                    accountId: normalizedEmail,
+                });
+            }
+
+            const persistedCredentialAccount = await tx.query.accounts.findFirst({
+                where: (account, { and, eq }) => and(
+                    eq(account.userId, id),
+                    eq(account.provider, "credential")
+                ),
+                columns: {
+                    userId: true,
+                },
+            });
+
+            if (!persistedCredentialAccount) {
+                throw new Error("AUTH_ACCOUNT_CREATE_FAILED");
+            }
 
             const [{ vid }] = await tx.insert(vendors).values({
                 ...data,
@@ -56,8 +95,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true }, { status: 200 });
 
     } catch (error) {
+        if (error instanceof Error && error.message === "AUTH_ACCOUNT_CREATE_FAILED") {
+            return NextResponse.json(
+                { error: "Unable to create authentication account", code: "AUTH_ACCOUNT_CREATE_FAILED" },
+                { status: 500 }
+            );
+        }
+
         console.log(error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
-
