@@ -203,11 +203,11 @@ export function messageRoute(app: Elysia) {
 
             let medias: Media[] = [];
             if (files && files.length > 0) {
-                console.log('[DEBUG] Inserting media for message:', {
-                    messageId: newMessage.id,
-                    fileCount: files.length,
-                    files: files.map((f: any) => ({ fileName: f.fileName, url: f.url }))
-                });
+                // console.log('[DEBUG] Inserting media for message:', {
+                //     messageId: newMessage.id,
+                //     fileCount: files.length,
+                //     files: files.map((f: any) => ({ fileName: f.fileName, url: f.url }))
+                // });
 
                 medias = await db.insert(media).values(files.map((file: any) => ({
                     ...file,
@@ -216,56 +216,68 @@ export function messageRoute(app: Elysia) {
                     fileType: getFileTypeCategory(file.mimeType),
                 }))).returning();
 
-                console.log('[DEBUG] Inserted media:', {
-                    count: medias.length,
-                    ids: medias.map(m => m.id)
-                });
+                // console.log('[DEBUG] Inserted media:', {
+                //     count: medias.length,
+                //     ids: medias.map(m => m.id)
+                // });
             }
-
 
             const enrichedMessage: Message = {
                 ...newMessage,
                 medias,
             };
 
+            let inactiveUserIds: string[] = activeUserIds.filter(id => !chat?.chatMembers.some(m => m.userId === id));
+            // update the last message id for active user ids the chat members
+            await db.update(chatMembers).set({
+                lastMessageId: newMessage.id,
+            }).where(and(
+                inArray(chatMembers.userId, activeUserIds),
+                eq(chatMembers.chatId, cid)
+            ));
 
-            const filteredActiveUserIds = activeUserIds.filter(id => id !== uid);
-            const inactiveUserIds = filteredActiveUserIds.filter(id => !chat?.chatMembers.some(m => m.userId === id));
 
-            let offlineUserIds: string[] = [];
+            broadcastMessage(cid, enrichedMessage);
+
+
             if (inactiveUserIds && inactiveUserIds.length > 0) {
-                await db.update(chatMembers).set({
-                    lastMessageId: newMessage.id,
-                    unreadCount: sql`${chatMembers.unreadCount} + 1`,
-                }).where(and(
-                    inArray(chatMembers.userId, inactiveUserIds),
-                    eq(chatMembers.chatId, cid)
-                )).execute();
-                broadcastMessageUnread(cid, enrichedMessage, inactiveUserIds);
-
-                // Fetch members of this chat
+                // Find offline users from the inactiveUserIds
                 const users = await db.query.users.findMany({
                     where: (users, { inArray, and }) => and(
-                        inArray(users.id, offlineUserIds),
+                        inArray(users.id, inactiveUserIds),
                         eq(users.isOnline, false)
                     ),
                     columns: {
                         id: true,
                     }
                 });
-                offlineUserIds = users.map(u => u.id);
+                const offlineUserIds: string[] = users.map(u => u.id);
+
+                // Remove offlineUserIds from inactiveUserIds to get only inactive but online users
+                inactiveUserIds = inactiveUserIds.filter(id => !offlineUserIds.includes(id));
+
+                // Now broadcast unread only to inactive-but-online users
+                if (inactiveUserIds.length > 0) {
+                    await db.update(chatMembers).set({
+                        unreadCount: sql`${chatMembers.unreadCount} + 1`,
+                    }).where(and(
+                        inArray(chatMembers.userId, inactiveUserIds),
+                        eq(chatMembers.chatId, cid)
+                    ));
+                    broadcastMessageUnread(cid, enrichedMessage, inactiveUserIds);
+                }
+
+                // Optionally: handle offlineUserIds (e.g., send push notification)
+                if (offlineUserIds.length > 0) {
+                    // send notification to users not using the app
+
+                }
             }
 
 
-            if (offlineUserIds && offlineUserIds.length > 0) {
-                // send notification to users not using the app
 
-            }
 
-            // Broadcast the enriched message to all subscribed clients
-            if (filteredActiveUserIds && filteredActiveUserIds.length > 0) {
-                broadcastMessage(cid, enrichedMessage);
-            }
+
 
 
 

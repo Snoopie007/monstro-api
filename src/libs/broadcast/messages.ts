@@ -1,5 +1,3 @@
-
-import { createClient } from '@supabase/supabase-js';
 import type { Message } from '@subtrees/types';
 import supabase from './SupabaseService';
 import { RealTimeEvents } from '@subtrees/constants/data';
@@ -15,7 +13,6 @@ export async function broadcastMessage(chatId: string, message: Message): Promis
 	try {
 		const channel = await supabase.createChannel(`chat:${chatId}`)
 		channel?.httpSend(RealTimeEvents.chat.NEW_MESSAGE, { message });
-
 		supabase.removeChannel(channel);
 	} catch (error) {
 		console.error('Error broadcasting message:', error);
@@ -24,11 +21,11 @@ export async function broadcastMessage(chatId: string, message: Message): Promis
 }
 
 
-export async function broadcastMessageUnread(chatId: string, message: Message, ids: string[]): Promise<void> {
+export async function broadcastMessageUnread(chatId: string, message: Message, userIds: string[]): Promise<void> {
 	try {
-		await Promise.all(ids.map(async (id) => {
+		await Promise.all(userIds.map(async (userId) => {
 			try {
-				const c = supabase.createChannel(`chats:${id}`);
+				const c = supabase.createChannel(`chats:${userId}`);
 				await c.httpSend(RealTimeEvents.chats.UPDATED_CHAT, {
 					chatId: chatId,
 					updates: {
@@ -42,7 +39,7 @@ export async function broadcastMessageUnread(chatId: string, message: Message, i
 				await c.httpSend(RealTimeEvents.chats.UNREAD, { chatId: chatId, lastMessageId: message.id });
 				supabase.removeChannel(c);
 			} catch (err) {
-				console.error(`Failed to broadcast to user ${id}:`, err);
+				console.error(`Failed to broadcast to user ${userId}:`, err);
 			}
 		}));
 	} catch (error) {
