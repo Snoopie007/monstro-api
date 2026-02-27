@@ -227,7 +227,9 @@ export function messageRoute(app: Elysia) {
                 medias,
             };
 
-            let inactiveUserIds: string[] = activeUserIds.filter(id => !chat?.chatMembers.some(m => m.userId === id));
+            let inactiveUserIds: string[] = chat?.chatMembers
+                .map(m => m.userId)
+                .filter(userId => !activeUserIds.includes(userId)) || [];
             // update the last message id for active user ids the chat members
             await db.update(chatMembers).set({
                 lastMessageId: newMessage.id,
