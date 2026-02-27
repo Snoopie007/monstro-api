@@ -13,7 +13,7 @@ import type {
     ReactionCount, MessageReply
 } from "@subtrees/types";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { Elysia, t, type Context } from "elysia";
+import { Elysia, t } from "elysia";
 import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
 
 const MessageProps = {
@@ -227,9 +227,12 @@ export function messageRoute(app: Elysia) {
                 medias,
             };
 
+            console.log('[DEBUG] Active users IDs:', activeUsersIds);
+
             let inactiveUserIds: string[] = chat?.chatMembers
                 .map(m => m.userId)
                 .filter(userId => !activeUsersIds.includes(userId)) || [];
+            console.log('[DEBUG] Inactive users IDs:', inactiveUserIds);
             // update the last message id for active user ids the chat members
             await db.update(chatMembers).set({
                 lastMessageId: newMessage.id,
@@ -254,7 +257,7 @@ export function messageRoute(app: Elysia) {
                     }
                 });
                 const offlineUserIds: string[] = users.map(u => u.id);
-
+                console.log('[DEBUG] Offline users IDs:', offlineUserIds);
                 // Remove offlineUserIds from inactiveUserIds to get only inactive but online users
                 inactiveUserIds = inactiveUserIds.filter(id => !offlineUserIds.includes(id));
 
