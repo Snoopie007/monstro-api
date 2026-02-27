@@ -104,6 +104,8 @@ export function QuizForm() {
             })
             if (res?.ok) {
                 router.push('/dashboard/locations/new');
+            } else {
+                toast.error(res?.error || "Unable to sign in. Please try again.");
             }
         } catch (error: unknown) {
             toast.error((error as Error).message || "Error signing in");
