@@ -10,6 +10,7 @@ import { mlSupportRoutes } from './support';
 import { mlPointsRoutes } from './points';
 import { memberLocations } from '@subtrees/schemas';
 import { mlPaymentMethods } from './methods';
+import createLocationChat from '@/libs/CreateLocationChat';
 
 const GeMLProps = {
     params: t.Object({
@@ -82,7 +83,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                     locationState: true,
                 },
             });
-
+            createLocationChat(lid, mid);
             return status(200, {
                 ...newMemberLocation,
                 location: location,

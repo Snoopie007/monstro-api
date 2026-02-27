@@ -1,21 +1,19 @@
 import { db } from "@/db/db";
 import {
     memberPackages, memberSubscriptions,
-    migrateMembers, memberLocations, memberCustomFields
+    migrateMembers, memberLocations, memberCustomFields,
 } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
 import { Elysia, t } from "elysia";
 import { eq, sql } from "drizzle-orm";
 import { calculateThresholdDate } from "@/libs/utils";
-
+import createLocationChat from "@/libs/CreateLocationChat";
 
 export function migrateAcceptRoutes(app: Elysia) {
     app.post('/accept', async ({ status, params, body }) => {
         const { migrateId, lid } = params;
         const { mid } = body;
         const today = new Date();
-
-
 
         try {
             // Fetch migrate record to get custom field values
@@ -47,6 +45,8 @@ export function migrateAcceptRoutes(app: Elysia) {
                     status: state,
                 },
             }).returning();
+
+
 
             // Transfer custom field values if they exist
             const customFieldValues = migrate?.metadata?.customFieldValues;
@@ -139,6 +139,10 @@ export function migrateAcceptRoutes(app: Elysia) {
                 updated: today,
             }).where(eq(migrateMembers.id, migrateId));
 
+
+            // Create location chat
+            createLocationChat(lid, mid);
+
             return status(200, ml);
         } catch (error) {
             console.error(error);
@@ -183,4 +187,5 @@ export function migrateAcceptRoutes(app: Elysia) {
     });
     return app;
 }
+
 

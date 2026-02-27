@@ -3,7 +3,7 @@ import { supportConversations } from "@subtrees/schemas";
 import {
     broadcastSupportConversation,
     formatSupportConversationPayload
-} from "@/libs/support-broadcast";
+} from "@/libs/broadcast";
 import type { SupportConversation } from "@subtrees/types";
 import { eq } from "drizzle-orm";
 import type { Elysia } from "elysia";

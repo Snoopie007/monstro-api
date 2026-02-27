@@ -1,6 +1,5 @@
 import type { SupportConversation, SupportMessage } from '@subtrees/types';
-import { createClient } from '@supabase/supabase-js';
-
+import supabase from './SupabaseService';
 /**
  * Interface for support message broadcast payload
  */
@@ -37,26 +36,6 @@ export interface SupportConversationPayload {
 }
 
 /**
- * Creates a Supabase client for broadcasting
- */
-function getSupabaseClient() {
-  const supabaseUrl = Bun.env.SUPABASE_URL;
-  const supabaseServiceKey = Bun.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('Missing Supabase configuration');
-  }
-
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    realtime: {
-      params: {
-        eventsPerSecond: 100,
-      },
-    },
-  });
-}
-
-/**
  * Broadcasts a support message to the conversation channel
  * @param conversationId - The conversation ID to broadcast to
  * @param message - The message to broadcast
@@ -65,18 +44,10 @@ export async function broadcastSupportMessage(
   conversationId: string,
   message: SupportMessagePayload
 ): Promise<void> {
-  const supabase = getSupabaseClient();
 
   try {
     // Broadcast to the specific conversation channel
-    const channel = supabase.channel(`support:${conversationId}`, {
-      config: {
-        private: true,
-        broadcast: {
-          ack: false,
-        },
-      },
-    });
+    const channel = supabase.createChannel(`support:${conversationId}`);
 
     // Determine event type based on message role
     const eventType = message.role === 'system' ? 'system_message' : 'new_message';
@@ -109,17 +80,8 @@ export async function broadcastSupportConversation(
   conversation: SupportConversationPayload,
   event: 'conversation_updated' | 'conversation_inserted'
 ): Promise<void> {
-  const supabase = getSupabaseClient();
-
   try {
-    const channel = supabase.channel(`support:${locationId}`, {
-      config: {
-        private: true,
-        broadcast: {
-          ack: false,
-        },
-      },
-    });
+    const channel = supabase.createChannel(`support:${locationId}`);
 
     await channel.send({
       type: 'broadcast',

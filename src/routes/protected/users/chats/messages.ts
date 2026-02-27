@@ -5,13 +5,14 @@ import {
 } from "@subtrees/schemas";
 import {
     broadcastMessage,
-    broadcastMessageUpdate, broadcastMessageDelete
-} from "@/libs/messages";
+    broadcastMessageUpdate, broadcastMessageDelete,
+    broadcastMessageUnread
+} from "@/libs/broadcast/messages";
 import type {
     Media, Message,
     ReactionCount, MessageReply
 } from "@subtrees/types";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { Elysia, t, type Context } from "elysia";
 import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
 
@@ -26,6 +27,8 @@ const PostProps = {
     ...MessageProps,
     body: t.Object({
         content: t.Optional(t.String()),
+        tempId: t.Optional(t.String()),
+        activeUserIds: t.Array(t.String()),
         replyId: t.Optional(t.String()),
         files: t.Optional(t.Array(t.Object({
             fileName: t.String(),
@@ -52,7 +55,7 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
 export function messageRoute(app: Elysia) {
     // Get messages for a chat with media and reactions
     app.get('/messages', async ({ params, set }) => {
-        const { cid, uid } = params;
+        const { cid } = params;
         try {
             // Fetch messages with sender and media relations
             const messageRows = await db.query.messages.findMany({
@@ -63,6 +66,11 @@ export function messageRoute(app: Elysia) {
                 limit: 50,
                 orderBy: (messages, { asc }) => asc(messages.created),
             });
+
+            if (messageRows.length === 0) {
+                set.status = 200;
+                return [];
+            }
 
             // Get message IDs for reaction lookup
             const messageIds = messageRows.map(m => m.id);
@@ -129,6 +137,7 @@ export function messageRoute(app: Elysia) {
                 };
             });
 
+
             set.status = 200;
             return enrichedMessages;
         } catch (error) {
@@ -138,10 +147,10 @@ export function messageRoute(app: Elysia) {
         }
     }, MessageProps)
 
-    app.post('/messages', async ({ params, body, set, ...ctx }) => {
+    app.post('/messages', async ({ params, body, set }) => {
 
         const { cid, uid } = params;
-        const { content, files, replyId } = body;
+        const { content, files, replyId, activeUserIds, tempId } = body;
 
         if (!content && (!files || files.length === 0)) {
             set.status = 400;
@@ -151,6 +160,13 @@ export function messageRoute(app: Elysia) {
             // For location chats, auto-add sender to chat_members if not already present
             const chat = await db.query.chats.findFirst({
                 where: eq(chats.id, cid),
+                with: {
+                    chatMembers: {
+                        columns: {
+                            userId: true,
+                        }
+                    }
+                }
             });
 
             if (chat?.locationId) {
@@ -173,6 +189,7 @@ export function messageRoute(app: Elysia) {
 
             // Insert the message first
             const [newMessage] = await db.insert(messages).values({
+                ...(tempId ? { id: tempId } : {}),
                 chatId: cid,
                 senderId: uid,
                 content: content?.trim() || null,
@@ -205,13 +222,53 @@ export function messageRoute(app: Elysia) {
                 });
             }
 
+
             const enrichedMessage: Message = {
                 ...newMessage,
                 medias,
             };
 
+
+            const filteredActiveUserIds = activeUserIds.filter(id => id !== uid);
+            const inactiveUserIds = filteredActiveUserIds.filter(id => !chat?.chatMembers.some(m => m.userId === id));
+
+            let offlineUserIds: string[] = [];
+            if (inactiveUserIds && inactiveUserIds.length > 0) {
+                await db.update(chatMembers).set({
+                    lastMessageId: newMessage.id,
+                    unreadCount: sql`${chatMembers.unreadCount} + 1`,
+                }).where(and(
+                    inArray(chatMembers.userId, inactiveUserIds),
+                    eq(chatMembers.chatId, cid)
+                )).execute();
+                broadcastMessageUnread(cid, enrichedMessage, inactiveUserIds);
+
+                // Fetch members of this chat
+                const users = await db.query.users.findMany({
+                    where: (users, { inArray, and }) => and(
+                        inArray(users.id, offlineUserIds),
+                        eq(users.isOnline, false)
+                    ),
+                    columns: {
+                        id: true,
+                    }
+                });
+                offlineUserIds = users.map(u => u.id);
+            }
+
+
+            if (offlineUserIds && offlineUserIds.length > 0) {
+                // send notification to users not using the app
+
+            }
+
             // Broadcast the enriched message to all subscribed clients
-            await broadcastMessage(cid, enrichedMessage);
+            if (filteredActiveUserIds && filteredActiveUserIds.length > 0) {
+                broadcastMessage(cid, enrichedMessage);
+            }
+
+
+
 
             set.status = 201;
             return enrichedMessage;
@@ -222,7 +279,7 @@ export function messageRoute(app: Elysia) {
         }
     }, PostProps)
 
-    app.put('/messages/:messageId', async ({ params, body, set, ...ctx }) => {
+    app.put('/messages/:messageId', async ({ params, body, set }) => {
         const { cid, messageId, uid } = params;
         const { content } = body;
 
@@ -300,8 +357,8 @@ export function messageRoute(app: Elysia) {
         }),
     })
 
-    app.delete('/messages/:messageId', async ({ params, set, ...ctx }) => {
-        const { userId } = ctx as Context & { userId: string };
+    app.delete('/messages/:messageId', async ({ params, set }) => {
+
         const { cid, messageId, uid } = params;
 
         try {
@@ -318,7 +375,7 @@ export function messageRoute(app: Elysia) {
                 return { error: 'Message not found' };
             }
 
-            if (message.senderId !== userId) {
+            if (message.senderId !== uid) {
                 set.status = 403;
                 return { error: 'You can only delete your own messages' };
             }

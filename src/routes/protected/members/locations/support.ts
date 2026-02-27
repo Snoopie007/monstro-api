@@ -1,7 +1,7 @@
 import { db } from '@/db/db'
 import { supportConversations } from 'subtrees/schemas'
 import { notifyUsersNewSupportConversation } from '@/libs/novu'
-import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/support-broadcast'
+import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/broadcast'
 import type { SupportConversation } from 'subtrees/types'
 import { Elysia } from 'elysia'
 import { z } from "zod"

@@ -76,7 +76,7 @@ export function userChatsRoutes(app: Elysia) {
         }, UserChatsProps);
         app.post('/', async ({ body, params, status }) => {
             const { uid } = params;
-            const { addresseeId } = body;
+            const { addresseeId, tempId } = body;
             try {
 
                 const user = await db.query.users.findFirst({
@@ -106,6 +106,7 @@ export function userChatsRoutes(app: Elysia) {
                 const chat = await db.transaction(async (tx) => {
                     const [chat] = await tx.insert(chats).values({
                         startedBy: uid,
+                        ...(tempId ? { id: tempId } : {}),
                         name: addressee.name,
                     }).returning();
 
@@ -149,6 +150,7 @@ export function userChatsRoutes(app: Elysia) {
             ...UserChatsProps,
             body: t.Object({
                 addresseeId: t.String(),
+                tempId: t.Optional(t.String()),
             }),
 
         })
