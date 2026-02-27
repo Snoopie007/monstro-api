@@ -43,9 +43,6 @@ export function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: string })
     })
 
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
-        if (form.formState.isSubmitting) return;
-
-
         try {
             const { result, error } = await tryCatch(
                 fetch(`/api/protected/loc/${lid}/staffs`, {
