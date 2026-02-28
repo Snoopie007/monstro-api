@@ -1,6 +1,0 @@
-export * from './BotFields'
-export * from './BotSettings'
-export * from './ExpandableTextarea'
-export * from './TestChatBox'
-export * from './KnowledgeBase'
-export * from './Triggers'
