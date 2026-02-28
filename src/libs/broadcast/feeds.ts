@@ -12,7 +12,7 @@ export async function broadcastNewFeed(userIds: string[], feed: UserFeed): Promi
     try {
 
         await Promise.all(userIds.map(async (userId) => {
-            const channel = supabase.createChannel(`feeds:${userId}`);
+            const channel = supabase.createChannel(`user:${userId}`);
             await channel.send({
                 type: 'broadcast',
                 event: RealTimeEvents.feeds.NEW_FEED,

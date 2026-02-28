@@ -1,11 +1,8 @@
 import { config } from 'dotenv'
 
-
 if (!process.env.BUN_ENV) {
     throw new Error('BUN_ENV must be set in the environment');
 }
-
-
 
 // Load environment variables based on BUN_ENV
 // On Fly/Docker we run from /usr/src/app; BUN_ENV often isn't passed to the process
