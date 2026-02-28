@@ -49,13 +49,11 @@ const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'applic
 
 
 export {
-    MonstroData,
-    PaymentMethods,
-    ALLOWED_IMAGE_TYPES,
-    ALLOWED_VIDEO_TYPES,
     ALLOWED_AUDIO_TYPES,
-    ALLOWED_DOCUMENT_TYPES
-}
+    ALLOWED_DOCUMENT_TYPES, ALLOWED_IMAGE_TYPES,
+    ALLOWED_VIDEO_TYPES, MonstroData,
+    PaymentMethods
+};
 
 export type { MonstroDataType };
 
@@ -214,7 +212,7 @@ const RealTimeEvents = {
         NEW_CHAT: "chat:new",
         UPDATED_CHAT: "chat:updated",
         DELETED_CHAT: "chat:deleted",
-        UNREAD: "unread",
+        UNREAD: "chats:unread",
     },
     chat: {
         NEW_MESSAGE: "new:message",
@@ -228,4 +226,4 @@ const RealTimeEvents = {
     }
 }
 
-export { CountryCodes, TimeZones, Regions, Industries, RETRIABLE_PG_CODES, COMMON_HOLIDAYS, RealTimeEvents };
+export { COMMON_HOLIDAYS, CountryCodes, Industries, RealTimeEvents, Regions, RETRIABLE_PG_CODES, TimeZones };
