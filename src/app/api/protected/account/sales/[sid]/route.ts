@@ -44,17 +44,15 @@ export async function POST(req: Request) {
             }
         });
 
-        if (existingLocation?.locationState?.status === "active") {
-            return NextResponse.json(
-                {
-                    error: "There is already an active location with that name.",
-                    code: "LOCATION_ALREADY_EXISTS"
-                },
-                { status: 409 }
-            );
-        }
-
-        if (!existingLocation) {
+        if (existingLocation) {
+            if (existingLocation.locationState?.status === "active") {
+                return NextResponse.json(
+                    { error: "There is already an active location with that name.", code: "LOCATION_ALREADY_EXISTS" },
+                    { status: 409 }
+                );
+            }
+            location = existingLocation as Location; // reuse inactive location
+        } else {
             const phoneNumber = parsePhoneNumberFromString(data.phone)?.number;
             const slug = data.name.toLowerCase().replace(/[^a-z0-9]/g, '-'); // Better slug generation
 
@@ -67,6 +65,8 @@ export async function POST(req: Request) {
 
             location = loc;
         }
+
+
         if (!location) {
             return NextResponse.json(
                 { error: "Failed to create location", code: "FAILED_TO_CREATE_LOCATION" },
@@ -74,7 +74,9 @@ export async function POST(req: Request) {
             );
         }
 
-        const plan = await getPlan(sale.planId);
+
+        const planId = sale.planId;
+        const plan = await getPlan(planId);
         const today = new Date();
         const metadata = { vendorId };
 
@@ -94,10 +96,11 @@ export async function POST(req: Request) {
             }
         }
 
+        const isReuse = !!existingLocation;
 
         await db.transaction(async (tx) => {
-            await tx.insert(locationState).values({
-                planId: sale.planId || 1,
+            const statePayload = {
+                planId,
                 settings: {
                     ...DEFAULT_LOCATION_SETTINGS,
                     ...(stripeSubscription?.id ? { stripeSubscriptionId: stripeSubscription.id } : {}),
@@ -107,8 +110,18 @@ export async function POST(req: Request) {
                 status: stripeSubscription?.status || 'incomplete',
                 startDate: today,
                 lastRenewalDate: today,
-            });
-
+            }
+            if (isReuse && existingLocation?.locationState) {
+                await tx
+                    .update(locationState)
+                    .set(statePayload)
+                    .where(eq(locationState.locationId, location.id));
+            } else {
+                await tx.insert(locationState).values({
+                    ...statePayload,
+                    locationId: location.id,
+                });
+            }
             // Create wallet
             await tx.insert(wallets).values({
                 locationId: location.id,

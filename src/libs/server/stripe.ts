@@ -282,6 +282,7 @@ interface VendorPaymentIntentResponse {
 
 class VendorStripePayments extends BaseStripePayments {
 	constructor() {
+		console.log('STRIPE_SECRET_KEY', process.env.STRIPE_SECRET_KEY);
 		super(process.env.STRIPE_SECRET_KEY!);
 	}
 
@@ -429,7 +430,7 @@ class VendorStripePayments extends BaseStripePayments {
 			name: params.name,
 			duration: params.duration,
 			...(params.percentOff !== undefined && { percent_off: params.percentOff }),
-			...(params.amountOff !== undefined && { 
+			...(params.amountOff !== undefined && {
 				amount_off: params.amountOff,
 				currency: params.currency || 'usd'
 			}),
@@ -464,10 +465,10 @@ class VendorStripePayments extends BaseStripePayments {
 			...(params.maxRedemptions && { max_redemptions: params.maxRedemptions }),
 			...(params.restrictions && {
 				restrictions: {
-					...(params.restrictions.firstTimeTransaction !== undefined && { 
-						first_time_transaction: params.restrictions.firstTimeTransaction 
+					...(params.restrictions.firstTimeTransaction !== undefined && {
+						first_time_transaction: params.restrictions.firstTimeTransaction
 					}),
-					...(params.restrictions.minimumAmount && { 
+					...(params.restrictions.minimumAmount && {
 						minimum_amount: params.restrictions.minimumAmount,
 						minimum_amount_currency: params.restrictions.minimumAmountCurrency || 'usd'
 					}),
@@ -548,8 +549,8 @@ class MemberStripePayments extends BaseStripePayments {
 
 
 	async createSubscription(
-		plan: MemberPlan, 
-		pricing: MemberPlanPricing, 
+		plan: MemberPlan,
+		pricing: MemberPlanPricing,
 		settings: MemberSubscriptionSettings
 	) {
 		if (!this._customer) {
