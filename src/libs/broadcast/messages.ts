@@ -26,6 +26,7 @@ export async function broadcastMessageUnread(chatId: string, message: Message, u
 		await Promise.all(userIds.map(async (userId) => {
 			try {
 				const c = supabase.createChannel(`user:${userId}`);
+				console.log('Broadcasting message unread to user:', userId);
 				await c.httpSend(RealTimeEvents.chats.UPDATED_CHAT, {
 					chatId: chatId,
 					updates: {
