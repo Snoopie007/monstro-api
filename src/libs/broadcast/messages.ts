@@ -27,17 +27,10 @@ export async function broadcastMessageUnread(chatId: string, message: Message, u
 			try {
 				const c = supabase.createChannel(`user:${userId}`);
 				console.log('Broadcasting message unread to user:', userId);
-				await c.httpSend(RealTimeEvents.chats.UPDATED_CHAT, {
+				await c.httpSend(RealTimeEvents.chats.NEW_MESSAGE, {
 					chatId: chatId,
-					updates: {
-						lastMessage: {
-							created: message.created,
-							content: message.content
-						}
-					}
-
+					message: message
 				});
-				await c.httpSend(RealTimeEvents.chats.UNREAD, { chatId: chatId, lastMessageId: message.id });
 				supabase.removeChannel(c);
 			} catch (err) {
 				console.error(`Failed to broadcast to user ${userId}:`, err);
