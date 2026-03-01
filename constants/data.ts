@@ -212,7 +212,7 @@ const RealTimeEvents = {
         NEW_CHAT: "chats:new",
         UPDATED_CHAT: "chats:updated",
         DELETED_CHAT: "chats:deleted",
-        UNREAD: "chats:unread",
+        NEW_MESSAGE: "chats:message:new",
     },
     chat: {
         NEW_MESSAGE: "new:message",
