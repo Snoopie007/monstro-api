@@ -1,21 +1,21 @@
 // src/state.ts (or src/libs/globalState.ts)
-export const serverState = {
+export const ServerState = {
     onlineUsers: new Set<string>(),
 };
 
 
 export function addOnlineUser(userId: string): void {
-    serverState.onlineUsers.add(userId);
+    ServerState.onlineUsers.add(userId);
 }
 
 export function removeOnlineUser(userId: string): void {
-    serverState.onlineUsers.delete(userId);
+    ServerState.onlineUsers.delete(userId);
 }
 
 export function isUserOnline(userId: string): boolean {
-    return serverState.onlineUsers.has(userId);
+    return ServerState.onlineUsers.has(userId);
 }
 
 export function getOnlineUserIds(): string[] {
-    return Array.from(serverState.onlineUsers.keys());
+    return Array.from(ServerState.onlineUsers.keys());
 }

@@ -15,7 +15,7 @@ import type {
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
-
+import { ServerState } from '@/state';
 const MessageProps = {
     params: t.Object({
         uid: t.String(),
@@ -247,44 +247,42 @@ export function messageRoute(app: Elysia) {
 
             if (inactiveUserIds && inactiveUserIds.length > 0) {
                 // Find offline users from the inactiveUserIds
-                const users = await db.query.users.findMany({
-                    where: (users, { inArray, and }) => and(
-                        inArray(users.id, inactiveUserIds),
-                        eq(users.isOnline, false)
-                    ),
-                    columns: {
-                        id: true,
-                    }
-                });
-                const offlineUserIds: string[] = users.map(u => u.id);
-                console.log('[DEBUG] Offline users IDs:', offlineUserIds);
-                // Remove offlineUserIds from inactiveUserIds to get only inactive but online users
-                inactiveUserIds = inactiveUserIds.filter(id => !offlineUserIds.includes(id));
 
-                // Now broadcast unread only to inactive-but-online users
-                if (inactiveUserIds.length > 0) {
+                // Get fresh list of online users
+                const onlineUserIds: string[] = Array.from(ServerState.onlineUsers.keys());
+                console.log('[DEBUG] Server state:', ServerState);
+                console.log('[DEBUG] Online users IDs:', onlineUserIds);
+
+                const offlineUserIds: string[] = [];
+
+                const inactiveButOnlineUserIds: string[] = [];
+                for (const id of inactiveUserIds) {
+                    if (!onlineUserIds.includes(id)) {
+                        offlineUserIds.push(id);
+                    } else {
+                        inactiveButOnlineUserIds.push(id);
+                    }
+                }
+
+                console.log('[DEBUG] Offline users:', offlineUserIds);
+
+                // Only update unreadCount and broadcast for inactive-but-online users
+                if (inactiveButOnlineUserIds.length > 0) {
                     await db.update(chatMembers).set({
                         unreadCount: sql`${chatMembers.unreadCount} + 1`,
                     }).where(and(
-                        inArray(chatMembers.userId, inactiveUserIds),
+                        inArray(chatMembers.userId, inactiveButOnlineUserIds),
                         eq(chatMembers.chatId, cid)
                     ));
                     broadcastMessageUnread(cid, enrichedMessage, inactiveUserIds);
                 }
 
                 // Optionally: handle offlineUserIds (e.g., send push notification)
-                if (offlineUserIds.length > 0) {
+                if (onlineUserIds.length > 0) {
                     // send notification to users not using the app
 
                 }
             }
-
-
-
-
-
-
-
 
 
             set.status = 201;

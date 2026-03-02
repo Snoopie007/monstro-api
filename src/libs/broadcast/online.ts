@@ -1,7 +1,11 @@
 import supabase from './SupabaseService';
 import { addOnlineUser, removeOnlineUser } from '@/state';
+
+
 export function startOnlineChannel() {
     const channel = supabase.createChannel('online', 'system');
+
+
     channel.on('presence', { event: 'join' }, ({ key }) => {
         console.log(`[DEBUG] ${key} joined online channel`);
         addOnlineUser(key);
