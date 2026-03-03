@@ -211,10 +211,10 @@ const COMMON_HOLIDAYS: HolidayWithPattern[] = [
 
 const RealTimeEvents = {
     chats: {
-        NEW_CHAT: "chat:new",
-        UPDATED_CHAT: "chat:updated",
-        DELETED_CHAT: "chat:deleted",
-        UNREAD: "unread",
+        NEW_CHAT: "chats:new",
+        UPDATED_CHAT: "chats:updated",
+        DELETED_CHAT: "chats:deleted",
+        NEW_MESSAGE: "chats:message:new",
     },
     chat: {
         NEW_MESSAGE: "new:message",
@@ -225,6 +225,12 @@ const RealTimeEvents = {
         NEW_FEED: "feed:new",
         UPDATED_FEED: "feed:updated",
         DELETED_FEED: "feed:deleted",
+    },
+    support: {
+        NEW_SUPPORT_MESSAGE: "system:message",
+        UPDATED_SUPPORT_MESSAGE: "new:message",
+        UPDATED: "updated:support",
+        NEW: "new:support",
     }
 }
 
