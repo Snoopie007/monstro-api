@@ -29,6 +29,8 @@ export function userChatsRoutes(app: Elysia) {
                                         id: true,
                                         name: true,
                                         image: true,
+                                        username: true,
+                                        discriminator: true,
                                     },
                                 },
                             },
@@ -85,6 +87,8 @@ export function userChatsRoutes(app: Elysia) {
                         id: true,
                         name: true,
                         image: true,
+                        username: true,
+                        discriminator: true,
                     },
                 });
                 if (!user) {
@@ -97,6 +101,8 @@ export function userChatsRoutes(app: Elysia) {
                         id: true,
                         name: true,
                         image: true,
+                        username: true,
+                        discriminator: true,
                     },
                 });
                 if (!addressee) {

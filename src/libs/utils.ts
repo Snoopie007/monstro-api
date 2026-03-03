@@ -164,30 +164,28 @@ function interEmailsAndText(
     template: string,
     data: Record<string, any>
 ): string {
-    return template.replace(
-        /\{\{([^}]+)\}\}/g,
-        (match: string, p1: string): string => {
-            // Split the path into parts (e.g. "user.name" -> ["user", "name"])
-            const parts = p1.trim().split(".");
+    return template.replace(/\{\{([^}]+)\}\}/g, (match: string, p1: string): string => {
+        // Split the path into parts (e.g. "user.name" -> ["user", "name"])
+        const parts = p1.trim().split(".");
 
-            // Check if there's a pipe for formatting
-            const [path, style] = parts[parts.length - 1]?.split("|") ?? [];
-            parts[parts.length - 1] = path ?? "";
+        // Check if there's a pipe for formatting
+        const [path, style] = parts[parts.length - 1]?.split("|") ?? [];
+        parts[parts.length - 1] = path ?? "";
 
-            // Traverse the object following the path
-            let value: Record<string, any> = data;
-            for (const part of parts) {
-                if (value === undefined || value === null) return match;
-                value = value[part];
-            }
-
-            // Apply style if specified
-            if (style && style.trim() === "lowercase") {
-                return String(value ?? match).toLowerCase();
-            }
-
-            return String(value ?? match);
+        // Traverse the object following the path
+        let value: Record<string, any> = data;
+        for (const part of parts) {
+            if (value === undefined || value === null) return match;
+            value = value[part];
         }
+
+        // Apply style if specified
+        if (style && style.trim() === "lowercase") {
+            return String(value ?? match).toLowerCase();
+        }
+
+        return String(value ?? match);
+    }
     );
 }
 

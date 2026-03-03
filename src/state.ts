@@ -19,3 +19,7 @@ export function isUserOnline(userId: string): boolean {
 export function getOnlineUserIds(): string[] {
     return Array.from(ServerState.onlineUsers.keys());
 }
+
+export function setOnlineUserIds(userIds: string[]): void {
+    ServerState.onlineUsers = new Set(userIds);
+}

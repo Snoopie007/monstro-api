@@ -17,20 +17,64 @@ export function migrateAcceptRoutes(app: Elysia) {
 
         try {
             // Fetch migrate record to get custom field values
-            const migrate = await db.query.migrateMembers.findFirst({
-                where: (mm, { eq }) => eq(mm.id, migrateId),
-                with: {
-                    pricing: {
-                        with: {
-                            plan: true,
+            const [migrate, location] = await Promise.all([
+                await db.query.migrateMembers.findFirst({
+                    where: (mm, { eq }) => eq(mm.id, migrateId),
+                    with: {
+
+                        member: {
+                            columns: {
+                                userId: true,
+                                firstName: true,
+                            },
+                        },
+                        pricing: {
+                            columns: {
+                                id: true,
+                                interval: true,
+                                intervalThreshold: true,
+                                expireInterval: true,
+                                expireThreshold: true,
+                            },
+                            with: {
+                                plan: {
+                                    columns: {
+                                        totalClassLimit: true,
+                                    },
+                                },
+                            },
                         },
                     },
-                },
-            });
+                }),
+                db.query.locations.findFirst({
+                    where: (location, { eq }) => eq(location.id, lid),
+                    columns: {
+                        name: true,
+                        welcomeMessage: true,
+                    },
+                    with: {
+                        vendor: {
+                            columns: {
+                                userId: true,
+                                firstName: true,
+                            },
+                        },
+                    },
+                }),
+            ]);
 
 
-            const hasPlan = migrate?.pricing && migrate?.planType;
+            if (!location) {
+                return status(404, { error: "Location not found" });
+            }
 
+            if (!migrate || !migrate?.member) {
+                return status(404, { error: "Migrate not found" });
+            }
+
+            const { pricing, planType, member } = migrate;
+
+            const hasPlan = pricing && planType;
             const hasPayment = migrate?.payment;
             const state = hasPlan && hasPayment ? "incomplete" : "active";
 
@@ -140,8 +184,8 @@ export function migrateAcceptRoutes(app: Elysia) {
             }).where(eq(migrateMembers.id, migrateId));
 
 
-            // Create location chat
-            createLocationChat(lid, mid);
+
+            createLocationChat(lid, member, location);
 
             return status(200, ml);
         } catch (error) {
