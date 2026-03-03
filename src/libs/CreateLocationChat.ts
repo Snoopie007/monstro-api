@@ -7,7 +7,7 @@ type LocationChat = Pick<Location, "name" | "welcomeMessage"> & { vendor: Pick<V
 
 const DEFAULT_WELCOME_MESSAGE = `
 👋 Hi {{member.firstName}}! Welcome to the {{location.name}} 🎉
-We're excited to have you here! 😊 Please let us know if you have any questions. ❓
+We're excited to have you here! 😊 Please let us know if you have any questions.
 `;
 
 async function createLocationChat(lid: string, member: Pick<Member, "userId" | 'firstName'>, location: LocationChat) {
