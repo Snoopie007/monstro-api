@@ -16,6 +16,7 @@ import SimpleOTPEmail from "./SimpleOTP";
 import UpdateEmailOTP from "./UpdateEmailOTP";
 import MigrationEmail from "./MigrationEmail";
 import ChildFamilyEmail from "./ChildFamilyEmail";
+import StaffInviteEmail from "./StaffInvite";
 
 export const EmailTemplates = {
     ClassReminderEmail,
@@ -26,6 +27,7 @@ export const EmailTemplates = {
     FamilyInviteEmail,
     MemberInviteEmail,
     ChildFamilyEmail,
+    StaffInviteEmail,
     MigrationEmail,
     MissedClassEmail,
     OTPEmailTemplate,
