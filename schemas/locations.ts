@@ -32,6 +32,7 @@ export const locations = pgTable("locations", {
 	logoUrl: text("logo_url"),
 	slug: text("slug").unique().notNull(),
 	metadata: jsonb("metadata"),
+	welcomeMessage: text("welcome_message"),
 	about: text("about"),
 	vendorId: text("vendor_id")
 		.notNull()
