@@ -2,6 +2,7 @@ import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
 import { chatMembers, chats } from "subtrees/schemas";
 import { messageRoute } from "./messages";
+import { and, eq } from "drizzle-orm";
 const UserChatsProps = {
     params: t.Object({
         uid: t.String(),
@@ -28,6 +29,8 @@ export function userChatsRoutes(app: Elysia) {
                                         id: true,
                                         name: true,
                                         image: true,
+                                        username: true,
+                                        discriminator: true,
                                     },
                                 },
                             },
@@ -73,9 +76,9 @@ export function userChatsRoutes(app: Elysia) {
                 return { error: 'Internal server error' }
             }
         }, UserChatsProps);
-        app.post('/', async ({ body, params, status, ...ctx }) => {
+        app.post('/', async ({ body, params, status }) => {
             const { uid } = params;
-            const { addresseeId } = body;
+            const { addresseeId, tempId } = body;
             try {
 
                 const user = await db.query.users.findFirst({
@@ -84,6 +87,8 @@ export function userChatsRoutes(app: Elysia) {
                         id: true,
                         name: true,
                         image: true,
+                        username: true,
+                        discriminator: true,
                     },
                 });
                 if (!user) {
@@ -96,6 +101,8 @@ export function userChatsRoutes(app: Elysia) {
                         id: true,
                         name: true,
                         image: true,
+                        username: true,
+                        discriminator: true,
                     },
                 });
                 if (!addressee) {
@@ -105,6 +112,7 @@ export function userChatsRoutes(app: Elysia) {
                 const chat = await db.transaction(async (tx) => {
                     const [chat] = await tx.insert(chats).values({
                         startedBy: uid,
+                        ...(tempId ? { id: tempId } : {}),
                         name: addressee.name,
                     }).returning();
 
@@ -148,6 +156,7 @@ export function userChatsRoutes(app: Elysia) {
             ...UserChatsProps,
             body: t.Object({
                 addresseeId: t.String(),
+                tempId: t.Optional(t.String()),
             }),
 
         })
@@ -185,6 +194,57 @@ export function userChatsRoutes(app: Elysia) {
                 params: t.Object({
                     uid: t.String(),
                     cid: t.String(),
+                }),
+            })
+            app.patch('/markread', async ({ params, body, status }) => {
+                const { cid, uid } = params;
+                const { lastMessageId } = body;
+                try {
+                    await db.update(chatMembers).set({
+                        lastMessageId,
+                        unreadCount: 0,
+                    }).where(and(
+                        eq(chatMembers.chatId, cid),
+                        eq(chatMembers.userId, uid)
+                    ));
+                    return status(200, { success: true });
+                } catch (error) {
+                    console.error(error);
+                    status(500, { error: 'Internal server error' });
+                    return { error: 'Internal server error' }
+                }
+            }, {
+                params: t.Object({
+                    uid: t.String(),
+                    cid: t.String(),
+                }),
+                body: t.Object({
+                    lastMessageId: t.String(),
+                }),
+            })
+            app.patch('/lastseen', async ({ params, body, status }) => {
+                const { cid, uid } = params;
+                const { lastActiveAt } = body;
+                try {
+                    await db.update(chatMembers).set({
+                        lastActiveAt: new Date(lastActiveAt),
+                    }).where(and(
+                        eq(chatMembers.chatId, cid),
+                        eq(chatMembers.userId, uid)
+                    ));
+                    return status(200, { success: true });
+                } catch (error) {
+                    console.error(error);
+                    status(500, { error: 'Internal server error' });
+                    return { error: 'Internal server error' }
+                }
+            }, {
+                params: t.Object({
+                    uid: t.String(),
+                    cid: t.String(),
+                }),
+                body: t.Object({
+                    lastActiveAt: t.Date(),
                 }),
             })
             app.use(messageRoute);

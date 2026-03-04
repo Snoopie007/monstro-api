@@ -7,6 +7,7 @@ import {
 	, XRoutes, webhooksRoutes
 } from "./src/routes";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
+import { startOnlineChannel } from "./src/libs/broadcast";
 
 const CORS_CONFIG = {
 	origin: "*",
@@ -82,3 +83,5 @@ app.use(cors(CORS_CONFIG))
 	});
 
 console.log(`🚀 Bun server running on http://localhost:${serverConfig.port}`);
+// Start online channel
+startOnlineChannel();

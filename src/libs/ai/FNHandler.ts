@@ -3,7 +3,7 @@ import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { supportConversations } from '@subtrees/schemas';
 import type { SupportConversation, MemberLocation } from '@subtrees/types';
-import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/support-broadcast';
+import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/broadcast';
 
 type ToolCall = {
 	id?: string;

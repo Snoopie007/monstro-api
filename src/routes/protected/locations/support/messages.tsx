@@ -3,7 +3,7 @@ import { supportConversations, supportMessages } from "@subtrees/schemas";
 import { calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory, getModel } from "@/libs/ai";
 import { ToolFunctions } from "@/libs/ai/FNHandler";
 import { formattedPrompt } from "@/libs/ai/Prompts";
-import { broadcastSupportMessage, formatSupportMessagePayload } from "@/libs/support-broadcast";
+import { broadcastSupportMessage, formatSupportMessagePayload } from "@/libs/broadcast";
 import { chargeWallet, hasEnoughBalance } from "@/libs/wallet";
 import type {
     MemberLocation, NewSupportMessage,

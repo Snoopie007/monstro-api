@@ -8,6 +8,7 @@ import {
     userChatsRoutes,
     userSupportRoutes,
     userNotificationRoutes,
+    userOnlineStatusRoutes,
 } from './users';
 import { friendsRoutes } from './friends';
 import { mediaRoutes } from './medias';
@@ -44,6 +45,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(userMomentsRoutes);
         app.use(userChatsRoutes);
         app.use(userNotificationRoutes);
+        app.use(userOnlineStatusRoutes);
         return app;
     })
     .group('/member/:mid', (app) => {

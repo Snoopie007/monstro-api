@@ -1,66 +1,88 @@
 import { db } from "@/db/db";
-import type { Elysia } from "elysia";
-import { z } from "zod";
-import type { UserFeed } from "@subtrees/types";
-
+import { and, isNull, eq, inArray } from "drizzle-orm";
+import { Elysia, t } from "elysia";
+import { userFeeds } from "@subtrees/schemas";
 const UserFeedsProps = {
 
-    params: z.object({
-        uid: z.string(),
-        type: z.enum(["moments", "posts", "group"]),
+    params: t.Object({
+        uid: t.String(),
+    }),
+    query: t.Object({
+        lastFeedDate: t.Optional(t.String()),
     }),
 };
 
 export function userFeedsRoutes(app: Elysia) {
-    return app.group('/feeds/:type', (app) => {
-        app.get("/", async ({ params, status, ...ctx }) => {
-            const { type, uid } = params;
+    return app.group('/feeds', (app) => {
+        app.get("/", async ({ params, query, status }) => {
+            const { uid } = params;
+            const { lastFeedDate } = query;
+            const startDate = lastFeedDate ? new Date(lastFeedDate) : new Date();
             try {
-                let feeds: UserFeed[] = [];
-                if (type === "moments") {
-                    feeds = await db.query.userFeeds.findMany({
-                        where: (userFeeds, { eq, and, isNull, isNotNull }) => and(
-                            eq(userFeeds.userId, uid),
-                            isNull(userFeeds.viewedAt),
-                            isNotNull(userFeeds.momentId),
-                        ),
-                        with: {
-                            author: true,
-                            moment: {
-                                with: {
-                                    medias: true,
-                                },
-                            },
 
-                        },
-                        orderBy: (userFeeds, { desc }) => desc(userFeeds.created),
-                    });
-                }
-                if (type === "group") {
-                    feeds = await db.query.userFeeds.findMany({
-                        where: (userFeeds, { eq, and, isNull, isNotNull }) => and(
-                            eq(userFeeds.userId, uid),
-                            isNull(userFeeds.viewedAt),
-                            isNotNull(userFeeds.postId),
-                        ),
-                        with: {
-                            post: {
-                                with: {
-                                    group: true,
-                                    author: true,
-                                    medias: true,
-                                },
+                const feeds = await db.query.userFeeds.findMany({
+                    where: (userFeeds, { eq, and, gte }) => and(
+                        eq(userFeeds.userId, uid),
+                        gte(userFeeds.created, startDate),
+                    ),
+                    with: {
+                        author: {
+                            columns: {
+                                id: true,
+                                name: true,
+                                image: true,
                             },
                         },
-                        orderBy: (userFeeds, { desc }) => desc(userFeeds.created),
-                    });
-                }
+                        group: true,
+                        post: {
+                            with: {
+                                medias: true,
+                            }
+                        },
+                        moment: {
+                            with: {
+                                medias: true,
+                            },
+                        },
+
+                    },
+                    orderBy: (userFeeds, { desc }) => desc(userFeeds.created),
+                });
+
+
+
+
                 return status(200, feeds);
             } catch (error) {
                 console.error("Error fetching moments feed:", error);
                 return status(500, { error: "Failed to fetch moments feed" });
             }
         }, UserFeedsProps);
+        app.post("/viewed", async ({ params, body, status }) => {
+            const { uid } = params;
+            const { feedIds, viewedAt } = body;
+
+            try {
+                await db.update(userFeeds).set({
+                    viewedAt: new Date(viewedAt),
+                }).where(and(
+                    eq(userFeeds.userId, uid), isNull(userFeeds.viewedAt),
+                    inArray(userFeeds.id, feedIds),
+                ));
+                return status(201, { success: true });
+            } catch (error) {
+                console.error("Error creating feed:", error);
+                return status(500, { error: "Failed to create feed" });
+            }
+        }, {
+            params: t.Object({
+                uid: t.String(),
+            }),
+            body: t.Object({
+                feedIds: t.Array(t.String()),
+                viewedAt: t.String(),
+            }),
+        });
         return app;
     })
 }
