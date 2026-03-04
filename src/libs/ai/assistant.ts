@@ -45,11 +45,37 @@ export type AssistantToolCall = {
   input: Record<string, unknown>;
 };
 
+export type AssistantResponseState = "answer" | "ask_clarification" | "confirm_action" | "handoff";
+
+export type AssistantPromptKind = "text" | "choice" | "confirm";
+
+export type AssistantPromptOption = {
+  label: string;
+  value: string;
+};
+
+export type AssistantPrompt = {
+  id: string;
+  kind: AssistantPromptKind;
+  question: string;
+  required: boolean;
+  risk: "low" | "high";
+  options?: AssistantPromptOption[];
+  placeholder?: string;
+};
+
 export type AssistantChatResult = {
   threadId: string;
   reply: string;
   usedTools: AssistantToolCall[];
   memorySaved: boolean;
+  responseState?: AssistantResponseState;
+  prompts?: AssistantPrompt[];
+  inputMode?: "free_text" | "prompt_only";
+  promptPolicy?: {
+    allowMultiple: boolean;
+    maxPromptsThisTurn: number;
+  };
 };
 
 export const assistantMemoryWritebackJobSchema = z.object({
@@ -128,6 +154,21 @@ async function buildEmbeddingVector(text: string): Promise<number[] | null> {
 
 function toVectorLiteral(values: number[]) {
   return `[${values.join(",")}]`;
+}
+
+function preferenceSignalScore(preference: RememberPreferenceInput | null | undefined): number {
+  if (!preference) return 0;
+
+  const reasonScore = typeof preference.reason === "string" && preference.reason.trim().length > 0 ? 1 : 0;
+  const valueEntries = Object.entries(preference.value || {});
+  const valueScore = valueEntries.reduce((score, [_, value]) => {
+    if (typeof value === "string") return score + (value.trim().length > 0 ? 2 : 0);
+    if (value === null || value === undefined) return score;
+    if (typeof value === "object") return score + (Object.keys(value as Record<string, unknown>).length > 0 ? 1 : 0);
+    return score + 1;
+  }, 0);
+
+  return reasonScore + valueScore;
 }
 
 type TrendReport = {
@@ -665,6 +706,100 @@ function buildReply(message: string, locationId: string, memories: RecalledMemor
   return `I am scoped to location ${locationId}. Ask about schedules, reports, or members and I will help.${memoryHint}`;
 }
 
+function extractClarificationQuestions(reply: string): string[] {
+  const matches = reply
+    .split(/\s+/)
+    .join(" ")
+    .match(/[^?]+\?/g);
+
+  if (!matches || matches.length === 0) {
+    const lowered = reply.toLowerCase();
+    if (lowered.includes("need more details") || lowered.includes("need more info") || lowered.includes("please clarify")) {
+      return [reply.trim()];
+    }
+    return [];
+  }
+
+  return matches
+    .map((chunk) => chunk.trim())
+    .filter((chunk) => chunk.length > 0)
+    .slice(0, 3);
+}
+
+function buildPromptId(prefix: string, index: number) {
+  return `${prefix}-${index + 1}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function shouldRequireConfirmation(message: string, usedTools: AssistantToolCall[]): boolean {
+  const scheduleMutation = usedTools.some((tool) => {
+    if (tool.name !== "schedule_manage") return false;
+    const action = typeof tool.input.action === "string" ? tool.input.action.toLowerCase() : "check";
+    return action !== "check";
+  });
+
+  if (scheduleMutation) return true;
+
+  const lower = message.toLowerCase();
+  const mutationWords = ["cancel", "reschedule", "book", "create", "update", "delete", "move"];
+  const hasMutationWord = mutationWords.some((word) => lower.includes(word));
+  const scheduleScope = lower.includes("schedule") || lower.includes("calendar") || lower.includes("class") || lower.includes("session");
+
+  return hasMutationWord && scheduleScope;
+}
+
+function deriveAssistantUiState(params: {
+  message: string;
+  reply: string;
+  usedTools: AssistantToolCall[];
+}): {
+  responseState: AssistantResponseState;
+  prompts: AssistantPrompt[];
+  inputMode: "free_text" | "prompt_only";
+} {
+  const requiresConfirmation = shouldRequireConfirmation(params.message, params.usedTools);
+  if (requiresConfirmation) {
+    return {
+      responseState: "confirm_action",
+      inputMode: "prompt_only",
+      prompts: [
+        {
+          id: buildPromptId("confirm", 0),
+          kind: "confirm",
+          question: "Please confirm if you want me to proceed with this requested change.",
+          required: true,
+          risk: "high",
+          options: [
+            { label: "Confirm", value: "confirm" },
+            { label: "Cancel", value: "cancel" },
+          ],
+        },
+      ],
+    };
+  }
+
+  const clarificationQuestions = extractClarificationQuestions(params.reply);
+  if (clarificationQuestions.length > 0) {
+    return {
+      responseState: "ask_clarification",
+      inputMode: "prompt_only",
+      prompts: clarificationQuestions.map((question, index) => ({
+        id: buildPromptId("clarify", index),
+        kind: "text",
+        question,
+        required: true,
+        risk: "low",
+        placeholder: "Type your answer...",
+      })),
+    };
+  }
+
+  return {
+    responseState: "answer",
+    inputMode: "free_text",
+    prompts: [],
+  };
+}
+
 async function runToolLoop(params: {
   locationId: string;
   vendorId: string;
@@ -753,7 +888,11 @@ async function runToolLoop(params: {
       });
 
       if (execution.explicitPreference) {
-        explicitPreference = execution.explicitPreference;
+        const currentScore = preferenceSignalScore(explicitPreference);
+        const nextScore = preferenceSignalScore(execution.explicitPreference);
+        if (!explicitPreference || nextScore >= currentScore) {
+          explicitPreference = execution.explicitPreference;
+        }
       }
 
       const toolMessage = new ToolMessage({
@@ -821,10 +960,23 @@ export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<As
 
   await enqueueWritebackJob(writebackJob);
 
+  const uiState = deriveAssistantUiState({
+    message: parsed.data.message,
+    reply: loopResult.reply,
+    usedTools: loopResult.usedTools,
+  });
+
   return {
     threadId,
     reply: loopResult.reply,
     usedTools: loopResult.usedTools,
     memorySaved: !!loopResult.explicitPreference,
+    responseState: uiState.responseState,
+    prompts: uiState.prompts,
+    inputMode: uiState.inputMode,
+    promptPolicy: {
+      allowMultiple: true,
+      maxPromptsThisTurn: uiState.prompts.length,
+    },
   };
 }
