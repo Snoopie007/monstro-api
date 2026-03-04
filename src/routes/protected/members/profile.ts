@@ -4,7 +4,7 @@ import { members, users } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
-import { generateOtp } from "@/libs/utils";
+import { generateOtp } from "@/utils";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { renderToStaticMarkup } from "react-dom/server";

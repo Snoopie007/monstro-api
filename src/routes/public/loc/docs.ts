@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/db";
-import { interpolate } from "@/libs/utils";
+import { interpolate } from "@/utils";
 import { DocumentPageTemplate, NotFoundPageTemplate } from "@/libs/html";
 import { z } from "zod";
 

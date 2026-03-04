@@ -6,7 +6,7 @@ import { users, members, accounts } from "@subtrees/schemas";
 import {
     generateDiscriminator, generateReferralCode,
     generateUsername, handleAdditionalData
-} from "@/libs/utils";
+} from "@/utils";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";
@@ -160,8 +160,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                 ...rest,
                 phone: member.phone,
                 memberId: member.id,
-                role: "member",
-                referralCode: member.referralCode,
+                username: user.username,
             };
             const tokens = await generateMobileToken({
                 memberId: member.id,

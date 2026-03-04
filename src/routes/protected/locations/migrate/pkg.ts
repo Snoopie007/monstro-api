@@ -8,7 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
-} from "@/libs/utils";
+} from "@/utils";
 
 const MigratePkgProps = {
     params: z.object({

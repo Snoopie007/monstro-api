@@ -6,7 +6,7 @@ import { users, members, accounts } from "@subtrees/schemas";
 import {
     generateDiscriminator, generateReferralCode,
     generateUsername, handleAdditionalData
-} from "@/libs/utils";
+} from "@/utils";
 import { z } from "zod";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";
 const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
@@ -60,11 +60,12 @@ export async function mobileAppleLogin(app: Elysia) {
             if (!account) {
 
                 const discriminator = generateDiscriminator();
+
                 const randomFourDigits = Math.floor(Math.random() * 10000);
                 const normalizedEmail = email ? email.trim().toLowerCase() : `temporary-${discriminator}@example.com`;
                 const failSafeFirstName = firstName ? firstName : `User-${randomFourDigits}`;
                 const name = `${failSafeFirstName}${lastName ? ` ${lastName}` : ""}`;
-
+                const username = generateUsername(name);
                 if (!user) {
                     user = await db.query.users.findFirst({
                         where: (user, { eq }) => eq(user.email, normalizedEmail),
@@ -91,8 +92,8 @@ export async function mobileAppleLogin(app: Elysia) {
                         const [newUser] = await tx.insert(users).values({
                             email: normalizedEmail,
                             name: name,
-                            username: generateUsername(name),
-                            discriminator: generateDiscriminator(),
+                            username,
+                            discriminator,
                             emailVerified: payload.email_verified as boolean || false,
                         }).returning();
                         if (!newUser) {
@@ -153,7 +154,6 @@ export async function mobileAppleLogin(app: Elysia) {
                 phone: member.phone,
                 referralCode: member.referralCode,
                 memberId: member.id,
-                role: "member",
             };
 
             const tokens = await generateMobileToken({

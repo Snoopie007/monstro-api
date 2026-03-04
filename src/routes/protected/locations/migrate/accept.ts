@@ -6,8 +6,8 @@ import {
 import type { PaymentType } from "@subtrees/types";
 import { Elysia, t } from "elysia";
 import { eq, sql } from "drizzle-orm";
-import { calculateThresholdDate } from "@/libs/utils";
-import createLocationChat from "@/libs/CreateLocationChat";
+import { calculateThresholdDate } from "@/utils";
+import { createLocationChat, addMembertoGroup } from "@/utils/chatsGroupsUtils";
 
 export function migrateAcceptRoutes(app: Elysia) {
     app.post('/accept', async ({ status, params, body }) => {
@@ -146,6 +146,9 @@ export function migrateAcceptRoutes(app: Elysia) {
                             threshold: pricing.intervalThreshold,
                             interval: pricing.interval,
                         });
+
+
+
                         await tx.insert(memberSubscriptions).values({
                             ...commonValues,
                             startDate,
@@ -184,8 +187,10 @@ export function migrateAcceptRoutes(app: Elysia) {
             }).where(eq(migrateMembers.id, migrateId));
 
 
-
-            createLocationChat(lid, member, location);
+            Promise.all([
+                addMembertoGroup(lid, member.userId),
+                createLocationChat(lid, member, location),
+            ]);
 
             return status(200, ml);
         } catch (error) {

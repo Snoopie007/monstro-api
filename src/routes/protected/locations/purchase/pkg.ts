@@ -10,7 +10,7 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
-} from "@/libs/utils";
+} from "@/utils";
 
 import Stripe from "stripe";
 

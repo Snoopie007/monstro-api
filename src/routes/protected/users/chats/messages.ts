@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import {
     chatMembers, chats, media,
-    messages, reactionCounts
+    messages, reactionCounts,
 } from "@subtrees/schemas";
 import {
     broadcastMessage,
@@ -16,6 +16,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
 import { ServerState } from '@/state';
+import { sendNotifications } from "@/libs/expo";
 const MessageProps = {
     params: t.Object({
         uid: t.String(),
@@ -51,6 +52,35 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
     // if (ALLOWED_DOCUMENT_TYPES.includes(mimeType)) return 'document';
     return 'other';
 }
+
+
+
+async function notifyNewMessage(message: Message, userIds: string[]): Promise<void> {
+    const notifications = await db.query.userNotifications.findMany({
+        where: (n, { eq, inArray, and }) => and(
+            inArray(n.userId, userIds),
+            eq(n.enabled, true),
+        ),
+    });
+    if (notifications.length === 0) {
+        return;
+    }
+
+    const tokens = notifications.map(n => n.token);
+    const messages = tokens.map(token => ({
+        to: token,
+        title: 'New message',
+        body: message.content || 'New message',
+        channelId: "messages",
+        data: {
+            messageId: message.id,
+            chatId: message.chatId,
+        },
+    }));
+    await sendNotifications(messages);
+}
+
+
 
 export function messageRoute(app: Elysia) {
     // Get messages for a chat with media and reactions
@@ -227,12 +257,10 @@ export function messageRoute(app: Elysia) {
                 medias,
             };
 
-            console.log('[DEBUG] Active users IDs:', activeUsersIds);
 
             let inactiveUserIds: string[] = chat?.chatMembers
                 .map(m => m.userId)
                 .filter(userId => !activeUsersIds.includes(userId)) || [];
-            console.log('[DEBUG] Inactive users IDs:', inactiveUserIds);
             // update the last message id for active user ids the chat members
             await db.update(chatMembers).set({
                 lastMessageId: newMessage.id,
@@ -250,8 +278,6 @@ export function messageRoute(app: Elysia) {
 
                 // Get fresh list of online users
                 const onlineUserIds: string[] = Array.from(ServerState.onlineUsers.keys());
-                console.log('[DEBUG] Server state:', ServerState);
-                console.log('[DEBUG] Online users IDs:', onlineUserIds);
 
                 const offlineUserIds: string[] = [];
 
@@ -264,7 +290,6 @@ export function messageRoute(app: Elysia) {
                     }
                 }
 
-                console.log('[DEBUG] Offline users:', offlineUserIds);
 
                 // Only update unreadCount and broadcast for inactive-but-online users
                 if (inactiveButOnlineUserIds.length > 0) {

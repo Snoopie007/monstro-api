@@ -10,7 +10,7 @@ import { mlSupportRoutes } from './support';
 import { mlPointsRoutes } from './points';
 import { memberLocations } from '@subtrees/schemas';
 import { mlPaymentMethods } from './methods';
-import createLocationChat from '@/libs/CreateLocationChat';
+import { createLocationChat } from '@/utils/chatsGroupsUtils';
 
 const GeMLProps = {
     params: t.Object({
@@ -70,6 +70,40 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         const { mid } = params;
         const { lid } = body;
         try {
+
+            const location = await db.query.locations.findFirst({
+                where: (l, { eq }) => eq(l.id, lid),
+                columns: {
+                    name: true,
+                    welcomeMessage: true,
+
+                },
+                with: {
+                    locationState: true,
+                    vendor: {
+                        columns: {
+                            userId: true,
+                        },
+                    },
+                },
+            });
+
+            if (!location) {
+                return status(404, { error: 'Location not found' });
+            }
+
+            const member = await db.query.members.findFirst({
+                where: (m, { eq }) => eq(m.id, mid),
+                columns: {
+                    userId: true,
+                    firstName: true,
+                },
+            });
+
+            if (!member) {
+                return status(404, { error: 'Member not found' });
+            }
+
             const [newMemberLocation] = await db.insert(memberLocations).values({
                 memberId: mid,
                 locationId: lid,
@@ -77,13 +111,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             }).onConflictDoNothing().returning();
 
 
-            const location = await db.query.locations.findFirst({
-                where: (l, { eq }) => eq(l.id, lid),
-                with: {
-                    locationState: true,
-                },
-            });
-            createLocationChat(lid, mid);
+            createLocationChat(lid, member, location);
             return status(200, {
                 ...newMemberLocation,
                 location: location,
