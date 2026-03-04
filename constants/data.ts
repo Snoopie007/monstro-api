@@ -208,4 +208,30 @@ const COMMON_HOLIDAYS: HolidayWithPattern[] = [
     { id: 12, name: "New Year's Eve", pattern: '31:day:11' },
 ];
 
-export { CountryCodes, TimeZones, Regions, Industries, RETRIABLE_PG_CODES, COMMON_HOLIDAYS };
+
+const RealTimeEvents = {
+    chats: {
+        NEW_CHAT: "chats:new",
+        UPDATED_CHAT: "chats:updated",
+        DELETED_CHAT: "chats:deleted",
+        NEW_MESSAGE: "chats:message:new",
+    },
+    chat: {
+        NEW_MESSAGE: "new:message",
+        UPDATED_MESSAGE: "updated:message",
+        DELETED_MESSAGE: "deleted:message",
+    },
+    feeds: {
+        NEW_FEED: "feed:new",
+        UPDATED_FEED: "feed:updated",
+        DELETED_FEED: "feed:deleted",
+    },
+    support: {
+        NEW_SUPPORT_MESSAGE: "system:message",
+        UPDATED_SUPPORT_MESSAGE: "new:message",
+        UPDATED: "updated:support",
+        NEW: "new:support",
+    }
+}
+
+export { CountryCodes, TimeZones, Regions, Industries, RETRIABLE_PG_CODES, COMMON_HOLIDAYS, RealTimeEvents };
