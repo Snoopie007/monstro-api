@@ -232,5 +232,16 @@ const RealTimeEvents = {
     }
 }
 
-export { COMMON_HOLIDAYS, CountryCodes, Industries, RealTimeEvents, Regions, RETRIABLE_PG_CODES, TimeZones };
+const AchievementTriggers = {
+    ATTENDANCES_COUNT: 1,
+    REFERRALS_COUNT: 2,
+    PLAN_SIGNUP: 3,
+    AMOUNT_SPENT: 4,
+    SIGNUP: 5,
+}
 
+export {
+    CountryCodes, TimeZones, Regions, Industries,
+    RETRIABLE_PG_CODES, COMMON_HOLIDAYS,
+    RealTimeEvents, AchievementTriggers
+};
