@@ -3,6 +3,7 @@ import { assistantMemoryWritebackQueue } from "@/queues";
 import { ChatOpenAI } from "@langchain/openai";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
+import { calculateAICost } from "@/libs/ai/AI";
 import { db } from "@/db/db";
 import { sql } from "drizzle-orm";
 import {
@@ -103,19 +104,68 @@ type RunAssistantTurnProps = {
   history?: Array<{ role: "user" | "assistant"; content: string }>;
 };
 
+type TokenUsage = {
+  promptTokens: number;
+  completionTokens: number;
+};
+
+type RunAssistantTurnStreamProps = RunAssistantTurnProps & {
+  onCompleted?: (meta: { usage: TokenUsage; cost: number }) => Promise<void> | void;
+  onFailed?: () => Promise<void> | void;
+};
+
+const DEFAULT_ASSISTANT_MODEL = "gpt-4.1-mini";
+
 type RecalledMemory = {
   id: string;
   content: string;
   score: number;
 };
 
-function getAssistantModel() {
+function getAssistantModel(onTokenUsage?: (usage: TokenUsage) => void) {
+  const callbacks = onTokenUsage
+    ? [{
+      handleLLMEnd: (output: any) => {
+        const usage = output?.llmOutput?.tokenUsage;
+        if (!usage) return;
+        onTokenUsage({
+          promptTokens: Number(usage.promptTokens || 0),
+          completionTokens: Number(usage.completionTokens || 0),
+        });
+      },
+    }]
+    : undefined;
+
   return new ChatOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    modelName: process.env.ASSISTANT_MODEL || "gpt-4.1-mini",
+    modelName: process.env.ASSISTANT_MODEL || DEFAULT_ASSISTANT_MODEL,
     temperature: 0.7,
     maxRetries: 3,
+    callbacks,
   });
+}
+
+function getAssistantModelName() {
+  return process.env.ASSISTANT_MODEL || DEFAULT_ASSISTANT_MODEL;
+}
+
+function estimateTokensFromText(text: string) {
+  if (!text.trim()) return 0;
+  return Math.max(1, Math.ceil(text.length / 4));
+}
+
+export function estimateAssistantTurnCost(message: string, history: Array<{ role: "user" | "assistant"; content: string }> = []) {
+  const historyText = history.map((entry) => entry.content).join(" ");
+  const promptTokens = estimateTokensFromText(message) + estimateTokensFromText(historyText) + 1200;
+  const completionTokens = 900;
+  const modelName = getAssistantModelName();
+  const estimatedCost = calculateAICost({ promptTokens, completionTokens }, modelName);
+  return Math.max(1, estimatedCost);
+}
+
+function calculateAssistantUsageCost(usage: TokenUsage) {
+  const modelName = getAssistantModelName();
+  return calculateAICost(usage, modelName);
 }
 
 async function buildEmbeddingVector(text: string): Promise<number[] | null> {
@@ -209,7 +259,15 @@ async function runToolLoop(params: {
   recalledMemories: RecalledMemory[];
   inferredExplicitPreference: RememberPreferenceInput | null;
 }) {
-  const model = getAssistantModel();
+  const usageTotals: TokenUsage = {
+    promptTokens: 0,
+    completionTokens: 0,
+  };
+
+  const model = getAssistantModel((usage) => {
+    usageTotals.promptTokens += usage.promptTokens;
+    usageTotals.completionTokens += usage.completionTokens;
+  });
   const modelWithTools = model.bindTools(toolDefinitions);
   const memoryContext = params.recalledMemories.length > 0
     ? params.recalledMemories.map((memory) => `- ${memory.content}`).join("\n")
@@ -343,10 +401,11 @@ async function runToolLoop(params: {
     usedTools,
     explicitPreference,
     toolExecutions,
+    usage: usageTotals,
   };
 }
 
-export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<AssistantChatResult> {
+async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
   const parsed = assistantChatRequestSchema.safeParse({
     message: props.message,
     threadId: props.threadId,
@@ -399,7 +458,7 @@ export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<As
   const bookingMeta = extractBookingMeta(loopResult.toolExecutions, formatHumanDateInTimezone);
   const blocks = extractChartBlocks(loopResult.toolExecutions, assistantChartBlockSchema as unknown as z.ZodType<AssistantBlock>);
 
-  return {
+  const result: AssistantChatResult = {
     threadId,
     reply: finalReply,
     usedTools: loopResult.usedTools,
@@ -414,10 +473,21 @@ export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<As
       maxPromptsThisTurn: uiState.prompts.length,
     },
   };
+
+  return {
+    result,
+    usage: loopResult.usage,
+    cost: calculateAssistantUsageCost(loopResult.usage),
+  };
+}
+
+export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<AssistantChatResult> {
+  const internal = await runAssistantTurnInternal(props);
+  return internal.result;
 }
 
 export async function* runAssistantTurnStream(
-  props: RunAssistantTurnProps,
+  props: RunAssistantTurnStreamProps,
 ): AsyncGenerator<AssistantStreamEvent, void, void> {
   const threadId = props.threadId || crypto.randomUUID();
   const messageId = crypto.randomUUID();
@@ -431,10 +501,18 @@ export async function* runAssistantTurnStream(
   };
 
   try {
-    const result = await runAssistantTurn({
+    const internal = await runAssistantTurnInternal({
       ...props,
       threadId,
     });
+    const result = internal.result;
+
+    if (props.onCompleted) {
+      await props.onCompleted({
+        usage: internal.usage,
+        cost: internal.cost,
+      });
+    }
 
     const textChunks = chunkReplyText(result.reply, 120);
     for (let index = 0; index < textChunks.length; index += 1) {
@@ -476,6 +554,10 @@ export async function* runAssistantTurnStream(
       ts: Date.now(),
     };
   } catch (error) {
+    if (props.onFailed) {
+      await props.onFailed();
+    }
+
     const message = error instanceof Error ? error.message : "Failed to process assistant turn";
 
     yield {

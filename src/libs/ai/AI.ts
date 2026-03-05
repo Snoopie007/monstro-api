@@ -54,6 +54,9 @@ export const MODEL_PRICES: ModelPricing = {
 	"gpt-4o": { prompt: 0.0025, completion: 0.01 },
 	"gpt-4o-mini": { prompt: 0.00015, completion: 0.0006 },
 
+	// GPT-5 Series
+	"gpt-5.2": { prompt: 0.00175, completion: 0.014 },
+
 	// Omni Models (o-series)
 	"o3": { prompt: 0.01, completion: 0.04 },
 	"o3-mini": { prompt: 0.0011, completion: 0.0044 },
