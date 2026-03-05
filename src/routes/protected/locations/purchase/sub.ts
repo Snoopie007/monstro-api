@@ -7,7 +7,7 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
-} from "@/libs/utils";
+} from "@/utils";
 import {
     scheduleCronBasedRenewal, scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";

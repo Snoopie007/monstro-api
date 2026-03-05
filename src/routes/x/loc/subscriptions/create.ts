@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { calculateThresholdDate } from "@/libs/utils";
+import { calculateThresholdDate } from "@/utils";
 import { memberSubscriptions } from "@subtrees/schemas";
 import { addDays } from "date-fns";
 import type Elysia from "elysia";

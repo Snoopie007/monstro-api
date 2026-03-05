@@ -4,7 +4,7 @@ import { members, users, accounts } from "@subtrees/schemas";
 import {
     generateDiscriminator, generateReferralCode,
     generateUsername, handleAdditionalData
-} from "@/libs/utils";
+} from "@/utils";
 import bcrypt from "bcryptjs";
 import type { Member } from "@subtrees/types";
 import { parsePhoneNumberFromString } from "libphonenumber-js";

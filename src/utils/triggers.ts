@@ -6,19 +6,13 @@ import {
 } from '@subtrees/schemas'
 import type { NewMemberPointsHistory } from '@subtrees/types'
 import { and, eq, inArray, SQL, sql } from 'drizzle-orm'
-
-const AchievementTriggers = [
-    { id: 1, name: "Attendances Count" },
-    { id: 2, name: "Referrals Count" },
-    { id: 3, name: "Plan Signup" },
-    { id: 4, name: "Amount Spent" }
-]
+import { AchievementTriggers } from '@subtrees/constants/data'
 
 export async function triggerSignUp(data: { mid: string, lid: string, pid: string }) {
     const { mid, lid, pid } = data
     const a = await db.query.achievements.findFirst({
         where: (a, { and, eq }) => and(
-            eq(a.triggerId, 3),
+            eq(a.triggerId, AchievementTriggers.PLAN_SIGNUP),
             eq(a.locationId, lid),
             eq(a.planId, pid)
         ),
@@ -77,16 +71,13 @@ type ProgressInput = {
 type TriggerIncrement = {
     mid: string,
     lid: string,
-    type: string,
+    tid: number,
     amount: number,
 }
 
 export async function triggerIncrement(data: TriggerIncrement) {
-    const { mid, lid, type, amount } = data;
-    const tid = AchievementTriggers.find(t => t.name === type)?.id;
-    if (!tid) {
-        throw new Error(`Trigger type ${type} not found`);
-    }
+    const { mid, lid, tid, amount } = data;
+
 
     const today = new Date();
     const achievements = await db.query.achievements.findMany({

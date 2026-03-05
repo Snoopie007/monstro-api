@@ -54,16 +54,15 @@ export async function mobileLogin(app: Elysia) {
                 return status(404, { message: "Member record not found." })
             }
 
-
             const user = account.user;
             const data = {
                 ...user,
                 referralCode: member.referralCode,
                 phone: member.phone,
                 memberId: member?.id,
-                role: "member",
+                username: user.username,
+                discriminator: user.discriminator,
             };
-
 
             const { accessToken, refreshToken, expires } = await generateMobileToken({
                 memberId: member.id,

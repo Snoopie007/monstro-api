@@ -1,7 +1,8 @@
 import { db } from "@/db/db";
-import { chats, chatMembers, messages } from "@subtrees/schemas";
+import { chats, chatMembers, messages, groupMembers } from "@subtrees/schemas";
+import { eq } from "drizzle-orm";
 import type { Location, Member, Vendor } from "@subtrees/types";
-import { interEmailsAndText } from "./utils";
+import { interEmailsAndText } from "./interpolator";
 
 type LocationChat = Pick<Location, "name" | "welcomeMessage"> & { vendor: Pick<Vendor, "userId"> };
 
@@ -51,4 +52,22 @@ async function createLocationChat(lid: string, member: Pick<Member, "userId" | '
 }
 
 
-export default createLocationChat;
+async function addMembertoGroup(gid: string, uid: string) {
+
+    await db.insert(groupMembers).values({
+        groupId: gid,
+        userId: uid,
+    });
+
+
+    const [chat] = await db.select({ id: chats.id }).from(chats).where(eq(chats.groupId, gid)).limit(1);
+    if (!chat) {
+        return;
+    }
+    await db.insert(chatMembers).values({
+        chatId: chat.id,
+        userId: uid,
+    });
+}
+
+export { createLocationChat, addMembertoGroup };

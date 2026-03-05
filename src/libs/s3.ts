@@ -6,7 +6,7 @@ import {
 	GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { tryCatch } from "./utils";
+import { tryCatch } from "@/utils";
 
 type Result = {
 	key: string;
@@ -122,8 +122,9 @@ export default class S3Bucket {
 		if (!result?.Contents) return [];
 
 		// Filter out the directory itself and map to public URLs
-		return result.Contents.filter((item) => item.Key !== directory + "/") // Exclude the directory itself
-			.map((item) => ({
+		return result.Contents
+			.filter((item: { Key?: string }) => item.Key !== directory + "/") // Exclude the directory itself
+			.map((item: { Key?: string }) => ({
 				key: item.Key || "",
 				url: `https://${this.BUCKET_NAME}.s3.${this.REGION}.amazonaws.com/${item.Key}`,
 			}));
