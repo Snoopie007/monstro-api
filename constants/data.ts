@@ -240,6 +240,8 @@ const AchievementTriggers = {
     PLAN_SIGNUP: 3,
     AMOUNT_SPENT: 4,
     SIGNUP: 5,
+    FIRST_BOOKING: 6,
+    FIRST_MESSAGE: 7,
 }
 
 export {
