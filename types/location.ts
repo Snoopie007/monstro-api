@@ -1,14 +1,15 @@
 import type {
-  Wallet,
-  Program,
   MemberInvoice,
   MemberSubscription,
-  Transaction,
   PaymentType,
+  Program,
   TaxRate,
+  Transaction,
+  Wallet,
 } from ".";
 import { locations, locationState } from "../schemas/locations";
 import type { MemberPlan } from "./member";
+import type { Vendor } from "./vendor";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
@@ -19,8 +20,9 @@ export type Location = typeof locations.$inferSelect & {
   wallet?: Wallet;
   memberPlans?: MemberPlan[];
   taxRates?: TaxRate[];
+  taxRate?: TaxRate;
+  vendor?: Vendor;
 };
-
 
 
 export type LocationState = typeof locationState.$inferSelect & {
@@ -28,8 +30,21 @@ export type LocationState = typeof locationState.$inferSelect & {
 }
 
 
+export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
+
+export type HolidaySettings = {
+  blockedHolidays: number[];
+  defaultBehavior: HolidayBehavior;
+  advanceBlockDays: number;
+  autoNotifyMembers: boolean;
+};
+
+
+
+
 export type LocationSettings = {
   theme: 'default';
   passOnFees: boolean;
   processingMethods: PaymentType[];
+  holidays?: HolidaySettings;
 }

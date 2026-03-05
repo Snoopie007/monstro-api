@@ -44,7 +44,7 @@ export default function MemberInviteEmail({
                             button below.
                         </Text>
                         <Section style={styles.buttonSection}>
-                            <Button style={styles.button} href={`${BASE_MONSTRO_X_URL}/register?lid=${location.id}memberId=${member.id}`}>
+                            <Button style={styles.button} href={`${BASE_MONSTRO_X_URL}/register?lid=${location.id}&memberId=${member.id}`}>
                                 Accept Invite
                             </Button>
                         </Section>

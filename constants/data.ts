@@ -49,13 +49,11 @@ const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'applic
 
 
 export {
-    MonstroData,
-    PaymentMethods,
-    ALLOWED_IMAGE_TYPES,
-    ALLOWED_VIDEO_TYPES,
     ALLOWED_AUDIO_TYPES,
-    ALLOWED_DOCUMENT_TYPES
-}
+    ALLOWED_DOCUMENT_TYPES, ALLOWED_IMAGE_TYPES,
+    ALLOWED_VIDEO_TYPES, MonstroData,
+    PaymentMethods
+};
 
 export type { MonstroDataType };
 
@@ -169,4 +167,86 @@ const Industries = [
     "Tutoring",
     "Other"
 ]
-export { CountryCodes, TimeZones, Regions, Industries };
+
+
+const RETRIABLE_PG_CODES = [
+    '40P01',   // deadlock_detected
+    '40001',   // serialization_failure
+    '53100',   // out_of_memory
+    '53200',   // out_of_memory (alternate)
+    '53300',   // too_many_connections
+    '57P01',   // admin_shutdown
+    '57P02',   // crash_shutdown
+    '57P03',   // cannot_connect_now
+    '08000',   // connection_exception
+    '08003',   // connection_does_not_exist
+    '08006',   // connection_failure
+    '55P03',   // lock_not_available
+];
+
+
+export type HolidayWithPattern = {
+    id: number;
+    name: string;
+    pattern: string;  // "N:dow:month" e.g. "1:day:0", "3:1:0", "L:1:4"
+};
+
+const COMMON_HOLIDAYS: HolidayWithPattern[] = [
+    { id: 1, name: "New Year's Day", pattern: '1:day:0' },
+    { id: 2, name: "MLK Day", pattern: '3:1:0' },
+    { id: 3, name: "Presidents' Day", pattern: '3:1:1' },
+    { id: 4, name: "Memorial Day", pattern: 'L:1:4' },
+    { id: 5, name: "Independence Day", pattern: '4:day:6' },
+    { id: 6, name: "Labor Day", pattern: '1:1:8' },
+    { id: 7, name: "Columbus Day", pattern: '2:1:9' },
+    { id: 8, name: "Veterans Day", pattern: '11:day:10' },
+    { id: 9, name: "Thanksgiving", pattern: '4:4:10' },
+    { id: 10, name: "Christmas Eve", pattern: '24:day:11' },
+    { id: 11, name: "Christmas Day", pattern: '25:day:11' },
+    { id: 12, name: "New Year's Eve", pattern: '31:day:11' },
+];
+
+
+const RealTimeEvents = {
+    chats: {
+        NEW_CHAT: "chats:new",
+        UPDATED_CHAT: "chats:updated",
+        DELETED_CHAT: "chats:deleted",
+        NEW_MESSAGE: "chats:message:new",
+    },
+    chat: {
+        NEW_MESSAGE: "new:message",
+        UPDATED_MESSAGE: "updated:message",
+        DELETED_MESSAGE: "deleted:message",
+    },
+    feeds: {
+        NEW_FEED: "feed:new",
+        UPDATED_FEED: "feed:updated",
+        DELETED_FEED: "feed:deleted",
+    },
+    achievements: {
+        UNLOCKED: "achievement:unlocked",
+    },
+    support: {
+        NEW_SUPPORT_MESSAGE: "system:message",
+        UPDATED_SUPPORT_MESSAGE: "new:message",
+        UPDATED: "updated:support",
+        NEW: "new:support",
+    }
+}
+
+const AchievementTriggers = {
+    ATTENDANCES_COUNT: 1,
+    REFERRALS_COUNT: 2,
+    PLAN_SIGNUP: 3,
+    AMOUNT_SPENT: 4,
+    SIGNUP: 5,
+    FIRST_BOOKING: 6,
+    FIRST_MESSAGE: 7,
+}
+
+export {
+    CountryCodes, TimeZones, Regions, Industries,
+    RETRIABLE_PG_CODES, COMMON_HOLIDAYS,
+    RealTimeEvents, AchievementTriggers
+};

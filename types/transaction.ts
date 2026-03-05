@@ -1,6 +1,7 @@
 import { transactions } from "../schemas";
 import type { PaymentType, TransactionStatus, TransactionType } from "./DatabaseEnums";
-import type { Member, MemberInvoice } from "./member";
+import type { Member } from "./member";
+import type { MemberInvoice } from "./invoices";
 
 export type TransactionMetadata = {
   card?: {
@@ -16,6 +17,7 @@ export type TransactionMetadata = {
   chargeId?: string;
 } & Record<string, unknown>;
 
+
 export type Transaction = typeof transactions.$inferSelect & {
   type: TransactionType;
   paymentType: PaymentType;
@@ -24,12 +26,15 @@ export type Transaction = typeof transactions.$inferSelect & {
   metadata?: TransactionMetadata;
   invoice?: MemberInvoice;
 };
-
-export type TransactionItem = {
-  name: string;
-  quantity: number;
-  price: number;
-  productId?: string;
-}
-
 export type NewTransaction = typeof transactions.$inferInsert;
+
+
+export type ChargeDetails = {
+  total: number;
+  subTotal: number;
+  unitCost: number;
+  tax: number;
+  monstroFee: number;
+  stripeFee: number;
+  applicationFeeAmount: number;
+}

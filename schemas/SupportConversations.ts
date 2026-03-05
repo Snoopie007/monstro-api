@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
-import { sql, relations } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { members } from "./members";
 import { supportAssistants } from "./SupportAssistants";
 import { conversationStatusEnum, messageRoleEnum, channelEnum } from "./SupportBotEnums";
@@ -33,23 +33,3 @@ export const supportMessages = pgTable("support_messages", {
   metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-// Define relations
-export const supportConversationsRelations = relations(supportConversations, ({ one, many }) => ({
-  assistant: one(supportAssistants, {
-    fields: [supportConversations.supportAssistantId],
-    references: [supportAssistants.id],
-  }),
-  member: one(members, {
-    fields: [supportConversations.memberId],
-    references: [members.id],
-  }),
-  messages: many(supportMessages),
-}));
-
-export const supportMessagesRelations = relations(supportMessages, ({ one }) => ({
-  conversation: one(supportConversations, {
-    fields: [supportMessages.conversationId],
-    references: [supportConversations.id],
-  }),
-}));

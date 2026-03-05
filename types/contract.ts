@@ -1,7 +1,6 @@
-import { contractTemplates } from "../schemas/contracts";
-import { memberContracts } from "../schemas/members";
+import { contractTemplates, memberContracts } from "../schemas";
 import type { Location } from "./location";
-import type { MemberSubscription, MemberPackage, Member } from "./member";
+import type { Member, MemberPackage, MemberSubscription } from "./member";
 
 export type Contract = typeof contractTemplates.$inferSelect & {
     location?: Location;
@@ -13,11 +12,12 @@ export type Contract = typeof contractTemplates.$inferSelect & {
     signedOn?: Date;
 }
 
-
 export type MemberContract = typeof memberContracts.$inferSelect & {
     member?: Member;
-    subscription?: MemberSubscription;
-    package?: MemberPackage;
+    subscription?: MemberSubscription | null;
+    package?: MemberPackage | null;
     contractTemplate?: Contract;
     location?: Location;
+    contract?: Contract;
+    pdfUrl?: string;
 }

@@ -1,19 +1,15 @@
-import { relations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
+    index,
+    integer,
+    pgTable,
+    primaryKey,
     text,
     timestamp,
-    pgTable,
-    index,
-
-    primaryKey,
-    foreignKey,
 } from "drizzle-orm/pg-core";
-import { members } from "../members";
-import { users } from "../users";
 import { locations } from "../locations";
+import { users } from "../users";
 import { groups } from "./groups";
-import { reactions } from "./reactions";
-import { media } from "./medias";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -31,6 +27,9 @@ export const chats = pgTable("chats", {
 export const chatMembers = pgTable("chat_members", {
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    lastMessageId: text("last_message_id").references(() => messages.id, { onDelete: "set null" }),
+    lastActiveAt: timestamp("last_active_at", { withTimezone: true }).notNull().defaultNow(),
+    unreadCount: integer("unread_count").notNull().default(0),
     joined: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
     primaryKey({ columns: [t.chatId, t.userId] }),
@@ -41,67 +40,12 @@ export const messages = pgTable("messages", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('msg_')`),
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
     senderId: text("sender_id").notNull().references(() => users.id, { onDelete: "set null" }),
-    replyId: text("reply_id"),
+    replyId: text("reply_id").references((): any => messages.id, { onDelete: "set null" }),
     content: text("content"),
+    // metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
-    foreignKey({
-        columns: [t.replyId],
-        foreignColumns: [t.id],
-        name: "fk_messages_reply_id",
-    }),
     index("idx_messages_chat_created").on(t.chatId, t.created),
     index("idx_messages_sender_id").on(t.senderId),
 ]);
-
-
-
-
-export const chatsRelations = relations(chats, ({ one, many }) => ({
-    started: one(members, {
-        fields: [chats.startedBy],
-        references: [members.id],
-        relationName: "chatStartedBy",
-    }),
-    location: one(locations, {
-        fields: [chats.locationId],
-        references: [locations.id],
-    }),
-    group: one(groups, {
-        fields: [chats.groupId],
-        references: [groups.id],
-    }),
-    chatMembers: many(chatMembers),
-    messages: many(messages),
-}));
-
-export const chatMembersRelations = relations(chatMembers, ({ one }) => ({
-    chat: one(chats, {
-        fields: [chatMembers.chatId],
-        references: [chats.id],
-        relationName: "chatChatMembers",
-    }),
-    user: one(users, {
-        fields: [chatMembers.userId],
-        references: [users.id],
-        relationName: "chatMemberMember",
-    }),
-}));
-
-export const messagesRelations = relations(messages, ({ one, many }) => ({
-    chat: one(chats, {
-        fields: [messages.chatId],
-        references: [chats.id],
-    }),
-    sender: one(users, {
-        fields: [messages.senderId],
-        references: [users.id],
-    }),
-    medias: many(media),
-    reply: one(messages, {
-        fields: [messages.replyId],
-        references: [messages.id],
-    }),
-    reactions: many(reactions, { relationName: 'messageReactions' }),
-}));

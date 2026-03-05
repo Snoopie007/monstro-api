@@ -1,7 +1,13 @@
-import { text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
+import {
+  text,
+  timestamp,
+  pgTable,
+  integer,
+  boolean,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { relations, sql } from "drizzle-orm";
-import { locations } from "./locations";
 
 export const vendors = pgTable("vendors", {
   id: uuid("id")
@@ -20,10 +26,20 @@ export const vendors = pgTable("vendors", {
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const vendorsRelations = relations(vendors, ({ one, many }) => ({
-  user: one(users, {
-    fields: [vendors.userId],
-    references: [users.id],
+export const supportPlans = pgTable("support_plans", {
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  vendorId: text("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  price: integer("price").notNull(),
+  supportCalls: boolean("support_calls").notNull().default(false),
+  sessionsPerMonth: integer("sessions_per_month").notNull().default(0),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updated: timestamp("updated_at", { withTimezone: true }),
+});
+
+export const supportPlansRelations = relations(supportPlans, ({ one }) => ({
+  vendor: one(vendors, {
+    fields: [supportPlans.vendorId],
+    references: [vendors.id],
   }),
-  locations: many(locations),
 }));
