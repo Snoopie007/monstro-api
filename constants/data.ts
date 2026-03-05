@@ -49,13 +49,11 @@ const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'applic
 
 
 export {
-    MonstroData,
-    PaymentMethods,
-    ALLOWED_IMAGE_TYPES,
-    ALLOWED_VIDEO_TYPES,
     ALLOWED_AUDIO_TYPES,
-    ALLOWED_DOCUMENT_TYPES
-}
+    ALLOWED_DOCUMENT_TYPES, ALLOWED_IMAGE_TYPES,
+    ALLOWED_VIDEO_TYPES, MonstroData,
+    PaymentMethods
+};
 
 export type { MonstroDataType };
 
@@ -226,6 +224,9 @@ const RealTimeEvents = {
         UPDATED_FEED: "feed:updated",
         DELETED_FEED: "feed:deleted",
     },
+    achievements: {
+        UNLOCKED: "achievement:unlocked",
+    },
     support: {
         NEW_SUPPORT_MESSAGE: "system:message",
         UPDATED_SUPPORT_MESSAGE: "new:message",
@@ -240,6 +241,8 @@ const AchievementTriggers = {
     PLAN_SIGNUP: 3,
     AMOUNT_SPENT: 4,
     SIGNUP: 5,
+    FIRST_BOOKING: 6,
+    FIRST_MESSAGE: 7,
 }
 
 export {

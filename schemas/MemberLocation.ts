@@ -1,7 +1,7 @@
 import { pgTable } from "drizzle-orm/pg-core";
 
 import { sql } from "drizzle-orm";
-import { integer, jsonb, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import type { MemberLocationProfile } from "../types/member";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
@@ -17,9 +17,8 @@ export const memberLocations = pgTable("member_locations", {
     waiverId: text("waiver_id").references(() => locations.id, {
         onDelete: "set null",
     }),
-    // MEMBER INFO UPDATE START: Added member personal information fields
+    onboarded: boolean("onboarded").notNull().default(false),
     profile: jsonb("profile").$type<MemberLocationProfile>(),
-    // MEMBER INFO UPDATE END
     botMetadata: jsonb("bot_metadata").default(sql`'{}'::jsonb`),
     lastBotInteraction: timestamp("last_bot_interaction", { withTimezone: true }),
 
