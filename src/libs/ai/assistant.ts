@@ -5,29 +5,42 @@ import { OpenAIEmbeddings } from "@langchain/openai";
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
 import { db } from "@/db/db";
 import { sql } from "drizzle-orm";
+import {
+  assistantPreferenceTypes,
+  assistantToolNames,
+  type AssistantBlock,
+  type AssistantBookingMeta,
+  type AssistantChatRequest as SharedAssistantChatRequest,
+  type AssistantChatResult,
+  type AssistantChartBlock,
+  type AssistantMemoryWritebackJobData as SharedAssistantMemoryWritebackJob,
+  type AssistantPrompt,
+  type AssistantResponseState,
+  type AssistantStreamEvent,
+  type AssistantToolCall,
+  type AssistantToolName,
+  type RememberPreferenceInput,
+} from "@subtrees/types/assistant";
 
-export const assistantToolNames = [
-  "schedule_manage",
-  "member_lookup",
-  "location_reports",
-  "remember_preference",
-] as const;
-
-export type AssistantToolName = (typeof assistantToolNames)[number];
+export { assistantToolNames };
+export type {
+  AssistantBlock,
+  AssistantBookingMeta,
+  AssistantChatResult,
+  AssistantChartBlock,
+  AssistantPrompt,
+  AssistantResponseState,
+  AssistantStreamEvent,
+  AssistantToolCall,
+  AssistantToolName,
+  RememberPreferenceInput,
+};
 
 export const rememberPreferenceInputSchema = z.object({
-  preferenceType: z.enum([
-    "report_format",
-    "default_date_range",
-    "scheduling_policy",
-    "timezone",
-    "custom",
-  ]),
+  preferenceType: z.enum(assistantPreferenceTypes),
   value: z.record(z.string(), z.unknown()),
   reason: z.string().trim().max(500).optional(),
 });
-
-export type RememberPreferenceInput = z.infer<typeof rememberPreferenceInputSchema>;
 
 export const assistantChatRequestSchema = z.object({
   message: z.string().trim().min(1).max(4000),
@@ -38,87 +51,7 @@ export const assistantChatRequestSchema = z.object({
   })).max(20).optional(),
 });
 
-export type AssistantChatRequest = z.infer<typeof assistantChatRequestSchema>;
-
-export type AssistantToolCall = {
-  name: AssistantToolName;
-  input: Record<string, unknown>;
-};
-
-export type AssistantResponseState = "answer" | "ask_clarification" | "confirm_action" | "handoff";
-
-export type AssistantPromptKind = "text" | "choice" | "confirm";
-
-export type AssistantPromptOption = {
-  label: string;
-  value: string;
-};
-
-export type AssistantPrompt = {
-  id: string;
-  kind: AssistantPromptKind;
-  question: string;
-  required: boolean;
-  risk: "low" | "high";
-  blocking: boolean;
-  responseChannel: "chatbox" | "inline";
-  options?: AssistantPromptOption[];
-  placeholder?: string;
-};
-
-export type AssistantBookingMeta = {
-  reservationId: string | null;
-  startOnUtc: string;
-  locationTimezone: string;
-  startOnLocation: string;
-};
-
-export type AssistantChartKind = "line" | "bar" | "area";
-
-export type AssistantChartSeries = {
-  key: string;
-  label: string;
-  color?: string;
-};
-
-export type AssistantChartBlock = {
-  id: string;
-  type: "chart";
-  version: 1;
-  status: "ready" | "loading" | "invalid";
-  title: string;
-  subtitle?: string;
-  chart?: {
-    kind: AssistantChartKind;
-    xKey: string;
-    yFormat: "currency" | "count" | "percent";
-    series: AssistantChartSeries[];
-    data: Array<Record<string, string | number | null>>;
-  };
-  a11y?: {
-    summary?: string;
-    table?: boolean;
-  };
-  fallbackText: string;
-};
-
-export type AssistantBlock = AssistantChartBlock;
-
-export type AssistantChatResult = {
-  threadId: string;
-  reply: string;
-  usedTools: AssistantToolCall[];
-  memorySaved: boolean;
-  bookingMeta?: AssistantBookingMeta;
-  blocks?: AssistantBlock[];
-  responseState?: AssistantResponseState;
-  prompts?: AssistantPrompt[];
-  inputMode?: "free_text" | "prompt_only";
-  promptPolicy?: {
-    allowMultiple: boolean;
-    maxPromptsThisTurn: number;
-  };
-};
+export type AssistantChatRequest = SharedAssistantChatRequest;
 
 export const assistantMemoryWritebackJobSchema = z.object({
   locationId: z.string().min(1),
@@ -137,7 +70,7 @@ export const assistantMemoryWritebackJobSchema = z.object({
   createdAt: z.string(),
 });
 
-export type AssistantMemoryWritebackJob = z.infer<typeof assistantMemoryWritebackJobSchema>;
+export type AssistantMemoryWritebackJob = SharedAssistantMemoryWritebackJob;
 
 const assistantChartSeriesSchema = z.object({
   key: z.string().min(1).max(80),
@@ -208,9 +141,24 @@ const MAX_TOOL_ITERATIONS = 4;
 function parseRangeDays(input?: string) {
   if (!input) return 30;
   const normalized = input.toLowerCase();
-  const match = normalized.match(/(\d{1,3})\s*(day|days|week|weeks|month|months)/);
+  const numberWords: Record<string, number> = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+    eleven: 11,
+    twelve: 12,
+  };
+  const match = normalized.match(/(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(day|days|week|weeks|month|months)/);
   if (!match) return 30;
-  const value = Number(match[1]);
+  const rawValue = match[1] || "";
+  const value = /^\d+$/.test(rawValue) ? Number(rawValue) : (numberWords[rawValue] || NaN);
   if (!Number.isFinite(value) || value <= 0) return 30;
   const unit = match[2] || "";
   if (unit.startsWith("week")) return value * 7;
@@ -247,7 +195,7 @@ function parseRequestedDateTime(text: string): LocalDateTimeParts | null {
   const normalized = text.replace(/\s+/g, " ").trim();
 
   const monthMatch = normalized.match(
-    /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})(?:[^\d]+(\d{1,2})(?::(\d{2}))?\s*(am|pm))?/i,
+    /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:,?\s+(\d{4}))?(?:[^\d]+(\d{1,2})(?::(\d{2}))?\s*(am|pm))?/i,
   );
 
   if (monthMatch) {
@@ -271,7 +219,7 @@ function parseRequestedDateTime(text: string): LocalDateTimeParts | null {
     if (typeof monthIndex !== "number") return null;
     const month = monthIndex + 1;
     const day = Number(monthMatch[2]);
-    const year = Number(monthMatch[3]);
+    const year = monthMatch[3] ? Number(monthMatch[3]) : new Date().getFullYear();
     let hour = monthMatch[4] ? Number(monthMatch[4]) : 9;
     const minute = monthMatch[5] ? Number(monthMatch[5]) : 0;
     const meridiem = (monthMatch[6] || "am").toLowerCase();
@@ -571,8 +519,8 @@ async function fetchLocationReport(locationId: string, metric: string, rangeDays
     `) as unknown as Array<{ current_total: number; previous_total: number }>;
 
     const row = revenueRows[0] || { current_total: 0, previous_total: 0 };
-    const current = Number(row.current_total || 0);
-    const previous = Number(row.previous_total || 0);
+    const current = Math.round((Number(row.current_total || 0) / 100) * 100) / 100;
+    const previous = Math.round((Number(row.previous_total || 0) / 100) * 100) / 100;
     const trend = buildTrend(current, previous);
     return {
       metric: "revenue",
@@ -668,7 +616,10 @@ async function fetchReportWithChart(locationId: string, metric: string, rangeDay
         xKey: "date",
         yFormat: "currency",
         series: [{ key: "revenue", label: "Revenue", color: "hsl(var(--chart-1))" }],
-        data: rows.map((row) => ({ date: row.bucket, revenue: Number(row.value || 0) })),
+        data: rows.map((row) => ({
+          date: row.bucket,
+          revenue: Math.round((Number(row.value || 0) / 100) * 100) / 100,
+        })),
       },
       a11y: {
         summary: `Revenue is ${report.direction} by ${report.changePercent}% versus the previous period.`,
@@ -767,7 +718,7 @@ function toFunctionTool(name: AssistantToolName, description: string, schema: Re
 const toolDefinitions = [
   toFunctionTool(
     "schedule_manage",
-    "Use for creating, updating, cancelling, or checking schedules for the current location.",
+    "Use for creating, updating, cancelling, or checking schedule availability for the current location. For questions about what programs/sessions are bookable in a date range, always use this tool with action=check.",
     {
       type: "object",
       properties: {
@@ -784,27 +735,65 @@ const toolDefinitions = [
           type: "string",
           description: "Additional scheduling details",
         },
+        programName: {
+          type: "string",
+          description: "Optional specific program/class name for availability checks",
+        },
+        query: {
+          type: "string",
+          description: "Natural language scheduling query from the user",
+        },
       },
       required: ["action"],
     },
   ),
   toFunctionTool(
     "member_lookup",
-    "Use to fetch member information for this location by name, email, or phone.",
+    "Use for member retrieval in this location: single member lookup, bulk member lists (e.g. newest members in last 30 days), and aggregate member counts.",
     {
       type: "object",
       properties: {
+        mode: {
+          type: "string",
+          enum: ["single", "list", "aggregate"],
+          description: "single for one member lookup, list for roster/bulk queries, aggregate for count summaries",
+        },
         query: {
           type: "string",
-          description: "Member identifier such as name, email, or phone",
+          description: "Member identifier text (name/email/phone) or natural language roster filter",
+        },
+        status: {
+          type: "string",
+          description: "Optional member status filter such as active, paused, archived",
+        },
+        joinedWithinDays: {
+          type: "number",
+          description: "Optional joined-within-days filter for roster queries",
+        },
+        range: {
+          type: "string",
+          description: "Optional natural language time range, for example last 30 days",
+        },
+        sortBy: {
+          type: "string",
+          enum: ["joined_desc", "joined_asc", "name_asc", "points_desc"],
+          description: "Sort mode for member list responses",
+        },
+        limit: {
+          type: "number",
+          description: "Max records to return for list mode (1-50)",
+        },
+        offset: {
+          type: "number",
+          description: "Pagination offset for list mode",
         },
       },
-      required: ["query"],
+      required: [],
     },
   ),
   toFunctionTool(
     "location_reports",
-    "Use to fetch location KPIs and reporting metrics for a given time range.",
+    "Use only for KPI/report metrics (revenue, attendance, active_members) for a time range. Do NOT use this for program/session booking availability questions.",
     {
       type: "object",
       properties: {
@@ -930,7 +919,9 @@ async function executeToolCall(
           tool: name,
           action,
           status: "cancelled_by_user",
-          message: "Scheduling request cancelled.",
+          cancelScope: "pending_request_only",
+          existingReservationsChanged: false,
+          message: "Cancelled as requested. I only cancelled the pending booking request; existing reservations were not changed.",
         }),
       };
     }
@@ -953,6 +944,8 @@ async function executeToolCall(
       const scheduleText = buildScheduleContextText(input, context);
       const requestedDate = parseRequestedDateTime(scheduleText);
       const locationTimezone = await getLocationTimezone(context.locationId);
+      const hasFirstAvailablePreference = /\b(first|earliest)\s+(time\s+slot|slot|available)\b/i.test(scheduleText);
+      const hasExplicitTimeExpression = /(\b\d{1,2}:\d{2}\b)|(\b\d{1,2}\s*(am|pm)\b)/i.test(scheduleText);
 
       if (!requestedDate) {
         return {
@@ -968,8 +961,8 @@ async function executeToolCall(
       }
 
       const dateText = `${requestedDate.year}-${String(requestedDate.month).padStart(2, "0")}-${String(requestedDate.day).padStart(2, "0")}`;
-      const requestedTime = formatTimeHHMMSS(requestedDate);
-      const requestedLocalTimestamp = `${dateText} ${requestedTime}`;
+      const requestedLocalTime = formatTimeHHMMSS(requestedDate);
+      const requestedLocalTimestamp = `${dateText} ${requestedLocalTime}`;
       const timingRows = await db.execute(sql`
         SELECT
           (${requestedLocalTimestamp}::timestamp AT TIME ZONE ${locationTimezone})::timestamptz AS start_utc,
@@ -987,6 +980,19 @@ async function executeToolCall(
             action,
             status: "needs_details",
             message: "I could not parse the requested date/time in this location timezone. Please provide the schedule details again.",
+          }),
+        };
+      }
+
+      if (new Date(timing.start_utc).getTime() < Date.now() && !hasFirstAvailablePreference) {
+        return {
+          content: JSON.stringify({
+            ok: false,
+            locationId: context.locationId,
+            tool: name,
+            action,
+            status: "needs_details",
+            message: "The requested booking date/time is in the past. Please provide a future date/time.",
           }),
         };
       }
@@ -1066,11 +1072,18 @@ async function executeToolCall(
       }
 
       const programRows = await db.execute(sql`
-        SELECT id, name
+        SELECT id, name, capacity, allow_waitlist, waitlist_capacity
         FROM programs
         WHERE location_id = ${context.locationId}
+          AND status = 'active'
         ORDER BY length(name) DESC, created_at DESC
-      `) as unknown as Array<{ id: string; name: string }>;
+      `) as unknown as Array<{
+        id: string;
+        name: string;
+        capacity: number;
+        allow_waitlist: boolean;
+        waitlist_capacity: number;
+      }>;
 
       const lowerText = scheduleText.toLowerCase();
       const program = programRows.find((row) => lowerText.includes(row.name.toLowerCase()));
@@ -1083,22 +1096,42 @@ async function executeToolCall(
             action,
             status: "needs_details",
             message: "I could not identify the program/session name. Please include the exact class name.",
+            programSuggestions: programRows.slice(0, 10).map((row) => row.name),
           }),
         };
       }
 
       const requestedDay = Number(timing.local_dow);
-      const sessionRows = await db.execute(sql`
-        SELECT id, day, time, duration
-        FROM program_sessions
-        WHERE program_id = ${program.id}
-          AND day = ${requestedDay}
-          AND time = ${timing.local_time}::time
-        LIMIT 1
-      `) as unknown as Array<{ id: string; day: number; time: string; duration: number }>;
+      const slotRows = await db.execute(sql`
+        SELECT
+          ps.id,
+          ps.day,
+          ps.time,
+          ps.duration,
+          (((${dateText} || ' ' || to_char(ps.time, 'HH24:MI:SS'))::timestamp) AT TIME ZONE ${locationTimezone})::timestamptz AS start_utc,
+          COALESCE(occ.confirmed_count, 0)::int AS confirmed_count
+        FROM program_sessions ps
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int AS confirmed_count
+          FROM reservations r
+          WHERE r.location_id = ${context.locationId}
+            AND r.session_id = ps.id
+            AND r.start_on = (((${dateText} || ' ' || to_char(ps.time, 'HH24:MI:SS'))::timestamp) AT TIME ZONE ${locationTimezone})::timestamptz
+            AND r.status IN ('confirmed', 'completed')
+        ) occ ON true
+        WHERE ps.program_id = ${program.id}
+          AND ps.day = ${requestedDay}
+        ORDER BY ps.time ASC
+      `) as unknown as Array<{
+        id: string;
+        day: number;
+        time: string;
+        duration: number;
+        start_utc: string;
+        confirmed_count: number;
+      }>;
 
-      const session = sessionRows[0];
-      if (!session) {
+      if (slotRows.length === 0) {
         const alternatives = await db.execute(sql`
           SELECT day, time, duration
           FROM program_sessions
@@ -1114,15 +1147,116 @@ async function executeToolCall(
             tool: name,
             action,
             status: "needs_details",
-            message: "That session time is not available for this class. Please choose one of the available schedule slots.",
+            message: "No sessions are configured for that date for this class. Please choose one of the configured schedule slots.",
             availableSessions: alternatives,
           }),
         };
       }
 
-      const startIso = timing.start_utc;
+      const slots = slotRows.map((row) => {
+        const capacity = Number(program.capacity || 0);
+        const confirmedCount = Number(row.confirmed_count || 0);
+        const remainingSpots = Math.max(capacity - confirmedCount, 0);
+        const bookable = capacity <= 0 ? true : confirmedCount < capacity;
+        return {
+          id: row.id,
+          day: Number(row.day || 0),
+          time: row.time,
+          duration: Number(row.duration || 0),
+          startOnUtc: row.start_utc,
+          startOnLocation: formatHumanDateInTimezone(row.start_utc, locationTimezone),
+          confirmedReservations: confirmedCount,
+          capacity,
+          remainingSpots,
+          bookable,
+        };
+      });
+
+      let selectedSlot = null as null | (typeof slots[number]);
+
+      if (hasFirstAvailablePreference || !hasExplicitTimeExpression) {
+        selectedSlot = slots.find((slot) => slot.bookable) || null;
+      } else {
+        selectedSlot = slots.find((slot) => slot.time === timing.local_time) || null;
+      }
+
+      if (!selectedSlot) {
+        return {
+          content: JSON.stringify({
+            ok: false,
+            locationId: context.locationId,
+            tool: name,
+            action,
+            status: "needs_details",
+            message: "That specific session time is not available. Please choose one of the available slots for that day.",
+            availableSlots: slots.slice(0, 5).map((slot) => ({
+              startOnUtc: slot.startOnUtc,
+              startOnLocation: slot.startOnLocation,
+              remainingSpots: slot.remainingSpots,
+              bookable: slot.bookable,
+            })),
+          }),
+        };
+      }
+
+      if (!selectedSlot.bookable) {
+        const alternative = slots.find((slot) => slot.bookable) || null;
+        return {
+          content: JSON.stringify({
+            ok: false,
+            locationId: context.locationId,
+            tool: name,
+            action,
+            status: "needs_details",
+            message: alternative
+              ? "The requested slot is full. Please confirm if you want the next available bookable slot."
+              : "The requested slot is full and there are no other bookable slots for that day.",
+            requestedSlot: {
+              startOnUtc: selectedSlot.startOnUtc,
+              startOnLocation: selectedSlot.startOnLocation,
+              capacity: selectedSlot.capacity,
+              confirmedReservations: selectedSlot.confirmedReservations,
+              remainingSpots: selectedSlot.remainingSpots,
+            },
+            nextAvailableSlot: alternative
+              ? {
+                  startOnUtc: alternative.startOnUtc,
+                  startOnLocation: alternative.startOnLocation,
+                  remainingSpots: alternative.remainingSpots,
+                }
+              : null,
+          }),
+        };
+      }
+
+      if (context.confirmationIntent !== "confirm") {
+        return {
+          content: JSON.stringify({
+            ok: true,
+            locationId: context.locationId,
+            tool: name,
+            action,
+            status: "requires_confirmation",
+            message: "I found an open slot and staged this booking. Please confirm to finalize.",
+            bookingCandidate: {
+              memberId: member.id,
+              memberName: `${member.first_name || ""}${member.last_name ? ` ${member.last_name}` : ""}`.trim(),
+              programId: program.id,
+              programName: program.name,
+              sessionId: selectedSlot.id,
+              startOnUtc: selectedSlot.startOnUtc,
+              startOnLocation: selectedSlot.startOnLocation,
+              locationTimezone,
+              capacity: selectedSlot.capacity,
+              remainingSpots: selectedSlot.remainingSpots,
+            },
+          }),
+        };
+      }
+
+      const startIso = selectedSlot.startOnUtc;
       const startDate = new Date(startIso);
-      const endDate = new Date(startDate.getTime() + Number(session.duration || 0) * 60 * 1000);
+      const endDate = new Date(startDate.getTime() + Number(selectedSlot.duration || 0) * 60 * 1000);
       const endIso = endDate.toISOString();
 
       const duplicateRows = await db.execute(sql`
@@ -1130,7 +1264,7 @@ async function executeToolCall(
         FROM reservations
         WHERE location_id = ${context.locationId}
           AND member_id = ${member.id}
-          AND session_id = ${session.id}
+          AND session_id = ${selectedSlot.id}
           AND start_on = ${startIso}::timestamptz
           AND status IN ('confirmed', 'completed')
         LIMIT 1
@@ -1167,16 +1301,16 @@ async function executeToolCall(
           is_make_up_class,
           updated_at
         ) VALUES (
-          ${session.id},
+          ${selectedSlot.id},
           ${startIso}::timestamptz,
           ${endIso}::timestamptz,
           ${context.locationId},
           ${member.id},
           ${program.id},
           ${program.name},
-          ${requestedTime}::time,
-          ${session.duration},
-          ${session.day},
+          ${selectedSlot.time}::time,
+          ${selectedSlot.duration},
+          ${selectedSlot.day},
           'confirmed',
           false,
           now()
@@ -1215,34 +1349,228 @@ async function executeToolCall(
       };
     }
 
-    const rows = await db.execute(sql`
-      SELECT
-        COUNT(*)::bigint AS total,
-        MIN(start_on) AS earliest,
-        MAX(start_on) AS latest
-      FROM reservations
-      WHERE location_id = ${context.locationId}
-        AND start_on >= now()
-        AND start_on < now() + (${days} * interval '1 day')
-        AND status = 'confirmed'
-    `) as unknown as Array<{ total: number; earliest: string | null; latest: string | null }>;
+    const locationTimezone = await getLocationTimezone(context.locationId);
+    const scheduleText = buildScheduleContextText(input, context);
+    const normalizedScheduleText = scheduleText.toLowerCase();
 
-    const row = rows[0] || { total: 0, earliest: null, latest: null };
+    const programRows = await db.execute(sql`
+      SELECT id, name
+      FROM programs
+      WHERE location_id = ${context.locationId}
+        AND status = 'active'
+      ORDER BY length(name) DESC, created_at DESC
+    `) as unknown as Array<{ id: string; name: string }>;
+
+    const matchedProgram = programRows.find((row) => normalizedScheduleText.includes(row.name.toLowerCase()));
+    const explicitProgramInput = [input.programName, input.program]
+      .filter((value) => typeof value === "string")
+      .map((value) => (value as string).trim())
+      .find((value) => value.length > 0);
+
+    if (explicitProgramInput && !matchedProgram) {
+      return {
+        content: JSON.stringify({
+          ok: false,
+          locationId: context.locationId,
+          tool: name,
+          action: "check",
+          status: "needs_details",
+          message: `I could not find an active program matching "${explicitProgramInput}" at this location.`,
+          programSuggestions: programRows.slice(0, 10).map((row) => row.name),
+        }),
+      };
+    }
+
+    const availabilityRows = await db.execute(sql`
+      WITH local_days AS (
+        SELECT
+          gs::date AS local_date
+        FROM generate_series(
+          (now() AT TIME ZONE ${locationTimezone})::date,
+          ((now() + (${days} * interval '1 day')) AT TIME ZONE ${locationTimezone})::date,
+          interval '1 day'
+        ) AS gs
+      ),
+      session_slots AS (
+        SELECT
+          p.id AS program_id,
+          p.name AS program_name,
+          p.capacity,
+          p.allow_waitlist,
+          p.waitlist_capacity,
+          ps.id AS session_id,
+          ps.day,
+          ps.time,
+          ps.duration,
+          ld.local_date,
+          ((ld.local_date::text || ' ' || to_char(ps.time, 'HH24:MI:SS'))::timestamp AT TIME ZONE ${locationTimezone})::timestamptz AS start_on_utc
+        FROM programs p
+        JOIN program_sessions ps ON ps.program_id = p.id
+        JOIN local_days ld ON EXTRACT(DOW FROM ld.local_date)::int = ps.day
+        WHERE p.location_id = ${context.locationId}
+          AND p.status = 'active'
+          ${matchedProgram ? sql`AND p.id = ${matchedProgram.id}` : sql``}
+      ),
+      upcoming_slots AS (
+        SELECT *
+        FROM session_slots
+        WHERE start_on_utc >= now()
+          AND start_on_utc < now() + (${days} * interval '1 day')
+      ),
+      occupancy AS (
+        SELECT
+          r.session_id,
+          r.start_on,
+          COUNT(*)::int AS confirmed_count
+        FROM reservations r
+        WHERE r.location_id = ${context.locationId}
+          AND r.status IN ('confirmed', 'completed')
+          AND r.start_on >= now()
+          AND r.start_on < now() + (${days} * interval '1 day')
+        GROUP BY r.session_id, r.start_on
+      )
+      SELECT
+        us.program_id,
+        us.program_name,
+        us.session_id,
+        us.day,
+        us.time,
+        us.duration,
+        us.capacity,
+        us.allow_waitlist,
+        us.waitlist_capacity,
+        us.start_on_utc,
+        to_char(us.start_on_utc AT TIME ZONE ${locationTimezone}, 'YYYY-MM-DD HH24:MI:SS') AS start_on_location,
+        COALESCE(o.confirmed_count, 0)::int AS confirmed_count
+      FROM upcoming_slots us
+      LEFT JOIN occupancy o
+        ON o.session_id = us.session_id
+       AND o.start_on = us.start_on_utc
+      ORDER BY us.start_on_utc ASC
+      LIMIT 240
+    `) as unknown as Array<{
+      program_id: string;
+      program_name: string;
+      session_id: string;
+      day: number;
+      time: string;
+      duration: number;
+      capacity: number;
+      allow_waitlist: boolean;
+      waitlist_capacity: number;
+      start_on_utc: string;
+      start_on_location: string;
+      confirmed_count: number;
+    }>;
+
+    const availableSessions = availabilityRows.map((row) => {
+      const capacity = Number(row.capacity || 0);
+      const confirmedCount = Number(row.confirmed_count || 0);
+      const remainingSpots = Math.max(capacity - confirmedCount, 0);
+      const full = capacity > 0 ? confirmedCount >= capacity : false;
+      const bookable = capacity <= 0 ? true : confirmedCount < capacity;
+      const canJoinWaitlist = full && !!row.allow_waitlist;
+      const status = bookable
+        ? "bookable"
+        : (canJoinWaitlist ? "full_waitlist_available" : "full_unavailable");
+
+      return {
+        programId: row.program_id,
+        programName: row.program_name,
+        sessionId: row.session_id,
+        day: Number(row.day || 0),
+        time: row.time,
+        duration: Number(row.duration || 0),
+        startOnUtc: row.start_on_utc,
+        startOnLocation: row.start_on_location,
+        capacity,
+        confirmedReservations: confirmedCount,
+        remainingSpots,
+        allowWaitlist: !!row.allow_waitlist,
+        waitlistCapacity: Number(row.waitlist_capacity || 0),
+        bookable,
+        status,
+      };
+    });
+
+    const programMap = new Map<string, {
+      programId: string;
+      programName: string;
+      totalUpcomingSessions: number;
+      bookableSessions: number;
+      nextBookableStartOnUtc: string | null;
+      nextBookableStartOnLocation: string | null;
+      minRemainingSpots: number | null;
+    }>();
+
+    for (const slot of availableSessions) {
+      const current = programMap.get(slot.programId) || {
+        programId: slot.programId,
+        programName: slot.programName,
+        totalUpcomingSessions: 0,
+        bookableSessions: 0,
+        nextBookableStartOnUtc: null,
+        nextBookableStartOnLocation: null,
+        minRemainingSpots: null,
+      };
+
+      current.totalUpcomingSessions += 1;
+      if (slot.bookable) {
+        current.bookableSessions += 1;
+        if (!current.nextBookableStartOnUtc || new Date(slot.startOnUtc).getTime() < new Date(current.nextBookableStartOnUtc).getTime()) {
+          current.nextBookableStartOnUtc = slot.startOnUtc;
+          current.nextBookableStartOnLocation = slot.startOnLocation;
+        }
+
+        if (typeof current.minRemainingSpots !== "number") {
+          current.minRemainingSpots = slot.remainingSpots;
+        } else {
+          current.minRemainingSpots = Math.min(current.minRemainingSpots, slot.remainingSpots);
+        }
+      }
+
+      programMap.set(slot.programId, current);
+    }
+
+    const availablePrograms = Array.from(programMap.values())
+      .sort((a, b) => {
+        if (b.bookableSessions !== a.bookableSessions) return b.bookableSessions - a.bookableSessions;
+        return a.programName.localeCompare(b.programName);
+      });
+
+    const bookableCount = availableSessions.filter((slot) => slot.bookable).length;
+    const shownSessions = availableSessions.slice(0, 20);
+
+    const message = matchedProgram
+      ? (bookableCount > 0
+        ? `Found ${bookableCount} bookable session${bookableCount === 1 ? "" : "s"} for ${matchedProgram.name} in the next ${days} days.`
+        : `No bookable sessions found for ${matchedProgram.name} in the next ${days} days.`)
+      : (bookableCount > 0
+        ? `Found ${bookableCount} bookable session${bookableCount === 1 ? "" : "s"} across ${availablePrograms.length} program${availablePrograms.length === 1 ? "" : "s"} in the next ${days} days.`
+        : `No bookable sessions found in the next ${days} days.`);
+
     return {
       content: JSON.stringify({
         ok: true,
         locationId: context.locationId,
         tool: name,
         action: "check",
+        mode: "availability",
+        timezone: locationTimezone,
         rangeDays: days,
-        confirmedReservations: Number(row.total || 0),
-        earliestStart: row.earliest,
-        latestStart: row.latest,
+        requestedProgram: matchedProgram?.name || null,
+        availablePrograms,
+        availableSessions: shownSessions,
+        totalMatchingSessions: availableSessions.length,
+        totalBookableSessions: bookableCount,
+        message,
       }),
     };
   }
 
   if (name === "member_lookup") {
+    const modeInput = typeof input.mode === "string" ? input.mode.toLowerCase() : "single";
+    const mode = modeInput === "list" || modeInput === "aggregate" ? modeInput : "single";
     const rawQuery = typeof input.query === "string"
       ? input.query.trim()
       : [input.name, input.memberName, input.email, input.phone]
@@ -1250,14 +1578,27 @@ async function executeToolCall(
           .map((value) => (value as string).trim())
           .filter((value) => value.length > 0)
           .join(" ");
-    if (!rawQuery) {
+
+    const statusFilter = typeof input.status === "string" ? input.status.trim().toLowerCase() : "";
+    const joinedWithinDays = typeof input.joinedWithinDays === "number"
+      ? Math.max(1, Math.min(3650, Math.floor(input.joinedWithinDays)))
+      : (typeof input.range === "string" ? parseRangeDays(input.range) : null);
+    const requestedLimit = typeof input.limit === "number" ? Math.floor(input.limit) : 10;
+    const limit = Math.max(1, Math.min(50, requestedLimit));
+    const offset = typeof input.offset === "number" ? Math.max(0, Math.floor(input.offset)) : 0;
+    const sortByInput = typeof input.sortBy === "string" ? input.sortBy : "joined_desc";
+    const sortBy = ["joined_desc", "joined_asc", "name_asc", "points_desc"].includes(sortByInput)
+      ? sortByInput
+      : "joined_desc";
+
+    if (mode === "single" && !rawQuery) {
       return {
         content: JSON.stringify({ ok: false, error: "Missing member lookup query" }),
       };
     }
 
     const signals = extractMemberLookupSignals(rawQuery);
-    if (!signals.searchText) {
+    if (mode === "single" && !signals.searchText) {
       return {
         content: JSON.stringify({
           ok: false,
@@ -1266,14 +1607,83 @@ async function executeToolCall(
       };
     }
 
-    const searchLike = `%${signals.searchText}%`;
-    const emailLike = signals.email ? `%${signals.email}%` : null;
-    const phoneLike = signals.phoneDigits ? `%${signals.phoneDigits}%` : null;
-    const tokenLikes = signals.tokens.map((token) => `%${token}%`);
-    const emailCondition = emailLike ? sql`m.email ILIKE ${emailLike}` : sql`false`;
-    const phoneCondition = phoneLike
-      ? sql`regexp_replace(COALESCE(m.phone, ''), '\\D', '', 'g') LIKE ${phoneLike}`
-      : sql`false`;
+    const filters: ReturnType<typeof sql>[] = [sql`ml.location_id = ${context.locationId}`];
+    if (statusFilter) {
+      filters.push(sql`lower(COALESCE(ml.status::text, '')) = ${statusFilter}`);
+    }
+    if (typeof joinedWithinDays === "number" && Number.isFinite(joinedWithinDays) && joinedWithinDays > 0) {
+      filters.push(sql`m.created_at >= now() - (${joinedWithinDays} * interval '1 day')`);
+    }
+
+    if (signals.searchText) {
+      const searchLike = `%${signals.searchText}%`;
+      const emailLike = signals.email ? `%${signals.email}%` : null;
+      const phoneLike = signals.phoneDigits ? `%${signals.phoneDigits}%` : null;
+      const tokenLikes = signals.tokens.map((token) => `%${token}%`);
+      const emailCondition = emailLike ? sql`m.email ILIKE ${emailLike}` : sql`false`;
+      const phoneCondition = phoneLike
+        ? sql`regexp_replace(COALESCE(m.phone, ''), '\\D', '', 'g') LIKE ${phoneLike}`
+        : sql`false`;
+
+      filters.push(sql`(
+        concat_ws(' ', COALESCE(m.first_name, ''), COALESCE(m.last_name, '')) ILIKE ${searchLike}
+        OR concat_ws(' ', COALESCE(m.last_name, ''), COALESCE(m.first_name, '')) ILIKE ${searchLike}
+        OR m.email ILIKE ${searchLike}
+        OR COALESCE(m.phone, '') ILIKE ${searchLike}
+        OR (${emailCondition})
+        OR (${phoneCondition})
+        OR (${tokenLikes.length > 0 ? sql.join(tokenLikes.map((tokenLike) => sql`
+            m.first_name ILIKE ${tokenLike}
+            OR m.last_name ILIKE ${tokenLike}
+            OR m.email ILIKE ${tokenLike}
+            OR COALESCE(m.phone, '') ILIKE ${tokenLike}
+          `), sql` OR `) : sql`false`})
+      )`);
+    }
+
+    const whereClause = filters.length > 0 ? sql`WHERE ${sql.join(filters, sql` AND `)}` : sql``;
+
+    if (mode === "aggregate") {
+      const aggregateRows = await db.execute(sql`
+        SELECT
+          COUNT(*)::bigint AS total_count,
+          COUNT(*) FILTER (WHERE lower(COALESCE(ml.status::text, '')) = 'active')::bigint AS active_count,
+          COUNT(*) FILTER (WHERE m.created_at >= now() - interval '30 day')::bigint AS joined_last_30_days
+        FROM member_locations ml
+        JOIN members m ON m.id = ml.member_id
+        ${whereClause}
+      `) as unknown as Array<{
+        total_count: number;
+        active_count: number;
+        joined_last_30_days: number;
+      }>;
+
+      const row = aggregateRows[0] || { total_count: 0, active_count: 0, joined_last_30_days: 0 };
+      return {
+        content: JSON.stringify({
+          ok: true,
+          locationId: context.locationId,
+          tool: name,
+          mode,
+          query: rawQuery,
+          status: statusFilter || null,
+          joinedWithinDays: joinedWithinDays || null,
+          totals: {
+            members: Number(row.total_count || 0),
+            activeMembers: Number(row.active_count || 0),
+            joinedLast30Days: Number(row.joined_last_30_days || 0),
+          },
+        }),
+      };
+    }
+
+    const orderBy = sortBy === "joined_asc"
+      ? sql`m.created_at ASC`
+      : sortBy === "name_asc"
+        ? sql`m.first_name ASC NULLS LAST, m.last_name ASC NULLS LAST`
+        : sortBy === "points_desc"
+          ? sql`ml.points DESC NULLS LAST, m.created_at DESC`
+          : sql`m.created_at DESC`;
 
     const rows = await db.execute(sql`
       SELECT
@@ -1284,26 +1694,14 @@ async function executeToolCall(
         m.phone,
         ml.status,
         ml.points,
-        m.created_at
+        m.created_at,
+        COUNT(*) OVER()::bigint AS total_count
       FROM member_locations ml
       JOIN members m ON m.id = ml.member_id
-      WHERE ml.location_id = ${context.locationId}
-        AND (
-          concat_ws(' ', COALESCE(m.first_name, ''), COALESCE(m.last_name, '')) ILIKE ${searchLike}
-          OR concat_ws(' ', COALESCE(m.last_name, ''), COALESCE(m.first_name, '')) ILIKE ${searchLike}
-          OR m.email ILIKE ${searchLike}
-          OR COALESCE(m.phone, '') ILIKE ${searchLike}
-          OR (${emailCondition})
-          OR (${phoneCondition})
-          OR (${tokenLikes.length > 0 ? sql.join(tokenLikes.map((tokenLike) => sql`
-              m.first_name ILIKE ${tokenLike}
-              OR m.last_name ILIKE ${tokenLike}
-              OR m.email ILIKE ${tokenLike}
-              OR COALESCE(m.phone, '') ILIKE ${tokenLike}
-            `), sql` OR `) : sql`false`})
-        )
-      ORDER BY m.created_at DESC
-      LIMIT 30
+      ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT ${mode === "single" ? 40 : limit}
+      OFFSET ${mode === "single" ? 0 : offset}
     `) as unknown as Array<{
       id: string;
       first_name: string | null;
@@ -1313,36 +1711,72 @@ async function executeToolCall(
       status: string;
       points: number;
       created_at: string;
+      total_count: number;
     }>;
 
-    const scored = rows
-      .map((member) => ({
-        ...member,
-        score: scoreMemberCandidate(member, signals),
-      }))
-      .filter((member) => member.score > 0)
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      })
-      .slice(0, 5);
+    if (mode === "single") {
+      const scored = rows
+        .map((member) => ({
+          ...member,
+          score: scoreMemberCandidate(member, signals),
+        }))
+        .filter((member) => member.score > 0)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        })
+        .slice(0, 5);
 
+      return {
+        content: JSON.stringify({
+          ok: true,
+          locationId: context.locationId,
+          tool: name,
+          mode,
+          query: rawQuery,
+          normalizedQuery: signals.searchText,
+          count: scored.length,
+          members: scored.map((member) => ({
+            id: member.id,
+            name: `${member.first_name}${member.last_name ? ` ${member.last_name}` : ""}`.trim(),
+            email: member.email,
+            phone: member.phone,
+            status: member.status,
+            points: Number(member.points || 0),
+            score: member.score,
+            joinedAt: member.created_at,
+          })),
+        }),
+      };
+    }
+
+    const total = rows[0] ? Number(rows[0].total_count || 0) : 0;
     return {
       content: JSON.stringify({
         ok: true,
         locationId: context.locationId,
         tool: name,
-        query: rawQuery,
-        normalizedQuery: signals.searchText,
-        count: scored.length,
-        members: scored.map((member) => ({
+        mode,
+        query: rawQuery || null,
+        status: statusFilter || null,
+        joinedWithinDays: joinedWithinDays || null,
+        sortBy,
+        limit,
+        offset,
+        total,
+        hasMore: offset + rows.length < total,
+        nextOffset: offset + rows.length < total ? offset + rows.length : null,
+        count: rows.length,
+        members: rows.map((member) => ({
           id: member.id,
           name: `${member.first_name}${member.last_name ? ` ${member.last_name}` : ""}`.trim(),
+          firstName: member.first_name,
+          lastName: member.last_name,
           email: member.email,
           phone: member.phone,
           status: member.status,
           points: Number(member.points || 0),
-          score: member.score,
+          joinedAt: member.created_at,
         })),
       }),
     };
@@ -1531,6 +1965,60 @@ function buildReply(message: string, locationId: string, memories: RecalledMemor
   return `I am scoped to location ${locationId}. Ask about schedules, reports, or members and I will help.${memoryHint}`;
 }
 
+function buildUnsupportedCapabilityReply(locationId: string) {
+  return [
+    `I can't do that yet in this assistant for location ${locationId}.`,
+    "Right now I can help with:",
+    "- scheduling availability/checks and bookings",
+    "- member lookup",
+    "- location reports (revenue, attendance, active members)",
+    "- remembering explicit preferences",
+    "If you tell me one of those tasks, I can handle it now.",
+  ].join("\n");
+}
+
+function inferUnsupportedCapabilityReply(params: {
+  message: string;
+  locationId: string;
+  usedTools: AssistantToolCall[];
+}): string | undefined {
+  if (params.usedTools.length > 0) return undefined;
+
+  const normalized = params.message.trim().toLowerCase();
+  if (!normalized) return undefined;
+
+  const greetingOnly = /^(hi|hello|hey|yo|good\s(morning|afternoon|evening))\b/.test(normalized);
+  if (greetingOnly) return undefined;
+
+  const supportedSignals = [
+    "schedule",
+    "book",
+    "booking",
+    "session",
+    "program",
+    "member",
+    "revenue",
+    "attendance",
+    "active members",
+    "report",
+    "kpi",
+    "remember",
+    "remind me",
+  ];
+
+  if (supportedSignals.some((signal) => normalized.includes(signal))) {
+    return undefined;
+  }
+
+  const looksLikeCapabilityRequest =
+    /\?$/.test(normalized)
+    || /\b(can you|could you|would you|please|help me|i need|do|send|create|update|delete|export|email|text|sms|call)\b/.test(normalized);
+
+  if (!looksLikeCapabilityRequest) return undefined;
+
+  return buildUnsupportedCapabilityReply(params.locationId);
+}
+
 function extractClarificationQuestions(reply: string): string[] {
   const matches = reply
     .split(/\s+/)
@@ -1578,6 +2066,31 @@ function hasTerminalScheduleOutcome(toolExecutions: ToolExecutionTrace[]): boole
     if (trace.name !== "schedule_manage" || !trace.output) return false;
     const status = typeof trace.output.status === "string" ? trace.output.status.toLowerCase() : "";
     return terminal.has(status);
+  });
+}
+
+function hasResolvedScheduleCheckOutcome(toolExecutions: ToolExecutionTrace[]): boolean {
+  return toolExecutions.some((trace) => {
+    if (trace.name !== "schedule_manage" || !trace.output) return false;
+    const ok = trace.output.ok;
+    const action = typeof trace.output.action === "string" ? trace.output.action.toLowerCase() : "";
+    return ok === true && action === "check";
+  });
+}
+
+function hasLocationReportOutcome(toolExecutions: ToolExecutionTrace[]): boolean {
+  return toolExecutions.some((trace) => {
+    if (trace.name !== "location_reports" || !trace.output) return false;
+    const ok = trace.output.ok;
+    return ok === true;
+  });
+}
+
+function hasMemberLookupOutcome(toolExecutions: ToolExecutionTrace[]): boolean {
+  return toolExecutions.some((trace) => {
+    if (trace.name !== "member_lookup" || !trace.output) return false;
+    const ok = trace.output.ok;
+    return ok === true;
   });
 }
 
@@ -1630,6 +2143,20 @@ function extractChartBlocks(toolExecutions: ToolExecutionTrace[]): AssistantBloc
   return blocks;
 }
 
+function extractCancelledByUserReply(toolExecutions: ToolExecutionTrace[]): string | undefined {
+  for (let i = toolExecutions.length - 1; i >= 0; i -= 1) {
+    const trace = toolExecutions[i];
+    if (!trace) continue;
+    if (trace.name !== "schedule_manage" || !trace.output) continue;
+    const status = typeof trace.output.status === "string" ? trace.output.status.toLowerCase() : "";
+    if (status !== "cancelled_by_user") continue;
+    const message = typeof trace.output.message === "string" ? trace.output.message.trim() : "";
+    if (message) return message;
+  }
+
+  return undefined;
+}
+
 function deriveAssistantUiState(params: {
   reply: string;
   toolExecutions: ToolExecutionTrace[];
@@ -1663,6 +2190,30 @@ function deriveAssistantUiState(params: {
 
   const clarificationQuestions = extractClarificationQuestions(params.reply);
   if (hasTerminalScheduleOutcome(params.toolExecutions)) {
+    return {
+      responseState: "answer",
+      inputMode: "free_text",
+      prompts: [],
+    };
+  }
+
+  if (hasResolvedScheduleCheckOutcome(params.toolExecutions)) {
+    return {
+      responseState: "answer",
+      inputMode: "free_text",
+      prompts: [],
+    };
+  }
+
+  if (hasLocationReportOutcome(params.toolExecutions)) {
+    return {
+      responseState: "answer",
+      inputMode: "free_text",
+      prompts: [],
+    };
+  }
+
+  if (hasMemberLookupOutcome(params.toolExecutions)) {
     return {
       responseState: "answer",
       inputMode: "free_text",
@@ -1714,6 +2265,9 @@ async function runToolLoop(params: {
     "You are Monstro Location Assistant.",
     "You are scoped to exactly one location and must never mix cross-location context.",
     "Use tools when needed. For actions that are not fully certain, ask for missing details.",
+    "For questions about bookable programs/sessions or schedule availability in a date range, always call schedule_manage with action=check.",
+    "location_reports is only for KPI metrics (revenue, attendance, active_members), never for schedule/program availability.",
+    "For member roster requests (new members, joined in last X days, list/filter/sort), use member_lookup with mode=list or mode=aggregate as appropriate.",
     "Only use remember_preference when user explicitly asks to remember something.",
     "When user explicitly asks to remember a preference, call remember_preference in the same turn.",
     "When a tool returns concrete values, summarize and present them directly.",
@@ -1862,13 +2416,21 @@ export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<As
     inferredExplicitPreference,
   });
 
+  const reply = extractCancelledByUserReply(loopResult.toolExecutions) || loopResult.reply;
+  const unsupportedReply = inferUnsupportedCapabilityReply({
+    message: parsed.data.message,
+    locationId: props.locationId,
+    usedTools: loopResult.usedTools,
+  });
+  const finalReply = unsupportedReply || reply;
+
   const writebackJob: AssistantMemoryWritebackJob = {
     locationId: props.locationId,
     vendorId: props.vendorId,
     userId: props.userId,
     threadId,
     userMessage: parsed.data.message,
-    assistantReply: loopResult.reply,
+    assistantReply: finalReply,
     toolCalls: loopResult.usedTools,
     explicitPreference: loopResult.explicitPreference || undefined,
     createdAt: new Date().toISOString(),
@@ -1877,7 +2439,7 @@ export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<As
   await enqueueWritebackJob(writebackJob);
 
   const uiState = deriveAssistantUiState({
-    reply: loopResult.reply,
+    reply: finalReply,
     toolExecutions: loopResult.toolExecutions,
   });
   const bookingMeta = extractBookingMeta(loopResult.toolExecutions);
@@ -1885,7 +2447,7 @@ export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<As
 
   return {
     threadId,
-    reply: loopResult.reply,
+    reply: finalReply,
     usedTools: loopResult.usedTools,
     memorySaved: !!loopResult.explicitPreference,
     bookingMeta,
@@ -1898,4 +2460,96 @@ export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<As
       maxPromptsThisTurn: uiState.prompts.length,
     },
   };
+}
+
+function chunkReplyText(input: string, size = 80) {
+  const text = input || "";
+  if (!text) return [] as string[];
+  const chunks: string[] = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    chunks.push(text.slice(cursor, cursor + size));
+    cursor += size;
+  }
+  return chunks;
+}
+
+export async function* runAssistantTurnStream(
+  props: RunAssistantTurnProps,
+): AsyncGenerator<AssistantStreamEvent, void, void> {
+  const threadId = props.threadId || crypto.randomUUID();
+  const messageId = crypto.randomUUID();
+  const startedAt = Date.now();
+
+  yield {
+    type: "session_start",
+    threadId,
+    messageId,
+    ts: startedAt,
+  };
+
+  try {
+    const result = await runAssistantTurn({
+      ...props,
+      threadId,
+    });
+
+    const textChunks = chunkReplyText(result.reply, 120);
+    for (let index = 0; index < textChunks.length; index += 1) {
+      const delta = textChunks[index] || "";
+      if (!delta) continue;
+      yield {
+        type: "text_delta",
+        threadId,
+        messageId,
+        delta,
+        index,
+        ts: Date.now(),
+      };
+    }
+
+    for (const block of result.blocks || []) {
+      yield {
+        type: "block_done",
+        threadId,
+        messageId,
+        block,
+        ts: Date.now(),
+      };
+    }
+
+    yield {
+      type: "assistant_final",
+      threadId,
+      messageId,
+      result,
+      ts: Date.now(),
+    };
+
+    yield {
+      type: "done",
+      threadId,
+      messageId,
+      reason: "completed",
+      ts: Date.now(),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to process assistant turn";
+
+    yield {
+      type: "error",
+      threadId,
+      messageId,
+      message,
+      ts: Date.now(),
+    };
+
+    yield {
+      type: "done",
+      threadId,
+      messageId,
+      reason: "error",
+      ts: Date.now(),
+    };
+  }
 }

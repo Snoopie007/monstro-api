@@ -1,11 +1,11 @@
-import { runAssistantTurn } from "@/libs/ai/assistant";
+import { runAssistantTurnStream } from "@/libs/ai/assistant";
 import type { Context, Elysia } from "elysia";
 import { t } from "elysia";
 
 export function assistantChatRoute(app: Elysia) {
   app.post(
     "/chat",
-    async ({ params, body, status, ...ctx }) => {
+    async ({ params, body, status, set, ...ctx }) => {
       const { vendorId, userId } = ctx as Context & { vendorId?: string; userId?: string };
       const { lid } = params as { lid: string };
       const { message, threadId, history } = body as {
@@ -18,21 +18,36 @@ export function assistantChatRoute(app: Elysia) {
         return status(401, { message: "Unauthorized", code: "UNAUTHORIZED" });
       }
 
-      try {
-        const result = await runAssistantTurn({
-          locationId: lid,
-          vendorId,
-          userId,
-          message,
-          threadId,
-          history,
-        });
+      const encoder = new TextEncoder();
+      set.headers["content-type"] = "text/event-stream; charset=utf-8";
+      set.headers["cache-control"] = "no-cache, no-transform";
+      set.headers.connection = "keep-alive";
 
-        return status(200, result);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to process assistant turn";
-        return status(400, { error: message });
-      }
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          try {
+            for await (const event of runAssistantTurnStream({
+              locationId: lid,
+              vendorId,
+              userId,
+              message,
+              threadId,
+              history,
+            })) {
+              const payload = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
+              controller.enqueue(encoder.encode(payload));
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to process assistant turn";
+            const payload = `event: error\ndata: ${JSON.stringify({ type: "error", message, ts: Date.now() })}\n\n`;
+            controller.enqueue(encoder.encode(payload));
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(stream);
     },
     {
       body: t.Object({
