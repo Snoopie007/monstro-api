@@ -35,25 +35,25 @@ for (const ev of RequireEnv) {
 
 // Redis configuration
 export const redisConfig = {
-  host: process.env.UPSTASH_REDIS_HOST,
-  port: parseInt(process.env.UPSTASH_REDIS_PORT ?? "6379"),
-  password: process.env.UPSTASH_REDIS_PASSWORD,
-  tls: false,
-  // Retry strategy to prevent negative timeout warnings
-  // First retry must be at least 1 second to avoid negative timeout calculations
-  retryStrategy: (times: number) => {
-    // Ensure first retry is at least 1 second (1000ms)
-    // Then use exponential backoff with a max of 30 seconds
-    const delay = Math.max(1000, Math.min(times * 100, 30000));
-    return delay;
-  },
-  // Maximum retry attempts before giving up
-  maxRetriesPerRequest: null,
-  // Connection timeout
-  connectTimeout: 10000,
-  // Enable offline queue to handle connection issues gracefully
-  enableOfflineQueue: true,
-};
+    host: process.env.UPSTASH_REDIS_HOST,
+    port: parseInt(process.env.UPSTASH_REDIS_PORT ?? '6379'),
+    password: process.env.UPSTASH_REDIS_PASSWORD,
+    tls: false,
+    // Retry strategy to prevent negative timeout warnings
+    // First retry must be at least 1 second to avoid negative timeout calculations
+    retryStrategy: (times: number) => {
+        // Ensure first retry is at least 1 second (1000ms)
+        // Then use exponential backoff with a max of 30 seconds
+        const delay = Math.max(1000, Math.min(times * 100, 30000));
+        return delay;
+    },
+    // Maximum retry attempts before giving up
+    maxRetriesPerRequest: null,
+    // Connection timeout
+    connectTimeout: 10000,
+    // Enable offline queue to handle connection issues gracefully
+    enableOfflineQueue: true,
+}
 
 // Server configuration
 export const serverConfig = {
