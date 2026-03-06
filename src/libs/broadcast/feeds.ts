@@ -13,13 +13,7 @@ export async function broadcastNewFeeds(newFeeds: UserFeed[]): Promise<void> {
 
         await Promise.all(newFeeds.map(async (feed) => {
             const channel = supabase.createChannel(`user:${feed.userId}`);
-            await channel.send({
-                type: 'broadcast',
-                event: RealTimeEvents.feeds.NEW_FEED,
-                payload: {
-
-                },
-            });
+            await channel.httpSend(RealTimeEvents.feeds.NEW_FEED, feed);
             supabase.removeChannel(channel);
         }));
 

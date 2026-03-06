@@ -52,12 +52,8 @@ export async function broadcastSupportMessage(
 		// Determine event type based on message role
 		const eventType = message.role === 'system' ? 'system_message' : 'new_message';
 
-		await channel.send({
-			type: 'broadcast',
-			event: eventType,
-			payload: {
-				message,
-			},
+		await channel.httpSend(eventType, {
+			message,
 		});
 
 		supabase.removeChannel(channel);
