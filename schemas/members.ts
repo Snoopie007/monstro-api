@@ -109,8 +109,8 @@ export const familyMembers = pgTable("family_members", {
     relatedMemberId: text("related_member_id")
         .notNull()
         .references(() => members.id, { onDelete: "cascade" }),
-    // contact: text("contact"),
-    // status: FamilyMemberStatusEnum("status").notNull().default("pending"),
+    contact: text("contact"),
+    status: FamilyMemberStatusEnum("status").notNull().default("pending"),
     relationship: MemberRelationshipEnum("relationship")
         .notNull()
         .default("extended"),
