@@ -6,18 +6,18 @@ import { RealTimeEvents } from '@subtrees/constants/data';
  * @param chatId - The chat ID to broadcast to
  * @param message - The updated message to broadcast
  */
-export async function broadcastNewFeed(userIds: string[], feed: UserFeed): Promise<void> {
+export async function broadcastNewFeeds(newFeeds: UserFeed[]): Promise<void> {
 
 
     try {
 
-        await Promise.all(userIds.map(async (userId) => {
-            const channel = supabase.createChannel(`user:${userId}`);
+        await Promise.all(newFeeds.map(async (feed) => {
+            const channel = supabase.createChannel(`user:${feed.userId}`);
             await channel.send({
                 type: 'broadcast',
                 event: RealTimeEvents.feeds.NEW_FEED,
                 payload: {
-                    feed
+
                 },
             });
             supabase.removeChannel(channel);

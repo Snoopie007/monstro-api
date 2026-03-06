@@ -10,9 +10,13 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
+    triggerNewMember,
+    triggerPurchase,
 } from "@/utils";
 
 import Stripe from "stripe";
+import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { LocationStatus } from "@subtrees/types";
 
 const PurchasePkgProps = {
     params: z.object({
@@ -92,28 +96,62 @@ export function purchasePkgRoutes(app: Elysia) {
 
             try {
 
-                const [member, location, pricing] = await Promise.all([
+                const [member, pricing, ml] = await Promise.all([
                     db.query.members.findFirst({
                         where: (member, { eq }) => eq(member.id, mid),
-                    }),
-                    db.query.locations.findFirst({
-                        where: (location, { eq }) => eq(location.id, lid),
-                        with: {
-                            taxRates: true,
-                            locationState: true,
-                            integrations: {
-                                where: (integration, { eq }) => eq(integration.service, "stripe"),
-                                columns: {
-                                    accountId: true,
-                                    service: true,
-                                },
-                            },
+                        columns: {
+                            userId: true,
+                            stripeCustomerId: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
                         },
                     }),
+
                     db.query.memberPlanPricing.findFirst({
                         where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
                         with: {
                             plan: true,
+                        },
+                    }),
+                    db.query.memberLocations.findFirst({
+                        where: (memberLocation, { and, eq }) => and(
+                            eq(memberLocation.memberId, mid),
+                            eq(memberLocation.locationId, lid)
+                        ),
+                        with: {
+                            location: {
+                                columns: {
+                                    name: true,
+                                    phone: true,
+                                    email: true,
+                                },
+                                with: {
+                                    taxRates: {
+                                        columns: {
+                                            percentage: true,
+                                            isDefault: true,
+                                        },
+                                    },
+                                    locationState: {
+                                        columns: {
+                                            planId: true,
+                                            usagePercent: true,
+                                            settings: true,
+                                        },
+                                    },
+                                    integrations: {
+                                        where: (integration, { eq }) => eq(integration.service, "stripe"),
+                                        columns: {
+                                            accountId: true,
+                                            service: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        columns: {
+                            status: true,
                         },
                     })
                 ]);
@@ -125,7 +163,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 }
 
 
-                if (!location) {
+                if (!ml || !ml.location) {
                     return status(404, { error: "Location not found" });
                 }
 
@@ -134,7 +172,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     return status(404, { error: "Pricing not found" });
                 }
 
-                const { taxRates, locationState, integrations } = location;
+                const { taxRates, locationState, integrations } = ml.location;
 
                 const integration = integrations[0];
                 if (!integration || !integration.accountId) {
@@ -250,7 +288,19 @@ export function purchasePkgRoutes(app: Elysia) {
                     },
                 });
 
-
+                if (ml && ml.status === LocationStatus.INCOMPLETE) {
+                    triggerNewMember({ planId: pricing.plan.id, mid, lid }).catch((error) => {
+                        console.error("Error triggering new member:", error);
+                    });
+                } else {
+                    triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
+                        if (a) {
+                            broadcastAchievement(member.userId, a)
+                        }
+                    }).catch((error) => {
+                        console.error("Error triggering purchase:", error);
+                    });
+                }
                 return status(200, { status: "active" });
             } catch (error) {
                 console.log(error);

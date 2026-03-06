@@ -10,7 +10,8 @@ import {
 } from "@/libs/broadcast/messages";
 import type {
     Media, Message,
-    ReactionCount, MessageReply
+    ReactionCount, MessageReply,
+    User
 } from "@subtrees/types";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
@@ -55,7 +56,7 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
 
 
 
-async function notifyNewMessage(message: Message, userIds: string[]): Promise<void> {
+async function notifyNewMessage(sender: { name: string, image: string | null }, message: Message, chatId: string, messageId: string, userIds: string[]): Promise<void> {
     const notifications = await db.query.userNotifications.findMany({
         where: (n, { eq, inArray, and }) => and(
             inArray(n.userId, userIds),
@@ -69,11 +70,13 @@ async function notifyNewMessage(message: Message, userIds: string[]): Promise<vo
     const tokens = notifications.map(n => n.token);
     const messages = tokens.map(token => ({
         to: token,
-        title: 'New message',
-        body: message.content || 'New message',
-        channelId: "messages",
+        title: sender.name,
+        body: message.content || 'shared a picture',
+        channelId: "default",
+        categoryId: "message",
+        ...(sender.image ? { richContent: { image: sender.image } } : {}),
         data: {
-            messageId: message.id,
+            messageId: messageId,
             chatId: message.chatId,
         },
     }));
@@ -192,6 +195,14 @@ export function messageRoute(app: Elysia) {
                 where: eq(chats.id, cid),
                 with: {
                     chatMembers: {
+                        with: {
+                            user: {
+                                columns: {
+                                    name: true,
+                                    image: true,
+                                }
+                            }
+                        },
                         columns: {
                             userId: true,
                         }
@@ -233,11 +244,7 @@ export function messageRoute(app: Elysia) {
 
             let medias: Media[] = [];
             if (files && files.length > 0) {
-                // console.log('[DEBUG] Inserting media for message:', {
-                //     messageId: newMessage.id,
-                //     fileCount: files.length,
-                //     files: files.map((f: any) => ({ fileName: f.fileName, url: f.url }))
-                // });
+
 
                 medias = await db.insert(media).values(files.map((file: any) => ({
                     ...file,
@@ -246,10 +253,6 @@ export function messageRoute(app: Elysia) {
                     fileType: getFileTypeCategory(file.mimeType),
                 }))).returning();
 
-                // console.log('[DEBUG] Inserted media:', {
-                //     count: medias.length,
-                //     ids: medias.map(m => m.id)
-                // });
             }
 
             const enrichedMessage: Message = {
@@ -290,7 +293,6 @@ export function messageRoute(app: Elysia) {
                     }
                 }
 
-
                 // Only update unreadCount and broadcast for inactive-but-online users
                 if (inactiveButOnlineUserIds.length > 0) {
                     await db.update(chatMembers).set({
@@ -304,8 +306,8 @@ export function messageRoute(app: Elysia) {
 
                 // Optionally: handle offlineUserIds (e.g., send push notification)
                 if (onlineUserIds.length > 0) {
-                    // send notification to users not using the app
-
+                    const user = chat?.chatMembers.find(m => m.userId === uid)?.user as { name: string, image: string | null };
+                    notifyNewMessage(user, enrichedMessage, cid, newMessage.id, offlineUserIds);
                 }
             }
 

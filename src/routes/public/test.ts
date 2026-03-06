@@ -1,26 +1,29 @@
 import { Elysia, t } from "elysia";
-import { paymentQueue, testQueue } from "@/queues";
-import { MemberStripePayments } from "@/libs/stripe";
-import { db } from "@/db/db";
-import Stripe from "stripe";
 import { sendNotifications } from "@/libs/expo";
 import { broadcastMessageUnread } from "@/libs/broadcast/messages";
 
 const TEST_PUSH_TOKENS = [
     "ExponentPushToken[mRfnnIAg7baHwm4QgUH6Ay]",
     "ExponentPushToken[bBsoSMHiFy9hnQCXUJsqOq]",
+    "ExponentPushToken[2bGQf-OeaQYLnnvo-iGjH5]",
 ];
 
 export function testRoutes(app: Elysia) {
     return app
         // GET /public/test/push — send test push to TEST_PUSH_TOKENS (server must be running)
-        .get("/test/push", async ({ set }) => {
+        .post("/test/push", async ({ set }) => {
             try {
                 const messages = TEST_PUSH_TOKENS.map((to) => ({
                     to,
-                    title: "Test notification",
-                    body: "This is a test push from the server.",
-                    data: { screen: "test" },
+                    title: "Allen Mayorga",
+                    body: "New message from Allen Mayorga",
+                    icon: "https://avatars.githubusercontent.com/u/26342387?v=4",
+                    channelId: "default",
+                    categoryId: "message",
+                    richContent: {
+                        image: "https://avatars.githubusercontent.com/u/26342387?v=4",
+                    },
+                    data: { screen: "messages", messageId: "1234567890", chatId: "3534534" },
                 }));
                 const tickets = await sendNotifications(messages);
                 return { ok: true, tickets, sent: tickets.length };

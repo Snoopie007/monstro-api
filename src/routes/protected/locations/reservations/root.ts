@@ -13,6 +13,8 @@ import { differenceInMilliseconds } from "date-fns";
 import { toZonedTime } from 'date-fns-tz';
 import { checkSubClassCredits, getSessionState, scheduleClassReminderJobs } from "./utils";
 import { chargeWallet } from "@/libs/wallet";
+import { triggerFirstBooking } from "@/utils/triggers";
+import { broadcastAchievement } from "@/libs/broadcast";
 
 const ReservationsProps = {
     params: t.Object({
@@ -44,56 +46,23 @@ export async function locationReservations(app: Elysia) {
             const { memberPlanId, session, autoReschedule, plan } = body;
             const isPackage = memberPlanId.startsWith("pkg_");
             try {
-
-                const location = await db.query.locations.findFirst({
-                    where: (locations, { eq }) => eq(locations.id, lid),
-                    columns: {
-                        id: true,
-                        vendorId: true,
-                        name: true,
-                        email: true,
-                        phone: true,
-                        timezone: true,
-                    },
-                    with: {
-                        locationState: {
-                            columns: {
-                                planId: true,
-                            }
-                        }
-                    }
-                });
-
-                if (!location) {
-                    throw new Error("Location not found");
-                }
-
                 let pkg = undefined;
                 let sub = undefined;
                 let classLimitReached = false;
-                let member = undefined;
+                let memberId = undefined;
                 if (isPackage) {
                     pkg = await db.query.memberPackages.findFirst({
                         where: (mp, { eq, and }) => and(
                             eq(mp.id, memberPlanId),
                             eq(mp.status, "active")
                         ),
-                        with: {
-                            member: {
-                                columns: {
-                                    id: true,
-                                    firstName: true,
-                                    lastName: true,
-                                    email: true,
-                                },
-                            },
-                        },
                         columns: {
                             totalClassLimit: true,
                             totalClassAttended: true,
+                            memberId: true,
                         }
                     });
-                    member = pkg?.member;
+                    memberId = pkg?.memberId;
                     classLimitReached = pkg ? pkg.totalClassAttended >= pkg.totalClassLimit : false;
                 } else {
                     sub = await db.query.memberSubscriptions.findFirst({
@@ -113,6 +82,7 @@ export async function locationReservations(app: Elysia) {
                         },
                         columns: {
                             id: true,
+                            memberId: true,
                             classCredits: true,
                         },
                     });
@@ -120,19 +90,63 @@ export async function locationReservations(app: Elysia) {
                     if (plan.classLimitInterval === 'term' && sub?.classCredits === 0) {
                         return status(200, { success: false, message: "No credits available for your plan." });
                     }
-                    member = sub?.member;
+
+                    memberId = sub?.memberId;
                     classLimitReached = sub ? await checkSubClassCredits({
                         sid: sub.id,
-                        mid: member?.id,
+                        mid: sub.memberId,
                         classLimitInterval: plan.classLimitInterval,
                         totalClassLimit: plan.totalClassLimit
                     }) : false;
                 }
 
-                if (!pkg && !sub) {
+                if (!pkg || !sub || !memberId) {
                     throw new Error("Member plan not found");
                 }
 
+                const ml = await db.query.memberLocations.findFirst({
+                    where: (ml, { eq, and }) => and(
+                        eq(ml.memberId, memberId),
+                        eq(ml.locationId, lid)
+                    ),
+                    with: {
+                        member: {
+                            columns: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                                userId: true,
+                            },
+                        },
+                        location: {
+                            columns: {
+                                id: true,
+                                vendorId: true,
+                                name: true,
+                                email: true,
+                                phone: true,
+                                timezone: true,
+                            },
+                            with: {
+                                locationState: {
+                                    columns: {
+                                        planId: true,
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    columns: {
+                        onboarded: true,
+                    },
+                });
+
+
+                if (!ml) {
+                    throw new Error("Member  not found");
+                }
+                const { member, location } = ml;
                 if (!member) {
                     throw new Error("Member not found");
                 }
@@ -156,7 +170,7 @@ export async function locationReservations(app: Elysia) {
                 const { isFull, isReserved } = await getSessionState({
                     startTime: utcStartTime,
                     sessionId: session.id,
-                    memberId: member.id,
+                    memberId,
                     capacity: session.capacity ?? 0,
                 });
 
@@ -169,7 +183,7 @@ export async function locationReservations(app: Elysia) {
                 const reservation = await db.transaction(async (tx) => {
                     // Explicitly cast to Reservation[] (or whatever Drizzle returns)
                     const inserted = await tx.insert(reservations).values({
-                        memberId: member.id,
+                        memberId,
                         locationId: lid,
                         programName: session.programName,
                         sessionId: session.id,
@@ -209,26 +223,39 @@ export async function locationReservations(app: Elysia) {
 
                 // No growth charge 10 cents per reservation
                 const noGrowthPlan = [1, 2].includes(location.locationState?.planId);
-                let success = false;
                 if (noGrowthPlan) {
-                    success = await chargeWallet({
+                    chargeWallet({
                         lid,
                         vendorId: location.vendorId,
                         amount: 1000,
                         description: `Reservation fee for ${session.programName}`,
+                    }).then((charged) => {
+                        if (charged) {
+                            scheduleClassReminderJobs({
+                                lid,
+                                reservationId: reservation.id,
+                                memberPlanId,
+                                member,
+                                location,
+                                session,
+                                plan,
+                                autoReschedule: autoReschedule ?? false,
+                            }).catch((error) => {
+                                console.error("Error scheduling class reminder jobs:", error);
+                            });
+                        }
+                    }).catch((error) => {
+                        console.error("Error charging wallet:", error);
+                        return false;
                     });
                 }
 
-                if (success) {
-                    await scheduleClassReminderJobs({
-                        lid,
-                        reservationId: reservation.id,
-                        memberPlanId,
-                        member,
-                        location,
-                        session,
-                        plan,
-                        autoReschedule: autoReschedule ?? false,
+                if (!ml.onboarded) {
+                    triggerFirstBooking({ mid: memberId, lid }).then((achievement) => {
+                        if (achievement) {
+                            broadcastAchievement(member.userId, achievement)
+                        }
+                    }).catch((error) => {
                     });
                 }
                 return status(200, { success: true, data: reservation });

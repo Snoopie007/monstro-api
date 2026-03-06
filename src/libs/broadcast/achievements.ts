@@ -7,25 +7,22 @@ import type { Achievement } from '@subtrees/types';
  * @param chatId - The chat ID to broadcast to
  * @param message - The updated message to broadcast
  */
-export async function broadcastNewFeed(userIds: string[], data: Achievement): Promise<void> {
+export async function broadcastAchievement(userId: string, data: Achievement): Promise<void> {
 
     try {
+        const channel = supabase.createChannel(`user:${userId}`);
+        await channel.send({
+            type: 'broadcast',
+            event: RealTimeEvents.achievements.UNLOCKED,
+            payload: {
+                badge: data.badge,
+                name: data.name,
+                description: data.description,
+                points: data.points,
 
-        await Promise.all(userIds.map(async (userId) => {
-            const channel = supabase.createChannel(`user:${userId}`);
-            await channel.send({
-                type: 'broadcast',
-                event: RealTimeEvents.achievements.UNLOCKED,
-                payload: {
-                    badge: data.badge,
-                    name: data.name,
-                    description: data.description,
-                    points: data.points,
-
-                },
-            });
-            supabase.removeChannel(channel);
-        }));
+            },
+        });
+        supabase.removeChannel(channel);
 
     } catch (error) {
         console.error('Error broadcasting message update:', error);

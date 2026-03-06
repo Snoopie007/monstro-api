@@ -7,12 +7,16 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
+    triggerNewMember,
+    triggerPurchase,
 } from "@/utils";
 import {
     scheduleCronBasedRenewal, scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
 import type { SubscriptionJobData } from "@subtrees/bullmq";
 import Stripe from "stripe";
+import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { LocationStatus } from "@subtrees/types";
 
 
 
@@ -113,7 +117,7 @@ export function purchaseSubRoutes(app: Elysia) {
 
             try {
 
-                const [sub, location, pricing] = await Promise.all([
+                const [sub, pricing, ml] = await Promise.all([
                     db.query.memberSubscriptions.findFirst({
                         where: (memberSubscription, { eq }) => eq(memberSubscription.id, memberPlanId),
                         columns: {
@@ -125,6 +129,7 @@ export function purchaseSubRoutes(app: Elysia) {
                                 columns: {
                                     firstName: true,
                                     lastName: true,
+                                    userId: true,
                                     email: true,
                                     stripeCustomerId: true,
                                 },
@@ -132,25 +137,50 @@ export function purchaseSubRoutes(app: Elysia) {
                         },
                     }),
 
-
-                    db.query.locations.findFirst({
-                        where: (location, { eq }) => eq(location.id, lid),
-                        with: {
-                            taxRates: true,
-                            locationState: true,
-                            integrations: {
-                                where: (integration, { eq }) => eq(integration.service, "stripe"),
-                                columns: {
-                                    accountId: true,
-                                    service: true,
-                                },
-                            },
-                        },
-                    }),
                     db.query.memberPlanPricing.findFirst({
                         where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
                         with: {
                             plan: true,
+                        },
+                    }),
+                    db.query.memberLocations.findFirst({
+                        where: (memberLocation, { and, eq }) => and(
+                            eq(memberLocation.memberId, mid),
+                            eq(memberLocation.locationId, lid)
+                        ),
+                        with: {
+                            location: {
+                                columns: {
+                                    name: true,
+                                    phone: true,
+                                    email: true,
+                                },
+                                with: {
+                                    taxRates: {
+                                        columns: {
+                                            percentage: true,
+                                            isDefault: true,
+                                        },
+                                    },
+                                    locationState: {
+                                        columns: {
+                                            planId: true,
+                                            usagePercent: true,
+                                            settings: true,
+                                        },
+                                    },
+                                    integrations: {
+                                        where: (integration, { eq }) => eq(integration.service, "stripe"),
+                                        columns: {
+                                            accountId: true,
+                                            service: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        columns: {
+                            status: true,
                         },
                     })
                 ]);
@@ -164,7 +194,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(404, { error: "Member or Stripe customer not found" });
                 }
 
-                if (!location) {
+                if (!ml || !ml.location) {
                     return status(404, { error: "Location not found" });
                 }
 
@@ -176,7 +206,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(400, { error: "Invalid pricing for subscription plan." });
                 }
 
-                const { taxRates, locationState, integrations } = location;
+                const { taxRates, locationState, integrations } = ml.location;
 
                 const integration = integrations?.find((i) => i.service === "stripe");
                 if (!integration) {
@@ -200,7 +230,6 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(404, { error: "Payment method not found" });
                 }
 
-                const now = new Date();
                 const startDate = new Date(currentPeriodStart);
 
                 let discount: number = 0;
@@ -308,9 +337,9 @@ export function purchaseSubRoutes(app: Elysia) {
                             taxRate: taxRate?.percentage || 0,
                             stripeCustomerId: member.stripeCustomerId,
                             location: {
-                                name: location.name,
-                                phone: location.phone,
-                                email: location.email,
+                                name: ml.location.name,
+                                phone: ml.location.phone,
+                                email: ml.location.email,
                             },
                             pricing: {
                                 name: pricing.name,
@@ -347,6 +376,18 @@ export function purchaseSubRoutes(app: Elysia) {
                         }
                     }
                 }
+
+                if (ml && ml.status === LocationStatus.INCOMPLETE) {
+                    triggerNewMember({ planId: pricing.plan.id, mid, lid });
+                } else {
+                    triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
+                        if (a) {
+                            broadcastAchievement(member.userId, a)
+                        }
+                    })
+                }
+
+
 
                 return status(200, { success: true });
             } catch (error) {
