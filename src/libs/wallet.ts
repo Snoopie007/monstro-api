@@ -3,6 +3,37 @@ import { VendorStripePayments } from "./stripe";
 import { wallets, walletUsages } from "@subtrees/schemas";
 import { eq, sql } from "drizzle-orm";
 
+type ReserveAIBudgetProps = {
+    lid: string;
+    operationId: string;
+    amount: number;
+    description?: string;
+};
+
+type SettleAIBudgetProps = {
+    lid: string;
+    operationId: string;
+    reservedAmount: number;
+    actualAmount: number;
+    description?: string;
+};
+
+type RefundAIBudgetProps = {
+    lid: string;
+    operationId: string;
+    reservedAmount: number;
+    reason?: string;
+};
+
+type WalletMutationResult = {
+    ok: boolean;
+    reason?: string;
+    available?: number;
+    charged?: number;
+    refunded?: number;
+    shortfall?: number;
+};
+
 type RechargeWalletProps = {
     lid: string;
     vendorId: string;
@@ -137,7 +168,283 @@ async function chargeWallet({ lid, vendorId, amount, description }: ChargeWallet
     }
 }
 
+async function reserveAIBudgetAtomic({ lid, operationId, amount, description }: ReserveAIBudgetProps): Promise<WalletMutationResult> {
+    const reserveAmount = Math.max(0, Math.floor(amount));
+    if (!reserveAmount) {
+        return { ok: true, charged: 0 };
+    }
+
+    try {
+        return await db.transaction(async (tx) => {
+            const rows = await tx.execute(sql`
+                SELECT id, balance, credits
+                FROM wallets
+                WHERE location_id = ${lid}
+                LIMIT 1
+                FOR UPDATE
+            `) as unknown as Array<{ id: string; balance: number; credits: number }>;
+
+            const wallet = rows[0];
+            if (!wallet) {
+                return { ok: false, reason: "WALLET_NOT_FOUND" };
+            }
+
+            const reserveLabel = `AI_RESERVE op:${operationId}`;
+            const existingReserve = await tx.execute(sql`
+                SELECT id, amount
+                FROM wallet_usages
+                WHERE wallet_id = ${wallet.id}
+                  AND description LIKE ${`${reserveLabel}%`}
+                LIMIT 1
+            `) as unknown as Array<{ id: string; amount: number }>;
+
+            if (existingReserve[0]) {
+                return { ok: true, charged: Number(existingReserve[0].amount || reserveAmount) };
+            }
+
+            const startingBalance = Number(wallet.balance || 0);
+            const startingCredits = Number(wallet.credits || 0);
+            const available = startingBalance + startingCredits;
+
+            if (available < reserveAmount) {
+                return { ok: false, reason: "INSUFFICIENT_FUNDS", available };
+            }
+
+            const creditsUsed = Math.min(startingCredits, reserveAmount);
+            const chargeFromBalance = reserveAmount - creditsUsed;
+            const newCredits = startingCredits - creditsUsed;
+            const newBalance = startingBalance - chargeFromBalance;
+
+            await tx.update(wallets).set({
+                balance: newBalance,
+                credits: newCredits,
+                updated: new Date(),
+            }).where(eq(wallets.id, wallet.id));
+
+            await tx.insert(walletUsages).values({
+                walletId: wallet.id,
+                balance: newBalance,
+                amount: reserveAmount,
+                isCredit: chargeFromBalance === 0,
+                description: reserveLabel + (description ? ` ${description}` : ""),
+                activityDate: new Date(),
+            });
+
+            return { ok: true, charged: reserveAmount };
+        });
+    } catch {
+        return { ok: false, reason: "RESERVE_FAILED" };
+    }
+}
+
+async function settleAIBudgetAtomic({ lid, operationId, reservedAmount, actualAmount, description }: SettleAIBudgetProps): Promise<WalletMutationResult> {
+    const reserve = Math.max(0, Math.floor(reservedAmount));
+    const actual = Math.max(0, Math.floor(actualAmount));
+
+    try {
+        return await db.transaction(async (tx) => {
+            const rows = await tx.execute(sql`
+                SELECT id, balance, credits
+                FROM wallets
+                WHERE location_id = ${lid}
+                LIMIT 1
+                FOR UPDATE
+            `) as unknown as Array<{ id: string; balance: number; credits: number }>;
+
+            const wallet = rows[0];
+            if (!wallet) {
+                return { ok: false, reason: "WALLET_NOT_FOUND" };
+            }
+
+            const settleLabel = `AI_SETTLE op:${operationId}`;
+            const existingSettle = await tx.execute(sql`
+                SELECT id
+                FROM wallet_usages
+                WHERE wallet_id = ${wallet.id}
+                  AND description LIKE ${`${settleLabel}%`}
+                LIMIT 1
+            `) as unknown as Array<{ id: string }>;
+
+            if (existingSettle[0]) {
+                return { ok: true, charged: actual };
+            }
+
+            const reserveLabel = `AI_RESERVE op:${operationId}`;
+            const reserveExists = await tx.execute(sql`
+                SELECT id
+                FROM wallet_usages
+                WHERE wallet_id = ${wallet.id}
+                  AND description LIKE ${`${reserveLabel}%`}
+                LIMIT 1
+            `) as unknown as Array<{ id: string }>;
+
+            if (!reserveExists[0]) {
+                return { ok: false, reason: "RESERVE_NOT_FOUND" };
+            }
+
+            let balance = Number(wallet.balance || 0);
+            let credits = Number(wallet.credits || 0);
+            let refunded = 0;
+            let charged = reserve;
+            let shortfall = 0;
+
+            if (actual < reserve) {
+                refunded = reserve - actual;
+                balance += refunded;
+                charged = actual;
+            } else if (actual > reserve) {
+                const extra = actual - reserve;
+                const available = balance + credits;
+                if (available >= extra) {
+                    const creditsUsed = Math.min(credits, extra);
+                    const fromBalance = extra - creditsUsed;
+                    credits -= creditsUsed;
+                    balance -= fromBalance;
+                    charged = actual;
+
+                    await tx.insert(walletUsages).values({
+                        walletId: wallet.id,
+                        balance,
+                        amount: extra,
+                        isCredit: fromBalance === 0,
+                        description: `AI_TOPUP op:${operationId}`,
+                        activityDate: new Date(),
+                    });
+                } else {
+                    shortfall = extra - available;
+                    charged = reserve + available;
+                    balance = 0;
+                    credits = 0;
+
+                    if (available > 0) {
+                        await tx.insert(walletUsages).values({
+                            walletId: wallet.id,
+                            balance,
+                            amount: available,
+                            isCredit: false,
+                            description: `AI_PARTIAL_TOPUP op:${operationId}`,
+                            activityDate: new Date(),
+                        });
+                    }
+                }
+            }
+
+            await tx.update(wallets).set({
+                balance,
+                credits,
+                updated: new Date(),
+            }).where(eq(wallets.id, wallet.id));
+
+            if (refunded > 0) {
+                await tx.insert(walletUsages).values({
+                    walletId: wallet.id,
+                    balance,
+                    amount: refunded,
+                    isCredit: true,
+                    description: `AI_REFUND op:${operationId}`,
+                    activityDate: new Date(),
+                });
+            }
+
+            await tx.insert(walletUsages).values({
+                walletId: wallet.id,
+                balance,
+                amount: charged,
+                isCredit: false,
+                description: settleLabel + (description ? ` ${description}` : "") + (shortfall > 0 ? ` shortfall:${shortfall}` : ""),
+                activityDate: new Date(),
+            });
+
+            return { ok: shortfall === 0, charged, refunded, shortfall };
+        });
+    } catch {
+        return { ok: false, reason: "SETTLE_FAILED" };
+    }
+}
+
+async function refundAIBudgetAtomic({ lid, operationId, reservedAmount, reason }: RefundAIBudgetProps): Promise<WalletMutationResult> {
+    const reserve = Math.max(0, Math.floor(reservedAmount));
+    if (!reserve) {
+        return { ok: true, refunded: 0 };
+    }
+
+    try {
+        return await db.transaction(async (tx) => {
+            const rows = await tx.execute(sql`
+                SELECT id, balance
+                FROM wallets
+                WHERE location_id = ${lid}
+                LIMIT 1
+                FOR UPDATE
+            `) as unknown as Array<{ id: string; balance: number }>;
+
+            const wallet = rows[0];
+            if (!wallet) {
+                return { ok: false, reason: "WALLET_NOT_FOUND" };
+            }
+
+            const settleLabel = `AI_SETTLE op:${operationId}`;
+            const existingSettle = await tx.execute(sql`
+                SELECT id
+                FROM wallet_usages
+                WHERE wallet_id = ${wallet.id}
+                  AND description LIKE ${`${settleLabel}%`}
+                LIMIT 1
+            `) as unknown as Array<{ id: string }>;
+            if (existingSettle[0]) {
+                return { ok: true, refunded: 0 };
+            }
+
+            const refundLabel = `AI_RESERVE_REFUND op:${operationId}`;
+            const existingRefund = await tx.execute(sql`
+                SELECT id
+                FROM wallet_usages
+                WHERE wallet_id = ${wallet.id}
+                  AND description LIKE ${`${refundLabel}%`}
+                LIMIT 1
+            `) as unknown as Array<{ id: string }>;
+            if (existingRefund[0]) {
+                return { ok: true, refunded: reserve };
+            }
+
+            const reserveLabel = `AI_RESERVE op:${operationId}`;
+            const reserveExists = await tx.execute(sql`
+                SELECT id
+                FROM wallet_usages
+                WHERE wallet_id = ${wallet.id}
+                  AND description LIKE ${`${reserveLabel}%`}
+                LIMIT 1
+            `) as unknown as Array<{ id: string }>;
+            if (!reserveExists[0]) {
+                return { ok: true, refunded: 0 };
+            }
+
+            const newBalance = Number(wallet.balance || 0) + reserve;
+            await tx.update(wallets).set({
+                balance: newBalance,
+                updated: new Date(),
+            }).where(eq(wallets.id, wallet.id));
+
+            await tx.insert(walletUsages).values({
+                walletId: wallet.id,
+                balance: newBalance,
+                amount: reserve,
+                isCredit: true,
+                description: refundLabel + (reason ? ` ${reason}` : ""),
+                activityDate: new Date(),
+            });
+
+            return { ok: true, refunded: reserve };
+        });
+    } catch {
+        return { ok: false, reason: "REFUND_FAILED" };
+    }
+}
+
 export {
     hasEnoughBalance,
-    chargeWallet
+    chargeWallet,
+    reserveAIBudgetAtomic,
+    settleAIBudgetAtomic,
+    refundAIBudgetAtomic,
 }
