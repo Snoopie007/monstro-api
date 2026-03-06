@@ -72,6 +72,15 @@ export function assistantChatRoute(app: Elysia) {
               description: "assistant_chat",
             });
             if (settleResult.ok || typeof settleResult.shortfall === "number") {
+              if (typeof settleResult.shortfall === "number" && settleResult.shortfall > 0) {
+                console.warn("Assistant wallet shortfall during settlement", {
+                  lid,
+                  operationId,
+                  reservedAmount,
+                  actualAmount,
+                  shortfall: settleResult.shortfall,
+                });
+              }
               finalizationState = "settled";
               return;
             }

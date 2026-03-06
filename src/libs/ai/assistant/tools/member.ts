@@ -125,7 +125,7 @@ export async function executeMemberLookupTool(params: {
           totals: {
             members: Number(row.total_count || 0),
             activeMembers: Number(row.active_count || 0),
-            joinedLast30Days: Number(row.joined_last_30_days || 0),
+            joinedInRequestedRange: Number(joinedWithinDays ? row.total_count || 0 : row.joined_last_30_days || 0),
           },
         }),
       };

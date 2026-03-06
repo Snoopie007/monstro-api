@@ -231,9 +231,16 @@ async function recallMemories(locationId: string, message: string): Promise<Reca
 }
 
 async function enqueueWritebackJob(job: AssistantMemoryWritebackJob) {
+  const finalizeJobId = `mem-finalize-${job.locationId}-${job.threadId}`;
+
   await assistantMemoryWritebackQueue.add("memory:writeback", job, {
-    jobId: `mem-write-${job.locationId}-${job.threadId}-${Date.now()}`,
+    jobId: `mem-write-${job.locationId}-${job.threadId}-${job.turnId}`,
   });
+
+  const existingFinalizeJob = await assistantMemoryWritebackQueue.getJob(finalizeJobId);
+  if (existingFinalizeJob) {
+    await existingFinalizeJob.remove();
+  }
 
   await assistantMemoryWritebackQueue.add(
     "memory:thread-finalize",
@@ -243,7 +250,7 @@ async function enqueueWritebackJob(job: AssistantMemoryWritebackJob) {
       triggerAt: new Date().toISOString(),
     },
     {
-      jobId: `mem-finalize-${job.locationId}-${job.threadId}-${Date.now()}`,
+      jobId: finalizeJobId,
       delay: Number(process.env.ASSISTANT_THREAD_IDLE_MS || 10 * 60 * 1000),
     },
   );
@@ -438,6 +445,7 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
   const finalReply = unsupportedReply || reply;
 
   const writebackJob: AssistantMemoryWritebackJob = {
+    turnId: crypto.randomUUID(),
     locationId: props.locationId,
     vendorId: props.vendorId,
     userId: props.userId,

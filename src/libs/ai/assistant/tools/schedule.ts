@@ -45,7 +45,7 @@ export async function executeScheduleTool(params: {
       : (typeof input.range === "string" ? input.range : "next 14 days");
     const days = parseRangeDays(rangeText);
 
-    if (action !== "check" && context.confirmationIntent === "cancel") {
+    if (action === "create" && context.confirmationIntent === "cancel") {
       return {
         content: JSON.stringify({
           ok: true,
@@ -60,16 +60,15 @@ export async function executeScheduleTool(params: {
       };
     }
 
-    if (action !== "check" && context.confirmationIntent !== "confirm") {
+    if (action !== "check" && action !== "create") {
       return {
         content: JSON.stringify({
-          ok: true,
+          ok: false,
           locationId: context.locationId,
           tool: name,
           action,
-          status: "requires_confirmation",
-          message: "Mutation actions are staged. Ask user to confirm exact schedule details before execution.",
-          input,
+          status: "unsupported_action",
+          message: "Only booking creation and availability checks are supported right now.",
         }),
       };
     }
@@ -393,19 +392,92 @@ export async function executeScheduleTool(params: {
       const endDate = new Date(startDate.getTime() + Number(selectedSlot.duration || 0) * 60 * 1000);
       const endIso = endDate.toISOString();
 
-      const duplicateRows = await db.execute(sql`
-        SELECT id
-        FROM reservations
-        WHERE location_id = ${context.locationId}
-          AND member_id = ${member.id}
-          AND session_id = ${selectedSlot.id}
-          AND start_on = ${startIso}::timestamptz
-          AND status IN ('confirmed', 'completed')
-        LIMIT 1
-      `) as unknown as Array<{ id: string }>;
+      const bookingResult = await db.transaction(async (tx: any) => {
+        const bookingLockKey = `${context.locationId}:${selectedSlot.id}:${startIso}`;
 
-      const existingReservation = duplicateRows.at(0);
-      if (existingReservation) {
+        await tx.execute(sql`
+          SELECT pg_advisory_xact_lock(hashtext(${bookingLockKey}))
+        `);
+
+        const duplicateRows = await tx.execute(sql`
+          SELECT id
+          FROM reservations
+          WHERE location_id = ${context.locationId}
+            AND member_id = ${member.id}
+            AND session_id = ${selectedSlot.id}
+            AND start_on = ${startIso}::timestamptz
+            AND status IN ('confirmed', 'completed')
+          LIMIT 1
+        `) as unknown as Array<{ id: string }>;
+
+        const existingReservation = duplicateRows.at(0);
+        if (existingReservation) {
+          return {
+            status: "already_booked" as const,
+            reservationId: existingReservation.id,
+          };
+        }
+
+        const occupancyRows = await tx.execute(sql`
+          SELECT COUNT(*)::int AS confirmed_count
+          FROM reservations
+          WHERE location_id = ${context.locationId}
+            AND session_id = ${selectedSlot.id}
+            AND start_on = ${startIso}::timestamptz
+            AND status IN ('confirmed', 'completed')
+        `) as unknown as Array<{ confirmed_count: number }>;
+
+        const confirmedCount = Number(occupancyRows[0]?.confirmed_count || 0);
+        const slotCapacity = Number(program.capacity || 0);
+
+        if (slotCapacity > 0 && confirmedCount >= slotCapacity) {
+          return {
+            status: "slot_full" as const,
+            confirmedCount,
+            remainingSpots: Math.max(slotCapacity - confirmedCount, 0),
+          };
+        }
+
+        const insertRows = await tx.execute(sql`
+          INSERT INTO reservations (
+            session_id,
+            start_on,
+            end_on,
+            location_id,
+            member_id,
+            program_id,
+            program_name,
+            session_time,
+            session_duration,
+            session_day,
+            status,
+            is_make_up_class,
+            updated_at
+          ) VALUES (
+            ${selectedSlot.id},
+            ${startIso}::timestamptz,
+            ${endIso}::timestamptz,
+            ${context.locationId},
+            ${member.id},
+            ${program.id},
+            ${program.name},
+            ${selectedSlot.time}::time,
+            ${selectedSlot.duration},
+            ${selectedSlot.day},
+            'confirmed',
+            false,
+            now()
+          )
+          RETURNING id
+        `) as unknown as Array<{ id: string }>;
+
+        return {
+          status: "booked" as const,
+          reservationId: insertRows[0]?.id || null,
+        };
+      });
+
+      if (bookingResult.status === "already_booked") {
         return {
           content: JSON.stringify({
             ok: true,
@@ -413,44 +485,31 @@ export async function executeScheduleTool(params: {
             tool: name,
             action,
             status: "already_booked",
-            reservationId: existingReservation.id,
+            reservationId: bookingResult.reservationId,
             message: "This reservation already exists for the requested slot.",
           }),
         };
       }
 
-      const insertRows = await db.execute(sql`
-        INSERT INTO reservations (
-          session_id,
-          start_on,
-          end_on,
-          location_id,
-          member_id,
-          program_id,
-          program_name,
-          session_time,
-          session_duration,
-          session_day,
-          status,
-          is_make_up_class,
-          updated_at
-        ) VALUES (
-          ${selectedSlot.id},
-          ${startIso}::timestamptz,
-          ${endIso}::timestamptz,
-          ${context.locationId},
-          ${member.id},
-          ${program.id},
-          ${program.name},
-          ${selectedSlot.time}::time,
-          ${selectedSlot.duration},
-          ${selectedSlot.day},
-          'confirmed',
-          false,
-          now()
-        )
-        RETURNING id
-      `) as unknown as Array<{ id: string }>;
+      if (bookingResult.status === "slot_full") {
+        return {
+          content: JSON.stringify({
+            ok: false,
+            locationId: context.locationId,
+            tool: name,
+            action,
+            status: "needs_details",
+            message: "That slot just filled up. Please choose another available slot.",
+            requestedSlot: {
+              startOnUtc: selectedSlot.startOnUtc,
+              startOnLocation: selectedSlot.startOnLocation,
+              capacity: selectedSlot.capacity,
+              confirmedReservations: bookingResult.confirmedCount,
+              remainingSpots: bookingResult.remainingSpots,
+            },
+          }),
+        };
+      }
 
       return {
         content: JSON.stringify({
@@ -459,7 +518,7 @@ export async function executeScheduleTool(params: {
           tool: name,
           action,
           status: "booked",
-          reservationId: insertRows[0]?.id || null,
+          reservationId: bookingResult.reservationId,
           memberName: `${member.first_name || ""}${member.last_name ? ` ${member.last_name}` : ""}`.trim(),
           programName: program.name,
           startOnUtc: startIso,
@@ -562,6 +621,14 @@ export async function executeScheduleTool(params: {
           AND r.start_on >= now()
           AND r.start_on < now() + (${days} * interval '1 day')
         GROUP BY r.session_id, r.start_on
+      ),
+      waitlist_occupancy AS (
+        SELECT
+          sw.session_id,
+          sw.session_date,
+          COUNT(*)::int AS waitlist_count
+        FROM session_waitlist sw
+        GROUP BY sw.session_id, sw.session_date
       )
       SELECT
         us.program_id,
@@ -575,11 +642,15 @@ export async function executeScheduleTool(params: {
         us.waitlist_capacity,
         us.start_on_utc,
         to_char(us.start_on_utc AT TIME ZONE ${locationTimezone}, 'YYYY-MM-DD HH24:MI:SS') AS start_on_location,
-        COALESCE(o.confirmed_count, 0)::int AS confirmed_count
+        COALESCE(o.confirmed_count, 0)::int AS confirmed_count,
+        COALESCE(wo.waitlist_count, 0)::int AS waitlist_count
       FROM upcoming_slots us
       LEFT JOIN occupancy o
         ON o.session_id = us.session_id
        AND o.start_on = us.start_on_utc
+      LEFT JOIN waitlist_occupancy wo
+        ON wo.session_id = us.session_id
+       AND wo.session_date = us.start_on_utc
       ORDER BY us.start_on_utc ASC
       LIMIT 240
     `) as unknown as Array<{
@@ -595,15 +666,20 @@ export async function executeScheduleTool(params: {
       start_on_utc: string;
       start_on_location: string;
       confirmed_count: number;
+      waitlist_count: number;
     }>;
 
     const availableSessions = availabilityRows.map((row) => {
       const capacity = Number(row.capacity || 0);
       const confirmedCount = Number(row.confirmed_count || 0);
       const remainingSpots = Math.max(capacity - confirmedCount, 0);
+      const waitlistCount = Number(row.waitlist_count || 0);
+      const waitlistCapacity = Number(row.waitlist_capacity || 0);
       const full = capacity > 0 ? confirmedCount >= capacity : false;
       const bookable = capacity <= 0 ? true : confirmedCount < capacity;
-      const canJoinWaitlist = full && !!row.allow_waitlist;
+      const canJoinWaitlist = full
+        && !!row.allow_waitlist
+        && (waitlistCapacity <= 0 || waitlistCount < waitlistCapacity);
       const status = bookable
         ? "bookable"
         : (canJoinWaitlist ? "full_waitlist_available" : "full_unavailable");
@@ -621,7 +697,8 @@ export async function executeScheduleTool(params: {
         confirmedReservations: confirmedCount,
         remainingSpots,
         allowWaitlist: !!row.allow_waitlist,
-        waitlistCapacity: Number(row.waitlist_capacity || 0),
+        waitlistCapacity,
+        waitlistCount,
         bookable,
         status,
       };

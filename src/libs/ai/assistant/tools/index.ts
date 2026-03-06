@@ -57,13 +57,13 @@ function toFunctionTool(name: AssistantToolName, description: string, schema: Re
 export const toolDefinitions = [
   toFunctionTool(
     "schedule_manage",
-    "Use for creating, updating, cancelling, or checking schedule availability for the current location. For questions about what programs/sessions are bookable in a date range, always use this tool with action=check.",
+    "Use for creating bookings or checking schedule availability for the current location. For questions about what programs/sessions are bookable in a date range, always use this tool with action=check.",
     {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["create", "update", "cancel", "check"],
+          enum: ["create", "check"],
           description: "Scheduling intent action",
         },
         dateRange: {

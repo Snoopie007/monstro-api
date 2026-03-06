@@ -1,8 +1,20 @@
 
 import { config } from 'dotenv'
 
-if (!process.env.BUN_ENV) {
-  throw new Error("BUN_ENV must be set in the environment");
+function parseOptionalBoolean(value: string | undefined): boolean | undefined {
+  if (!value) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return undefined;
+}
+
+function shouldUseRedisTls() {
+  const explicit = parseOptionalBoolean(process.env.UPSTASH_REDIS_TLS);
+  if (typeof explicit === 'boolean') return explicit;
+
+  const host = process.env.UPSTASH_REDIS_HOST || '';
+  return host.length > 0 && !/(^localhost$|^127\.|^0\.0\.0\.0$)/.test(host);
 }
 
 // Load environment variables based on BUN_ENV
@@ -38,7 +50,7 @@ export const redisConfig = {
     host: process.env.UPSTASH_REDIS_HOST,
     port: parseInt(process.env.UPSTASH_REDIS_PORT ?? '6379'),
     password: process.env.UPSTASH_REDIS_PASSWORD,
-    tls: false,
+    tls: shouldUseRedisTls() ? {} : undefined,
     // Retry strategy to prevent negative timeout warnings
     // First retry must be at least 1 second to avoid negative timeout calculations
     retryStrategy: (times: number) => {
