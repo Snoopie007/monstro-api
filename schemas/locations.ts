@@ -34,19 +34,14 @@ export const locations = pgTable("locations", {
 	metadata: jsonb("metadata"),
 	welcomeMessage: text("welcome_message"),
 	about: text("about"),
-	vendorId: text("vendor_id")
-		.notNull()
-		.references(() => vendors.id, { onDelete: "cascade" }),
-	created: timestamp("created_at", { withTimezone: true })
-		.notNull()
+	vendorId: text("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+	created: timestamp("created_at", { withTimezone: true }).notNull()
 		.defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const locationState = pgTable("location_state", {
-	locationId: text("location_id")
-		.primaryKey()
-		.references(() => locations.id, { onDelete: "cascade" }),
+	locationId: text("location_id").primaryKey().references(() => locations.id, { onDelete: "cascade" }),
 	planId: integer("plan_id").notNull().default(1),
 	waiverId: text("waiver_id"),
 	agreeToTerms: boolean("agree_to_terms").notNull().default(false),
