@@ -18,6 +18,9 @@ export const members = pgTable('members', {
 	email: text('email').notNull().unique(),
 	phone: text('phone'),
 	referralCode: text('referral_code').notNull(),
+	familyInviteCode: text('family_invite_code').notNull(),
+	hasInstalledApp: boolean('has_installed_app').notNull().default(false),
+	isFirstTime: boolean('is_first_time').notNull().default(true),
 	gender: text('gender'),
 	addresses: jsonb('addresses').$type<MemberAddress[]>().notNull().default(sql`'[]'::jsonb`),
 	dob: timestamp('dob', { withTimezone: true, mode: 'date' }).default(sql`NULL`),
@@ -26,9 +29,6 @@ export const members = pgTable('members', {
 	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp('updated_at', { withTimezone: true }),
 })
-
-
-
 
 export const memberReferrals = pgTable('member_referrals', {
 	memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
