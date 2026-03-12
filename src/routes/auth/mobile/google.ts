@@ -4,7 +4,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
 import { users, members, accounts } from "@subtrees/schemas";
 import {
-    generateDiscriminator, generateReferralCode,
+    generateDiscriminator, generateReferralCode, generateFamilyInviteCode,
     generateUsername, handleAdditionalData
 } from "@/utils";
 import { z } from "zod";
@@ -110,6 +110,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                         lastName: lastName || "",
                         email: normalizedEmail,
                         referralCode: generateReferralCode(),
+                        familyInviteCode: generateFamilyInviteCode(),
                     }).onConflictDoUpdate({
                         target: [members.email],
                         set: {

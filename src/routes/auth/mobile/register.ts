@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { members, users, accounts } from "@subtrees/schemas";
 import {
-    generateDiscriminator, generateReferralCode,
+    generateDiscriminator, generateReferralCode, generateFamilyInviteCode,
     generateUsername, handleAdditionalData
 } from "@/utils";
 import bcrypt from "bcryptjs";
@@ -79,6 +79,7 @@ export async function mobileRegister(app: Elysia) {
                             email: normalizedEmail,
                             userId: user.id,
                             referralCode: generateReferralCode(),
+                            familyInviteCode: generateFamilyInviteCode(),
                         }).returning();
                     if (!newMember) {
                         console.log("Failed to create member");

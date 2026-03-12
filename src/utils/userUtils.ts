@@ -1,14 +1,24 @@
-import { JWT } from "google-auth-library";
 
 // Simple referral code generator
-export function generateReferralCode(): string {
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+function generateCode(length: number = 8): string {
 	let result = "";
-	for (let i = 0; i < 8; i++) {
-		result += chars.charAt(Math.floor(Math.random() * chars.length));
+	for (let i = 0; i < length; i++) {
+		result += CHARS.charAt(Math.floor(Math.random() * CHARS.length));
 	}
 	return result;
 }
+
+export function generateReferralCode(): string {
+	return generateCode();
+}
+
+// Family invite code generator (same pattern, separate field)
+export function generateFamilyInviteCode(): string {
+	return generateCode(6);
+}
+
 
 export function generateOtp(): string {
 	return Math.floor(100000 + Math.random() * 900000).toString();

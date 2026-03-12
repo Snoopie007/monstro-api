@@ -20,6 +20,7 @@ import {
 	memberReferrals,
 	members,
 } from "./members";
+import { memberPasses } from "./MemberPasses";
 import { migrateMembers } from "./MigrateMembers";
 import { memberPaymentMethods, paymentMethods } from "./PaymentMethods";
 import { planPrograms, programs, programSessions, sessionWaitlist } from "./programs";
@@ -126,6 +127,22 @@ export const membersRelations = relations(members, ({ many, one }) => ({
 	}),
 	memberTags: many(memberHasTags),
 	customFields: many(memberCustomFields),
+	passes: many(memberPasses),
+}));
+
+export const memberPassesRelations = relations(memberPasses, ({ one }) => ({
+	member: one(members, {
+		fields: [memberPasses.memberId],
+		references: [members.id],
+	}),
+	location: one(locations, {
+		fields: [memberPasses.locationId],
+		references: [locations.id],
+	}),
+	claimedByMember: one(members, {
+		fields: [memberPasses.claimedBy],
+		references: [members.id],
+	}),
 }));
 
 export const familyMemberRelations = relations(familyMembers, ({ one }) => ({

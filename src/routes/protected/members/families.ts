@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { accounts, familyMembers, members, users } from "@subtrees/schemas";
 import type { FamilyMember } from "@subtrees/types";
-import { generateDiscriminator, generateReferralCode, generateUsername } from "@/utils";
+import { generateDiscriminator, generateReferralCode, generateFamilyInviteCode, generateUsername } from "@/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 import { EmailSender } from "@/libs/email";
@@ -171,6 +171,7 @@ export async function memberFamilies(app: Elysia) {
                             email: normalizedEmail,
                             phone: phoneNumber,
                             referralCode: generateReferralCode(),
+                            familyInviteCode: generateFamilyInviteCode(),
                         }).returning();
 
 
