@@ -32,8 +32,12 @@ export const members = pgTable("members", {
     lastName: text("last_name"),
     email: text("email").notNull().unique(),
     phone: text("phone"),
-    referralCode: text("referral_code").notNull(),
-    familyInviteCode: text('family_invite_code').notNull(),
+    referralCode: text("referral_code")
+        .notNull()
+        .default(sql`generate_random_code(8)`),
+    familyInviteCode: text("family_invite_code")
+        .notNull()
+        .default(sql`generate_random_code(6)`),
     hasInstalledApp: boolean("has_installed_app").notNull().default(false),
     gender: text("gender"),
     addresses: jsonb("addresses")
