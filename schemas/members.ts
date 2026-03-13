@@ -1,23 +1,24 @@
 import { sql } from "drizzle-orm";
 import {
+    boolean,
+    jsonb,
+    pgTable,
     primaryKey,
     text,
     timestamp,
-    pgTable,
-    boolean,
-    jsonb,
     unique,
     uuid,
 } from "drizzle-orm/pg-core";
-import { locations } from "./locations";
-import { users } from "./users";
+
 import type { MemberAddress } from "../types/member";
 import {
-    MemberRelationshipEnum,
     CustomFieldTypeEnum,
     FamilyMemberStatusEnum,
+    MemberRelationshipEnum,
 } from "./DatabaseEnums";
 import { contractTemplates } from "./contracts";
+import { locations } from "./locations";
+import { users } from "./users";
 
 export const members = pgTable("members", {
     id: uuid("id")
@@ -33,6 +34,11 @@ export const members = pgTable("members", {
     email: text("email").notNull().unique(),
     phone: text("phone"),
     referralCode: text("referral_code").notNull(),
+    familyInviteCode: text("family_invite_code")
+        .notNull()
+        .default(sql`uuid_base62()`),
+    hasInstalledApp: boolean("has_installed_app").notNull().default(false),
+    isFirstTime: boolean("is_first_time").notNull().default(true),
     gender: text("gender"),
     addresses: jsonb("addresses")
         .$type<MemberAddress[]>()
@@ -103,9 +109,9 @@ export const familyMembers = pgTable("family_members", {
         .primaryKey()
         .notNull()
         .default(sql`uuid_base62()`),
-    memberId: text("member_id").references(() => members.id, {
-        onDelete: "cascade",
-    }),
+    memberId: text("member_id")
+        .notNull()
+        .references(() => members.id, { onDelete: "cascade" }),
     relatedMemberId: text("related_member_id")
         .notNull()
         .references(() => members.id, { onDelete: "cascade" }),
