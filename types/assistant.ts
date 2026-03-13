@@ -120,47 +120,47 @@ export type AssistantChatResult = {
 
 export type AssistantStreamEvent =
   | {
-      type: "session_start";
-      threadId: string;
-      messageId: string;
-      ts: number;
-    }
+    type: "session_start";
+    threadId: string;
+    messageId: string;
+    ts: number;
+  }
   | {
-      type: "text_delta";
-      threadId: string;
-      messageId: string;
-      delta: string;
-      index: number;
-      ts: number;
-    }
+    type: "text_delta";
+    threadId: string;
+    messageId: string;
+    delta: string;
+    index: number;
+    ts: number;
+  }
   | {
-      type: "block_done";
-      threadId: string;
-      messageId: string;
-      block: AssistantBlock;
-      ts: number;
-    }
+    type: "block_done";
+    threadId: string;
+    messageId: string;
+    block: AssistantBlock;
+    ts: number;
+  }
   | {
-      type: "assistant_final";
-      threadId: string;
-      messageId: string;
-      result: AssistantChatResult;
-      ts: number;
-    }
+    type: "assistant_final";
+    threadId: string;
+    messageId: string;
+    result: AssistantChatResult;
+    ts: number;
+  }
   | {
-      type: "error";
-      threadId: string;
-      messageId: string;
-      message: string;
-      ts: number;
-    }
+    type: "error";
+    threadId: string;
+    messageId: string;
+    message: string;
+    ts: number;
+  }
   | {
-      type: "done";
-      threadId: string;
-      messageId: string;
-      reason: "completed" | "error";
-      ts: number;
-    };
+    type: "done";
+    threadId: string;
+    messageId: string;
+    reason: "completed" | "error";
+    ts: number;
+  };
 
 export type AssistantMemoryWritebackJobData = {
   turnId: string;
