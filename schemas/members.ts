@@ -1,13 +1,13 @@
 import { sql } from 'drizzle-orm'
-import { primaryKey, text, timestamp, pgTable, boolean, jsonb, unique, uuid } from 'drizzle-orm/pg-core'
-import { locations } from './locations'
-import { users } from './users'
+import { boolean, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 import type { MemberAddress } from '../types/member'
 import {
-	MemberRelationshipEnum, CustomFieldTypeEnum,
-	FamilyMemberStatusEnum
+	CustomFieldTypeEnum,
+	MemberRelationshipEnum
 } from './DatabaseEnums'
 import { contractTemplates } from './contracts'
+import { locations } from './locations'
+import { users } from './users'
 
 
 export const members = pgTable('members', {
@@ -57,10 +57,8 @@ export const memberContracts = pgTable('member_contracts', {
 
 export const familyMembers = pgTable('family_members', {
 	id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
-	memberId: text('member_id').references(() => members.id, { onDelete: 'cascade' }),
+	memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
 	relatedMemberId: text('related_member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
-	contact: text('contact'),
-	status: FamilyMemberStatusEnum('status').notNull().default('pending'),
 	relationship: MemberRelationshipEnum('relationship').notNull().default('extended'),
 	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp('updated_at', { withTimezone: true }),
