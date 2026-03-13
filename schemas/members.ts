@@ -13,7 +13,6 @@ import {
 import type { MemberAddress } from "../types/member";
 import {
     CustomFieldTypeEnum,
-    FamilyMemberStatusEnum,
     MemberRelationshipEnum,
 } from "./DatabaseEnums";
 import { contractTemplates } from "./contracts";
@@ -34,11 +33,8 @@ export const members = pgTable("members", {
     email: text("email").notNull().unique(),
     phone: text("phone"),
     referralCode: text("referral_code").notNull(),
-    familyInviteCode: text("family_invite_code")
-        .notNull()
-        .default(sql`uuid_base62()`),
+    familyInviteCode: text('family_invite_code').notNull(),
     hasInstalledApp: boolean("has_installed_app").notNull().default(false),
-    isFirstTime: boolean("is_first_time").notNull().default(true),
     gender: text("gender"),
     addresses: jsonb("addresses")
         .$type<MemberAddress[]>()
@@ -116,7 +112,11 @@ export const familyMembers = pgTable("family_members", {
         .notNull()
         .references(() => members.id, { onDelete: "cascade" }),
     contact: text("contact"),
-    status: FamilyMemberStatusEnum("status").notNull().default("pending"),
+    status: text("status", {
+        enum: ["pending", "accepted", "declined", "cancelled"],
+    })
+        .notNull()
+        .default("pending"),
     relationship: MemberRelationshipEnum("relationship")
         .notNull()
         .default("extended"),

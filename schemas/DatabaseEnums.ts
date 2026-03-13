@@ -24,7 +24,6 @@ export const TransactionStatusEnum = pgEnum("transaction_status", ["paid", "fail
 export const StaffStatusEnum = pgEnum("staff_status", ["active", "inactive"]);
 export const ProgramStatusEnum = pgEnum("program_status", ["active", "inactive", "archived"]);
 export const MigrateStatusEnum = pgEnum("migrate_status", ["pending", "completed"]);
-export const FamilyMemberStatusEnum = pgEnum("family_member_status", ["pending", "accepted", "declined", "cancelled"]);
 export const CustomFieldTypeEnum = pgEnum("custom_field_type", ["text", "number", "date", "boolean", "select", "multi-select"]);
 
 // Reservation and Exception Enums

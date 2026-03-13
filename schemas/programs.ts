@@ -14,7 +14,7 @@ export const programs = pgTable("programs", {
 	minAge: integer("min_age").notNull(),
 	maxAge: integer("max_age").notNull(),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	instructorId: integer("instructor_id").references(() => staffs.id, { onDelete: "cascade" }),
+	instructorId: text("instructor_id").references(() => staffs.id, { onDelete: "set null" }),
 	// interval: IntervalType("interval").notNull().default("week"),
 	// intervalThreshold: smallint("interval_threshold").notNull().default(1),
 	icon: text("icon"),
