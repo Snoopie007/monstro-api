@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import bcrypt from "bcryptjs";
+import { USER_AUTH_COLUMNS, MEMBER_AUTH_COLUMNS } from "@/utils/userUtils";
 import { generateMobileToken } from "@/libs/auth";
 
 const MobileLoginSchema = {
@@ -26,7 +27,9 @@ export async function mobileLogin(app: Elysia) {
             const account = await db.query.accounts.findFirst({
                 where: (account, { eq }) => eq(account.accountId, normalizedEmail),
                 with: {
-                    user: true
+                    user: {
+                        columns: USER_AUTH_COLUMNS,
+                    }
                 },
             });
 
@@ -47,7 +50,8 @@ export async function mobileLogin(app: Elysia) {
             }
 
             const member = await db.query.members.findFirst({
-                where: (member, { eq }) => eq(member.userId, `${account.userId}`)
+                where: (member, { eq }) => eq(member.userId, `${account.userId}`),
+                columns: MEMBER_AUTH_COLUMNS,
             });
 
             if (!member) {
@@ -57,11 +61,9 @@ export async function mobileLogin(app: Elysia) {
             const user = account.user;
             const data = {
                 ...user,
-                referralCode: member.referralCode,
-                phone: member.phone,
+                ...member,
+                id: user.id,
                 memberId: member?.id,
-                username: user.username,
-                discriminator: user.discriminator,
             };
 
             const { accessToken, refreshToken, expires } = await generateMobileToken({

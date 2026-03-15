@@ -2,8 +2,8 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { members, users, accounts } from "@subtrees/schemas";
 import {
-    generateDiscriminator, generateReferralCode, generateFamilyInviteCode,
-    generateUsername, handleAdditionalData
+    generateUsername,
+    handleAdditionalData
 } from "@/utils";
 import bcrypt from "bcryptjs";
 import type { Member } from "@subtrees/types";
@@ -55,7 +55,6 @@ export async function mobileRegister(app: Elysia) {
                         name: `${firstName} ${lastName}`,
                         email: normalizedEmail,
                         username: generateUsername(`${firstName} ${lastName}`),
-                        discriminator: generateDiscriminator(),
                     }).onConflictDoNothing({
                         target: [users.email]
                     }).returning();
@@ -78,8 +77,6 @@ export async function mobileRegister(app: Elysia) {
                             phone: normalizedPhone,
                             email: normalizedEmail,
                             userId: user.id,
-                            referralCode: generateReferralCode(),
-                            familyInviteCode: generateFamilyInviteCode(),
                         }).returning();
                     if (!newMember) {
                         console.log("Failed to create member");
@@ -105,7 +102,7 @@ export async function mobileRegister(app: Elysia) {
             }
 
             if (additionalData) {
-                handleAdditionalData(additionalData, member);
+                handleAdditionalData(additionalData, member.id);
             }
             return status(200, member);
         } catch (error) {

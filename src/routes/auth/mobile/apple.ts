@@ -4,7 +4,8 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
 import { users, members, accounts } from "@subtrees/schemas";
 import {
-    generateDiscriminator, generateReferralCode, generateFamilyInviteCode,
+    MEMBER_AUTH_COLUMNS,
+    USER_AUTH_COLUMNS,
     generateUsername, handleAdditionalData
 } from "@/utils";
 import { z } from "zod";
@@ -21,7 +22,6 @@ const ApplAccountSchema = {
         additionalData: AuthAdditionalDataSchema.optional(),
     }),
 };
-
 
 export async function mobileAppleLogin(app: Elysia) {
 
@@ -48,8 +48,11 @@ export async function mobileAppleLogin(app: Elysia) {
                 ),
                 with: {
                     user: {
+                        columns: USER_AUTH_COLUMNS,
                         with: {
-                            member: true
+                            member: {
+                                columns: MEMBER_AUTH_COLUMNS
+                            }
                         }
                     }
                 },
@@ -58,19 +61,19 @@ export async function mobileAppleLogin(app: Elysia) {
             let user = account?.user;
 
             if (!account) {
-
-                const discriminator = generateDiscriminator();
-
                 const randomFourDigits = Math.floor(Math.random() * 10000);
-                const normalizedEmail = email ? email.trim().toLowerCase() : `temporary-${discriminator}@example.com`;
-                const failSafeFirstName = firstName ? firstName : `User-${randomFourDigits}`;
+                const normalizedEmail = email ? email.trim().toLowerCase() : `temp-${randomFourDigits}@temp.com`;
+                const failSafeFirstName = firstName ? firstName : `user-${randomFourDigits}`;
                 const name = `${failSafeFirstName}${lastName ? ` ${lastName}` : ""}`;
                 const username = generateUsername(name);
                 if (!user) {
                     user = await db.query.users.findFirst({
                         where: (user, { eq }) => eq(user.email, normalizedEmail),
+                        columns: USER_AUTH_COLUMNS,
                         with: {
-                            member: true
+                            member: {
+                                columns: MEMBER_AUTH_COLUMNS
+                            }
                         },
                     });
                 }
@@ -85,17 +88,22 @@ export async function mobileAppleLogin(app: Elysia) {
                     idToken: token
                 }
 
-
-
                 await db.transaction(async (tx) => {
                     if (!user) {
                         const [newUser] = await tx.insert(users).values({
                             email: normalizedEmail,
                             name: name,
                             username,
-                            discriminator,
                             emailVerified: payload.email_verified as boolean || false,
-                        }).returning();
+                        }).returning({
+                            id: users.id,
+                            username: users.username,
+                            discriminator: users.discriminator,
+                            email: users.email,
+                            emailVerified: users.emailVerified,
+                            image: users.image,
+                            isChild: users.isChild,
+                        });
                         if (!newUser) {
                             tx.rollback();
                             return;
@@ -105,14 +113,21 @@ export async function mobileAppleLogin(app: Elysia) {
                             firstName: failSafeFirstName,
                             lastName,
                             email: normalizedEmail,
-                            referralCode: generateReferralCode(),
-                            familyInviteCode: generateFamilyInviteCode(),
+                            referralCode: "TEMP",
+                            familyInviteCode: "TEMP",
                         }).onConflictDoUpdate({
                             target: [members.email],
-                            set: {
-                                userId: newUser.id,
-                            },
-                        }).returning();
+                            set: { userId: newUser.id },
+                        }).returning({
+                            id: members.id,
+                            email: members.email,
+                            firstName: members.firstName,
+                            lastName: members.lastName,
+                            setupCompleted: members.setupCompleted,
+                            phone: members.phone,
+                            referralCode: members.referralCode,
+                            familyInviteCode: members.familyInviteCode,
+                        });
                         if (!newMember) {
                             tx.rollback();
                             return;
@@ -142,19 +157,18 @@ export async function mobileAppleLogin(app: Elysia) {
                 return status(500, { message: "Member not found" });
             }
 
-
             const { member, ...rest } = user;
-
-
             if (additionalData) {
-                handleAdditionalData(additionalData, member);
+                handleAdditionalData(additionalData, member.id);
             }
 
             const data = {
-                ...rest,
-                phone: member.phone,
-                referralCode: member.referralCode,
-                memberId: member.id,
+                ...member,
+                id: rest.id,
+                image: rest.image,
+                discriminator: rest.discriminator,
+                username: rest.username,
+                isChild: rest.isChild,
             };
 
             const tokens = await generateMobileToken({

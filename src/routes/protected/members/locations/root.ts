@@ -57,11 +57,13 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                 },
             });
 
+
             return status(200, {
                 memberLocations: mls,
                 migrations,
             });
         } catch (error) {
+            console.error(error);
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }

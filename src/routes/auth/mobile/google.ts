@@ -4,7 +4,8 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
 import { users, members, accounts } from "@subtrees/schemas";
 import {
-    generateDiscriminator, generateReferralCode, generateFamilyInviteCode,
+    USER_AUTH_COLUMNS,
+    MEMBER_AUTH_COLUMNS,
     generateUsername, handleAdditionalData
 } from "@/utils";
 import { z } from "zod";
@@ -54,8 +55,11 @@ export async function mobileGoogleLogin(app: Elysia) {
                 ),
                 with: {
                     user: {
+                        columns: USER_AUTH_COLUMNS,
                         with: {
-                            member: true
+                            member: {
+                                columns: MEMBER_AUTH_COLUMNS
+                            }
                         }
                     }
                 },
@@ -66,8 +70,11 @@ export async function mobileGoogleLogin(app: Elysia) {
             if (!user) {
                 user = await db.query.users.findFirst({
                     where: (user, { eq }) => eq(user.email, normalizedEmail),
+                    columns: USER_AUTH_COLUMNS,
                     with: {
-                        member: true
+                        member: {
+                            columns: MEMBER_AUTH_COLUMNS
+                        }
                     },
                 });
             }
@@ -91,14 +98,18 @@ export async function mobileGoogleLogin(app: Elysia) {
                         name: name,
                         image: payload.picture as string,
                         username: generateUsername(name),
-                        discriminator: generateDiscriminator(),
                         emailVerified: payload.email_verified as boolean || false,
                     }).onConflictDoUpdate({
                         target: [users.email],
-                        set: {
-                            image: payload.picture as string,
-                        },
-                    }).returning();
+                        set: { image: payload.picture as string },
+                    }).returning({
+                        id: users.id,
+                        username: users.username,
+                        discriminator: users.discriminator,
+                        email: users.email,
+                        image: users.image,
+                        isChild: users.isChild,
+                    });
                     if (!newUser) {
                         tx.rollback();
                         return;
@@ -109,14 +120,19 @@ export async function mobileGoogleLogin(app: Elysia) {
                         firstName: firstName || "",
                         lastName: lastName || "",
                         email: normalizedEmail,
-                        referralCode: generateReferralCode(),
-                        familyInviteCode: generateFamilyInviteCode(),
                     }).onConflictDoUpdate({
                         target: [members.email],
-                        set: {
-                            userId: newUser.id,
-                        },
-                    }).returning();
+                        set: { userId: newUser.id },
+                    }).returning({
+                        id: members.id,
+                        email: members.email,
+                        firstName: members.firstName,
+                        lastName: members.lastName,
+                        setupCompleted: members.setupCompleted,
+                        phone: members.phone,
+                        referralCode: members.referralCode,
+                        familyInviteCode: members.familyInviteCode,
+                    });
                     if (!newMember) {
                         tx.rollback();
                         return;
@@ -153,15 +169,17 @@ export async function mobileGoogleLogin(app: Elysia) {
             const { member, ...rest } = user;
 
             if (additionalData) {
-                handleAdditionalData(additionalData, member);
+                handleAdditionalData(additionalData, member.id);
             }
 
 
             const data = {
-                ...rest,
-                phone: member.phone,
-                memberId: member.id,
-                username: user.username,
+                ...member,
+                id: rest.id,
+                image: rest.image,
+                discriminator: rest.discriminator,
+                username: rest.username,
+                isChild: rest.isChild,
             };
             const tokens = await generateMobileToken({
                 memberId: member.id,

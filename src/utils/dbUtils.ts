@@ -10,7 +10,7 @@ type HandleAdditionalDataOptions = {
 
 export async function handleAdditionalData(
 	additionalData: AuthAdditionalData,
-	member: Member,
+	memberId: string,
 	options: HandleAdditionalDataOptions = {},
 ): Promise<void> {
 	const { delay = 1000 } = options;
@@ -22,7 +22,7 @@ export async function handleAdditionalData(
 				await db
 					.update(migrateMembers)
 					.set({
-						memberId: member.id,
+						memberId: memberId,
 						viewedOn: today,
 						updated: today,
 					})

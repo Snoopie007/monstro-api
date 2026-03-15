@@ -11,7 +11,7 @@ export const users = pgTable("users", {
     isChild: boolean("is_child").notNull().default(false),
     lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     isOnline: boolean("is_online").notNull().default(false),
-    discriminator: integer("discriminator").notNull(), // 4-digit number as string
+    discriminator: integer("discriminator").notNull().default(sql`generate_discriminator()`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
