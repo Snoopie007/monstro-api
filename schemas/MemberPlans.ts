@@ -95,7 +95,6 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 
 export const memberPackages = pgTable("member_packages", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
-	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
 	memberPlanPricingId: text("member_plan_pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
