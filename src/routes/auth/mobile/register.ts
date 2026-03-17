@@ -17,8 +17,6 @@ export async function mobileRegister(app: Elysia) {
     app.post('/register', async ({ status, body }) => {
         const { password, firstName, lastName, email, phone, additionalData } = body;
 
-
-
         const normalizedEmail = email.trim().toLowerCase();
         let normalizedPhone: string | undefined = undefined;
         if (phone) {

@@ -18,7 +18,7 @@ const DocsProps = {
 
 
 
-export const docsRoutes = new Elysia({ prefix: "/docs" })
+export const publicDocsRoutes = new Elysia({ prefix: "/docs" })
 	.get("/:did/:type", async ({ params, set, query }) => {
 		const { did, type } = params;
 		const { theme, mid, pricingId } = query;

@@ -19,6 +19,7 @@ const ApplAccountSchema = {
         email: z.string().nullable().optional(),
         firstName: z.string().nullable().optional(),
         lastName: z.string().nullable().optional(),
+        phone: z.string().nullable().optional(),
         additionalData: AuthAdditionalDataSchema.optional(),
     }),
 };
@@ -158,6 +159,8 @@ export async function mobileAppleLogin(app: Elysia) {
             }
 
             const { member, ...rest } = user;
+
+
             if (additionalData) {
                 handleAdditionalData(additionalData, member.id);
             }

@@ -38,30 +38,27 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             })
 
 
-            const migrations = await db.query.migrateMembers.findMany({
-                where: (migrateMembers, { eq, and }) => and(
-                    eq(migrateMembers.memberId, mid),
-                    eq(migrateMembers.status, "pending"),
-                ),
-                with: {
-                    pricing: {
-                        with: {
-                            plan: true,
-                        },
-                    },
-                    location: {
-                        with: {
-                            locationState: true,
-                        },
-                    },
-                },
-            });
+            // const migrations = await db.query.migrateMembers.findMany({
+            //     where: (migrateMembers, { eq, and }) => and(
+            //         eq(migrateMembers.memberId, mid),
+            //         eq(migrateMembers.status, "pending"),
+            //     ),
+            //     with: {
+            //         pricing: {
+            //             with: {
+            //                 plan: true,
+            //             },
+            //         },
+            //         location: {
+            //             with: {
+            //                 locationState: true,
+            //             },
+            //         },
+            //     },
+            // });
 
 
-            return status(200, {
-                memberLocations: mls,
-                migrations,
-            });
+            return status(200, mls);
         } catch (error) {
             console.error(error);
             status(500, { error: 'Internal server error' });

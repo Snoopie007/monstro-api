@@ -1,0 +1,72 @@
+import { Elysia, t } from "elysia";
+import { db } from "@/db/db";
+
+const PublicLocationPlansProps = {
+    params: t.Object({
+        lid: t.String(),
+    }),
+};
+
+export async function publicLocationPlans(app: Elysia) {
+    return app.get('/plans', async ({ params, status }) => {
+        const { lid } = params;
+
+        try {
+
+            const plans = await db.query.memberPlans.findMany({
+                where: (plans, { eq }) => eq(plans.locationId, lid),
+                with: {
+                    contract: {
+                        columns: {
+                            id: true,
+                            title: true,
+                            requireSignature: true,
+                        },
+                    },
+                    planPrograms: {
+                        with: {
+                            program: {
+                                columns: {
+                                    id: true,
+                                    name: true,
+                                    minAge: true,
+                                    maxAge: true,
+                                    icon: true,
+                                    capacity: true,
+                                    description: true,
+                                },
+                            },
+                        },
+                    },
+                    pricings: true,
+                },
+            });
+            const mappedPlans = plans.map(plan => {
+                const { planPrograms, pricings, ...rest } = plan
+                const programs = planPrograms.map(pp => pp.program);
+
+                // Get all numeric minAge and maxAge values from programs
+                const minAges = programs.map(p => p.minAge)
+                const maxAges = programs.map(p => p.maxAge)
+
+                const minAge = minAges.length ? Math.min(...minAges) : 0;
+                const maxAge = maxAges.length ? Math.max(...maxAges) : 0;
+
+                const prices = pricings.map(p => p.price);
+                const minPrice = prices.length ? Math.min(...prices) : 0;
+
+                return {
+                    ...rest,
+                    programs,
+                    startingPrice: minPrice,
+                    pricings,
+                    ageRange: { min: minAge, max: maxAge },
+                };
+            });
+            return status(200, mappedPlans);
+        } catch (err) {
+            console.error("Error getting plans:", err);
+            return status(500, { error: "Failed to get plans" });
+        }
+    }, PublicLocationPlansProps)
+}   

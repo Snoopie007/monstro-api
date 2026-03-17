@@ -15,9 +15,29 @@ export const migrationRoutes = new Elysia({ prefix: '/migrate' })
                 const migration = await db.query.migrateMembers.findFirst({
                     where: (migrateMembers, { eq }) => eq(migrateMembers.id, migrateId),
                     with: {
+                        pricing: {
+                            columns: {
+                                id: true,
+                                name: true,
+                                price: true,
+                                interval: true,
+                                intervalThreshold: true,
+                            },
+                            with: {
+                                plan: {
+                                    columns: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
                         location: true,
                     },
                 });
+
+                await new Promise((resolve) => setTimeout(resolve, 10000));
+
                 if (!migration) {
                     return status(404, { error: "Migration not found" });
                 }

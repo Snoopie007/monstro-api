@@ -8,7 +8,7 @@ import { locationSessions } from "./sessions";
 import { locationSupport } from "./support";
 import { locationPurchaseRoutes } from "./purchase";
 import { locationLeaderboard } from "./leaderboard";
-import { locationPlans } from "./plans";
+// import { locationPlans } from "./plans";
 import { locationPromos } from "./promos";
 import { locationMigrateRoutes } from "./migrate";
 import { locationIntegrationRoutes } from "./integration";
@@ -68,7 +68,7 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationPromos);
         app.use(locationSupport);
         app.use(locationLeaderboard);
-        app.use(locationPlans);
+        // app.use(locationPlans);
         app.use(locationPurchaseRoutes);
         app.use(locationMigrateRoutes);
         app.use(locationIntegrationRoutes);
