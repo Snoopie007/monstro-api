@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
 
 
 const allowedEvents: Stripe.Event.Type[] = [
-    'payment_intent.payment_failed',
+    "payment_intent.payment_failed",
     "payment_intent.canceled",
     "payment_intent.succeeded",
     "application_fee.created",
@@ -35,6 +35,12 @@ const allowedEvents: Stripe.Event.Type[] = [
 
 const stripe = new MemberStripePayments();
 
+type StripeMetadata = {
+    locationId: string;
+    memberId: string;
+    invoiceId: string;
+    memberPlanId: string;
+};
 
 export function stripeWebhookRoutes(app: Elysia) {
     app.post('/member/stripe', async ({ body, headers, request, status }) => {
@@ -88,7 +94,9 @@ async function processEvent(event: Stripe.Event) {
                 await handleCharge(event);
                 break;
 
+            case "payment_intent.payment_failed":
             case "payment_intent.canceled":
+                await handlePaymentIntentFailure(event);
                 break;
             default:
                 console.warn(`[STRIPE WEBHOOK] Unhandled event type: ${event.type}`);
@@ -100,13 +108,6 @@ async function processEvent(event: Stripe.Event) {
         );
         throw error;
     }
-}
-
-type StripeMetadata = {
-    locationId: string;
-    memberId: string;
-    invoiceId: string;
-    memberPlanId: string;
 }
 
 async function handleCharge(event: Stripe.Event) {
@@ -125,9 +126,7 @@ async function handleCharge(event: Stripe.Event) {
     const now = new Date();
 
     let paymentType: PaymentType = "card";
-    if (paymentMethodDetails?.type === "card") {
-        paymentType = "card";
-    } else if (paymentMethodDetails?.type === "us_bank_account") {
+    if (paymentMethodDetails?.type === "us_bank_account") {
         paymentType = "us_bank_account";
     }
 
@@ -158,7 +157,7 @@ async function handleCharge(event: Stripe.Event) {
         type: "inbound",
         status: charge.paid ? "paid" : "failed",
         failedReason: charge.failure_message,
-        failedCode: charge.failure_code,
+        failedCode: charge.failure_code || charge.outcome?.reason || null,
         locationId,
         memberId,
         paymentMethodId: charge.payment_method,
@@ -178,6 +177,82 @@ async function handleCharge(event: Stripe.Event) {
         await db.update(memberSubscriptions).set({
             stripePaymentId: charge.payment_method,
             status: charge.paid ? "active" : "past_due",
+        }).where(eq(memberSubscriptions.id, memberPlanId));
+    }
+}
+
+async function handlePaymentIntentFailure(event: Stripe.Event) {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    const metadata = paymentIntent.metadata as unknown as StripeMetadata;
+    const {
+        locationId,
+        memberId,
+        invoiceId,
+        memberPlanId,
+    } = metadata;
+    const now = new Date();
+
+    const [invoice] = await db.update(memberInvoices).set({
+        status: "unpaid",
+        paid: false,
+        updated: now,
+    }).where(eq(memberInvoices.id, invoiceId)).returning({
+        description: memberInvoices.description,
+        currency: memberInvoices.currency,
+        total: memberInvoices.total,
+        subTotal: memberInvoices.subTotal,
+        tax: memberInvoices.tax,
+        items: memberInvoices.items,
+    });
+
+    if (!invoice) {
+        throw new Error("Invoice not found for payment intent failure");
+    }
+
+    const lastPaymentError = paymentIntent.last_payment_error;
+    const paymentMethodType = lastPaymentError?.payment_method?.type || paymentIntent.payment_method_types?.[0] || "card";
+    const paymentType: PaymentType = paymentMethodType === "us_bank_account" ? "us_bank_account" : "card";
+    const failedReason = event.type === "payment_intent.canceled"
+        ? paymentIntent.cancellation_reason || lastPaymentError?.message || "canceled"
+        : lastPaymentError?.message || null;
+    const failedCode = lastPaymentError?.code
+        || lastPaymentError?.decline_code
+        || (event.type === "payment_intent.canceled" ? "canceled" : null);
+
+    const existingTransaction = await db.query.transactions.findFirst({
+        where: (transaction, { eq: equal }) => equal(transaction.invoiceId, invoiceId),
+    });
+
+    const values = {
+        ...invoice,
+        total: paymentIntent.amount,
+        items: invoice.items ?? [],
+        type: "inbound" as const,
+        status: "failed" as const,
+        failedReason,
+        failedCode,
+        locationId,
+        memberId,
+        invoiceId,
+        paymentMethodId: typeof paymentIntent.payment_method === "string" ? paymentIntent.payment_method : null,
+        paymentType,
+        chargeDate: now,
+        applicationFeeAmount: paymentIntent.application_fee_amount || 0,
+        metadata: {
+            memberPlanId,
+        },
+        updated: now,
+    };
+
+    if (existingTransaction) {
+        await db.update(transactions).set(values).where(eq(transactions.id, existingTransaction.id));
+    } else {
+        await db.insert(transactions).values(values);
+    }
+
+    if (memberPlanId && !memberPlanId.startsWith("pkg_")) {
+        await db.update(memberSubscriptions).set({
+            status: "past_due",
         }).where(eq(memberSubscriptions.id, memberPlanId));
     }
 }
