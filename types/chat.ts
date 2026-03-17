@@ -24,8 +24,7 @@ export type Chat = typeof chats.$inferSelect & {
 
 }
 
-export type MessageSender =
-    Omit<User, 'password' | 'email' | 'emailVerified' | 'isChild' | 'created' | 'updated' | 'discriminator' | 'username'>;
+export type MessageSender = Pick<User, 'id' | 'name' | 'image'>;
 
 export type MessageReply = {
     id: string;

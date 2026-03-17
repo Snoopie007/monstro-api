@@ -49,13 +49,11 @@ const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'applic
 
 
 export {
-    MonstroData,
-    PaymentMethods,
-    ALLOWED_IMAGE_TYPES,
-    ALLOWED_VIDEO_TYPES,
     ALLOWED_AUDIO_TYPES,
-    ALLOWED_DOCUMENT_TYPES
-}
+    ALLOWED_DOCUMENT_TYPES, ALLOWED_IMAGE_TYPES,
+    ALLOWED_VIDEO_TYPES, MonstroData,
+    PaymentMethods
+};
 
 export type { MonstroDataType };
 
@@ -208,4 +206,47 @@ const COMMON_HOLIDAYS: HolidayWithPattern[] = [
     { id: 12, name: "New Year's Eve", pattern: '31:day:11' },
 ];
 
-export { CountryCodes, TimeZones, Regions, Industries, RETRIABLE_PG_CODES, COMMON_HOLIDAYS };
+
+const RealTimeEvents = {
+    chats: {
+        NEW_CHAT: "chats:new",
+        UPDATED_CHAT: "chats:updated",
+        DELETED_CHAT: "chats:deleted",
+        NEW_MESSAGE: "chats:message:new",
+    },
+    chat: {
+        NEW_MESSAGE: "new:message",
+        UPDATED_MESSAGE: "updated:message",
+        DELETED_MESSAGE: "deleted:message",
+    },
+    feeds: {
+        NEW_FEED: "feed:new",
+        UPDATED_FEED: "feed:updated",
+        DELETED_FEED: "feed:deleted",
+    },
+    achievements: {
+        UNLOCKED: "achievement:unlocked",
+    },
+    support: {
+        NEW_SUPPORT_MESSAGE: "system:message",
+        UPDATED_SUPPORT_MESSAGE: "new:message",
+        UPDATED: "updated:support",
+        NEW: "new:support",
+    }
+}
+
+const AchievementTriggers = {
+    ATTENDANCES_COUNT: 1,
+    REFERRALS_COUNT: 2,
+    PLAN_SIGNUP: 3,
+    AMOUNT_SPENT: 4,
+    SIGNUP: 5,
+    FIRST_BOOKING: 6,
+    FIRST_MESSAGE: 7,
+}
+
+export {
+    CountryCodes, TimeZones, Regions, Industries,
+    RETRIABLE_PG_CODES, COMMON_HOLIDAYS,
+    RealTimeEvents, AchievementTriggers
+};

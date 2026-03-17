@@ -1,6 +1,7 @@
 export * from "./account";
 export * from "./achievement";
 export * from "./attendance";
+export * from "./assistant";
 export * from "./chat";
 export * from "./contract";
 export * from "./database";
@@ -32,3 +33,4 @@ export * from "./transaction";
 export * from "./user";
 export * from "./wallet";
 export * from "./vendor";
+export * from "./MemberPass";
