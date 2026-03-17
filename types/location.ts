@@ -39,13 +39,6 @@ export type HolidaySettings = {
   autoNotifyMembers: boolean;
 };
 
-export type OnboardingCompetitor =
-  | 'spark'
-  | 'gymdesk'
-  | 'pushpress'
-  | 'mybody'
-  | 'other';
-
 export type OnboardingChecklist = {
   importMembers: boolean;
   contracts: boolean;
@@ -61,11 +54,10 @@ export type LocationOnboardingSettings = {
   initialCompleted: boolean;
   initialCompletedAt?: string;
   usage?: {
-    primaryUse?: string;
-    businessType?: string;
-    competitors?: OnboardingCompetitor[];
-    otherCompetitor?: string;
-    migrationIntent?: string;
+    members?: string;
+    niche?: string;
+    years?: string;
+    channels?: string;
   };
   website?: {
     decision?: 'provided' | 'no_website';
