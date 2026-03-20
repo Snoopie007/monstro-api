@@ -100,7 +100,7 @@ export async function locationReservations(app: Elysia) {
                     }) : false;
                 }
 
-                if (!pkg || !sub || !memberId) {
+                if ((!pkg && !sub) || !memberId) {
                     throw new Error("Member plan not found");
                 }
 
