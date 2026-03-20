@@ -45,6 +45,7 @@ export async function locationReservations(app: Elysia) {
             const { lid } = params;
             const { memberPlanId, session, autoReschedule, plan } = body;
             const isPackage = memberPlanId.startsWith("pkg_");
+
             try {
                 let pkg = undefined;
                 let sub = undefined;
@@ -100,7 +101,7 @@ export async function locationReservations(app: Elysia) {
                     }) : false;
                 }
 
-                if (!pkg || !sub || !memberId) {
+                if ((!pkg && !sub) || !memberId) {
                     throw new Error("Member plan not found");
                 }
 
