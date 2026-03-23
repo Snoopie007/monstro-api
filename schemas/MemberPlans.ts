@@ -54,6 +54,8 @@ export const memberPlanPricing = pgTable("member_plan_pricing", {
 	expireInterval: IntervalType("expire_interval"),
 	expireThreshold: integer("expire_threshold"),
 	downpayment: integer("downpayment"),
+	// TO BE REMOVED ONCE PROD DB HAS THIS REMOVED
+	stripePriceId: text("stripe_price_id"),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
