@@ -10,6 +10,7 @@ export * from "./locations";
 export * from "./MemberLocation";
 export * from "./MemberPlans";
 export * from "./members";
+export * from "./MemberPasses";
 export * from "./MigrateMembers";
 export * from "./PaymentMethods";
 export * from "./permissions";

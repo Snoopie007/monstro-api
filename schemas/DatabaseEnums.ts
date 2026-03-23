@@ -11,7 +11,7 @@ export const LocationStatusEnum = pgEnum("location_status", [
   "incomplete_expired",
   "archived",
 ]);
-export const PlanType = pgEnum("plan_type", ["recurring", "one-time"]);
+export const PlanType = pgEnum("plan_type", ["recurring", "one-time", "pass"]);
 export const IntervalType = pgEnum("interval_type", ["day", "week", "month", "year"]);
 export const PackageStatusEnum = pgEnum("package_status", ["active", "incomplete", "expired", "completed"]);
 export const PaymentTypeEnum = pgEnum("payment_type", ["cash", "card", "us_bank_account", 'paypal', 'apple_pay', 'google_pay']);
