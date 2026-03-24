@@ -12,6 +12,7 @@ import {
     calculateChargeDetails,
     triggerNewMember,
     triggerPurchase,
+    getCurrency,
 } from "@/utils";
 
 import Stripe from "stripe";
@@ -125,6 +126,7 @@ export function purchasePkgRoutes(app: Elysia) {
                                     name: true,
                                     phone: true,
                                     email: true,
+                                    country: true,
                                 },
                                 with: {
                                     taxRates: {
@@ -256,7 +258,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 });
 
                 const now = new Date();
-
+                const currency = getCurrency(ml.location.country);
                 const [invoice] = await db.insert(memberInvoices).values({
                     ...chargeDetails,
                     description,
@@ -265,7 +267,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     locationId: lid,
                     memberPlanId,
                     paymentType: paymentMethod.type,
-                    currency: pricing.currency,
+                    currency,
                     dueDate: now,
                 }).returning({ id: memberInvoices.id });
 
@@ -277,7 +279,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 await stripe.processPayment({
                     ...chargeDetails,
                     paymentMethodId: paymentMethod.stripeId,
-                    currency: pricing.currency,
+                    currency,
                     description,
                     productName,
                     metadata: {
@@ -288,19 +290,13 @@ export function purchasePkgRoutes(app: Elysia) {
                     },
                 });
 
-                if (ml && ml.status === LocationStatus.INCOMPLETE) {
-                    triggerNewMember({ planId: pricing.plan.id, mid, lid }).catch((error) => {
-                        console.error("Error triggering new member:", error);
-                    });
-                } else {
-                    triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
-                        if (a) {
-                            broadcastAchievement(member.userId, a)
-                        }
-                    }).catch((error) => {
-                        console.error("Error triggering purchase:", error);
-                    });
-                }
+                triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
+                    if (a) {
+                        broadcastAchievement(member.userId, a)
+                    }
+                }).catch((error) => {
+                    console.error("Error triggering purchase:", error);
+                });
                 return status(200, { status: "active" });
             } catch (error) {
                 console.log(error);

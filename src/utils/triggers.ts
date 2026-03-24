@@ -29,26 +29,16 @@ type TriggerIncrement = {
  * This function will handle both achievements at once for new member 
  * to reduce the new to run the achievement query twice.
  */
-export async function triggerNewMember(data: { planId: string, mid: string, lid: string }) {
-    const { planId, mid, lid } = data
+export async function triggerNewMember(data: { mid: string, lid: string }) {
+    const { mid, lid } = data
     const today = new Date()
-    const achievements = await db.query.achievements.findMany({
-        where: (a, { and, eq, or, isNull }) => and(
+    const achievements = await db.query.achievements.findFirst({
+        where: (a, { and, eq }) => and(
             eq(a.locationId, lid),
-            or(
-                and(
-                    eq(a.triggerId, AchievementTriggers.SIGNUP),
-                    isNull(a.planId)
-                ),
-                and(
-                    eq(a.triggerId, AchievementTriggers.PLAN_SIGNUP),
-                    eq(a.planId, planId)
-                )
-            )
+            eq(a.triggerId, AchievementTriggers.SIGNUP)
         ),
         columns: {
             id: true,
-            planId: true,
             points: true,
             triggerId: true,
         },
@@ -62,53 +52,30 @@ export async function triggerNewMember(data: { planId: string, mid: string, lid:
         }
     })
 
-    if (achievements.length === 0) return
+    if (!achievements) return
 
+    const ma = achievements.memberAchievements[0]
+    if (ma && ma.dateAchieved) return
     const commonData = {
         memberId: mid,
         locationId: lid,
     }
-    let totalPoints = 0;
-    let newMemberAchievementData: MemberAchievement[] = [];
-    let pointHistories: NewMemberPointsHistory[] = [];
-
-
-
-    achievements.forEach(a => {
-        newMemberAchievementData.push({
+    await db.transaction(async (tx) => {
+        await tx.insert(memberAchievements).values({
             ...commonData,
-            achievementId: a.id,
+            achievementId: achievements.id,
             progress: 1,
             dateAchieved: today,
-            created: today,
-        })
-        pointHistories.push({
+        });
+        await tx.insert(memberPointsHistory).values({
             ...commonData,
-            points: a.points,
+            points: achievements.points,
             type: 'earned',
             created: today,
             updated: today,
-        })
-        totalPoints += a.points || 0;
+        });
+
     })
-
-    await db.transaction(async (tx) => {
-
-        await tx.insert(memberAchievements).values(newMemberAchievementData);
-        await tx.insert(memberPointsHistory).values(pointHistories);
-        await tx.update(memberLocations).set({
-            points: sql`${memberLocations.points} + ${totalPoints}`,
-            onboarded: true,
-            updated: today,
-        }).where(
-            and(
-                eq(memberLocations.memberId, mid),
-                eq(memberLocations.locationId, lid)
-            )
-        )
-    })
-
-
 }
 
 /**

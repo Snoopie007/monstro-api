@@ -44,7 +44,7 @@ export function locationPass(app: Elysia) {
             const plan = await db.query.memberPlans.findFirst({
                 where: (memberPlans, { eq, and }) => and(
                     eq(memberPlans.id, planId),
-                    eq(memberPlans.isFreePass, true),
+                    eq(memberPlans.type, "pass"),
                 ),
                 columns: {
                     id: true,

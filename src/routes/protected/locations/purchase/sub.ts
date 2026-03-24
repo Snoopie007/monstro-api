@@ -1,14 +1,14 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
-import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
     triggerNewMember,
     triggerPurchase,
+    getCurrency,
 } from "@/utils";
 import {
     scheduleCronBasedRenewal, scheduleRecursiveRenewal,
@@ -154,6 +154,7 @@ export function purchaseSubRoutes(app: Elysia) {
                                     name: true,
                                     phone: true,
                                     email: true,
+                                    country: true,
                                 },
                                 with: {
                                     taxRates: {
@@ -180,7 +181,7 @@ export function purchaseSubRoutes(app: Elysia) {
                             },
                         },
                         columns: {
-                            status: true,
+                            onboarded: true,
                         },
                     })
                 ]);
@@ -202,7 +203,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(404, { error: "Pricing not found" });
                 }
 
-                if (!pricing.interval || !pricing.intervalThreshold || !pricing.stripePriceId) {
+                if (!pricing.interval || !pricing.intervalThreshold) {
                     return status(400, { error: "Invalid pricing for subscription plan." });
                 }
 
@@ -283,6 +284,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
 
 
+                const currency = getCurrency(ml.location.country);
                 const [invoice] = await db.insert(memberInvoices).values({
                     description,
                     items: [{
@@ -298,7 +300,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     ...chargeDetails,
                     forPeriodStart: startDate,
                     forPeriodEnd: currentPeriodEnd,
-                    currency: pricing.currency,
+                    currency,
                     dueDate: startDate,
                 }).returning({
                     id: memberInvoices.id
@@ -311,7 +313,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 await stripe.processPayment({
                     ...chargeDetails,
                     paymentMethodId: paymentMethod.stripeId,
-                    currency: pricing.currency,
+                    currency,
                     description,
                     productName,
                     metadata: {
@@ -344,7 +346,7 @@ export function purchaseSubRoutes(app: Elysia) {
                             pricing: {
                                 name: pricing.name,
                                 price: pricing.price,
-                                currency: pricing.currency,
+                                currency: "usd",
                                 interval: pricing.interval,
                                 intervalThreshold: pricing.intervalThreshold,
                             },
@@ -377,16 +379,11 @@ export function purchaseSubRoutes(app: Elysia) {
                     }
                 }
 
-                if (ml && ml.status === LocationStatus.INCOMPLETE) {
-                    triggerNewMember({ planId: pricing.plan.id, mid, lid });
-                } else {
-                    triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
-                        if (a) {
-                            broadcastAchievement(member.userId, a)
-                        }
-                    })
-                }
-
+                triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
+                    if (a) {
+                        broadcastAchievement(member.userId, a)
+                    }
+                })
 
 
                 return status(200, { success: true });

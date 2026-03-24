@@ -25,8 +25,8 @@ export async function generateMobileToken(m: TokenPayload): Promise<MobileToken>
     const supabaseSecret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
     const authSecret = new TextEncoder().encode(process.env.AUTH_SECRET);
     const now = Math.floor(Date.now() / 1000);
-    const expires = now + 24 * 60 * 60;
-    const refreshTokenExpires = now + 30 * 24 * 60 * 60;
+    const expires = now + 7 * 24 * 60 * 60;
+    const refreshTokenExpires = now + 360 * 24 * 60 * 60;
     const supabasePayload = {
         aud: "authenticated", // Required: audience
         exp: expires, // Required: expiration (1 day)

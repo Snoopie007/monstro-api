@@ -6,3 +6,4 @@ export * from "./otherUtils";
 export * from "./chatsGroupsUtils";
 export * from "./triggers";
 export * from "./posts";
+export * from "./getCurrency";
