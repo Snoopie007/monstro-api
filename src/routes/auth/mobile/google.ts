@@ -175,6 +175,7 @@ export async function mobileGoogleLogin(app: Elysia) {
 
             const data = {
                 ...member,
+                memberId: member.id,
                 id: rest.id,
                 image: rest.image,
                 discriminator: rest.discriminator,

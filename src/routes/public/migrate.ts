@@ -36,7 +36,6 @@ export const migrationRoutes = new Elysia({ prefix: '/migrate' })
                     },
                 });
 
-                await new Promise((resolve) => setTimeout(resolve, 10000));
 
                 if (!migration) {
                     return status(404, { error: "Migration not found" });
