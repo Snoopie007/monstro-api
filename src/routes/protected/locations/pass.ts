@@ -27,23 +27,21 @@ export function locationPass(app: Elysia) {
                 });
                 if (!pass) {
                     return status(404, {
-                        error: 'PASS_NOT_FOUND',
-                        message: 'This pass does not exist.'
+                        error: 'This pass does not exist.',
                     });
                 }
                 if (pass.claimedBy) {
                     return status(400, {
-                        error: 'PASS_ALREADY_CLAIMED',
-                        message: 'This pass has already been claimed.'
+                        error: 'This pass has already been claimed.',
                     });
                 }
-                if (pass.referrerId !== memberId) {
+                if (pass.referrerId === memberId) {
                     return status(400, {
-                        error: 'CANNOT_CLAIM',
-                        message: 'Nice try, but you cannot claim your own pass.'
+                        error: 'Nice try, but you cannot claim your own pass.',
+
                     });
                 }
-
+                console.log(pass.planId);
                 // Typo fix: reference to memberPlans in query - import if necessary
                 const plan = await db.query.memberPlans.findFirst({
                     where: (memberPlans, { eq }) => eq(memberPlans.id, pass.planId),
@@ -61,6 +59,7 @@ export function locationPass(app: Elysia) {
                         },
                     },
                 });
+
                 if (!plan || !plan.pricings || plan.pricings.length === 0) {
                     return status(404, { error: 'Plan not found' });
                 }
@@ -91,6 +90,7 @@ export function locationPass(app: Elysia) {
                     }).onConflictDoNothing({
                         target: [memberLocations.memberId, memberLocations.locationId],
                     });
+
 
                     let expireDate: Date | undefined = undefined;
                     if (pricing.expireInterval && pricing.expireThreshold) {
