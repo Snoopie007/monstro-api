@@ -15,7 +15,7 @@ const LocationPassProps = {
 };
 
 export function locationPass(app: Elysia) {
-    app.group('/pass/:passId', (app) => {
+    app.group('/passes/:passId', (app) => {
 
         app.post('/claim', async ({ params, body, status }) => {
             const { lid, passId } = params;
@@ -26,13 +26,22 @@ export function locationPass(app: Elysia) {
                     where: (memberPasses, { eq }) => eq(memberPasses.id, passId),
                 });
                 if (!pass) {
-                    return status(404, { error: 'Pass not found' });
+                    return status(404, {
+                        error: 'PASS_NOT_FOUND',
+                        message: 'This pass does not exist.'
+                    });
                 }
                 if (pass.claimedBy) {
-                    return status(400, { error: 'Pass has already been claimed' });
+                    return status(400, {
+                        error: 'PASS_ALREADY_CLAIMED',
+                        message: 'This pass has already been claimed.'
+                    });
                 }
                 if (pass.referrerId !== memberId) {
-                    return status(400, { error: 'Pass does not belong to you' });
+                    return status(400, {
+                        error: 'CANNOT_CLAIM',
+                        message: 'Nice try, but you cannot claim your own pass.'
+                    });
                 }
 
                 // Typo fix: reference to memberPlans in query - import if necessary
