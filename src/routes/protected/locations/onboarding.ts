@@ -20,7 +20,7 @@ export function onboardingRoutes(app: Elysia) {
             const { mid } = body;
             try {
 
-                // await triggerNewMember({ mid, lid });
+                await triggerNewMember({ mid, lid });
                 // create claimed reward
 
                 const passPlan = await db.query.memberPlans.findFirst({
@@ -39,15 +39,30 @@ export function onboardingRoutes(app: Elysia) {
                     return status(200, { pass: null });
                 }
 
-                const [newPass] = await db.insert(memberPasses).values({
-                    referrerId: mid,
-                    locationId: lid,
-                    planId: passPlan.id,
-                }).returning()
+                let p = await db.query.memberPasses.findFirst({
+                    where: (mp, { eq, and, isNull }) => and(
+                        eq(mp.referrerId, mid),
+                        eq(mp.locationId, lid),
+                        eq(mp.planId, passPlan.id),
+                        isNull(mp.claimedBy),
+                    ),
+                });
+
+                if (!p) {
+                    const [newPass] = await db.insert(memberPasses).values({
+                        referrerId: mid,
+                        locationId: lid,
+                        planId: passPlan.id,
+                    }).returning();
+                    if (!newPass) {
+                        return status(500, { error: 'Failed to create pass' });
+                    }
+                    p = newPass;
+                }
 
                 return status(200, {
                     pass: {
-                        ...newPass,
+                        ...p,
                         plan: passPlan,
                     }
                 });
@@ -60,7 +75,8 @@ export function onboardingRoutes(app: Elysia) {
             const { lid } = params;
             const { mid } = body;
             try {
-                await triggerNewMember({ mid, lid });
+
+
 
                 await db.update(memberLocations)
                     .set({ onboarded: true })

@@ -12,11 +12,9 @@ export function startOnlineChannel() {
     });
 
     channel.on('presence', { event: 'join' }, ({ key }) => {
-        console.log(`[DEBUG] ${key} joined online channel`);
         addOnlineUser(key);
     });
     channel.on('presence', { event: 'leave' }, ({ key }) => {
-        console.log(`[DEBUG] ${key} left online channel`);
         removeOnlineUser(key);
     });
     channel.subscribe((status) => {

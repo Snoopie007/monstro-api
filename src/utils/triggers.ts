@@ -4,7 +4,7 @@ import {
     memberPointsHistory,
     memberLocations,
 } from '@subtrees/schemas'
-import type { Achievement, MemberAchievement, NewMemberPointsHistory } from '@subtrees/types'
+import type { Achievement, NewMemberPointsHistory } from '@subtrees/types'
 import { and, eq, inArray, SQL, sql } from 'drizzle-orm'
 import { AchievementTriggers } from '@subtrees/constants/data'
 
@@ -52,7 +52,7 @@ export async function triggerNewMember(data: { mid: string, lid: string }) {
         }
     })
 
-    if (!achievements) return
+    if (!achievements) throw new Error("Achievement not found")
 
     const ma = achievements.memberAchievements[0]
     if (ma && ma.dateAchieved) return
