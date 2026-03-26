@@ -143,7 +143,7 @@ export const memberPassesRelations = relations(memberPasses, ({ one }) => ({
 		fields: [memberPasses.claimedBy],
 		references: [members.id],
 	}),
-	memberPlan: one(memberPlans, {
+	plan: one(memberPlans, {
 		fields: [memberPasses.planId],
 		references: [memberPlans.id],
 	}),
