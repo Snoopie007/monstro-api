@@ -144,7 +144,7 @@ export const memberPassesRelations = relations(memberPasses, ({ one }) => ({
 		references: [members.id],
 	}),
 	memberPlan: one(memberPlans, {
-		fields: [memberPasses.memberPlanId],
+		fields: [memberPasses.planId],
 		references: [memberPlans.id],
 	}),
 }));
