@@ -98,18 +98,9 @@ export const familyMembers = pgTable("family_members", {
     relatedMemberId: text("related_member_id")
         .notNull()
         .references(() => members.id, { onDelete: "cascade" }),
-    contact: text("contact"),
-    status: text("status", {
-        enum: ["pending", "accepted", "declined", "cancelled"],
-    })
-        .notNull()
-        .default("pending"),
     relationship: MemberRelationshipEnum("relationship")
         .notNull()
         .default("extended"),
-    created: timestamp("created_at", { withTimezone: true })
-        .notNull()
-        .defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
 
