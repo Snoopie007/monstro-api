@@ -14,7 +14,7 @@ export async function publicLocationPlans(app: Elysia) {
         try {
 
             const plans = await db.query.memberPlans.findMany({
-                where: (plans, { eq }) => eq(plans.locationId, lid),
+                where: (plans, { eq, and, not }) => and(eq(plans.locationId, lid), not(eq(plans.type, "pass"))),
                 with: {
                     contract: {
                         columns: {

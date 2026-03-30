@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, status, t } from "elysia";
 import { db } from "@/db/db";
 import { accounts, familyMembers, members, users } from "@subtrees/schemas";
 import type { FamilyMember } from "@subtrees/types";
@@ -50,6 +50,7 @@ export async function memberFamilies(app: Elysia) {
                 return status(500, { error: "Failed to fetch families" });
             }
         }, MemberFamiliesProps)
+
 
         app.post("/child", async ({ status, params, body }) => {
             const { mid } = params;

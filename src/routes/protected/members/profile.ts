@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { members, users } from "@subtrees/schemas";
+import { familyMembers, members, users } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
@@ -121,8 +121,10 @@ export function memberProfile(app: Elysia) {
 
     app.patch('/completed', async ({ status, params }) => {
         const { mid } = params;
+
         try {
             await db.update(members).set({ setupCompleted: true }).where(eq(members.id, mid));
+
             return status(200, { success: true });
         } catch (error) {
             console.error(error);

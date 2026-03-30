@@ -18,6 +18,7 @@ export function userFeedsRoutes(app: Elysia) {
             const { uid } = params;
             const { lastFeedDate } = query;
             const startDate = lastFeedDate ? new Date(lastFeedDate) : new Date();
+
             try {
 
                 const feeds = await db.query.userFeeds.findMany({

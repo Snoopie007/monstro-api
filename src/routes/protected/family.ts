@@ -1,95 +1,83 @@
 import { db } from "@/db/db";
+import type { MemberRelationship } from "@subtrees/types";
 import { Elysia, t } from "elysia";
 import { familyMembers } from "subtrees/schemas";
-import { eq } from "drizzle-orm";
+
+
+
+const INVERSE_RELATIONSHIP: Record<string, MemberRelationship> = {
+    parent: "child",
+    spouse: "spouse",
+    child: "parent",
+    sibling: "sibling",
+    extended: "extended",
+}
 
 export function familyRoutes(app: Elysia) {
     app.group("/family", (app) => {
-        app.get("/:familyId", async ({ status, params }) => {
-            const { familyId } = params;
+        app.post("/join", async ({ status, body, params }) => {
+            const { memberId, relatedMemberId, relationship } = body;
             try {
-                const family = await db.query.familyMembers.findFirst({
-                    where: (familyMembers, { eq, and }) =>
-                        and(
-                            eq(familyMembers.id, familyId),
-                            eq(familyMembers.status, 'pending')
-                        ),
-                    with: {
-                        member: {
-                            columns: {
-                                id: true,
-                                firstName: true,
-                                lastName: true,
-                                email: true,
-                            },
-                            with: {
-                                user: {
-                                    columns: {
-                                        id: true,
-                                        name: true,
-                                        image: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
+                if (relatedMemberId === memberId) {
+                    return status(400, { error: "You cannot add yourself as a family member" });
+                }
+
+                await db.transaction(async (tx) => {
+                    await tx.insert(familyMembers).values({
+                        memberId,
+                        relatedMemberId,
+                        relationship: relationship as MemberRelationship,
+                    }).onConflictDoNothing({
+                        target: [familyMembers.memberId, familyMembers.relatedMemberId],
+                    })
+                    await tx.insert(familyMembers).values({
+                        memberId: relatedMemberId,
+                        relatedMemberId: memberId,
+                        relationship: INVERSE_RELATIONSHIP[relationship],
+                    }).onConflictDoNothing({
+                        target: [familyMembers.memberId, familyMembers.relatedMemberId],
+                    })
                 });
-
-
-                return status(200, family || {});
+                return status(200, { success: true });
             } catch (error) {
-                return status(500, { error: "Failed to fetch family" });
+                console.error(error);
+                return status(500, { error: "Failed to add family member" });
             }
+        }, {
+            body: t.Object({
+                relationship: t.String(),
+                relatedMemberId: t.String(),
+                memberId: t.String(),
+            }),
         });
-        app.patch('/:familyId', async ({ status, params, body }) => {
-            const { familyId } = params;
-            const { updates } = body;
+        app.get("/join/:code/related", async ({ status, params }) => {
+            const { code } = params;
             try {
-
-                const member = await db.query.members.findFirst({
-                    where: (m, { eq }) => eq(m.id, updates.memberId),
+                const family = await db.query.members.findFirst({
+                    where: (m, { eq }) => eq(m.familyInviteCode, code),
                     columns: {
                         id: true,
                         firstName: true,
                         lastName: true,
-                        email: true,
-                        phone: true,
                         userId: true,
                     },
+                    with: {
+                        user: {
+                            columns: {
+                                image: true,
+                            },
+                        },
+                    },
                 });
-                if (!member) {
-                    return status(400, { error: "Member not found" });
+                if (!family) {
+                    return status(404, { error: "Family not found" });
                 }
-
-
-                const [familyMember] = await db.update(familyMembers).set({
-
-                    ...updates,
-                    updated: new Date(),
-                }).where(eq(familyMembers.id, familyId)).returning();
-
-                if (!familyMember) {
-                    return status(500, { error: "Failed to update family member" });
-                }
-                return status(200, {
-                    ...familyMember,
-                    member: member,
-                });
+                return status(200, family);
             } catch (error) {
                 console.error(error);
-                return status(500, { error: "Failed to accept family member" });
+                return status(500, { error: "Failed to fetch family" });
             }
-        }, {
-            params: t.Object({
-                familyId: t.String(),
-            }),
-            body: t.Object({
-                updates: t.Object({
-                    memberId: t.String(),
-                    status: t.Union([t.Literal("accepted"), t.Literal("declined")]),
-                }),
-            }),
-        });
+        }, { params: t.Object({ code: t.String() }) });
         return app;
     });
     return app;
