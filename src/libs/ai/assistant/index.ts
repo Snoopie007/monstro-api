@@ -234,7 +234,7 @@ async function enqueueWritebackJob(job: AssistantMemoryWritebackJob) {
   const finalizeJobId = `mem-finalize-${job.locationId}-${job.threadId}`;
 
   await assistantMemoryWritebackQueue.add("memory:writeback", job, {
-    jobId: `mem-write-${job.locationId}-${job.threadId}-${job.turnId}`,
+    jobId: `mem-write-${job.locationId}-${job.threadId}`,
   });
 
   const existingFinalizeJob = await assistantMemoryWritebackQueue.getJob(finalizeJobId);
@@ -445,7 +445,6 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
   const finalReply = unsupportedReply || reply;
 
   const writebackJob: AssistantMemoryWritebackJob = {
-    turnId: crypto.randomUUID(),
     locationId: props.locationId,
     vendorId: props.vendorId,
     userId: props.userId,

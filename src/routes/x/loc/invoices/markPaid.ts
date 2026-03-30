@@ -5,6 +5,7 @@ import { t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
+import { getCurrency } from "@/utils";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/mark-paid", async ({ params, body, status }) => {
@@ -25,6 +26,17 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         }
 
         let walletChargeMetadata: Record<string, unknown> | null = null;
+        const location = await db.query.locations.findFirst({
+            where: (l, { eq }) => eq(l.id, lid),
+            columns: {
+                vendorId: true,
+                country: true,
+            },
+        });
+
+        if (!location) {
+            return status(404, { error: "Location not found" });
+        }
 
         if (invoice.memberPlanId) {
             const sub = await db.query.memberSubscriptions.findFirst({
@@ -35,12 +47,6 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
             });
 
             if (sub?.paymentType === "cash") {
-                const location = await db.query.locations.findFirst({
-                    where: (l, { eq }) => eq(l.id, lid),
-                    columns: {
-                        vendorId: true,
-                    },
-                });
 
                 if (!location?.vendorId) {
                     return status(422, {
@@ -157,7 +163,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 eq(inv.status, "draft")
                             ),
                         });
-
+                        const currency = getCurrency(location.country);
                         if (!existingDraft) {
                             const lineItems = [{
                                 name: `${sub.pricing.name}`,
@@ -175,7 +181,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 subTotal: sub.pricing.price,
                                 total: sub.pricing.price,
                                 tax: 0,
-                                currency: sub.pricing.currency,
+                                currency: currency || "usd",
                                 status: "draft",
                                 dueDate: new Date(nextEnd),
                                 paymentType: "cash",
@@ -203,7 +209,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 total: sub.pricing.price,
                                 subTotal: sub.pricing.price,
                                 tax: 0,
-                                currency: sub.pricing.currency,
+                                currency: currency || "usd",
                                 items: [{
                                     name: sub.pricing.name,
                                     amount: sub.pricing.price,

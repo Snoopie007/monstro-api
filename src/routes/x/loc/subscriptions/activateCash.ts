@@ -4,6 +4,7 @@ import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { eq } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
+import { getCurrency } from "@/utils";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
@@ -13,6 +14,11 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid)),
             with: {
                 pricing: true,
+                location: {
+                    columns: {
+                        country: true,
+                    },
+                },
             },
         });
 
@@ -38,6 +44,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     price: sub.pricing.price,
                 }];
 
+                const currency = getCurrency(sub.location.country);
                 const [invoice] = await db.insert(memberInvoices).values({
                     memberId: sub.memberId,
                     locationId: lid,
@@ -47,7 +54,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     subTotal: sub.pricing.price,
                     total: sub.pricing.price,
                     tax: 0,
-                    currency: sub.pricing.currency,
+                    currency: currency || "usd",
                     status: "draft",
                     dueDate: new Date(sub.currentPeriodEnd),
                     paymentType: "cash",
@@ -72,7 +79,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                         total: sub.pricing.price,
                         subTotal: sub.pricing.price,
                         tax: 0,
-                        currency: sub.pricing.currency,
+                        currency: currency || "usd",
                         items: [{
                             name: sub.pricing.name,
                             amount: sub.pricing.price,

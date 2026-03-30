@@ -17,6 +17,7 @@ import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
+import { getCurrency } from "@/utils";
 
 export async function activateSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate", async ({ params, body, status }) => {
@@ -49,6 +50,13 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                             columns: { accountId: true, service: true },
                         },
                     },
+                    columns: {
+                        name: true,
+                        email: true,
+                        phone: true,
+                        address: true,
+                        country: true,
+                    },
                 },
             },
         });
@@ -79,6 +87,12 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         } | undefined);
         const discountAmount = promoMeta?.discount?.amount || 0;
 
+        const location = sub.location;
+        if (!location) {
+            return status(404, { error: "Location not found" });
+        }
+        const currency = getCurrency(location.country);
+
         if (sub.status === "trialing" && sub.trialEnd && isFuture(sub.trialEnd)) {
             const payload: SubscriptionJobData = {
                 sid: sub.id,
@@ -89,17 +103,17 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     email: sub.member.email,
                 },
                 location: {
-                    name: sub.location.name,
-                    email: sub.location.email,
-                    phone: sub.location.phone,
-                    address: sub.location.address,
+                    name: location.name,
+                    email: location.email,
+                    phone: location.phone,
+                    address: location.address,
                 },
-                taxRate: sub.location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
+                taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
                 stripeCustomerId: sub.member.stripeCustomerId,
                 pricing: {
                     name: sub.pricing.name,
                     price: sub.pricing.price,
-                    currency: sub.pricing.currency,
+                    currency: currency || "usd",
                     interval: sub.pricing.interval!,
                     intervalThreshold: sub.pricing.intervalThreshold!,
                 },
@@ -188,7 +202,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             subTotal: chargeDetails.subTotal,
             total: chargeDetails.total,
             tax: chargeDetails.tax,
-            currency: sub.pricing.currency,
+            currency: currency || "usd",
             status: "draft",
             dueDate: new Date(),
             paymentType: paymentMethod.type,
@@ -227,7 +241,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         memberSubscriptionId: sub.id,
                     },
                     productName: planName,
-                    currency: sub.pricing.plan?.currency || sub.pricing.currency,
+                    currency: currency || "usd",
                 }),
                 30000,
                 "Stripe payment timeout while activating subscription"
@@ -319,7 +333,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             pricing: {
                 name: sub.pricing.name,
                 price: sub.pricing.price,
-                currency: sub.pricing.currency,
+                currency: currency || "usd",
                 interval: sub.pricing.interval!,
                 intervalThreshold: sub.pricing.intervalThreshold!,
             },

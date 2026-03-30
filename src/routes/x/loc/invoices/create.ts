@@ -9,6 +9,7 @@ import {
     PENDING_TRANSACTION_PAYMENT_TYPE,
     PENDING_TRANSACTION_STATUS,
 } from "./shared";
+import { getCurrency } from "@/utils";
 
 export async function createInvoiceRoutes(app: Elysia) {
     return app.post("/", async ({ body, params, status }) => {
@@ -53,6 +54,11 @@ export async function createInvoiceRoutes(app: Elysia) {
             const sub = await db.query.memberSubscriptions.findFirst({
                 where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid), eq(s.memberId, memberId)),
                 with: {
+                    location: {
+                        columns: {
+                            country: true,
+                        },
+                    },
                     pricing: {
                         with: {
                             plan: true,
@@ -74,7 +80,7 @@ export async function createInvoiceRoutes(app: Elysia) {
             }];
 
             const { subtotal, total } = calcTotals(lineItems, tax, discount);
-
+            const currency = getCurrency(sub.location.country);
             const [invoice] = await db.insert(memberInvoices).values({
                 memberId,
                 locationId: lid,
@@ -84,7 +90,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                 subTotal: subtotal,
                 total,
                 tax,
-                currency: sub.pricing.currency || sub.pricing.plan?.currency || "usd",
+                currency: currency || "usd",
                 status: "draft",
                 dueDate: dueDate ? new Date(dueDate) : new Date(sub.currentPeriodEnd),
                 paymentType: sub.paymentType,
@@ -119,7 +125,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                     total,
                     subTotal: subtotal,
                     tax,
-                    currency: sub.pricing.currency || "usd",
+                    currency: currency || "usd",
                     metadata: {
                         intendedPaymentType: sub.paymentType,
                         collectionMethod,

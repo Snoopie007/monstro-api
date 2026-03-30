@@ -2,15 +2,35 @@ import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { calcTotals } from "./shared";
+import { getCurrency } from "@/utils";
 
 export async function previewInvoiceRoutes(app: Elysia) {
     return app.post("/preview", async ({ body, params, status }) => {
         const { lid } = params as { lid: string };
-        const { memberId, items, type, selectedSubscriptionId, subscriptionId, tax = 0, discount = 0 } = body;
+        const { memberId,
+            items,
+            type,
+            selectedSubscriptionId,
+            subscriptionId,
+            tax = 0,
+            discount = 0,
+        } = body;
 
         const member = await db.query.members.findFirst({
             where: (m, { eq }) => eq(m.id, memberId),
         });
+
+        const location = await db.query.locations.findFirst({
+            where: (l, { eq }) => eq(l.id, lid),
+            columns: {
+                country: true,
+            },
+        });
+
+        if (!location) {
+            return status(404, { error: "Location not found" });
+        }
+        const currency = getCurrency(location.country);
 
         if (!member) {
             return status(404, { error: "Member not found" });
@@ -41,12 +61,12 @@ export async function previewInvoiceRoutes(app: Elysia) {
                     subtotal: totals.subtotal,
                     tax_total: tax,
                     amount_due: totals.total,
-                    currency: sub.pricing.currency || "usd",
+                    currency: currency || "usd",
                     formatted_lines: previewItems.map((item) => ({
                         description: `${item.name}${item.description ? ` - ${item.description}` : ""}`,
                         amount: item.price * item.quantity,
                         quantity: item.quantity,
-                        currency: sub.pricing.currency || "usd",
+                        currency: currency || "usd",
                     })),
                     customer_info: {
                         name: `${member.firstName} ${member.lastName}`,
@@ -59,7 +79,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
                     tax_cents: tax,
                     discount_cents: discount,
                     total_cents: totals.total,
-                    currency: sub.pricing.currency || "usd",
+                    currency: currency || "usd",
                 },
             });
         }

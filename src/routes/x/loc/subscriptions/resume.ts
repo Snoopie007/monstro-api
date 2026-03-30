@@ -11,6 +11,7 @@ import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
 import { type PromoDiscount } from "./shared";
+import { getCurrency } from "@/utils";
 
 export async function resumeSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/resume", async ({ params, body, status }) => {
@@ -33,6 +34,13 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     with: {
                         taxRates: true,
                     },
+                    columns: {
+                        name: true,
+                        email: true,
+                        phone: true,
+                        address: true,
+                        country: true,
+                    },
                 },
             },
         });
@@ -41,6 +49,13 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             return status(404, { error: "Subscription not found" });
         }
 
+
+        const location = sub.location;
+        if (!location) {
+            return status(404, { error: "Location not found" });
+        }
+
+        const currency = getCurrency(location.country);
         const nextBillingAt = resumeAt ? new Date(resumeAt) : new Date();
 
         await db.update(memberSubscriptions).set({
@@ -60,17 +75,17 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     email: sub.member.email,
                 },
                 location: {
-                    name: sub.location?.name || "",
-                    email: sub.location?.email || null,
-                    phone: sub.location?.phone || null,
-                    address: sub.location?.address || null,
+                    name: location.name,
+                    email: location.email,
+                    phone: location.phone,
+                    address: location.address,
                 },
-                taxRate: sub.location?.taxRates?.find((t) => t.isDefault)?.percentage || 0,
+                taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
                 stripeCustomerId: sub.member.stripeCustomerId,
                 pricing: {
                     name: sub.pricing.name,
                     price: sub.pricing.price,
-                    currency: sub.pricing.currency,
+                    currency: currency || "usd",
                     interval: sub.pricing.interval!,
                     intervalThreshold: sub.pricing.intervalThreshold!,
                 },

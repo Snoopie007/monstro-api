@@ -11,6 +11,7 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
+    getCurrency,
 } from "@/utils";
 import { isToday } from "date-fns";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
@@ -62,6 +63,12 @@ export function migrateSubRoutes(app: Elysia) {
                             },
                         },
                     },
+                    columns: {
+                        name: true,
+                        phone: true,
+                        email: true,
+                        country: true,
+                    },
                 }),
                 db.query.paymentMethods.findFirst({
                     where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
@@ -87,7 +94,7 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(404, { error: "Pricing not found" });
             }
 
-            if (!pricing.stripePriceId || !pricing.interval || !pricing.intervalThreshold) {
+            if (!pricing.interval || !pricing.intervalThreshold) {
                 return status(400, { error: "Invalid pricing for subscription plan." });
             }
 
@@ -178,6 +185,8 @@ export function migrateSubRoutes(app: Elysia) {
             if (!sub) {
                 return status(500, { error: "Failed to create subscription" });
             }
+
+            const currency = getCurrency(location.country);
             if (isToday(currentPeriodStart)) {
                 const productName = pricing.name;
                 const description = `Payment for ${pricing.name}`;
@@ -207,7 +216,7 @@ export function migrateSubRoutes(app: Elysia) {
                     ...chargeDetails,
                     forPeriodStart: currentPeriodStart,
                     forPeriodEnd: currentPeriodEnd,
-                    currency: pricing.currency,
+                    currency,
                     dueDate: new Date(),
                 }).returning({
                     id: memberInvoices.id
@@ -220,7 +229,7 @@ export function migrateSubRoutes(app: Elysia) {
                 await stripe.processPayment({
                     ...chargeDetails,
                     paymentMethodId,
-                    currency: pricing.currency,
+                    currency,
                     description,
                     productName,
                     metadata: {
@@ -255,7 +264,7 @@ export function migrateSubRoutes(app: Elysia) {
                     pricing: {
                         name: pricing.name,
                         price: pricing.price,
-                        currency: pricing.currency,
+                        currency: currency || "usd",
                         interval: pricing.interval,
                         intervalThreshold: pricing.intervalThreshold,
                     }
