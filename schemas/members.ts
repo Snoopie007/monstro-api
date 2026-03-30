@@ -19,41 +19,24 @@ import { contractTemplates } from "./contracts";
 import { locations } from "./locations";
 import { users } from "./users";
 
-export const members = pgTable("members", {
-    id: uuid("id")
-        .primaryKey()
-        .notNull()
-        .default(sql`uuid_base62()`),
-    userId: text("user_id")
-        .notNull()
-        .unique()
-        .references(() => users.id, { onDelete: "cascade" }),
-    firstName: text("first_name").notNull(),
-    lastName: text("last_name"),
-    email: text("email").notNull().unique(),
-    phone: text("phone"),
-    referralCode: text("referral_code")
-        .notNull()
-        .default(sql`generate_random_code(8)`),
-    familyInviteCode: text("family_invite_code")
-        .notNull()
-        .default(sql`generate_random_code(6)`),
-    hasInstalledApp: boolean("has_installed_app").notNull().default(false),
-    gender: text("gender"),
-    addresses: jsonb("addresses")
-        .$type<MemberAddress[]>()
-        .notNull()
-        .default(sql`'[]'::jsonb`),
-    dob: timestamp("dob", { withTimezone: true, mode: "date" }).default(
-        sql`NULL`,
-    ),
-    stripeCustomerId: text("stripe_customer_id"),
-    setupCompleted: boolean("setup_completed").notNull().default(false),
-    created: timestamp("created_at", { withTimezone: true })
-        .notNull()
-        .defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
-});
+export const members = pgTable('members', {
+	id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
+	userId: text('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+	firstName: text('first_name').notNull(),
+	lastName: text('last_name'),
+	email: text('email').notNull().unique(),
+	phone: text('phone'),
+	referralCode: text('referral_code').notNull().default(sql`generate_random_code()`),
+	familyInviteCode: text('family_invite_code').notNull().default(sql`generate_random_code()`),
+	hasInstalledApp: boolean('has_installed_app').notNull().default(false),
+	gender: text('gender'),
+	addresses: jsonb('addresses').$type<MemberAddress[]>().notNull().default(sql`'[]'::jsonb`),
+	dob: timestamp('dob', { withTimezone: true, mode: 'date' }).default(sql`NULL`),
+	stripeCustomerId: text('stripe_customer_id'),
+	setupCompleted: boolean('setup_completed').notNull().default(false),
+	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updated: timestamp('updated_at', { withTimezone: true }),
+})
 
 export const memberReferrals = pgTable(
     "member_referrals",
