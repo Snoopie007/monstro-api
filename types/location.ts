@@ -89,6 +89,16 @@ export type LocationOnboardingSettings = {
     skipAcknowledged?: boolean;
     completedAt?: string;
   };
+  pass?: {
+    planId?: string;
+    name?: string;
+    description?: string;
+    totalClassLimit?: number;
+    expires?: boolean;
+    expireInterval?: 'day' | 'week' | 'month' | 'year';
+    expireThreshold?: number;
+    completedAt?: string;
+  };
   welcomeVideo?: {
     dismissedAt?: string;
   };
