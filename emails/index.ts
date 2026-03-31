@@ -3,7 +3,6 @@ import HolidayCancellationEmail from "./HolidayCancellationEmail";
 import InvoiceReminderEmail from "./InvoiceReminderEmail";
 import LoginTokenEmail from "./LoginTokenEmail";
 import MakeupClassConfirmationEmail from "./MakeupClassConfirmationEmail";
-import FamilyInviteEmail from "./FamilyInvite";
 import MemberInviteEmail from "./MemberInvite";
 import MissedClassEmail from "./MissedClassEmail";
 import OTPEmailTemplate from "./OTPEmailTemplate";
@@ -24,7 +23,6 @@ export const EmailTemplates = {
     InvoiceReminderEmail,
     LoginTokenEmail,
     MakeupClassConfirmationEmail,
-    FamilyInviteEmail,
     MemberInviteEmail,
     ChildFamilyEmail,
     StaffInviteEmail,
