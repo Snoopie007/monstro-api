@@ -11,7 +11,6 @@ import {
 	locations, locationState,
 } from "./locations";
 import { memberLocations } from "./MemberLocation";
-import { memberPasses } from "./MemberPasses";
 import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions } from "./MemberPlans";
 import {
 	familyMembers,
@@ -21,6 +20,7 @@ import {
 	memberReferrals,
 	members,
 } from "./members";
+import { memberPasses } from "./MemberPasses";
 import { migrateMembers } from "./MigrateMembers";
 import { memberPaymentMethods, paymentMethods } from "./PaymentMethods";
 import { planPrograms, programs, programSessions, sessionWaitlist } from "./programs";
@@ -143,8 +143,8 @@ export const memberPassesRelations = relations(memberPasses, ({ one }) => ({
 		fields: [memberPasses.claimedBy],
 		references: [members.id],
 	}),
-	memberPlan: one(memberPlans, {
-		fields: [memberPasses.memberPlanId],
+	plan: one(memberPlans, {
+		fields: [memberPasses.planId],
 		references: [memberPlans.id],
 	}),
 }));
