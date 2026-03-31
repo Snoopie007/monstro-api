@@ -48,7 +48,8 @@ export default function MigrationEmail({
                             button below.
                         </Text>
                         <Section style={styles.buttonSection}>
-                            <Button style={styles.button} href={`${BASE_APPFLYER_URL}/mig?migrate_id=${migrateId}`} >
+                            {/* This assumes the url is something like: https://d.monstro-x.com/wh6i?af_xp=email&pid=Email&c=Migration&deep_link_value=migrate&af_dp=monstrox%3A%2F%2Fpublic%2Fmigrate&af_force_deeplink=true&migrate_id= */}
+                            <Button style={styles.button} href={`${BASE_APPFLYER_URL}${migrateId}`} >
                                 Accept Invite
                             </Button>
                         </Section>
