@@ -4,7 +4,7 @@ import {
   reservations,
 } from "../schemas/reservations";
 import type { Member, MemberPackage, MemberSubscription } from "./member";
-import type { Program, ProgramSession } from "./program";
+import type { ProgramSession } from "./program";
 
 export type Attendance = typeof attendances.$inferSelect & {
   reservation?: Reservation;
@@ -53,10 +53,22 @@ export type AttendanceResponse = {
   missedReservations: MissedReservation[];
 };
 
+export type CheckinOption = {
+  id: string;
+  source: "reservation" | "walkin";
+  reservationId: string | null;
+  memberId: string;
+  locationId: string;
+  sessionId: string;
+  startOn: Date;
+  endOn: Date;
+  session: ProgramSession;
+  attendance?: Attendance | null;
+};
+
 
 // Unified exception type - supports both recurring and single reservations
 export type ReservationException = typeof reservationExceptions.$inferSelect & {
   reservation?: Reservation;
 };
-
 
