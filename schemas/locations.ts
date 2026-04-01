@@ -57,4 +57,3 @@ export const locationState = pgTable("location_state", {
 });
 
 
-
