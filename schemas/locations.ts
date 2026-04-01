@@ -45,6 +45,7 @@ export const locationState = pgTable("location_state", {
 	planId: integer("plan_id").notNull().default(1),
 	waiverId: text("waiver_id"),
 	agreeToTerms: boolean("agree_to_terms").notNull().default(false),
+	allowAppCheckIns: boolean("allow_app_check_ins").notNull().default(true),
 	lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true, }).defaultNow(),
 	startDate: timestamp("start_date", { withTimezone: true }),
 	settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
@@ -54,7 +55,6 @@ export const locationState = pgTable("location_state", {
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
-
 
 
 
