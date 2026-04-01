@@ -1,9 +1,9 @@
 import { Elysia } from "elysia"
 
 
-const CURRENT_VERSION = `1.1.0`;
-const PREVIOUS_VERSION = `1.1.0`;
-const MINIMUM_VERSION = `1.1.0`;
+const CURRENT_VERSION = `1.1.01`;
+const PREVIOUS_VERSION = `1.1.01`;
+const MINIMUM_VERSION = `1.1.01`;
 
 export const appStatsRoutes = new Elysia({ prefix: '/app' })
     .get('/version', async ({ params, status }) => {

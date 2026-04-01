@@ -36,10 +36,7 @@ export const migrationRoutes = new Elysia({ prefix: '/migrate' })
                     },
                 });
 
-
-                if (!migration) {
-                    return status(404, { error: "Migration not found" });
-                }
+                if (!migration) return status(404, { error: "Migration not found" });
                 return status(200, migration);
             } catch (error) {
                 return status(500, { error: "Failed to get migrate" });
