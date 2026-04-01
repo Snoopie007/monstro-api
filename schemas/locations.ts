@@ -26,7 +26,7 @@ export const locations = pgTable("locations", {
 	state: LocationStatusEnum("state"),
 	postalCode: text("postal_code"),
 	website: text("website"),
-	country: text("country"),
+	country: text("country").notNull(),
 	phone: text("phone"),
 	timezone: text("timezone").notNull().default("America/New_York"),
 	logoUrl: text("logo_url"),

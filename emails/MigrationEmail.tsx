@@ -12,6 +12,7 @@ import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
 import type { Member, Location } from '../types';
+import { BASE_APPFLYER_URL } from '../constants/data';
 
 interface MigrationEmailProps {
     member: Pick<Member, 'firstName'>;
@@ -26,6 +27,7 @@ const styles: Record<string, React.CSSProperties> = {
         margin: '12px 0',
     },
 };
+
 export default function MigrationEmail({
     member,
     location,
@@ -46,7 +48,7 @@ export default function MigrationEmail({
                             button below.
                         </Text>
                         <Section style={styles.buttonSection}>
-                            <Button style={styles.button} href={`https://m.monstro-x.com/register?migrateId=${migrateId}`} >
+                            <Button style={styles.button} href={`${BASE_APPFLYER_URL}/mig?migrate_id=${migrateId}`} >
                                 Accept Invite
                             </Button>
                         </Section>

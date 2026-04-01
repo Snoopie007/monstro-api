@@ -11,7 +11,6 @@ export type BaseUser = {
 };
 
 export type ExtendedUser = BaseUser & {
-
   memberId?: string | null;
 };
 
@@ -22,6 +21,4 @@ export type ExtendedVendorUser = ExtendedUser & {
 
 export type AuthAdditionalData = {
   migrateId?: string | null;
-  ref?: string | null;
-  lid?: string | null;
 };

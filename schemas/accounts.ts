@@ -12,6 +12,8 @@ export const accounts = pgTable("account", {
 	refreshToken: text("refresh_token"),
 	accessToken: text("access_token"),
 	expires: timestamp("expires_at", { withTimezone: true }),
+	accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+	refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
 	tokenType: text("token_type"),
 	idToken: text("id_token"),
 	scope: text("scope"),

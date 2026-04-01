@@ -32,6 +32,8 @@ const MonstroData: MonstroDataType = {
     xUrl: 'https://x.com/monstro',
 }
 
+const BASE_APPFLYER_URL = 'https://d.monstro-x.com/wh6i';
+
 const PaymentMethods: string[] = [
     "card",
     "cash",
@@ -248,5 +250,5 @@ const AchievementTriggers = {
 export {
     CountryCodes, TimeZones, Regions, Industries,
     RETRIABLE_PG_CODES, COMMON_HOLIDAYS,
-    RealTimeEvents, AchievementTriggers
+    RealTimeEvents, AchievementTriggers, BASE_APPFLYER_URL
 };

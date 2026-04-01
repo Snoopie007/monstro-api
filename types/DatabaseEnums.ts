@@ -24,7 +24,6 @@ export type Interval = 'day' | 'week' | 'month' | 'year';
 export type PaymentType = 'card' | 'cash' | 'us_bank_account' | 'paypal' | 'apple_pay' | 'google_pay';
 export type InvoiceStatus = 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'void';
 export type MemberRelationship = 'parent' | 'spouse' | 'child' | 'sibling' | 'extended';
-export type FamilyMemberStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
 export type ContractType = 'contract' | 'waiver';
 export type RoleColor = "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow";
 export type TransactionStatus = 'paid' | 'failed' | 'disputed';
