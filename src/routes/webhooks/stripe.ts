@@ -2,9 +2,9 @@ import { Elysia, t } from "elysia";
 import Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/stripe";
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, memberPackages, transactions, memberLocations } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 /**
  * Stripe Webhook Handler for Member Billing Events
  *
@@ -169,16 +169,26 @@ async function handleCharge(event: Stripe.Event) {
         }
     });
 
-    if (isPackage && charge.paid) {
-        await db.update(memberPackages).set({
-            status: "active",
-        }).where(eq(memberPackages.id, memberPlanId));
-    } else {
-        await db.update(memberSubscriptions).set({
-            stripePaymentId: charge.payment_method,
-            status: charge.paid ? "active" : "past_due",
-        }).where(eq(memberSubscriptions.id, memberPlanId));
-    }
+    const isActive = charge.paid;
+    await db.transaction(async (tx) => {
+
+        if (isPackage && isActive) {
+            await tx.update(memberPackages).set({
+                status: "active",
+            }).where(eq(memberPackages.id, memberPlanId));
+        } else {
+            await tx.update(memberSubscriptions).set({
+                stripePaymentId: charge.payment_method,
+                status: isActive ? "active" : "past_due",
+            }).where(eq(memberSubscriptions.id, memberPlanId));
+        }
+        if (isActive) {
+            await tx.update(memberLocations).set({
+                status: "active",
+            }).where(and(eq(memberLocations.memberId, memberId),
+                eq(memberLocations.locationId, locationId)));
+        }
+    });
 }
 
 async function handlePaymentIntentFailure(event: Stripe.Event) {
