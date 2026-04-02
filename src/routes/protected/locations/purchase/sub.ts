@@ -393,8 +393,6 @@ export function purchaseSubRoutes(app: Elysia) {
                     switch (error.type) {
                         case "StripeCardError":
                             const paymentIntent = error.payment_intent;
-                            console.log(paymentIntent);
-                            console.log(error.code);
                             return status(400, { error: error.message });
                         default:
                             return status(500, { error: error.message });

@@ -10,14 +10,12 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
-    triggerNewMember,
     triggerPurchase,
     getCurrency,
 } from "@/utils";
 
 import Stripe from "stripe";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
-import { LocationStatus } from "@subtrees/types";
 
 const PurchasePkgProps = {
     params: z.object({

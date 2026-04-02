@@ -49,13 +49,15 @@ export async function scheduleCronBasedRenewal({
     };
 
 
+
     let lastError: Error | null = null;
+    const DayBeforeStart = startDate.setDate(startDate.getDate() - 1);
     for (let attempt = 1; attempt <= MAX_SCHEDULER_ATTEMPTS; attempt++) {
         try {
             await subQueue.upsertJobScheduler(`renewal:static:${sid}`, {
                 pattern,
                 utc: true,
-                startDate: new Date(startDate),
+                startDate: DayBeforeStart,
             }, {
                 name: `renewal:static:${sid}`,
                 data: data,
@@ -63,7 +65,7 @@ export async function scheduleCronBasedRenewal({
             return;
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
-            console.error(` attempt ${attempt}/${MAX_SCHEDULER_ATTEMPTS} failed:`, lastError.message);
+            console.error(`attempt ${attempt}/${MAX_SCHEDULER_ATTEMPTS} failed:`, lastError.message);
             if (attempt < MAX_SCHEDULER_ATTEMPTS) {
                 await sleep(SCHEDULER_RETRY_DELAY_MS * attempt);
             }
