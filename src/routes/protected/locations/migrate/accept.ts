@@ -78,6 +78,9 @@ export function migrateAcceptRoutes(app: Elysia) {
             const hasPayment = migrate?.payment;
             const state = hasPlan && hasPayment ? "incomplete" : "active";
 
+
+
+
             const [ml] = await db.insert(memberLocations).values({
                 memberId: mid,
                 locationId: lid,
@@ -181,6 +184,7 @@ export function migrateAcceptRoutes(app: Elysia) {
             }
 
             await db.update(migrateMembers).set({
+                ...(!migrate?.memberId && { memberId: mid }),
                 ...(!migrate?.payment && { status: "completed" }),
                 acceptedOn: today,
                 updated: today,
@@ -215,11 +219,13 @@ export function migrateAcceptRoutes(app: Elysia) {
             ])),
         }),
     });
-    app.post('/decline', async ({ status, params }) => {
+    app.post('/decline', async ({ status, params, body }) => {
         const { migrateId } = params;
+        const { mid } = body;
         const today = new Date();
         try {
             await db.update(migrateMembers).set({
+                memberId: mid,
                 status: "completed",
                 declinedOn: today,
                 updated: today,
@@ -232,6 +238,9 @@ export function migrateAcceptRoutes(app: Elysia) {
         params: t.Object({
             lid: t.String(),
             migrateId: t.String(),
+        }),
+        body: t.Object({
+            mid: t.String(),
         }),
     });
     return app;

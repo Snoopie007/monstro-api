@@ -41,7 +41,6 @@ export function locationPass(app: Elysia) {
 
                     });
                 }
-                console.log(pass.planId);
                 // Typo fix: reference to memberPlans in query - import if necessary
                 const plan = await db.query.memberPlans.findFirst({
                     where: (memberPlans, { eq }) => eq(memberPlans.id, pass.planId),

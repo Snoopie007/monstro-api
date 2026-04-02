@@ -1,6 +1,6 @@
 import type { PaymentType } from "@subtrees/types";
 
-import { addMonths, addYears } from "date-fns";
+import { addMonths } from "date-fns";
 import Stripe from "stripe";
 import { BASE_MONSTRO_X_URL } from "@subtrees/emails/_shared/data";
 
