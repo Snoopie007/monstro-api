@@ -19,6 +19,7 @@ export * from "./medias";
 export * from "./member";
 export * from "./MigrateMember";
 export * from "./moments";
+export * from "./other";
 export * from "./PaymentMethods";
 export * from "./program";
 export * from "./promo";
