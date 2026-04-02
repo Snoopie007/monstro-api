@@ -19,6 +19,9 @@ export type SessionLocation = {
     status?: string;
     roles?: any[];
     permissions?: string[];
+    locationState?: {
+      status: string;
+    } | null;
 };
 
 export type ExtendedUser = Partial<User> & {

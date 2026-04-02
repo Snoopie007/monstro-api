@@ -1,4 +1,5 @@
-import { serial, timestamp, pgTable, text, integer } from "drizzle-orm/pg-core";
+import { serial, timestamp, pgTable, text, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { reservations } from "./reservations";
 import { locations } from "./locations";
 import { members } from "./members";
@@ -33,4 +34,6 @@ export const attendances = pgTable("check_ins", {
 		.notNull()
 		.defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-});
+}, (t) => [
+	uniqueIndex("check_ins_reservation_id_uq").on(t.reservationId).where(sql`${t.reservationId} is not null`),
+]);
