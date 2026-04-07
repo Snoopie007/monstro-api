@@ -74,6 +74,15 @@ export async function triggerNewMember(data: { mid: string, lid: string }) {
             created: today,
             updated: today,
         });
+        await tx.update(memberLocations).set({
+            points: sql`${memberLocations.points} + ${achievements.points}`,
+            updated: today,
+        }).where(
+            and(
+                eq(memberLocations.memberId, mid),
+                eq(memberLocations.locationId, lid)
+            )
+        )
 
     })
 }
