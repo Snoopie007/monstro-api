@@ -1,7 +1,5 @@
 import { Elysia, t } from 'elysia';
 import { db } from '@/db/db';
-import { sql } from 'drizzle-orm';
-import { reservations } from '@subtrees/schemas';
 
 const ReservationsProps = {
     params: t.Object({
@@ -14,11 +12,26 @@ const ReservationsProps = {
 };
 
 export function mlReservationsRoutes(app: Elysia) {
-    return app.get('/reservations', async ({ params, query, status }) => {
+    app.get('/reservations', async ({ params, query, status }) => {
         const { mid, lid } = params;
         const { limit } = query;
         const startDate = new Date();
         try {
+
+            const locationState = await db.query.locationState.findFirst({
+                where: (locationState, { eq }) => eq(locationState.locationId, lid),
+                columns: {
+                    allowAppCheckIns: true,
+                    status: true,
+                },
+            });
+            if (!locationState) {
+                return status(404, { error: "This location is not available" });
+            }
+            if (locationState.status !== "active") {
+                return status(400, { error: "This location is not active" });
+            }
+
             // Get the closest reservation to today (could be past or future)
             const classes = await db.query.reservations.findMany({
                 where: (reservations, { eq, and, gte }) => and(
@@ -56,4 +69,6 @@ export function mlReservationsRoutes(app: Elysia) {
             return status(500, { error: "Internal server error" });
         }
     }, ReservationsProps)
+
+    return app;
 }

@@ -15,7 +15,7 @@ const SessionsProps = {
     }),
 };
 export async function locationSessions(app: Elysia) {
-    return app.get('/sessions', async ({ params, status, query }) => {
+    app.get('/sessions', async ({ params, status, query }) => {
         const { lid } = params;
         const { programIds, date } = query;
         const programIdsArray = programIds.split(",");
@@ -108,6 +108,21 @@ export async function locationSessions(app: Elysia) {
             return status(500, { error: "Internal server error" });
         }
     }, SessionsProps)
+    app.get('/sessions/today', async ({ params, status, query }) => {
+        const today = new Date();
+
+        const { programIds } = query;
+        const programIdsArray = programIds.split(",");
+        try {
+
+            return status(200, { sessions: [] });
+        } catch (error) {
+            console.error(error);
+            return status(500, { error: "Internal server error" });
+        }
+    }, SessionsProps)
+
+    return app;
 }
 
 
