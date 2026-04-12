@@ -21,7 +21,6 @@ export async function xEmailSend(app: Elysia) {
             return status(400, { error: "Invalid template" });
         }
         try {
-
             await emailSender.sendWithTemplate({
                 options: {
                     to: recipient,
@@ -31,14 +30,21 @@ export async function xEmailSend(app: Elysia) {
                 data
             });
 
-            console.log(`📧 Sent immediate email to ${recipient} using template ${template}`);
+            console.log('📧 Sent immediate email', {
+                recipient,
+                template,
+            });
 
             return {
                 success: true,
-                message: `Email sent immediately to ${recipient}`
+                message: `Email sent immediately to ${recipient}`,
             }
         } catch (error) {
-            console.error('Error sending immediate email:', error);
+            console.error('Error sending immediate email:', {
+                recipient,
+                template,
+                error,
+            });
             set.status = 500;
             return {
                 success: false,

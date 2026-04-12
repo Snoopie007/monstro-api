@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
 import { getCurrency } from "@/utils";
 
@@ -91,10 +91,22 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             }
         }
 
-        await db.update(memberSubscriptions).set({
-            status: isTrialing ? "trialing" : "active",
-            updated: new Date(),
-        }).where(eq(memberSubscriptions.id, sid));
+        await db.transaction(async (tx) => {
+            await tx.update(memberSubscriptions).set({
+                status: isTrialing ? "trialing" : "active",
+                updated: new Date(),
+            }).where(eq(memberSubscriptions.id, sid));
+
+            if (!isTrialing) {
+                await tx.update(memberLocations).set({
+                    status: "active",
+                    updated: new Date(),
+                }).where(and(
+                    eq(memberLocations.memberId, sub.memberId),
+                    eq(memberLocations.locationId, lid),
+                ));
+            }
+        });
 
         return status(200, {
             status: isTrialing ? "trialing" : "active",
