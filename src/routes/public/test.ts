@@ -1,7 +1,5 @@
 import { Elysia, t } from "elysia";
 import { sendNotifications } from "@/libs/expo";
-import { broadcastMessageUnread } from "@/libs/broadcast/messages";
-import { broadcastAchievement } from "@/libs/broadcast";
 
 const TEST_PUSH_TOKENS = [
     "ExponentPushToken[mRfnnIAg7baHwm4QgUH6Ay]",
@@ -44,15 +42,7 @@ export function testRoutes(app: Elysia) {
                     points: 100,
                     badge: "https://png.pngtree.com/png-vector/20240115/ourmid/pngtree-achievement-badge-png-image_11439954.png",
                 };
-                await broadcastAchievement(userId, {
-                    ...achievement,
-                    created: new Date(),
-                    updated: new Date(),
-                    locationId: "1234567890",
-                    requiredActionCount: 100,
-                    planId: "1234567890",
-                    triggerId: 1,
-                });
+
                 return { ok: true, result: "test" };
             } catch (error: any) {
                 console.error(error);

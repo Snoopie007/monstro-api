@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { members } from "./members";
 
@@ -7,6 +7,7 @@ export const rewards = pgTable("rewards", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     description: text("description").notNull(),
+    isArchived: boolean("is_archived").notNull().default(false),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     requiredPoints: integer("required_points").notNull(),
     limitPerMember: integer("limit_per_member").notNull(),
