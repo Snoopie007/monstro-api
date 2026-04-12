@@ -16,7 +16,7 @@ import type { Location, Staff } from '../types';
 interface StaffInviteEmailProps {
     staff: Pick<Staff, 'id' | 'firstName' | 'lastName' | 'email'>;
     location: Pick<Location, 'id' | 'name' | 'address' | 'email' | 'phone'>;
-    staffLocationId?: number | string;
+    staffLocationId?: string;
     inviteUrl?: string;
 }
 

@@ -37,7 +37,7 @@ const styles: Record<string, React.CSSProperties> = {
 export default function ResetPasswordEmail({
 	member,
 	url,
- 	ui,
+	ui,
 }: ResetPasswordEmailProps) {
 	const resetUrl = url ?? ui?.btnUrl ?? 'https://example.com/reset-password';
 
