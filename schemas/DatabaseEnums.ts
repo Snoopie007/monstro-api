@@ -13,6 +13,7 @@ export const LocationStatusEnum = pgEnum("location_status", [
 ]);
 export const PlanType = pgEnum("plan_type", ["recurring", "one-time", "pass"]);
 export const IntervalType = pgEnum("interval_type", ["day", "week", "month", "year"]);
+export const ClassLimitIntervalEnum = pgEnum("class_limit_interval", ["term", "week", "month", "day", "year"]);
 export const PackageStatusEnum = pgEnum("package_status", ["active", "incomplete", "expired", "completed"]);
 export const PaymentTypeEnum = pgEnum("payment_type", ["cash", "card", "us_bank_account", 'paypal', 'apple_pay', 'google_pay']);
 export const InvoiceStatusEnum = pgEnum("invoice_status", ["draft", "paid", "unpaid", "uncollectible", "void", "sent"]);

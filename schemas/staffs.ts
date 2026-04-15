@@ -1,17 +1,16 @@
 import {
-    serial,
     text,
     timestamp,
     pgTable,
-    integer,
-    primaryKey,
+    unique,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 import { locations } from './locations'
 import { users } from './users'
 import { StaffStatusEnum } from './DatabaseEnums'
 
 export const staffs = pgTable('staffs', {
-    id: serial('id').primaryKey(),
+    id: text('id').primaryKey().notNull().default(sql`uuid_base62('stf_')`),
     firstName: text('first_name').notNull(),
     lastName: text('last_name'),
     email: text('email').notNull().unique(),
@@ -24,8 +23,8 @@ export const staffs = pgTable('staffs', {
 export const staffsLocations = pgTable(
     'staff_locations',
     {
-        id: serial('id').primaryKey(),
-        staffId: integer('staff_id')
+        id: text('id').primaryKey().notNull().default(sql`uuid_base62()`),
+        staffId: text('staff_id')
             .notNull()
             .references(() => staffs.id, { onDelete: 'cascade' }),
         locationId: text('location_id')
@@ -33,5 +32,5 @@ export const staffsLocations = pgTable(
             .references(() => locations.id, { onDelete: 'cascade' }),
         status: StaffStatusEnum('status').notNull().default('active'),
     },
-    (t) => [primaryKey({ columns: [t.staffId, t.locationId] })]
+    (t) => [unique('staff_locations_staff_location_unique').on(t.staffId, t.locationId)]
 )
