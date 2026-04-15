@@ -59,6 +59,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 const [pkg] = await db.insert(memberPackages).values({
                     locationId: lid,
                     memberId: mid,
+                    totalClassLimit: pricing.plan?.totalClassLimit ?? 0,
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentType,
                     startDate: today,
