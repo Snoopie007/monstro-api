@@ -16,7 +16,6 @@ import type { FamilyMember } from './FamilyMember'
 import type { MemberInvoice } from './invoices'
 import type { Location } from './location'
 import type { MigrateMember } from './MigrateMember'
-import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { PlanProgram, Program } from './program'
 import type { User } from './user'
 
@@ -100,8 +99,6 @@ export type MemberLocation = typeof memberLocations.$inferSelect & {
   knownFamilyMembers?: FamilyMember[],
   lastCheckInTime?: Date | null
   totalPointsEarned?: number
-  memberPaymentMethods?: MemberPaymentMethod[]
-  paymentMethods?: PaymentMethod[]
   migration?: MigrateMember;
   pointsHistory?: MemberPointsHistory[];
 }

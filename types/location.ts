@@ -39,6 +39,72 @@ export type HolidaySettings = {
   autoNotifyMembers: boolean;
 };
 
+export type OnboardingChecklist = {
+  importMembers: boolean;
+  contracts: boolean;
+  firstProgram: boolean;
+  firstProductWithPricing: boolean;
+  // TODO: points?: number;
+  // TODO: badges?: string[];
+  // TODO: achievements?: string[];
+};
+
+export type LocationOnboardingSettings = {
+  version: 1;
+  initialCompleted: boolean;
+  initialCompletedAt?: string;
+  usage?: {
+    members?: string;
+    niche?: string;
+    years?: string;
+    channels?: string;
+  };
+  website?: {
+    decision?: 'provided' | 'no_website';
+    url?: string;
+    // TODO: website AI analysis scaffolding
+    // discoveryStatus?: 'idle' | 'queued' | 'processing' | 'complete' | 'failed';
+    // discoveryPayload?: unknown;
+  };
+  businessReview?: {
+    completed?: boolean;
+    completedAt?: string;
+  };
+  timezone?: {
+    value?: string;
+    completedAt?: string;
+  };
+  tax?: {
+    configured?: boolean;
+    defaultTaxRateId?: string;
+    noTaxAcknowledged?: boolean;
+    completedAt?: string;
+  };
+  welcomeMessage?: {
+    confirmed?: boolean;
+    completedAt?: string;
+  };
+  stripe?: {
+    decision?: 'connected' | 'skipped';
+    skipAcknowledged?: boolean;
+    completedAt?: string;
+  };
+  pass?: {
+    planId?: string;
+    name?: string;
+    description?: string;
+    totalClassLimit?: number;
+    expires?: boolean;
+    expireInterval?: 'day' | 'week' | 'month' | 'year';
+    expireThreshold?: number;
+    completedAt?: string;
+  };
+  welcomeVideo?: {
+    dismissedAt?: string;
+  };
+  checklist?: Partial<OnboardingChecklist>;
+};
+
 
 
 
@@ -47,4 +113,5 @@ export type LocationSettings = {
   passOnFees: boolean;
   processingMethods: PaymentType[];
   holidays?: HolidaySettings;
+  onboarding?: LocationOnboardingSettings;
 }
