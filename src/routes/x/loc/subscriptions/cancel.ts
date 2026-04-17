@@ -64,14 +64,15 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                     ),
                     columns: {
                         accountId: true,
+                        accessToken: true,
                     },
                 });
 
-                if (!integration?.accountId) {
+                if (!integration || !integration.accountId || !integration.accessToken) {
                     return status(404, { error: "Stripe integration not found" });
                 }
 
-                const stripe = new MemberStripePayments(integration.accountId);
+                const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
                 const requestedAmount =
                     refund.amountType === "partial" && typeof refund.amount === "number"
                         ? Math.max(0, Math.min(refund.amount, latestPaidTransaction.total))

@@ -12,6 +12,7 @@ export const memberLocations = pgTable("member_locations", {
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     points: integer("points").notNull().default(0),
+    stripeCustomerId: text("stripe_customer_id").unique(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: false }),
     waiverId: text("waiver_id").references(() => locations.id, {

@@ -57,7 +57,7 @@ abstract class BaseStripePayments {
 
     constructor(key: string) {
         this._stripe = new Stripe(key, {
-            apiVersion: STRIPE_API_VERSION as any,
+            apiVersion: STRIPE_API_VERSION,
             timeout: 30000,
             maxNetworkRetries: 1,
             appInfo: {
@@ -71,8 +71,6 @@ abstract class BaseStripePayments {
         this._customer = customer;
         return this;
     }
-
-
 
     async connectOAuth(code: string, scope?: string) {
         return await this._stripe.oauth.token({
@@ -231,12 +229,7 @@ abstract class BaseStripePayments {
         return await this._stripe.customers.update(this._customer, updates);
     }
 
-    async getPaymentMethods(customerId: string, options?: { limit?: number, type?: "card" | "us_bank_account" }) {
-        return await this._stripe.customers.listPaymentMethods(customerId, {
-            limit: options?.limit || 10,
-            ...(options?.type && { type: options.type as Stripe.CustomerListPaymentMethodsParams.Type }),
-        });
-    }
+
 
     async setupIntent(source: string, type?: string) {
         if (!this._customer) {
@@ -272,10 +265,6 @@ abstract class BaseStripePayments {
         return list;
     }
 
-    async getCharges(limit?: number) {
-        const res = await this._stripe.charges.list({ limit: limit || 10 });
-        return res.data;
-    }
 
     async getInvoices(limit?: number) {
         if (!this._customer) {
@@ -508,20 +497,33 @@ class VendorStripePayments extends BaseStripePayments {
 }
 
 
-
 class MemberStripePayments extends BaseStripePayments {
     private _accountId: string | null;
-    constructor(accountId?: string, secretKey?: string) {
-        super(secretKey || process.env.STRIPE_SECRET_KEY!);
-        this._accountId = accountId || null;
+    constructor(accountId: string, secretKey: string) {
+
+        super(secretKey);
+        this._accountId = accountId;
     }
 
     async getPaymentMethod(id: string): Promise<Stripe.PaymentMethod> {
         return await this._stripe.paymentMethods.retrieve(id, { expand: ["customer"] });
     }
+    async getPaymentMethods(
+        options?: { limit?: number, type?: "card" | "us_bank_account" }
+    ) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const res = await this._stripe.customers.listPaymentMethods(
+            this._customer,
+            {
+                limit: options?.limit || 10,
+                ...(options?.type && { type: options.type as Stripe.CustomerListPaymentMethodsParams.Type }),
+            });
+        return res.data;
+    }
 
-
-    override async getCharges(limit?: number) {
+    async getCharges(limit?: number) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
@@ -531,6 +533,7 @@ class MemberStripePayments extends BaseStripePayments {
         });
         return res.data;
     }
+
     async createPaymentIntent(amount: number, paymentMethodId: string) {
         if (!this._customer) {
             throw new Error("Customer not set");
@@ -550,6 +553,7 @@ class MemberStripePayments extends BaseStripePayments {
         }
         return this._stripe.paymentIntents.create(option);
     }
+
     async processPayment(options: MemberPaymentOptions) {
 
         if (!this._customer) {
@@ -619,12 +623,9 @@ class MemberStripePayments extends BaseStripePayments {
         }
 
 
-
         const option: Stripe.Checkout.SessionCreateParams = {
             customer: this._customer,
             payment_method_types: ['card', 'us_bank_account'],
-
-
             mode: 'subscription',
         }
 

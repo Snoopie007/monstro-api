@@ -10,12 +10,14 @@ export function publicLocationIntegration(app: Elysia) {
                     eq(integration.locationId, lid),
                     eq(integration.service, "stripe")
                 ),
-                columns: { id: true }
+                columns: {
+                    id: true,
+                    apiKey: true,
+                }
             });
 
-            const hasIntegration = integration ? true : false;
 
-            return status(200, { hasIntegration });
+            return status(200, { key: integration ? integration.apiKey : undefined });
         } catch (error) {
             console.error(error);
             return status(500, { error: "Failed to get integration" });

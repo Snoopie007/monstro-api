@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import {
     memberInvoices,
-    memberLocations, memberPaymentMethods,
+    memberLocations,
     memberSubscriptions, migrateMembers,
 } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
@@ -27,22 +27,14 @@ const MigrateSubProps = {
 export function migrateSubRoutes(app: Elysia) {
     app.post('/sub', async ({ params, status, body }) => {
         const { lid, migrateId } = params;
-        const { paymentMethodId, mid } = body;
+        const { paymentMethodId, mid, paymentType } = body;
         const today = new Date();
 
         try {
-            const [migrate, location, paymentMethod] = await Promise.all([
+            const [migrate, location] = await Promise.all([
                 db.query.migrateMembers.findFirst({
                     where: (migrateMember, { eq }) => eq(migrateMember.id, migrateId),
                     with: {
-                        member: {
-                            columns: {
-                                stripeCustomerId: true,
-                                firstName: true,
-                                lastName: true,
-                                email: true,
-                            },
-                        },
                         pricing: {
                             with: {
                                 plan: true
@@ -55,13 +47,6 @@ export function migrateSubRoutes(app: Elysia) {
                     with: {
                         taxRates: true,
                         locationState: true,
-                        integrations: {
-                            where: (integration, { eq }) => eq(integration.service, "stripe"),
-                            columns: {
-                                accountId: true,
-                                service: true,
-                            },
-                        },
                     },
                     columns: {
                         name: true,
@@ -69,9 +54,6 @@ export function migrateSubRoutes(app: Elysia) {
                         email: true,
                         country: true,
                     },
-                }),
-                db.query.paymentMethods.findFirst({
-                    where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
                 }),
             ]);
 
@@ -82,14 +64,13 @@ export function migrateSubRoutes(app: Elysia) {
             if (!location) {
                 return status(404, { error: "Location not found" });
             }
-            if (!paymentMethod) {
-                return status(404, { error: "Payment method not found" });
-            }
 
-            const { pricing, member } = migrate;
-            if (!member || !member.stripeCustomerId) {
-                return status(404, { error: "Member not found" });
-            }
+
+
+            const { pricing } = migrate;
+
+            const { taxRates, locationState } = location;
+
             if (!pricing) {
                 return status(404, { error: "Pricing not found" });
             }
@@ -98,29 +79,50 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(400, { error: "Invalid pricing for subscription plan." });
             }
 
-            await db.insert(memberPaymentMethods).values({
-                paymentMethodId: paymentMethod.id,
-                memberId: mid,
-                locationId: lid,
-            }).onConflictDoNothing({
-                target: [
-                    memberPaymentMethods.paymentMethodId,
-                    memberPaymentMethods.memberId,
-                    memberPaymentMethods.locationId,
-                ],
+            const ml = await db.query.memberLocations.findFirst({
+                where: (memberLocation, { eq, and }) => and(
+                    eq(memberLocation.memberId, mid),
+                    eq(memberLocation.locationId, lid)
+                ),
+                with: {
+                    member: {
+                        columns: {
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                        },
+                    },
+                },
+                columns: {
+                    stripeCustomerId: true,
+                },
             });
 
 
-            const { taxRates, locationState, integrations } = location;
 
-            const integration = integrations?.find((i) => i.service === "stripe");
-            if (!integration) {
-                throw new Error("Stripe integration not found");
+            if (!ml || !ml.stripeCustomerId) {
+                return status(404, { error: "Member location or Stripe customer not found" });
             }
 
-            const stripe = new MemberStripePayments(integration.accountId);
-            stripe.setCustomer(member.stripeCustomerId);
 
+
+            const integration = await db.query.integrations.findFirst({
+                where: (integration, { eq, and }) => and(
+                    eq(integration.locationId, lid),
+                    eq(integration.service, "stripe")
+                ),
+                columns: {
+                    accountId: true,
+                    accessToken: true,
+                },
+            });
+
+            if (!integration || !integration.accountId || !integration.accessToken) {
+                return status(404, { error: "Stripe integration not found" });
+            }
+
+            const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
+            stripe.setCustomer(ml?.stripeCustomerId);
 
 
             const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
@@ -162,9 +164,9 @@ export function migrateSubRoutes(app: Elysia) {
                     cancelAt,
                     classCredits: migrate.classCredits || 0,
                     memberPlanPricingId: pricing.id,
-                    paymentType: paymentMethod.type,
+                    paymentType: paymentType,
                     status: 'incomplete',
-                    stripePaymentId: paymentMethod.stripeId,
+                    stripePaymentId: paymentMethodId,
                 }).returning();
 
                 await tx.update(memberLocations).set({
@@ -196,7 +198,7 @@ export function migrateSubRoutes(app: Elysia) {
                     amount: pricing.price,
                     taxRate: taxRate?.percentage ?? 0,
                     usagePercent: locationState.usagePercent || 0,
-                    paymentType: paymentMethod.type,
+                    paymentType: paymentType,
                     isRecurring: noGrowthPlan,
                     passOnFees: locationState.settings?.passOnFees || false,
                 });
@@ -246,6 +248,7 @@ export function migrateSubRoutes(app: Elysia) {
 
 
             if (["month", "year"].includes(pricing.interval)) {
+                const member = ml.member;
                 const payload: SubscriptionJobData = {
                     sid: sub.id,
                     lid: lid,
@@ -255,7 +258,7 @@ export function migrateSubRoutes(app: Elysia) {
                         lastName: member.lastName,
                         email: member.email,
                     },
-                    stripeCustomerId: member.stripeCustomerId,
+                    stripeCustomerId: ml.stripeCustomerId,
                     location: {
                         name: location.name,
                         phone: location.phone,

@@ -112,7 +112,8 @@ export function purchaseSubRoutes(app: Elysia) {
                 mid,
                 priceId,
                 memberPlanId,
-                promoId
+                promoId,
+                paymentType
             } = body;
 
             try {
@@ -131,7 +132,6 @@ export function purchaseSubRoutes(app: Elysia) {
                                     lastName: true,
                                     userId: true,
                                     email: true,
-                                    stripeCustomerId: true,
                                 },
                             },
                         },
@@ -170,17 +170,12 @@ export function purchaseSubRoutes(app: Elysia) {
                                             settings: true,
                                         },
                                     },
-                                    integrations: {
-                                        where: (integration, { eq }) => eq(integration.service, "stripe"),
-                                        columns: {
-                                            accountId: true,
-                                            service: true,
-                                        },
-                                    },
+
                                 },
                             },
                         },
                         columns: {
+                            stripeCustomerId: true,
                             onboarded: true,
                         },
                     })
@@ -191,7 +186,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 }
                 const { member, currentPeriodEnd, currentPeriodStart } = sub;
 
-                if (!member || !member.stripeCustomerId) {
+                if (!ml || !ml.stripeCustomerId) {
                     return status(404, { error: "Member or Stripe customer not found" });
                 }
 
@@ -207,29 +202,29 @@ export function purchaseSubRoutes(app: Elysia) {
                     return status(400, { error: "Invalid pricing for subscription plan." });
                 }
 
-                const { taxRates, locationState, integrations } = ml.location;
+                const { taxRates, locationState } = ml.location;
 
-                const integration = integrations?.find((i) => i.service === "stripe");
-                if (!integration) {
-                    throw new Error("Stripe integration not found");
-                }
-
-                const stripe = new MemberStripePayments(integration.accountId);
-                stripe.setCustomer(member.stripeCustomerId);
-                const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
-
-
-                const paymentMethod = await db.query.paymentMethods.findFirst({
-                    where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
+                const integration = await db.query.integrations.findFirst({
+                    where: (integration, { eq, and }) => and(
+                        eq(integration.locationId, lid),
+                        eq(integration.service, "stripe")
+                    ),
                     columns: {
-                        stripeId: true,
-                        type: true,
+                        accountId: true,
+                        accessToken: true,
                     },
                 });
 
-                if (!paymentMethod) {
-                    return status(404, { error: "Payment method not found" });
+                if (!integration || !integration.accountId || !integration.accessToken) {
+                    throw new Error("Stripe integration not found");
                 }
+
+                const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
+                stripe.setCustomer(ml.stripeCustomerId);
+                const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
+
+
+
 
                 const startDate = new Date(currentPeriodStart);
 
@@ -275,7 +270,7 @@ export function purchaseSubRoutes(app: Elysia) {
                     discount,
                     taxRate: taxRate?.percentage ?? 0,
                     usagePercent: usagePercent || 0,
-                    paymentType: paymentMethod.type,
+                    paymentType: paymentType,
                     isRecurring: noGrowthPlan,
                     passOnFees: settings?.passOnFees || false,
                 });
@@ -312,7 +307,7 @@ export function purchaseSubRoutes(app: Elysia) {
 
                 await stripe.processPayment({
                     ...chargeDetails,
-                    paymentMethodId: paymentMethod.stripeId,
+                    paymentMethodId,
                     currency,
                     description,
                     productName,
@@ -337,7 +332,7 @@ export function purchaseSubRoutes(app: Elysia) {
                                 email: member.email,
                             },
                             taxRate: taxRate?.percentage || 0,
-                            stripeCustomerId: member.stripeCustomerId,
+                            stripeCustomerId: ml.stripeCustomerId,
                             location: {
                                 name: ml.location.name,
                                 phone: ml.location.phone,
@@ -408,6 +403,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 memberPlanId: t.String(),
                 mid: t.String(),
                 promoId: t.Optional(t.String()),
+                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account')),
             }),
         });
 

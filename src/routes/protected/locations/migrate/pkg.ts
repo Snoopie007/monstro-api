@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
 import {
     migrateMembers, memberLocations, memberPackages,
-    memberPaymentMethods
 } from "@subtrees/schemas";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
@@ -23,10 +22,10 @@ export function migratePkgRoutes(app: Elysia) {
     app.post('/pkg', async ({ params, status, body }) => {
 
         const { lid, migrateId } = params;
-        const { mid, paymentMethodId } = body;
+        const { mid, paymentType, paymentMethodId } = body;
 
         try {
-            const [migrate, paymentMethod] = await Promise.all([
+            const [migrate] = await Promise.all([
                 db.query.migrateMembers.findFirst({
                     where: (migrateMember, { eq }) => eq(migrateMember.id, migrateId),
                     with: {
@@ -37,16 +36,10 @@ export function migratePkgRoutes(app: Elysia) {
                         },
                     },
                 }),
-                db.query.paymentMethods.findFirst({
-                    where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
-                }),
             ]);
 
             if (!migrate) {
                 return status(404, { error: "Migrate not found" });
-            }
-            if (!paymentMethod) {
-                return status(404, { error: "Payment method not found" });
             }
 
             const pricing = migrate.pricing;
@@ -55,17 +48,7 @@ export function migratePkgRoutes(app: Elysia) {
                 return status(404, { error: "Pricing not found" });
             }
 
-            await db.insert(memberPaymentMethods).values({
-                paymentMethodId: paymentMethod.id,
-                memberId: mid,
-                locationId: lid,
-            }).onConflictDoNothing({
-                target: [
-                    memberPaymentMethods.paymentMethodId,
-                    memberPaymentMethods.memberId,
-                    memberPaymentMethods.locationId
-                ],
-            });
+
 
             const today = new Date();
             const startDate = migrate.backdateStartDate ? new Date(migrate.backdateStartDate) : today;
@@ -89,10 +72,10 @@ export function migratePkgRoutes(app: Elysia) {
                     memberId: mid,
                     memberPlanPricingId: pricing.id,
                     startDate,
-                    paymentType: paymentMethod.type,
+                    paymentType: paymentType,
                     totalClassLimit,
                     totalClassAttended,
-                    stripePaymentId: paymentMethod.stripeId,
+                    stripePaymentId: paymentMethodId,
                     expireDate,
                     status: "active"
                 }).returning();

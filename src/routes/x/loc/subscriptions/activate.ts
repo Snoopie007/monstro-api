@@ -47,7 +47,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         locationState: true,
                         integrations: {
                             where: (integration, { eq }) => eq(integration.service, "stripe"),
-                            columns: { accountId: true, service: true },
+                            columns: { accountId: true, service: true, accessToken: true },
                         },
                     },
                     columns: {
@@ -74,7 +74,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         }
 
         const integration = sub.location.integrations?.[0];
-        if (!integration?.accountId) {
+        if (!integration || !integration.accountId || !integration.accessToken) {
             return status(404, { error: "Stripe integration not found" });
         }
 
@@ -165,7 +165,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             return status(400, { error: "Unsupported payment method type for activation" });
         }
 
-        const stripe = new MemberStripePayments(integration.accountId);
+        const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
         stripe.setCustomer(sub.member.stripeCustomerId);
 
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];

@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
 import {
     memberPackages, memberInvoices,
-    memberPaymentMethods
 } from "@subtrees/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
@@ -91,21 +90,18 @@ export function purchasePkgRoutes(app: Elysia) {
         })
         app.post('/stripe', async ({ params, status, body }) => {
             const { lid } = params;
-            const { paymentMethodId, mid, priceId, memberPlanId, promoId } = body;
+            const {
+                paymentMethodId,
+                mid,
+                priceId,
+                memberPlanId,
+                promoId,
+                paymentType
+            } = body;
 
             try {
 
-                const [member, pricing, ml] = await Promise.all([
-                    db.query.members.findFirst({
-                        where: (member, { eq }) => eq(member.id, mid),
-                        columns: {
-                            userId: true,
-                            stripeCustomerId: true,
-                            firstName: true,
-                            lastName: true,
-                            email: true,
-                        },
-                    }),
+                const [pricing, ml] = await Promise.all([
 
                     db.query.memberPlanPricing.findFirst({
                         where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
@@ -144,13 +140,23 @@ export function purchasePkgRoutes(app: Elysia) {
                                         where: (integration, { eq }) => eq(integration.service, "stripe"),
                                         columns: {
                                             accountId: true,
+                                            accessToken: true,
                                             service: true,
                                         },
                                     },
                                 },
                             },
+                            member: {
+                                columns: {
+                                    userId: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                },
+                            },
                         },
                         columns: {
+                            stripeCustomerId: true,
                             status: true,
                         },
                     })
@@ -158,7 +164,7 @@ export function purchasePkgRoutes(app: Elysia) {
 
 
 
-                if (!member || !member.stripeCustomerId) {
+                if (!ml || !ml.member || !ml.stripeCustomerId) {
                     return status(404, { error: "Member or Stripe customer not found" });
                 }
 
@@ -175,33 +181,14 @@ export function purchasePkgRoutes(app: Elysia) {
                 const { taxRates, locationState, integrations } = ml.location;
 
                 const integration = integrations[0];
-                if (!integration || !integration.accountId) {
+                if (!integration || !integration.accountId || !integration.accessToken) {
                     throw new Error("Stripe integration not found");
                 }
 
-                const stripe = new MemberStripePayments(integration.accountId);
+                const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
 
-                const paymentMethod = await db.query.paymentMethods.findFirst({
-                    where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
-                });
 
-                if (!paymentMethod) {
-                    return status(404, { error: "Payment method not found" });
-                }
-
-                await db.insert(memberPaymentMethods).values({
-                    paymentMethodId: paymentMethodId,
-                    memberId: mid,
-                    locationId: lid,
-                }).onConflictDoNothing({
-                    target: [
-                        memberPaymentMethods.paymentMethodId,
-                        memberPaymentMethods.memberId,
-                        memberPaymentMethods.locationId
-                    ],
-                });
-
-                stripe.setCustomer(member.stripeCustomerId);
+                stripe.setCustomer(ml.stripeCustomerId);
 
                 let discount: number = 0;
                 if (promoId) {
@@ -250,7 +237,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     discount,
                     taxRate: taxRate?.percentage ?? 0,
                     usagePercent: usagePercent || 0,
-                    paymentType: paymentMethod.type,
+                    paymentType: paymentType,
                     isRecurring: false,
                     passOnFees: settings?.passOnFees || false,
                 });
@@ -264,7 +251,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     memberId: mid,
                     locationId: lid,
                     memberPlanId,
-                    paymentType: paymentMethod.type,
+                    paymentType: paymentType,
                     currency,
                     dueDate: now,
                 }).returning({ id: memberInvoices.id });
@@ -276,7 +263,7 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 await stripe.processPayment({
                     ...chargeDetails,
-                    paymentMethodId: paymentMethod.stripeId,
+                    paymentMethodId: paymentMethodId,
                     currency,
                     description,
                     productName,
@@ -290,7 +277,7 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
                     if (a) {
-                        broadcastAchievement(member.userId, a)
+                        broadcastAchievement(ml.member.userId, a)
                     }
                 }).catch((error) => {
                     console.error("Error triggering purchase:", error);
@@ -315,6 +302,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 priceId: t.String(),
                 memberPlanId: t.String(),
                 mid: t.String(),
+                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account')),
                 promoId: t.Optional(t.String()),
             }),
         });

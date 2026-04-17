@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import Stripe from "stripe";
-import { MemberStripePayments } from "@/libs/stripe";
+import { MemberStripePayments, VendorStripePayments } from "@/libs/stripe";
 import { db } from "@/db/db";
 import { memberInvoices, memberSubscriptions, memberPackages, transactions, memberLocations } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
@@ -33,7 +33,7 @@ const allowedEvents: Stripe.Event.Type[] = [
 ];
 
 
-const stripe = new MemberStripePayments();
+const stripe = new VendorStripePayments();
 
 type StripeMetadata = {
     locationId: string;

@@ -21,7 +21,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         firstName: true,
                         lastName: true,
                         email: true,
-                        stripeCustomerId: true,
                     },
                 },
                 location: {
@@ -29,12 +28,19 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         locationState: true,
                         integrations: {
                             where: (integration, { eq }) => eq(integration.service, "stripe"),
-                            columns: { accountId: true, service: true },
+                            columns: {
+                                accountId: true,
+                                service: true,
+                                accessToken: true,
+                            },
                         },
                     },
                 },
             },
         });
+
+
+
 
         if (!invoice) {
             return status(404, { error: "Invoice not found" });
@@ -43,17 +49,23 @@ export async function sendInvoiceRoutes(app: Elysia) {
         if (invoice.status !== "draft") {
             return status(400, { error: "Invoice must be draft to send" });
         }
-
+        const ml = await db.query.memberLocations.findFirst({
+            where: (ml, { eq, and }) => and(eq(ml.locationId, lid), eq(ml.memberId, invoice?.memberId)),
+            columns: {
+                stripeCustomerId: true,
+            },
+        });
+        if (!ml || !ml.stripeCustomerId) {
+            return status(404, { error: "Member location or Stripe customer not found" });
+        }
         const collectionMethod = (invoice.metadata as { collectionMethod?: "send_invoice" | "charge_automatically" } | null)?.collectionMethod || "send_invoice";
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
 
         if (shouldAutoCharge) {
-            if (!invoice.member?.stripeCustomerId) {
-                return status(400, { error: "Member is missing Stripe customer" });
-            }
+
 
             const integration = invoice.location?.integrations?.[0];
-            if (!integration?.accountId) {
+            if (!integration || !integration.accountId || !integration.accessToken) {
                 return status(404, { error: "Stripe integration not found" });
             }
 
@@ -64,46 +76,15 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 }
                 | undefined;
 
-            if (paymentMethodId) {
-                const pm = await db.query.paymentMethods.findFirst({
-                    where: (p, { and, eq }) => and(eq(p.id, paymentMethodId), eq(p.memberId, invoice.memberId)),
-                    columns: { stripeId: true, type: true },
-                });
-                if (!pm || (pm.type !== "card" && pm.type !== "us_bank_account")) {
-                    return status(404, { error: "Valid payment method not found" });
-                }
-                selectedPaymentMethod = { stripeId: pm.stripeId, type: pm.type };
-            }
 
-            if (!selectedPaymentMethod) {
-                const defaultMemberPaymentMethod = await db.query.memberPaymentMethods.findFirst({
-                    where: (mpm, { and, eq }) => and(
-                        eq(mpm.memberId, invoice.memberId),
-                        eq(mpm.locationId, lid),
-                        eq(mpm.isDefault, true)
-                    ),
-                });
 
-                if (defaultMemberPaymentMethod) {
-                    const pm = await db.query.paymentMethods.findFirst({
-                        where: (p, { and, eq }) => and(
-                            eq(p.id, defaultMemberPaymentMethod.paymentMethodId),
-                            eq(p.memberId, invoice.memberId)
-                        ),
-                        columns: { stripeId: true, type: true },
-                    });
-                    if (pm && (pm.type === "card" || pm.type === "us_bank_account")) {
-                        selectedPaymentMethod = { stripeId: pm.stripeId, type: pm.type };
-                    }
-                }
-            }
 
             if (!selectedPaymentMethod) {
                 return status(400, { error: "No default payment method found for automatic charging" });
             }
 
-            const stripe = new MemberStripePayments(integration.accountId);
-            stripe.setCustomer(invoice.member.stripeCustomerId);
+            const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
+            stripe.setCustomer(ml.stripeCustomerId);
 
             const chargeDetails = calculateChargeDetails({
                 amount: invoice.total,

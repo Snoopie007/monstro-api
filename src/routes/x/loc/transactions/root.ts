@@ -63,10 +63,10 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
         const integration = await db.query.integrations.findFirst({
             where: (ig, { and, eq }) => and(eq(ig.locationId, lid), eq(ig.service, "stripe")),
-            columns: { accountId: true },
+            columns: { accountId: true, accessToken: true },
         });
 
-        if (!integration?.accountId) {
+        if (!integration || !integration.accountId || !integration.accessToken) {
             return status(404, { error: "Stripe integration not found" });
         }
 
@@ -86,7 +86,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             refundAmount = Math.min(amount, transaction.total);
         }
 
-        const stripe = new MemberStripePayments(integration.accountId);
+        const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
         const refund = await stripe.createRefund({
             payment_intent: paymentIntentId,
             amount: refundAmount,

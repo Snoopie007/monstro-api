@@ -1,8 +1,10 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { memberPaymentMethods } from "@subtrees/schemas"; // Fix naming
-import { eq, and } from "drizzle-orm"; // Assume drizzle-orm for query helpers
-
+import { and, eq } from "drizzle-orm";
+import { MemberStripePayments } from "@/libs/stripe";
+import type { PaymentMethod, PaymentType } from "@subtrees/types";
+import { memberLocations } from "@subtrees/schemas";
+import type Stripe from "stripe";
 const GetMLPProps = {
     params: t.Object({
         mid: t.String(),
@@ -16,55 +18,97 @@ export function mlPaymentMethods(app: Elysia) {
     app.get("/methods", async ({ status, params }) => {
         const { mid, lid } = params;
         try {
-            const methods = await db.query.memberPaymentMethods.findMany({
-                where: (paymentMethod, { eq, and }) =>
-                    and(
-                        eq(paymentMethod.memberId, mid),
-                        eq(paymentMethod.locationId, lid)
-                    ),
+            const ml = await db.query.memberLocations.findFirst({
+                where: (memberLocation, { eq, and }) => and(
+                    eq(memberLocation.memberId, mid),
+                    eq(memberLocation.locationId, lid)
+                ),
+                columns: {
+                    stripeCustomerId: true,
+                },
             });
-            return status(200, methods);
+            if (!ml) {
+                return status(404, { error: "Member location not found" });
+            }
+
+            if (!ml.stripeCustomerId) {
+                return status(404, { error: "Stripe customer not found" });
+            }
+
+            const stripeIntegration = await db.query.integrations.findFirst({
+                where: (integration, { eq, and }) => and(
+                    eq(integration.locationId, lid),
+                    eq(integration.service, "stripe")
+                ),
+                columns: {
+                    accountId: true,
+                    accessToken: true,
+                },
+            });
+
+
+            if (!stripeIntegration || !stripeIntegration.accountId || !stripeIntegration.accessToken) {
+                return status(404, { error: "Stripe integration not found" });
+            }
+
+            const stripe = new MemberStripePayments(
+                stripeIntegration.accountId,
+                stripeIntegration.accessToken
+            );
+            stripe.setCustomer(ml.stripeCustomerId);
+
+
+            const stripePaymentMethods = await stripe.getPaymentMethods();
+
+            let paymentMethods: PaymentMethod[] = [];
+            if (stripePaymentMethods.length > 0) {
+                stripePaymentMethods.forEach(method => {
+                    // Ensure all required PaymentMethod fields are present and not undefined
+                    if (!method.id) return; // skip if no id; shouldn't happen but for type safety
+                    if (method.type === 'card' && method.card) {
+                        const card = method.card;
+                        paymentMethods.push({
+                            id: method.id,
+                            source: 'stripe',
+                            type: method.type as PaymentType,
+                            isDefault: false,
+                            card: {
+                                brand: card.brand,
+                                last4: card.last4,
+                                expMonth: card.exp_month,
+                                expYear: card.exp_year,
+                            },
+                            usBankAccount: null,
+                        });
+                    } else if (method.type === 'us_bank_account' && method.us_bank_account) {
+                        const bank = method.us_bank_account;
+                        paymentMethods.push({
+                            id: method.id,
+                            source: 'stripe',
+                            type: method.type as PaymentType,
+                            isDefault: false,
+                            usBankAccount: {
+                                bankName: bank.bank_name,
+                                last4: bank.last4,
+                                accountType: bank.account_type,
+                            },
+                            card: null,
+                        });
+                    }
+                });
+            }
+
+
+            return status(200, paymentMethods);
         } catch (err) {
             console.log(err);
             return status(500, { error: err });
         }
     }, GetMLPProps);
-
-    app.post("/methods", async ({ status, body, params }) => {
-        const { mid, lid } = params;
-        const { paymentMethodId } = body;
+    app.delete("/methods/:pmId", async ({ status, params }) => {
+        const { mid, lid, pmId } = params;
         try {
-            const [newMemberPaymentMethod] = await db.insert(memberPaymentMethods).values({
-                memberId: mid,
-                locationId: lid,
-                paymentMethodId: paymentMethodId,
-            }).onConflictDoNothing({
-                target: [memberPaymentMethods.memberId, memberPaymentMethods.locationId, memberPaymentMethods.paymentMethodId],
-            }).returning();
-            return status(200, newMemberPaymentMethod);
-        } catch (err) {
-            console.log(err);
-            return status(500, { error: err });
-        }
-    },
-        {
-            ...GetMLPProps,
-            body: t.Object({
-                paymentMethodId: t.String(),
-            }),
-        }
-    );
 
-    app.delete("/methods/:paymentMethodId", async ({ status, body, params }) => {
-        const { mid, lid, paymentMethodId } = params;
-        try {
-            const method = await db.delete(memberPaymentMethods).where(
-                and(
-                    eq(memberPaymentMethods.memberId, mid),
-                    eq(memberPaymentMethods.locationId, lid),
-                    eq(memberPaymentMethods.paymentMethodId, paymentMethodId)
-                )
-            );
             return status(200, { success: true });
         } catch (err) {
             console.log(err);
@@ -75,9 +119,241 @@ export function mlPaymentMethods(app: Elysia) {
             params: t.Object({
                 mid: t.String(),
                 lid: t.String(),
-                paymentMethodId: t.String(),
+                pmId: t.String(),
             }),
         }
     );
+    app.group("/new", (app) => {
+        app.post("/", async ({ status, body, params }) => {
+            const { mid, lid } = params;
+            const { userAgent, secret } = body;
+            // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
+            const setupIntentId = secret.split('_secret_')[0];
+            if (!setupIntentId) {
+                return status(400, { error: "Setup intent ID is required" })
+            }
+            try {
+                const ml = await db.query.memberLocations.findFirst({
+                    where: (memberLocation, { eq, and }) => and(
+                        eq(memberLocation.memberId, mid),
+                        eq(memberLocation.locationId, lid)
+                    ),
+                    columns: {
+                        stripeCustomerId: true,
+                    },
+                    with: {
+                        member: {
+                            columns: {
+                                email: true,
+                                phone: true,
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                });
+
+                if (!ml) {
+                    return status(404, { error: "Member not found for this location" })
+                }
+
+                const stripeIntegration = await db.query.integrations.findFirst({
+                    where: (integration, { eq, and }) => and(
+                        eq(integration.locationId, lid),
+                        eq(integration.service, "stripe")
+                    ),
+                    columns: {
+                        accountId: true,
+                        accessToken: true,
+                    },
+                });
+
+                if (!stripeIntegration || !stripeIntegration.accountId || !stripeIntegration.accessToken) {
+                    return status(404, { error: "Stripe integration not found" });
+                }
+
+                const stripe = new MemberStripePayments(
+                    stripeIntegration.accountId,
+                    stripeIntegration.accessToken
+                );
+
+
+                let stripeCustomerId = ml.stripeCustomerId;
+
+                if (!stripeCustomerId) {
+                    const { member } = ml;
+                    const newCustomer = await stripe.createCustomer({
+                        email: member.email,
+                        phone: member.phone,
+                        firstName: member.firstName,
+                        lastName: member.lastName,
+                    }, undefined, {
+                        memberId: mid,
+                    });
+                    await db.update(memberLocations).set({
+                        stripeCustomerId: newCustomer.id,
+                    }).where(and(
+                        eq(memberLocations.memberId, mid),
+                        eq(memberLocations.locationId, lid)
+                    ));
+                    stripeCustomerId = newCustomer.id;
+                }
+
+
+                stripe.setCustomer(stripeCustomerId);
+                const setupIntent = await stripe.getSetupIntent(setupIntentId);
+
+
+                if (setupIntent.status === 'succeeded') {
+                    // Save the payment method to your database
+                    const paymentMethod = setupIntent.payment_method as Stripe.PaymentMethod;
+
+                    let mappedPaymentMethod: PaymentMethod | undefined;
+                    if (paymentMethod.type === 'card' && paymentMethod.card) {
+                        mappedPaymentMethod = {
+                            id: paymentMethod.id,
+                            source: 'stripe',
+                            type: paymentMethod.type as PaymentType,
+                            isDefault: false,
+                            card: {
+                                brand: paymentMethod.card.brand,
+                                last4: paymentMethod.card.last4,
+                                expMonth: paymentMethod.card.exp_month,
+                                expYear: paymentMethod.card.exp_year,
+                            },
+                            usBankAccount: null,
+                        };
+                    } else if (paymentMethod.type === 'us_bank_account' && paymentMethod.us_bank_account) {
+                        mappedPaymentMethod = {
+                            id: paymentMethod.id,
+                            source: 'stripe',
+                            type: paymentMethod.type as PaymentType,
+                            isDefault: false,
+                            usBankAccount: {
+                                bankName: paymentMethod.us_bank_account.bank_name,
+                                last4: paymentMethod.us_bank_account.last4,
+                                accountType: paymentMethod.us_bank_account.account_type,
+                            },
+                            card: null,
+                        };
+                    }
+                    return status(200, mappedPaymentMethod);
+                } else {
+                    return status(400, { error: 'Setup intent not succeeded' });
+                }
+
+            } catch (err) {
+                console.log(err)
+                return status(500, { error: err })
+            }
+        }, {
+            params: t.Object({
+                mid: t.String(),
+                lid: t.String(),
+            }),
+
+            body: t.Object({
+                userAgent: t.Optional(t.String()),
+                secret: t.String(),
+            }),
+        })
+        app.get("/intent", async ({ status, params, query }) => {
+            const { mid, lid } = params;
+            const { ephemeralKey } = query;
+            try {
+                const ml = await db.query.memberLocations.findFirst({
+                    where: (memberLocation, { eq, and }) => and(
+                        eq(memberLocation.memberId, mid),
+                        eq(memberLocation.locationId, lid)
+                    ),
+                    columns: {
+                        stripeCustomerId: true,
+                    },
+                    with: {
+                        member: {
+                            columns: {
+                                email: true,
+                                phone: true,
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                });
+
+                if (!ml) {
+                    return status(404, { error: "Member location not found" })
+                }
+
+                const stripeIntegration = await db.query.integrations.findFirst({
+                    where: (integration, { eq, and }) => and(
+                        eq(integration.locationId, lid),
+                        eq(integration.service, "stripe")
+                    ),
+                    columns: {
+                        accountId: true,
+                        accessToken: true,
+                    },
+                });
+
+                if (!stripeIntegration || !stripeIntegration.accountId || !stripeIntegration.accessToken) {
+                    return status(404, { error: "Stripe integration not found" });
+                }
+
+                const stripe = new MemberStripePayments(
+                    stripeIntegration.accountId,
+                    stripeIntegration.accessToken
+                );
+                let stripeCustomerId = ml.stripeCustomerId;
+                if (!stripeCustomerId) {
+                    const { member } = ml;
+                    const newCustomer = await stripe.createCustomer({
+                        email: member.email,
+                        phone: member.phone,
+                        firstName: member.firstName,
+                        lastName: member.lastName,
+                    }, undefined, {
+                        memberId: mid,
+                    });
+                    await db.update(memberLocations).set({
+                        stripeCustomerId: newCustomer.id,
+                    }).where(and(
+                        eq(memberLocations.memberId, mid),
+                        eq(memberLocations.locationId, lid)
+                    ));
+                    stripeCustomerId = newCustomer.id;
+                }
+
+                stripe.setCustomer(stripeCustomerId);
+                const setupIntent = await stripe.createSetupIntent();
+
+                let ek = undefined;
+                if (ephemeralKey) {
+                    const ephemeralKey = await stripe.createEphemeralKey();
+                    ek = ephemeralKey;
+                }
+
+                return status(200, {
+                    customer: setupIntent.customer,
+                    clientSecret: setupIntent.client_secret,
+                    ephemeralKey: ek,
+                })
+            } catch (err) {
+                console.log(err)
+                return status(500, { error: err })
+            }
+        }, {
+            params: t.Object({
+                mid: t.String(),
+                lid: t.String(),
+            }),
+            query: t.Object({
+                ephemeralKey: t.Optional(t.Boolean()),
+            }),
+        })
+        return app;
+    })
+
+
     return app;
 }

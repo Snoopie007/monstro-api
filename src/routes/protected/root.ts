@@ -22,7 +22,6 @@ import {
     memberAvatar,
     memberFamilies,
     memberGroups,
-    memberPayments,
     memberPlans,
     memberProfile,
     membersLocations,
@@ -52,7 +51,6 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(membersLocations);
         app.use(resetPassword);
         app.use(memberFamilies);
-        app.use(memberPayments);
         app.use(memberGroups);
         app.use(memberPlans);
         app.group('/profile', (app) => {
