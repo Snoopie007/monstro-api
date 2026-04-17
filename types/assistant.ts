@@ -163,7 +163,7 @@ export type AssistantStreamEvent =
   };
 
 export type AssistantMemoryWritebackJobData = {
-  // turnId: string;
+  turnId: string;
   locationId: string;
   vendorId: string;
   userId: string;
