@@ -1,20 +1,15 @@
-import { memberPaymentMethods, paymentMethods } from "../schemas/PaymentMethods"
-import type { PaymentType } from "./DatabaseEnums"
-import type { Location } from "./location"
-import type { Member } from "./member"
 
-export type PaymentMethod = typeof paymentMethods.$inferSelect & {
+import type { PaymentType } from "./DatabaseEnums"
+import Stripe from "stripe";
+export type PaymentMethod = {
+    id: string
+    source: 'stripe' | 'square'
     type: PaymentType
+    address?: Stripe.Address
     card: CardPaymentMethod | null
     usBankAccount: UsBankAccountPaymentMethod | null
-    isDefault?: boolean
-}
+    isDefault: boolean
 
-
-export type MemberPaymentMethod = typeof memberPaymentMethods.$inferSelect & {
-    method?: PaymentMethod
-    member?: Member
-    location?: Location
 }
 
 
