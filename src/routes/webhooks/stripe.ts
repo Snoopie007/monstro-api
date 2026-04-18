@@ -113,7 +113,9 @@ async function processEvent(event: Stripe.Event) {
 async function handleCharge(event: Stripe.Event) {
 
     const charge = event.data.object as Stripe.Charge;
-    console.log(`[STRIPE WEBHOOK] Charge ${event.type}:`, charge.id);
+    const stripeAccountId = event.account;
+    console.log(`[STRIPE WEBHOOK] Charge ${event.type}:`, charge.id, stripeAccountId);
+
     const paymentMethodDetails = charge.payment_method_details;
     const {
         locationId,
@@ -193,6 +195,8 @@ async function handleCharge(event: Stripe.Event) {
 
 async function handlePaymentIntentFailure(event: Stripe.Event) {
     const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    const stripeAccountId = event.account;
+    console.log(`[STRIPE WEBHOOK] Payment Intent Failure ${event.type}:`, paymentIntent.id, stripeAccountId);
     const metadata = paymentIntent.metadata as unknown as StripeMetadata;
     const {
         locationId,

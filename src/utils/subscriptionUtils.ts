@@ -55,19 +55,23 @@ export function calculateChargeDetails(
 	const tax = Math.floor((price * (taxRate || 0)) / 100);
 
 	let total = price + tax;
-	const monstroFee = Math.floor((price * usagePercent) / 100);
+	// const monstroFee = Math.floor((price * usagePercent) / 100);
 
+	let applicationFeeAmount = 0;
+	if (usagePercent > 0) {
+		applicationFeeAmount = Math.floor((total * usagePercent) / 100);
+	}
 	const stripeFee = calculateStripeFeeAmount(
-		passOnFees ? total : total + monstroFee,
+		total,
 		paymentType,
 		isRecurring || false,
 	);
 
-	const applicationFeeAmount = monstroFee + stripeFee;
 
 	if (passOnFees) {
-		total += applicationFeeAmount;
-		price += applicationFeeAmount;
+		const fees = applicationFeeAmount + stripeFee;
+		total += fees;
+		price += fees;
 	}
 
 	return {
@@ -75,8 +79,6 @@ export function calculateChargeDetails(
 		subTotal: price,
 		unitCost: price,
 		tax,
-		monstroFee,
-		stripeFee,
 		applicationFeeAmount,
 	};
 }

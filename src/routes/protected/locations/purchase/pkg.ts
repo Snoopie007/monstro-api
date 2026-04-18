@@ -165,12 +165,17 @@ export function purchasePkgRoutes(app: Elysia) {
 
 
 
-                if (!ml || !ml.member || !ml.stripeCustomerId) {
-                    return status(404, { error: "Member or Stripe customer not found" });
+                if (!ml) {
+                    return status(404, { error: "Member don't belong to this location" });
                 }
 
+                const { member, location, stripeCustomerId } = ml;
 
-                if (!ml || !ml.location) {
+                if (!stripeCustomerId) {
+                    return status(404, { error: "Stripe customer not linked to this location" });
+                }
+
+                if (!location) {
                     return status(404, { error: "Location not found" });
                 }
 
@@ -189,7 +194,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
 
 
-                stripe.setCustomer(ml.stripeCustomerId);
+                stripe.setCustomer(stripeCustomerId);
 
                 let discount: number = 0;
                 if (promoId) {
@@ -233,6 +238,7 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 const productName = `${pricing.plan.name}/${pricing.name}`;
                 const description = `Payment for ${productName}`;
+
                 const chargeDetails = calculateChargeDetails({
                     amount: pricing.price,
                     discount,
@@ -248,7 +254,12 @@ export function purchasePkgRoutes(app: Elysia) {
                 const [invoice] = await db.insert(memberInvoices).values({
                     ...chargeDetails,
                     description,
-                    items: [{ name: productName, quantity: 1, price: chargeDetails.unitCost, discount }],
+                    items: [{
+                        name: productName,
+                        quantity: 1,
+                        price: chargeDetails.unitCost,
+                        discount,
+                    }],
                     memberId: mid,
                     locationId: lid,
                     memberPlanId,
@@ -276,13 +287,13 @@ export function purchasePkgRoutes(app: Elysia) {
                     },
                 });
 
-                triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
-                    if (a) {
-                        broadcastAchievement(ml.member.userId, a)
-                    }
-                }).catch((error) => {
-                    console.error("Error triggering purchase:", error);
-                });
+                // triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
+                //     if (a) {
+                //         broadcastAchievement(ml.member.userId, a)
+                //     }
+                // }).catch((error) => {
+                //     console.error("Error triggering purchase:", error);
+                // });
                 return status(200, { status: "active" });
             } catch (error) {
                 console.log(error);
