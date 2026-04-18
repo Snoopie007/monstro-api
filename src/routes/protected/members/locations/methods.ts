@@ -55,10 +55,8 @@ export function mlPaymentMethods(app: Elysia) {
                 stripeIntegration.accountId,
                 stripeIntegration.accessToken
             );
-            stripe.setCustomer(ml.stripeCustomerId);
 
-
-            const stripePaymentMethods = await stripe.getPaymentMethods();
+            const stripePaymentMethods = await stripe.getPaymentMethods(ml.stripeCustomerId);
 
             let paymentMethods: PaymentMethod[] = [];
             if (stripePaymentMethods.length > 0) {

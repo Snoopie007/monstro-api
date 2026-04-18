@@ -33,10 +33,6 @@ export class MemberStripePayments extends StripeBase {
         return await this._stripe.paymentMethods.retrieve(id, { expand: ["customer"] });
     }
 
-    override async getPaymentMethods(customerId: string, options?: PaymentMethodOptions) {
-        return await super.getPaymentMethods(customerId, options);
-    }
-
     async getCharges(limit?: number) {
         if (!this._customer) {
             throw new Error("Customer not set");
