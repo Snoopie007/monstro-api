@@ -1,16 +1,16 @@
 
 import type { PaymentType } from "./DatabaseEnums"
-import Stripe from "stripe";
+import type { Address } from "./other"
 export type PaymentMethod = {
     id: string
     source: 'stripe' | 'square'
     type: PaymentType
-    address?: Stripe.Address
-    card: CardPaymentMethod | null
-    usBankAccount: UsBankAccountPaymentMethod | null
+    address?: Address
+    card?: CardPaymentMethod
+    usBankAccount?: UsBankAccountPaymentMethod
     isDefault: boolean
-
 }
+
 
 
 export type CardPaymentMethod = {
