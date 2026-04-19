@@ -2,12 +2,14 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	integer,
+	index,
 	pgTable,
 	primaryKey,
 	smallint,
 	text,
 	time,
 	timestamp,
+	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 import { ExceptionInitiatorEnum, ReservationStatusEnum } from "./DatabaseEnums";
@@ -41,7 +43,10 @@ export const reservations = pgTable("reservations", {
 
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-});
+}, (t) => [
+	index("idx_reservations_session_occurrence_active").on(t.sessionId, t.startOn).where(sql`${t.status} in ('confirmed', 'completed')`),
+	uniqueIndex("reservations_member_session_occurrence_active_uq").on(t.memberId, t.sessionId, t.startOn).where(sql`${t.status} in ('confirmed', 'completed')`),
+]);
 
 // Unified reservation exceptions table - supports both recurring and single reservations
 // Also supports location-wide blocks (holidays, maintenance)

@@ -5,6 +5,7 @@ import {
 	integer,
 	jsonb,
 	pgTable,
+	smallint,
 	text,
 	timestamp,
 	uuid,
@@ -20,6 +21,7 @@ import {
 	PackageStatusEnum,
 	PaymentTypeEnum,
 	PlanType,
+	ClassLimitIntervalEnum,
 } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { memberContracts, members } from "./members";
@@ -30,13 +32,16 @@ export const memberPlans = pgTable("member_plans", {
 	description: text("description").notNull().default(""),
 	family: boolean("family").notNull().default(false),
 	familyMemberLimit: integer("family_member_limit").notNull().default(0),
+	editable: boolean("editable").notNull().default(true),
 	archived: boolean("archived").notNull().default(false),
 	contractId: text("contract_id").references(() => contractTemplates.id),
 	type: PlanType("type").notNull(),
 	totalClassLimit: integer("total_class_limit"),
-	classLimitInterval: text("class_limit_interval", { enum: ["week", "month", "term"] }),
+	classLimitInterval: ClassLimitIntervalEnum("class_limit_interval"),
 	billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
+	marketingDetails: jsonb("marketing_details").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	allowProration: boolean("allow_proration").notNull().default(false),
+	classLimitThreshold: smallint("class_limit_threshold"),
 	makeUpCredits: integer("make_up_credits").notNull().default(0),
 	groupId: text("group_id").references(() => groups.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),

@@ -34,7 +34,5 @@ export type ChargeDetails = {
   subTotal: number;
   unitCost: number;
   tax: number;
-  monstroFee: number;
-  stripeFee: number;
   applicationFeeAmount: number;
 }

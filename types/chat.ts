@@ -43,3 +43,5 @@ export type Message = typeof messages.$inferSelect & {
     reply?: MessageReply;
     files?: Media[];
 }
+
+

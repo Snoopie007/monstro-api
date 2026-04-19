@@ -19,6 +19,7 @@ export const achievements = pgTable("achievements", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   badge: text("badge").notNull(),
+  isArchived: boolean("is_archived").notNull().default(false),
   locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
   requiredActionCount: integer("required_action_count").notNull(),
   planId: text("plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),

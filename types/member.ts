@@ -16,7 +16,6 @@ import type { FamilyMember } from './FamilyMember'
 import type { MemberInvoice } from './invoices'
 import type { Location } from './location'
 import type { MigrateMember } from './MigrateMember'
-import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 import type { PlanProgram, Program } from './program'
 import type { User } from './user'
 
@@ -32,14 +31,6 @@ export type Member = typeof members.$inferSelect & {
   referredBy?: MemberReferral
 }
 
-export type MemberAddress = {
-  line1: string
-  line2: string
-  city: string
-  state: string
-  postalCode: string
-  country: string
-}
 
 
 export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
@@ -100,8 +91,6 @@ export type MemberLocation = typeof memberLocations.$inferSelect & {
   knownFamilyMembers?: FamilyMember[],
   lastCheckInTime?: Date | null
   totalPointsEarned?: number
-  memberPaymentMethods?: MemberPaymentMethod[]
-  paymentMethods?: PaymentMethod[]
   migration?: MigrateMember;
   pointsHistory?: MemberPointsHistory[];
 }
