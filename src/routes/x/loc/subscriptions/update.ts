@@ -5,7 +5,7 @@ import { addDays } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
-
+import { resolveStripePaymentMethodForCustomer } from "./shared";
 export async function updateSubscriptionRoutes(app: Elysia) {
     return app.patch("/:sid", async ({ params, body, status }) => {
         const { lid, sid } = params as { lid: string; sid: string };
@@ -44,13 +44,22 @@ export async function updateSubscriptionRoutes(app: Elysia) {
             }
 
             const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
-            const paymentMethod = await stripe.retrievePaymentMethod(memberLocation.stripeCustomerId, paymentMethodId);
+            const resolvedPaymentMethod = await resolveStripePaymentMethodForCustomer({
+                stripe,
+                stripeCustomerId: memberLocation.stripeCustomerId,
+                paymentMethodId,
+                invalidMessage: "Selected payment method is not available for this member",
+                unsupportedMessage: "Unsupported payment method type",
+                upstreamMessage: "Failed to validate payment method with Stripe",
+                logLabel: "[x/subscriptions/update] payment method validation failed",
+                logContext: { lid, sid, memberId: sub.memberId, paymentMethodId },
+            });
 
-            if (paymentMethod.type !== "card" && paymentMethod.type !== "us_bank_account") {
-                return status(400, { error: "Unsupported payment method type" });
+            if (!resolvedPaymentMethod.ok) {
+                return status(resolvedPaymentMethod.statusCode, { error: resolvedPaymentMethod.error });
             }
 
-            nextStripePaymentId = paymentMethod.id;
+            nextStripePaymentId = resolvedPaymentMethod.paymentMethod.id;
         }
 
         const trialEnd = typeof trialDays === "number" && trialDays > 0

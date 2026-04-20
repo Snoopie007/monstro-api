@@ -16,7 +16,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
+import { getNextBillingDate, resolveStripePaymentMethodForCustomer, type PromoDiscount, withTimeout } from "./shared";
 import { getCurrency } from "@/utils";
 
 export async function activateSubscriptionRoutes(app: Elysia) {
@@ -161,11 +161,22 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
         stripe.setCustomer(memberLocation.stripeCustomerId!);
 
-        const paymentMethod = await stripe.retrievePaymentMethod(memberLocation.stripeCustomerId!, paymentMethodId);
+        const resolvedPaymentMethod = await resolveStripePaymentMethodForCustomer({
+            stripe,
+            stripeCustomerId: memberLocation.stripeCustomerId!,
+            paymentMethodId,
+            invalidMessage: "Selected payment method is not available for this member",
+            unsupportedMessage: "Unsupported payment method type for activation",
+            upstreamMessage: "Failed to validate payment method with Stripe",
+            logLabel: "[x/subscriptions/activate] payment method validation failed",
+            logContext: { lid, sid, memberId: sub.memberId, paymentMethodId },
+        });
 
-        if (paymentMethod.type !== "card" && paymentMethod.type !== "us_bank_account") {
-            return status(400, { error: "Unsupported payment method type for activation" });
+        if (!resolvedPaymentMethod.ok) {
+            return status(resolvedPaymentMethod.statusCode, { error: resolvedPaymentMethod.error });
         }
+
+        const paymentMethod = resolvedPaymentMethod.paymentMethod;
 
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
         const planName = `${sub.pricing.plan?.name || "Plan"}/${sub.pricing.name}`;
