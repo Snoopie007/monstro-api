@@ -16,7 +16,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
+import { getNextBillingDate, resolveStripePaymentMethodForCustomer, type PromoDiscount, withTimeout } from "./shared";
 import { getCurrency } from "@/utils";
 
 export async function activateSubscriptionRoutes(app: Elysia) {
@@ -30,7 +30,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 member: {
                     columns: {
                         id: true,
-                        stripeCustomerId: true,
                         firstName: true,
                         lastName: true,
                         email: true,
@@ -65,8 +64,19 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             return status(404, { error: "Subscription not found" });
         }
 
-        if (!sub.member.stripeCustomerId) {
-            return status(400, { error: "Member is missing Stripe customer" });
+        const memberLocation = await db.query.memberLocations.findFirst({
+            where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
+            columns: {
+                stripeCustomerId: true,
+            },
+        });
+
+        if (!memberLocation) {
+            return status(404, { error: "Member location not found" });
+        }
+
+        if (sub.paymentType !== "cash" && !memberLocation.stripeCustomerId) {
+            return status(400, { error: "Member location is missing Stripe customer" });
         }
 
         if (sub.paymentType === "cash") {
@@ -109,7 +119,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     address: location.address,
                 },
                 taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
-                stripeCustomerId: sub.member.stripeCustomerId,
+                stripeCustomerId: memberLocation.stripeCustomerId || null,
                 pricing: {
                     name: sub.pricing.name,
                     price: sub.pricing.price,
@@ -148,25 +158,25 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             return status(400, { error: "paymentMethodId is required" });
         }
 
-        const paymentMethod = await db.query.paymentMethods.findFirst({
-            where: (pm, { and, eq }) => and(eq(pm.id, paymentMethodId), eq(pm.memberId, sub.memberId)),
-            columns: {
-                id: true,
-                stripeId: true,
-                type: true,
-            },
+        const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
+        stripe.setCustomer(memberLocation.stripeCustomerId!);
+
+        const resolvedPaymentMethod = await resolveStripePaymentMethodForCustomer({
+            stripe,
+            stripeCustomerId: memberLocation.stripeCustomerId!,
+            paymentMethodId,
+            invalidMessage: "Selected payment method is not available for this member",
+            unsupportedMessage: "Unsupported payment method type for activation",
+            upstreamMessage: "Failed to validate payment method with Stripe",
+            logLabel: "[x/subscriptions/activate] payment method validation failed",
+            logContext: { lid, sid, memberId: sub.memberId, paymentMethodId },
         });
 
-        if (!paymentMethod) {
-            return status(404, { error: "Payment method not found" });
+        if (!resolvedPaymentMethod.ok) {
+            return status(resolvedPaymentMethod.statusCode, { error: resolvedPaymentMethod.error });
         }
 
-        if (paymentMethod.type !== "card" && paymentMethod.type !== "us_bank_account") {
-            return status(400, { error: "Unsupported payment method type for activation" });
-        }
-
-        const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
-        stripe.setCustomer(sub.member.stripeCustomerId);
+        const paymentMethod = resolvedPaymentMethod.paymentMethod;
 
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
         const planName = `${sub.pricing.plan?.name || "Plan"}/${sub.pricing.name}`;
@@ -231,7 +241,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     description: sub.pricing.downpayment
                         ? `Downpayment for ${planName}`
                         : `Payment for ${planName}`,
-                    paymentMethodId: paymentMethod.stripeId,
+                    paymentMethodId: paymentMethod.id,
                     metadata: {
                         lid,
                         locationId: lid,
@@ -274,7 +284,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 }).where(eq(memberInvoices.id, invoice.id));
 
                 await tx.update(memberSubscriptions).set({
-                    stripePaymentId: paymentMethod.stripeId,
+                    stripePaymentId: paymentMethod.id,
                     metadata: {
                         ...(sub.metadata || {}),
                         hasPaidDownpayment: !!sub.pricing.downpayment,
@@ -329,7 +339,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 address: sub.location.address,
             },
             taxRate: taxRate?.percentage || 0,
-            stripeCustomerId: sub.member.stripeCustomerId,
+            stripeCustomerId: memberLocation.stripeCustomerId || null,
             pricing: {
                 name: sub.pricing.name,
                 price: sub.pricing.price,

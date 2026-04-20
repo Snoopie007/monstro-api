@@ -62,29 +62,63 @@ export async function sendInvoiceRoutes(app: Elysia) {
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
 
         if (shouldAutoCharge) {
-
-
             const integration = invoice.location?.integrations?.[0];
             if (!integration || !integration.accountId || !integration.accessToken) {
                 return status(404, { error: "Stripe integration not found" });
             }
 
-            let selectedPaymentMethod:
-                | {
-                    stripeId: string;
-                    type: "card" | "us_bank_account";
+            const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
+            stripe.setCustomer(ml.stripeCustomerId);
+
+            let paymentMethod: { id: string; type: string } | undefined;
+
+            if (paymentMethodId) {
+                try {
+                    paymentMethod = await stripe.retrievePaymentMethod(ml.stripeCustomerId, paymentMethodId);
+                } catch {
+                    return status(400, { error: "Selected payment method cannot be used for automatic charging" });
                 }
-                | undefined;
+            } else {
+                const customer = await stripe.getCustomer(ml.stripeCustomerId);
+                if (!customer) {
+                    return status(404, { error: "Stripe customer not found" });
+                }
 
+                const defaultPaymentMethod = customer.invoice_settings?.default_payment_method;
+                if (!defaultPaymentMethod) {
+                    return status(400, { error: "No default payment method found for automatic charging" });
+                }
 
+                if (typeof defaultPaymentMethod === "string") {
+                    try {
+                        paymentMethod = await stripe.retrievePaymentMethod(ml.stripeCustomerId, defaultPaymentMethod);
+                    } catch {
+                        return status(400, { error: "Default payment method cannot be used for automatic charging" });
+                    }
+                } else {
+                    paymentMethod = defaultPaymentMethod;
+                }
+            }
 
-
-            if (!selectedPaymentMethod) {
+            if (!paymentMethod) {
                 return status(400, { error: "No default payment method found for automatic charging" });
             }
 
-            const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
-            stripe.setCustomer(ml.stripeCustomerId);
+            if (paymentMethod.type !== "card" && paymentMethod.type !== "us_bank_account") {
+                return status(400, {
+                    error: paymentMethodId
+                        ? "Selected payment method cannot be used for automatic charging"
+                        : "Default payment method cannot be used for automatic charging",
+                });
+            }
+
+            const selectedPaymentMethod: {
+                id: string;
+                type: "card" | "us_bank_account";
+            } = {
+                id: paymentMethod.id,
+                type: paymentMethod.type,
+            };
 
             const chargeDetails = calculateChargeDetails({
                 amount: invoice.total,
@@ -102,7 +136,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 tax: chargeDetails.tax,
                 applicationFeeAmount: chargeDetails.applicationFeeAmount,
                 description: invoice.description || `Invoice ${invoice.id}`,
-                paymentMethodId: selectedPaymentMethod.stripeId,
+                paymentMethodId: selectedPaymentMethod.id,
                 metadata: {
                     lid,
                     locationId: lid,
