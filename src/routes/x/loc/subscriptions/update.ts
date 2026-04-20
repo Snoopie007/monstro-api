@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { MemberStripePayments } from "@/libs/stripe";
 import { memberSubscriptions } from "@subtrees/schemas";
 import { addDays } from "date-fns";
 import type Elysia from "elysia";
@@ -19,14 +20,37 @@ export async function updateSubscriptionRoutes(app: Elysia) {
 
         let nextStripePaymentId: string | undefined;
         if (paymentMethodId) {
-            const pm = await db.query.paymentMethods.findFirst({
-                where: (p, { and, eq }) => and(eq(p.id, paymentMethodId), eq(p.memberId, sub.memberId)),
-                columns: { stripeId: true },
+            const memberLocation = await db.query.memberLocations.findFirst({
+                where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
+                columns: {
+                    stripeCustomerId: true,
+                },
             });
-            if (!pm) {
-                return status(404, { error: "Payment method not found" });
+
+            if (!memberLocation?.stripeCustomerId) {
+                return status(400, { error: "Member location is missing Stripe customer" });
             }
-            nextStripePaymentId = pm.stripeId;
+
+            const integration = await db.query.integrations.findFirst({
+                where: (integration, { and, eq }) => and(eq(integration.locationId, lid), eq(integration.service, "stripe")),
+                columns: {
+                    accountId: true,
+                    accessToken: true,
+                },
+            });
+
+            if (!integration?.accountId || !integration.accessToken) {
+                return status(404, { error: "Stripe integration not found" });
+            }
+
+            const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
+            const paymentMethod = await stripe.retrievePaymentMethod(memberLocation.stripeCustomerId, paymentMethodId);
+
+            if (paymentMethod.type !== "card" && paymentMethod.type !== "us_bank_account") {
+                return status(400, { error: "Unsupported payment method type" });
+            }
+
+            nextStripePaymentId = paymentMethod.id;
         }
 
         const trialEnd = typeof trialDays === "number" && trialDays > 0

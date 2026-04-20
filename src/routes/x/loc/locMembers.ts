@@ -189,10 +189,10 @@ function locMembers(app: Elysia) {
                     dob: members.dob,
                     gender: members.gender,
                     referralCode: members.referralCode,
-                    stripeCustomerId: members.stripeCustomerId,
                     setupCompleted: members.setupCompleted,
                     memberLocation: {
                         status: memberLocations.status,
+                        stripeCustomerId: memberLocations.stripeCustomerId,
                     },
                 })
                 .from(memberLocations)

@@ -43,7 +43,6 @@ export async function createSubscriptionRoutes(app: Elysia) {
                 member: {
                     columns: {
                         id: true,
-                        stripeCustomerId: true,
                         firstName: true,
                         lastName: true,
                         email: true,
