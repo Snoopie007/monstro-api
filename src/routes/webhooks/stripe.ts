@@ -19,6 +19,9 @@ const allowedEvents: Stripe.Event.Type[] = [
     "payment_intent.succeeded",
     "application_fee.created",
     "application_fee.refunded",
+    "customer.created",
+    "customer.updated",
+    "customer.deleted",
     "transfer.created",
     "transfer.updated",
     "charge.succeeded",
@@ -90,6 +93,9 @@ async function processEvent(event: Stripe.Event) {
 
     try {
         switch (event.type) {
+            case "customer.deleted":
+                await handleCustomer(event);
+                break;
             case "charge.succeeded":
             case "charge.failed":
                 await handleCharge(event);
@@ -109,6 +115,28 @@ async function processEvent(event: Stripe.Event) {
         );
         throw error;
     }
+}
+
+async function handleCustomer(event: Stripe.Event) {
+    const customer = event.data.object as Stripe.Customer;
+    const stripeAccountId = event.account;
+    console.log(`[STRIPE WEBHOOK] Customer ${event.type}:`, customer.id, stripeAccountId);
+
+    const customerId = customer.id;
+    console.log(`[STRIPE WEBHOOK] Customer ID:`, customerId);
+    const ml = await db.query.memberLocations.findFirst({
+        where: (memberLocation, { eq: equal }) => equal(memberLocation.stripeCustomerId, customerId),
+        columns: {
+            memberId: true,
+            locationId: true,
+        },
+    });
+    if (!ml) return;
+
+    await db.update(memberLocations).set({
+        stripeCustomerId: null,
+    }).where(and(eq(memberLocations.memberId, ml.memberId), eq(memberLocations.locationId, ml.locationId)));
+    console.log(`[STRIPE WEBHOOK] Strtipe Customer ID Removed from Location`);
 }
 
 async function handleCharge(event: Stripe.Event) {
