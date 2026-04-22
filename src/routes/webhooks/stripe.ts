@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import Stripe from "stripe";
-import { MemberStripePayments, VendorStripePayments } from "@/libs/stripe";
+import { VendorStripePayments } from "@/libs/stripe";
 import { db } from "@/db/db";
 import { memberInvoices, memberSubscriptions, memberPackages, transactions, memberLocations } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
@@ -43,14 +43,15 @@ type StripeMetadata = {
 };
 
 export function stripeWebhookRoutes(app: Elysia) {
-    app.post('/member/stripe', async ({ body, headers, request, status }) => {
+
+    app.post('/connected/stripe', async ({ body, headers, request, status }) => {
 
         const signature = headers["stripe-signature"];
 
         if (typeof signature !== "string") {
             throw new Error("Stripe Hook Signature is not a string");
         }
-        if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        if (!process.env.STRIPE_CONNECTED_WEBHOOK_SECRET) {
             throw new Error("Stripe Member webhook secret not found");
         }
 
@@ -60,7 +61,7 @@ export function stripeWebhookRoutes(app: Elysia) {
             event = await stripe.constructEventAsync(
                 Buffer.from(rawText),
                 signature,
-                process.env.STRIPE_WEBHOOK_SECRET
+                process.env.STRIPE_CONNECTED_WEBHOOK_SECRET
             );
         } catch (err) {
             console.error("[STRIPE WEBHOOK] Failed to construct event:", err);
