@@ -11,6 +11,7 @@ import {
 	locations, locationState,
 } from "./locations";
 import { memberLocations } from "./MemberLocation";
+import { memberPasses } from "./MemberPasses";
 import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions } from "./MemberPlans";
 import {
 	familyMembers,
@@ -20,7 +21,6 @@ import {
 	memberReferrals,
 	members,
 } from "./members";
-import { memberPasses } from "./MemberPasses";
 import { migrateMembers } from "./MigrateMembers";
 import { planPrograms, programs, programSessions, sessionWaitlist } from "./programs";
 import { promos } from "./promos";

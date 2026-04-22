@@ -76,7 +76,7 @@ export function mlPaymentMethods(app: Elysia) {
                                 expMonth: card.exp_month,
                                 expYear: card.exp_year,
                             },
-                            usBankAccount: null,
+                            usBankAccount: undefined,
                         });
                     } else if (method.type === 'us_bank_account' && method.us_bank_account) {
                         const bank = method.us_bank_account;
@@ -90,7 +90,7 @@ export function mlPaymentMethods(app: Elysia) {
                                 last4: bank.last4,
                                 accountType: bank.account_type,
                             },
-                            card: null,
+                            card: undefined,
                         });
                     }
                 });
@@ -259,8 +259,8 @@ export function mlPaymentMethods(app: Elysia) {
                     source: 'stripe',
                     type: paymentMethod.type as PaymentType,
                     isDefault: false,
-                    card: null,
-                    usBankAccount: null,
+                    card: undefined,
+                    usBankAccount: undefined,
                 };
                 if (paymentMethod.type === 'card' && paymentMethod.card) {
                     mappedPaymentMethod.card = {

@@ -1,17 +1,17 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
-  pgTable,
-  timestamp,
-  text,
-  jsonb,
   integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
 } from "drizzle-orm/pg-core";
+import type { MigrateStatus } from "../types/DatabaseEnums";
+import { PlanType } from "./DatabaseEnums";
 import { locations } from "./locations";
-import { sql } from "drizzle-orm";
 import { memberPlanPricing } from "./MemberPlans";
 import { members } from "./members";
-import { PlanType } from "./DatabaseEnums";
-import type { MigrateStatus } from "@subtrees/types/DatabaseEnums";
 
 export const migrateMembers = pgTable('migrate_members', {
   id: text('id').primaryKey().notNull().default(sql`uuid_base62()`),
