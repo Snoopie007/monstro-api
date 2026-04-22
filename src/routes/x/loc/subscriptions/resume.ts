@@ -23,7 +23,6 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             with: {
                 member: {
                     columns: {
-                        stripeCustomerId: true,
                         firstName: true,
                         lastName: true,
                         email: true,
@@ -45,18 +44,24 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             },
         });
 
-        if (!sub || !sub.pricing) {
+        if (!sub || !sub.pricing || !sub.member || !sub.location) {
             return status(404, { error: "Subscription not found" });
         }
 
-
         const location = sub.location;
-        if (!location) {
-            return status(404, { error: "Location not found" });
-        }
-
         const currency = getCurrency(location.country);
         const nextBillingAt = resumeAt ? new Date(resumeAt) : new Date();
+
+        const memberLocation = await db.query.memberLocations.findFirst({
+            where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
+            columns: {
+                stripeCustomerId: true,
+            },
+        });
+
+        if (sub.paymentType !== "cash" && !memberLocation?.stripeCustomerId) {
+            return status(400, { error: "Member location is missing Stripe customer" });
+        }
 
         await db.update(memberSubscriptions).set({
             status: sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active",
@@ -64,7 +69,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             updated: new Date(),
         }).where(eq(memberSubscriptions.id, sid));
 
-        if (sub.paymentType !== "cash" && sub.member?.stripeCustomerId) {
+        if (sub.paymentType !== "cash" && memberLocation?.stripeCustomerId) {
             const promoMeta = sub.metadata?.promo as { discount?: PromoDiscount } | undefined;
             const payload: SubscriptionJobData = {
                 sid: sub.id,
@@ -81,7 +86,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     address: location.address,
                 },
                 taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
-                stripeCustomerId: sub.member.stripeCustomerId,
+                stripeCustomerId: memberLocation.stripeCustomerId,
                 pricing: {
                     name: sub.pricing.name,
                     price: sub.pricing.price,
