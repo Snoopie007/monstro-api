@@ -10,7 +10,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 
-import type { MemberAddress } from "../types/member";
+import type { Address } from "../types/other";
 import {
     CustomFieldTypeEnum,
     MemberRelationshipEnum,
@@ -30,7 +30,7 @@ export const members = pgTable('members', {
     familyInviteCode: text('family_invite_code').notNull().default(sql`generate_random_code()`),
     hasInstalledApp: boolean('has_installed_app').notNull().default(false),
     gender: text('gender'),
-    addresses: jsonb('addresses').$type<MemberAddress[]>().notNull().default(sql`'[]'::jsonb`),
+    addresses: jsonb('addresses').$type<Address[]>().notNull().default(sql`'[]'::jsonb`),
     dob: timestamp('dob', { withTimezone: true, mode: 'date' }).default(sql`NULL`),
     setupCompleted: boolean('setup_completed').notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
