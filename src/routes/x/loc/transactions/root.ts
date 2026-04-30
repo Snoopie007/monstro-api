@@ -7,7 +7,7 @@ import {
     reservations,
     transactions,
 } from "@subtrees/schemas";
-import { MemberStripePayments } from "@/libs/stripe";
+import { StripePaymentGateway } from "@/libs/PaymentGateway";
 
 export const xTransactions = new Elysia({ prefix: "/transactions" })
     .post("/:tid/refund", async ({ params, body, status }) => {

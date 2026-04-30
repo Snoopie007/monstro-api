@@ -192,7 +192,7 @@ function locMembers(app: Elysia) {
                     setupCompleted: members.setupCompleted,
                     memberLocation: {
                         status: memberLocations.status,
-                        stripeCustomerId: memberLocations.stripeCustomerId,
+                        gatewayCustomerId: memberLocations.gatewayCustomerId,
                     },
                 })
                 .from(memberLocations)

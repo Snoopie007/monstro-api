@@ -9,7 +9,7 @@ import { mlRewardsRoutes } from './rewards';
 import { mlSupportRoutes } from './support';
 import { mlPointsRoutes } from './points';
 import { memberLocations } from '@subtrees/schemas';
-import { mlPaymentMethods } from './methods';
+import { paymentMethodsRoutes } from './methods/root';
 import { createLocationChat } from '@/utils/chatsGroupsUtils';
 import { memberLocationPassesRoutes } from './passes';
 
@@ -137,7 +137,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         app.use(mlReferralsRoutes)
         app.use(mlSupportRoutes)
         app.use(mlPointsRoutes)
-        app.use(mlPaymentMethods)
+        app.use(paymentMethodsRoutes)
         return app;
 
     })

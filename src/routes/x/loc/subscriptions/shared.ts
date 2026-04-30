@@ -1,5 +1,5 @@
 import { isFuture } from "date-fns";
-import type { MemberStripePayments } from "@/libs/stripe";
+import type { StripePaymentGateway } from "@/libs/PaymentGateway";
 import type Stripe from "stripe";
 
 export type PromoDiscount = {

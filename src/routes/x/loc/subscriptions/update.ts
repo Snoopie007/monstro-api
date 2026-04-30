@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { MemberStripePayments } from "@/libs/stripe";
+import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { memberSubscriptions } from "@subtrees/schemas";
 import { addDays } from "date-fns";
 import type Elysia from "elysia";
@@ -23,11 +23,11 @@ export async function updateSubscriptionRoutes(app: Elysia) {
             const memberLocation = await db.query.memberLocations.findFirst({
                 where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
                 columns: {
-                    stripeCustomerId: true,
+                    gatewayCustomerId: true,
                 },
             });
 
-            if (!memberLocation?.stripeCustomerId) {
+            if (!memberLocation?.gatewayCustomerId) {
                 return status(400, { error: "Member location is missing Stripe customer" });
             }
 

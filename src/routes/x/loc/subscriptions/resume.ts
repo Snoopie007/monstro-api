@@ -55,11 +55,11 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         const memberLocation = await db.query.memberLocations.findFirst({
             where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
             columns: {
-                stripeCustomerId: true,
+                gatewayCustomerId: true,
             },
         });
 
-        if (sub.paymentType !== "cash" && !memberLocation?.stripeCustomerId) {
+        if (sub.paymentType !== "cash" && !memberLocation?.gatewayCustomerId) {
             return status(400, { error: "Member location is missing Stripe customer" });
         }
 
@@ -69,7 +69,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             updated: new Date(),
         }).where(eq(memberSubscriptions.id, sid));
 
-        if (sub.paymentType !== "cash" && memberLocation?.stripeCustomerId) {
+        if (sub.paymentType !== "cash" && memberLocation?.gatewayCustomerId) {
             const promoMeta = sub.metadata?.promo as { discount?: PromoDiscount } | undefined;
             const payload: SubscriptionJobData = {
                 sid: sub.id,

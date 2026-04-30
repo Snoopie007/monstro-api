@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { MemberStripePayments } from "@/libs/stripe";
+import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils";
 import type Elysia from "elysia";
 import { t } from "elysia";

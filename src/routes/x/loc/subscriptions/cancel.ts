@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { MemberStripePayments } from "@/libs/stripe";
+import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { removeRenewalJobs } from "@/queues/subscriptions";
 import { memberSubscriptions, transactions } from "@subtrees/schemas";
 import type Elysia from "elysia";

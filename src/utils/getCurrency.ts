@@ -1,12 +1,16 @@
-export const getCurrency = (country: string) => {
+import type { Currency } from "square";
+
+export const getCurrency = (country: string): Currency => {
     switch (country) {
         case "US":
-            return "usd";
+            return "USD";
         case "CA":
-            return "cad";
+            return "CAD";
         case "UK":
-            return "gbp";
+            return "GBP";
         case "AU":
-            return "aud";
+            return "AUD";
+        default:
+            return "USD";
     }
 }

@@ -4,7 +4,6 @@ import {
     memberLocations,
     memberSubscriptions, migrateMembers,
 } from "@subtrees/schemas";
-import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -17,6 +16,7 @@ import { isToday } from "date-fns";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
 import type { SubscriptionJobData } from "@subtrees/bullmq";
 import Stripe from "stripe";
+import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 const MigrateSubProps = {
     params: z.object({
         lid: z.string(),
@@ -65,19 +65,22 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(404, { error: "Location not found" });
             }
 
-
-
             const { pricing } = migrate;
-
-            const { taxRates, locationState } = location;
 
             if (!pricing) {
                 return status(404, { error: "Pricing not found" });
             }
-
             if (!pricing.interval || !pricing.intervalThreshold) {
                 return status(400, { error: "Invalid pricing for subscription plan." });
             }
+
+            const { taxRates, locationState } = location;
+            const { paymentGatewayId } = locationState;
+            if (!paymentGatewayId) {
+                return status(400, { error: "This location does not have a payment gateway set." });
+            }
+
+
 
             const ml = await db.query.memberLocations.findFirst({
                 where: (memberLocation, { eq, and }) => and(
@@ -94,35 +97,32 @@ export function migrateSubRoutes(app: Elysia) {
                     },
                 },
                 columns: {
-                    stripeCustomerId: true,
+                    gatewayCustomerId: true,
                 },
             });
 
 
 
-            if (!ml || !ml.stripeCustomerId) {
+            if (!ml || !ml.gatewayCustomerId) {
                 return status(404, { error: "Member location or Stripe customer not found" });
             }
 
 
-
-            const integration = await db.query.integrations.findFirst({
-                where: (integration, { eq, and }) => and(
-                    eq(integration.locationId, lid),
-                    eq(integration.service, "stripe")
+            const gateway = await db.query.integrations.findFirst({
+                where: (i, { eq, and }) => and(
+                    eq(i.id, paymentGatewayId)
                 ),
                 columns: {
                     accountId: true,
                     accessToken: true,
+                    service: true,
+                    metadata: true,
                 },
             });
 
-            if (!integration || !integration.accountId || !integration.accessToken) {
+            if (!gateway || !gateway.accountId || !gateway.accessToken) {
                 return status(404, { error: "Stripe integration not found" });
             }
-
-            const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
-            stripe.setCustomer(ml?.stripeCustomerId);
 
 
             const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
@@ -148,10 +148,7 @@ export function migrateSubRoutes(app: Elysia) {
                 })
             }
 
-            const backdateStartDate =
-                migrate.backdateStartDate ?
-                    new Date(migrate.backdateStartDate) : undefined;
-
+            const backdateStartDate = migrate.backdateStartDate ? new Date(migrate.backdateStartDate) : undefined;
 
 
             const sub = await db.transaction(async (tx) => {
@@ -228,20 +225,46 @@ export function migrateSubRoutes(app: Elysia) {
                 if (!invoice) {
                     return status(500, { error: "Failed to create invoice" });
                 }
-                await stripe.processPayment({
-                    ...chargeDetails,
-                    paymentMethodId,
-                    currency,
-                    description,
-                    productName,
-                    metadata: {
-                        locationId: lid,
-                        memberId: mid,
-                        memberPlanId: pricing.id,
-                        invoiceId: invoice.id,
-                    },
-                });
 
+                if (gateway.service === "stripe") {
+
+                    try {
+                        const stripe = new StripePaymentGateway(gateway.accessToken);
+                        await stripe.createCharge(ml.gatewayCustomerId, paymentMethodId, {
+                            ...chargeDetails,
+                            currency,
+                            description,
+                            productName,
+                            metadata: {
+                                locationId: lid,
+                                memberId: mid,
+                                memberPlanId: pricing.id,
+                                invoiceId: invoice.id,
+                            },
+                        });
+                    } catch (error) {
+
+                        console.error(error);
+                    }
+
+                } else if (gateway.service === "square") {
+                    try {
+                        const square = new SquarePaymentGateway(gateway.accessToken);
+                        const squareLocationId = gateway.metadata?.squareLocationId;
+                        if (!squareLocationId) {
+                            throw new Error("Square location ID not found");
+                        }
+                        await square.createCharge(ml.gatewayCustomerId, paymentMethodId, {
+                            ...chargeDetails,
+                            currency,
+                            referenceId: invoice.id,
+                            squareLocationId: squareLocationId,
+                            note: `${description}|mid:${mid}|lid:${lid}|subId:${sub.id}`,
+                        });
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }
             } else {
                 nextBillingDate = currentPeriodEnd;
             }
@@ -258,7 +281,7 @@ export function migrateSubRoutes(app: Elysia) {
                         lastName: member.lastName,
                         email: member.email,
                     },
-                    stripeCustomerId: ml.stripeCustomerId,
+                    stripeCustomerId: ml.gatewayCustomerId,
                     location: {
                         name: location.name,
                         phone: location.phone,

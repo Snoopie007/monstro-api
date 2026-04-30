@@ -2,9 +2,14 @@ import { Elysia, t } from "elysia";
 import Stripe from "stripe";
 import { VendorStripePayments } from "@/libs/stripe";
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, memberPackages, transactions, memberLocations } from "@subtrees/schemas";
+import {
+    memberInvoices, memberSubscriptions, memberPackages,
+    transactions, memberLocations
+} from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
 import { and, eq } from "drizzle-orm";
+
+
 /**
  * Stripe Webhook Handler for Member Billing Events
  *
@@ -125,7 +130,7 @@ async function handleCustomer(event: Stripe.Event) {
     const customerId = customer.id;
     console.log(`[STRIPE WEBHOOK] Customer ID:`, customerId);
     const ml = await db.query.memberLocations.findFirst({
-        where: (memberLocation, { eq: equal }) => equal(memberLocation.stripeCustomerId, customerId),
+        where: (ml, { eq: equal }) => equal(ml.gatewayCustomerId, customerId),
         columns: {
             memberId: true,
             locationId: true,
@@ -134,7 +139,7 @@ async function handleCustomer(event: Stripe.Event) {
     if (!ml) return;
 
     await db.update(memberLocations).set({
-        stripeCustomerId: null,
+        gatewayCustomerId: null,
     }).where(and(eq(memberLocations.memberId, ml.memberId), eq(memberLocations.locationId, ml.locationId)));
     console.log(`[STRIPE WEBHOOK] Strtipe Customer ID Removed from Location`);
 }

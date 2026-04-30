@@ -2,7 +2,6 @@ import { db } from "@/db/db";
 import {
     memberPackages, memberInvoices,
 } from "@subtrees/schemas";
-import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { z } from "zod";
 
@@ -11,18 +10,42 @@ import {
     calculateChargeDetails,
     triggerPurchase,
     getCurrency,
+    fetchPromoDiscount,
 } from "@/utils";
 
 import Stripe from "stripe";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import { ErrorCategory, SquareError, ErrorCode } from "square";
+
+
+
+const CreatePackageBody = {
+    params: t.Object({
+        lid: t.String(),
+    }),
+    body: t.Object({
+        priceId: t.String(),
+        mid: t.String(),
+        paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
+    })
+};
+
+
 
 const PurchasePkgProps = {
     params: z.object({
         lid: z.string(),
     }),
+    body: t.Object({
+        paymentMethodId: t.String(),
+        priceId: t.String(),
+        memberPlanId: t.String(),
+        mid: t.String(),
+        paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account')),
+        promoId: t.Optional(t.String()),
+    }),
 };
-
-
 
 export function purchasePkgRoutes(app: Elysia) {
 
@@ -81,15 +104,8 @@ export function purchasePkgRoutes(app: Elysia) {
                 console.error(error);
                 return status(500, { error: "Failed to checkout" });
             }
-        }, {
-            ...PurchasePkgProps,
-            body: t.Object({
-                priceId: t.String(),
-                mid: t.String(),
-                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
-            }),
-        })
-        app.post('/stripe', async ({ params, status, body }) => {
+        }, CreatePackageBody)
+        app.post('/checkout', async ({ params, status, body }) => {
             const { lid } = params;
             const {
                 paymentMethodId,
@@ -102,139 +118,38 @@ export function purchasePkgRoutes(app: Elysia) {
 
             try {
 
-                const [pricing, ml] = await Promise.all([
-
-                    db.query.memberPlanPricing.findFirst({
-                        where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
-                        with: {
-                            plan: true,
-                        },
-                    }),
-                    db.query.memberLocations.findFirst({
-                        where: (memberLocation, { and, eq }) => and(
-                            eq(memberLocation.memberId, mid),
-                            eq(memberLocation.locationId, lid)
-                        ),
-                        with: {
-                            location: {
-                                columns: {
-                                    name: true,
-                                    phone: true,
-                                    email: true,
-                                    country: true,
-                                },
-                                with: {
-                                    taxRates: {
-                                        columns: {
-                                            percentage: true,
-                                            isDefault: true,
-                                        },
-                                    },
-                                    locationState: {
-                                        columns: {
-                                            planId: true,
-                                            usagePercent: true,
-                                            settings: true,
-                                        },
-                                    },
-                                    integrations: {
-                                        where: (integration, { eq }) => eq(integration.service, "stripe"),
-                                        columns: {
-                                            accountId: true,
-                                            accessToken: true,
-                                            service: true,
-                                        },
-                                    },
-                                },
-                            },
-                            member: {
-                                columns: {
-                                    userId: true,
-                                    firstName: true,
-                                    lastName: true,
-                                    email: true,
-                                },
-                            },
-                        },
-                        columns: {
-                            stripeCustomerId: true,
-                            status: true,
-                        },
-                    })
-                ]);
-
-
+                const [pricing, ml] = await fetchData(lid, mid, priceId);
 
                 if (!ml) {
                     return status(404, { error: "Member don't belong to this location" });
                 }
-
-                const { member, location, stripeCustomerId } = ml;
-
-                if (!stripeCustomerId) {
-                    return status(404, { error: "Stripe customer not linked to this location" });
-                }
-
-                if (!location) {
-                    return status(404, { error: "Location not found" });
-                }
-
-
                 if (!pricing) {
                     return status(404, { error: "Pricing not found" });
                 }
+                const { location, gatewayCustomerId } = ml;
 
-                const { taxRates, locationState, integrations } = ml.location;
-
-                const integration = integrations[0];
-                if (!integration || !integration.accountId || !integration.accessToken) {
-                    throw new Error("Stripe integration not found");
+                if (!gatewayCustomerId) {
+                    return status(404, { error: "Gateway customer not linked to this location" });
                 }
 
-                const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
 
+                const { taxRates, locationState } = location;
+                const { settings, usagePercent, paymentGatewayId } = locationState;
 
-                stripe.setCustomer(stripeCustomerId);
-
-                let discount: number = 0;
-                if (promoId) {
-                    const promo = await db.query.promos.findFirst({
-                        where: (promo, { eq, and, gt, isNull, or }) => and(
-                            eq(promo.id, promoId),
-                            eq(promo.isActive, true),
-                            or(
-                                isNull(promo.expiresAt),
-                                gt(promo.expiresAt, new Date())
-                            )
-                        ),
-                        columns: {
-                            type: true,
-                            value: true,
-                            redemptionCount: true,
-                            maxRedemptions: true,
-                            allowedPlans: true,
-                        },
-                    });
-
-                    if (promo) {
-                        const { value, redemptionCount, maxRedemptions, type, allowedPlans } = promo;
-                        const isWithinRedemption = !maxRedemptions || redemptionCount < maxRedemptions;
-                        const isAllowedPlan = allowedPlans ? allowedPlans.includes(pricing.id) : true;
-
-                        if (isWithinRedemption && isAllowedPlan) {
-
-                            if (type === "fixed_amount") {
-                                discount = Math.round(value);
-                            } else {
-                                discount = Math.round(pricing.price * (value / 100));
-                            }
-                        }
-                    }
+                if (!paymentGatewayId) {
+                    return status(400, { error: "This location does not have a payment gateway set." });
+                }
+                const gateway = await db.query.integrations.findFirst({
+                    where: (integration, { eq }) => eq(integration.id, paymentGatewayId),
+                    columns: { accountId: true, accessToken: true, service: true, metadata: true },
+                });
+                if (!gateway || !gateway.accountId || !gateway.accessToken) {
+                    throw new Error("Integration not found");
                 }
 
+                const discount = await fetchPromoDiscount(promoId, pricing);
                 const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
 
-                const { settings, usagePercent } = locationState;
 
                 const productName = `${pricing.plan.name}/${pricing.name}`;
                 const description = `Payment for ${productName}`;
@@ -263,7 +178,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     memberId: mid,
                     locationId: lid,
                     memberPlanId,
-                    paymentType: paymentType,
+                    paymentType,
                     currency,
                     dueDate: now,
                 }).returning({ id: memberInvoices.id });
@@ -273,30 +188,66 @@ export function purchasePkgRoutes(app: Elysia) {
                     return status(500, { error: "Failed to create invoice" });
                 }
 
-                await stripe.processPayment({
-                    ...chargeDetails,
-                    paymentMethodId: paymentMethodId,
-                    currency,
-                    description,
-                    productName,
-                    metadata: {
-                        memberPlanId,
-                        invoiceId: invoice.id,
-                        locationId: lid,
-                        memberId: mid,
-                    },
-                });
 
-                // triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
-                //     if (a) {
-                //         broadcastAchievement(ml.member.userId, a)
-                //     }
-                // }).catch((error) => {
-                //     console.error("Error triggering purchase:", error);
-                // });
+                if (gateway.service === "stripe") {
+                    try {
+
+                        const stripe = new StripePaymentGateway(gateway.accessToken);
+
+                        await stripe.createCharge(gatewayCustomerId, paymentMethodId, {
+                            ...chargeDetails,
+                            currency,
+                            description,
+                            productName,
+                            metadata: {
+                                memberPlanId,
+                                invoiceId: invoice.id,
+                                locationId: lid,
+                                memberId: mid,
+                            },
+                        });
+                    } catch (error) {
+                        console.error(error);
+                        throw new Error("Failed to charge payment");
+                    }
+                }
+
+                if (gateway.service === "square") {
+                    try {
+                        const square = new SquarePaymentGateway(gateway.accessToken);
+                        const squareLocationId = gateway.metadata?.squareLocationId;
+                        if (!squareLocationId) {
+                            throw new Error("Square location ID not found");
+                        }
+
+                        await square.createCharge(gatewayCustomerId, paymentMethodId, {
+                            total: chargeDetails.total,
+                            feesAmount: chargeDetails.feesAmount,
+                            currency,
+                            note: `${productName}|${description}|mid:${mid}|lid:${lid}`,
+                            referenceId: `${invoice.id}`,
+                            squareLocationId: squareLocationId,
+                        });
+                    } catch (error) {
+                        console.error(error);
+
+                        throw new Error("Failed to charge payment");
+                    }
+                }
+                triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
+                    if (a) {
+                        broadcastAchievement(ml.member.userId, a)
+                    }
+                }).catch((error) => {
+                    console.error("Error triggering purchase:", error);
+                });
                 return status(200, { status: "active" });
             } catch (error) {
                 console.log(error);
+                if (error instanceof SquareError) {
+                    const { code, message } = handleSquareError(error);
+                    return status(400, { error: message });
+                }
                 if (error instanceof Stripe.errors.StripeError) {
                     const lastError = error.payment_intent?.last_payment_error;
                     const declineCode = lastError?.decline_code;
@@ -307,21 +258,100 @@ export function purchasePkgRoutes(app: Elysia) {
                 }
                 return status(500, { error: "Failed to checkout" });
             }
-        }, {
-            ...PurchasePkgProps,
-            body: t.Object({
-                paymentMethodId: t.String(),
-                priceId: t.String(),
-                memberPlanId: t.String(),
-                mid: t.String(),
-                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account')),
-                promoId: t.Optional(t.String()),
-            }),
-        });
+        }, PurchasePkgProps);
+
+
 
         return app;
     });
 
     return app
 
+}
+
+
+function handleSquareError(error: SquareError): { code: string, message: string } {
+    if (error.errors.length > 0) {
+        const squareError = error.errors[0];
+        if (!squareError) {
+            return { code: "UNKNOWN_ERROR", message: error.message };
+        }
+        if (squareError?.category === ErrorCategory.PaymentMethodError) {
+            switch (squareError?.code) {
+                case ErrorCode.InsufficientFunds:
+                case ErrorCode.PaymentLimitExceeded:
+                    return { code: "INSUFFICIENT_FUNDS", message: 'insufficient funds' };
+
+                case ErrorCode.InvalidCard:
+                case ErrorCode.GenericDecline:
+                case ErrorCode.CardDeclined:
+                    return { code: "CARD_DECLINED", message: 'card declined' };
+                case ErrorCode.ExpirationFailure:
+                    return { code: "EXPIRATION_FAILURE", message: 'card expired' };
+                case ErrorCode.CardNotSupported:
+                    return { code: "CARD_NOT_SUPPORTED", message: 'card not supported' };
+                default:
+                    return { code: "UNKNOWN_ERROR", message: 'unable to process payment' };
+            }
+        }
+    }
+    return { code: "UNKNOWN_ERROR", message: 'unable to process payment' };
+}
+
+
+async function fetchData(lid: string, mid: string, priceId: string) {
+
+    return Promise.all([
+
+        db.query.memberPlanPricing.findFirst({
+            where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
+            with: {
+                plan: true,
+            },
+        }),
+        db.query.memberLocations.findFirst({
+            where: (memberLocation, { and, eq }) => and(
+                eq(memberLocation.memberId, mid),
+                eq(memberLocation.locationId, lid)
+            ),
+            with: {
+                location: {
+                    columns: {
+                        name: true,
+                        phone: true,
+                        email: true,
+                        country: true,
+                    },
+                    with: {
+                        taxRates: {
+                            columns: {
+                                percentage: true,
+                                isDefault: true,
+                            },
+                        },
+                        locationState: {
+                            columns: {
+                                planId: true,
+                                usagePercent: true,
+                                paymentGatewayId: true,
+                                settings: true,
+                            },
+                        },
+                    },
+                },
+                member: {
+                    columns: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
+            },
+            columns: {
+                gatewayCustomerId: true,
+                status: true,
+            },
+        })
+    ]);
 }

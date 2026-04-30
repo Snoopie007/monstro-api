@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { MemberStripePayments } from "@/libs/stripe";
+import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils";
 import {
     removeRenewalJobs,
@@ -67,7 +67,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const memberLocation = await db.query.memberLocations.findFirst({
             where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
             columns: {
-                stripeCustomerId: true,
+                gatewayCustomerId: true,
             },
         });
 
@@ -75,7 +75,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             return status(404, { error: "Member location not found" });
         }
 
-        if (sub.paymentType !== "cash" && !memberLocation.stripeCustomerId) {
+        if (sub.paymentType !== "cash" && !memberLocation.gatewayCustomerId) {
             return status(400, { error: "Member location is missing Stripe customer" });
         }
 

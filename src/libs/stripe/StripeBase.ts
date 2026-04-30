@@ -1,7 +1,7 @@
 import Stripe from "stripe";
-import { BASE_MONSTRO_X_URL } from "@subtrees/emails/_shared/data";
 import type { PaymentType } from "@subtrees/types";
 
+const BASE_MONSTRO_X_URL = 'https://m.monstro-x.com';
 export const STRIPE_API_VERSION = "2026-03-25.dahlia";
 
 
