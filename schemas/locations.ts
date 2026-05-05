@@ -9,10 +9,10 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import type { LocationSettings } from "../types";
+import type { Currency } from "../types/currency";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { vendors } from "./vendors";
 import { integrations } from "./integrations";
-import type { Currency } from "square";
 export const locations = pgTable("locations", {
 	id: uuid("id")
 		.primaryKey()
