@@ -48,7 +48,7 @@ export async function scheduleInvoiceReminderAndOverdue(invoiceId: string, dueDa
             location: payload.location,
         },
     }, {
-        jobId: `overdue:${invoiceId}:reminder:0`,
+        jobId: `invoice:overdue:${invoiceId}-r0`,
         delay: overdueDelay,
         attempts: 3,
         backoff: { type: "exponential", delay: 5000 },

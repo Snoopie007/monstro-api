@@ -114,16 +114,26 @@ export async function overdueInvoiceRoutes(app: Elysia) {
                 removedCount++;
             }
 
-            // Remove all numbered reminder jobs
-            for (let i = 0; i < 10; i++) { // Max 10 reminders
+            // Remove all numbered reminder jobs (legacy 4-part format)
+            for (let i = 0; i < 10; i++) {
                 const reminderJobId = `overdue:${invoiceId}:reminder:${i}`;
                 const reminderJob = await invoiceQueue.getJob(reminderJobId);
                 if (reminderJob) {
                     await reminderJob.remove();
                     removedCount++;
                 }
+            }
+            // Remove all numbered reminder jobs (new 3-part format)
+            for (let i = 0; i < 10; i++) {
+                const reminderJobId = `invoice:overdue:${invoiceId}-r${i}`;
+                const reminderJob = await invoiceQueue.getJob(reminderJobId);
+                if (reminderJob) {
+                    await reminderJob.remove();
+                    removedCount++;
+                }
+            }
 
-                // Current worker recurring overdue reminder id format
+            for (let i = 0; i < 10; i++) {
                 const dashedReminderJobId = `invoice-overdue-${invoiceId}-reminder-${i}`;
                 const dashedReminderJob = await invoiceQueue.getJob(dashedReminderJobId);
                 if (dashedReminderJob) {
