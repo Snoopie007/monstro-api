@@ -87,12 +87,9 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     address: location.address,
                 },
                 taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
-                // TODO(cleanup): Subscription workers no longer use this field.
-                stripeCustomerId: memberLocation.gatewayCustomerId,
                 pricing: {
                     name: sub.pricing.name,
                     price: sub.pricing.price,
-                    currency: currency || "usd",
                     interval: sub.pricing.interval!,
                     intervalThreshold: sub.pricing.intervalThreshold!,
                 },

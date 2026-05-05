@@ -281,8 +281,6 @@ export function migrateSubRoutes(app: Elysia) {
                         lastName: member.lastName,
                         email: member.email,
                     },
-                    // TODO(cleanup): Subscription workers no longer use this field.
-                    stripeCustomerId: ml.gatewayCustomerId,
                     location: {
                         name: location.name,
                         phone: location.phone,
@@ -291,7 +289,6 @@ export function migrateSubRoutes(app: Elysia) {
                     pricing: {
                         name: pricing.name,
                         price: pricing.price,
-                        currency: currency || "usd",
                         interval: pricing.interval,
                         intervalThreshold: pricing.intervalThreshold,
                     }

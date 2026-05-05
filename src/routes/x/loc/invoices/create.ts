@@ -169,7 +169,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                 subTotal: subtotal,
                 total,
                 tax,
-                currency: "usd",
+                currency: "USD",
                 status: "draft",
                 dueDate: dueDate ? new Date(dueDate) : new Date(),
                 paymentType,

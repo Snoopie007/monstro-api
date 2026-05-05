@@ -151,14 +151,34 @@ async function handleCharge(event: Stripe.Event) {
     console.log(`[STRIPE WEBHOOK] Charge ${event.type}:`, charge.id, stripeAccountId);
 
     const paymentMethodDetails = charge.payment_method_details;
+    let metadata = charge.metadata as unknown as StripeMetadata;
+    if (!metadata.invoiceId && typeof charge.payment_intent === "string") {
+        const integration = await db.query.integrations.findFirst({
+            where: (integration, { eq }) => eq(integration.accountId, stripeAccountId || ""),
+            columns: { accessToken: true },
+        });
+
+        if (integration?.accessToken) {
+            const stripeClient = new Stripe(integration.accessToken);
+            const paymentIntent = await stripeClient.paymentIntents.retrieve(charge.payment_intent, {}, {
+                stripeAccount: stripeAccountId || undefined,
+            });
+            metadata = paymentIntent.metadata as unknown as StripeMetadata;
+        }
+    }
+
     const {
         locationId,
         memberId,
         invoiceId,
         memberPlanId,
-    } = charge.metadata as unknown as StripeMetadata;
+    } = metadata;
 
-    const isPackage = memberPlanId.startsWith("pkg_");
+    if (!locationId || !memberId || !invoiceId) {
+        throw new Error("Stripe charge is missing required billing metadata");
+    }
+
+    const isPackage = memberPlanId?.startsWith("pkg_") ?? false;
     const now = new Date();
 
     let paymentType: PaymentType = "card";
@@ -186,24 +206,41 @@ async function handleCharge(event: Stripe.Event) {
         throw new Error("Invoice not found");
     }
 
-    await db.insert(transactions).values({
+    const transactionValues = {
         ...invoice,
+        invoiceId,
         total: charge.amount,
         items: invoice.items ?? [],
-        type: "inbound",
-        status: charge.paid ? "paid" : "failed",
+        type: "inbound" as const,
+        status: charge.paid ? "paid" as const : "failed" as const,
         failedReason: charge.failure_message,
         failedCode: charge.failure_code || charge.outcome?.reason || null,
         locationId,
         memberId,
         paymentMethodId: charge.payment_method,
+        paymentIntentId: typeof charge.payment_intent === "string" ? charge.payment_intent : null,
         paymentType,
         chargeDate: now,
         feeAmount: charge.application_fee_amount || 0,
         metadata: {
+            ...metadata,
+            gatewayService: "stripe",
+            chargeId: charge.id,
+            stripeChargeId: charge.id,
+            paymentIntentId: typeof charge.payment_intent === "string" ? charge.payment_intent : null,
             memberPlanId,
         }
+    };
+
+    const existingTransaction = await db.query.transactions.findFirst({
+        where: (transaction, { eq }) => eq(transaction.invoiceId, invoiceId),
     });
+
+    if (existingTransaction) {
+        await db.update(transactions).set(transactionValues).where(eq(transactions.id, existingTransaction.id));
+    } else {
+        await db.insert(transactions).values(transactionValues);
+    }
 
     const isActive = charge.paid;
     await db.transaction(async (tx) => {
@@ -212,7 +249,7 @@ async function handleCharge(event: Stripe.Event) {
             await tx.update(memberPackages).set({
                 status: "active",
             }).where(eq(memberPackages.id, memberPlanId));
-        } else {
+        } else if (memberPlanId) {
             await tx.update(memberSubscriptions).set({
                 gatewayPaymentId: charge.payment_method,
                 status: isActive ? "active" : "past_due",

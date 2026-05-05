@@ -569,12 +569,9 @@ function buildRenewalPayload({
             address: location.address,
         },
         taxRate,
-        // TODO(cleanup): Subscription workers no longer use this field.
-        stripeCustomerId: memberLocationGatewayCustomerId,
         pricing: {
             name: sub.pricing.name,
             price: sub.pricing.price,
-            currency: currency || "usd",
             interval: sub.pricing.interval as "day" | "week" | "month" | "year",
             intervalThreshold: sub.pricing.intervalThreshold!,
         },
