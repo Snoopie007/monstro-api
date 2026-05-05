@@ -45,7 +45,6 @@ export const ClassSchema = z.object({
 
 const PricingSchema = z.object({
     name: z.string(),
-    currency: z.string(),
     price: z.coerce.number(),
     interval: z.enum(['day', 'week', 'month', 'year']),
     intervalThreshold: z.coerce.number(),
@@ -56,7 +55,7 @@ export const DiscountSchema = z.object({
     duration: z.coerce.number(),
 })
 
-const SubscriptionJobSchemaBase = z.object({
+export const SubscriptionJobSchema = z.object({
     sid: z.string(),
     lid: z.string(),
     member: MemberSchema,
@@ -66,20 +65,16 @@ const SubscriptionJobSchemaBase = z.object({
     discount: DiscountSchema.optional(),
 });
 
-export const SubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
-    stripeCustomerId: z.string().nullable(),
-});
 
-export const RecursiveSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
-    stripeCustomerId: z.string().nullable(),
+export const RecursiveSubscriptionJobSchema = SubscriptionJobSchema.extend({
     recurrenceCount: z.number(),
 });
 
-export const CashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+export const CashSubscriptionJobSchema = SubscriptionJobSchema.extend({
     vendorId: z.string(),
 });
 
-export const RecursiveCashSubscriptionJobSchema = SubscriptionJobSchemaBase.extend({
+export const RecursiveCashSubscriptionJobSchema = SubscriptionJobSchema.extend({
     vendorId: z.string(),
     recurrenceCount: z.number(),
 });
