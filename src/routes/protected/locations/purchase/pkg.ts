@@ -207,7 +207,21 @@ export function purchasePkgRoutes(app: Elysia) {
                             },
                         });
                     } catch (error) {
-                        console.error(error);
+                        if (error instanceof Stripe.errors.StripeCardError) {
+
+                            switch (error.decline_code) {
+                                case "insufficient_funds":
+                                    return status(400, { error: "Insufficient funds" });
+                                case "card_declined":
+                                    return status(400, { error: "Card declined" });
+                                case "card_expired":
+                                    return status(400, { error: "Card expired" });
+                                case "card_not_supported":
+                                    return status(400, { error: "Card not supported" });
+                                default:
+                                    return status(400, { error: "Failed to charge payment" });
+                            }
+                        }
                         throw new Error("Failed to charge payment");
                     }
                 }

@@ -83,7 +83,7 @@ export abstract class StripeBase {
         return await this._stripe.webhooks.constructEventAsync(body, sig, key);
     }
     async constructEvent(
-        body: Buffer,
+        body: string,
         sig: string,
         key: string
     ): Promise<Stripe.Event> {

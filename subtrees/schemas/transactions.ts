@@ -21,7 +21,7 @@ export const transactions = pgTable("transactions", {
 	description: text("description"),
 	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
-	applicationFeeAmount: integer("application_fee_amount").notNull().default(0),
+	feeAmount: integer("fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
 	paymentMethodId: text("payment_method_id"),
 	paymentIntentId: text("payment_intent_id").unique(),

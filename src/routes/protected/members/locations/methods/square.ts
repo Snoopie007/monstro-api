@@ -58,7 +58,7 @@ export function SquarePaymentMethodsRoutes(app: Elysia) {
                 let paymentMethods: PaymentMethod[] = [];
                 if (ml.gatewayCustomerId) {
                     const pms = await square.getCards(ml.gatewayCustomerId);
-
+                    console.log(pms)
 
                     if (pms.length > 0) {
                         pms.forEach(pm => {

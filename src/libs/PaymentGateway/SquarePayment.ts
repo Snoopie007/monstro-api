@@ -84,7 +84,6 @@ export class SquarePaymentGateway {
         const cards = await this._client.cards.list({
             customerId: customerId,
         });
-        console.log(cards);
         return cards.data;
     }
 
@@ -116,8 +115,6 @@ export class SquarePaymentGateway {
             referenceId: referenceId,
             locationId: squareLocationId,
         });
-        console.log(data);
-        console.log(data.payment);
         return data.payment;
     }
 

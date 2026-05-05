@@ -1,5 +1,7 @@
 import { Elysia, t } from "elysia";
 import { sendNotifications } from "@/libs/expo";
+import { SquarePaymentGateway } from "@/libs/PaymentGateway";
+import { SquareError, type CreatePaymentResponse } from "square";
 
 const TEST_PUSH_TOKENS = [
     "ExponentPushToken[mRfnnIAg7baHwm4QgUH6Ay]",
@@ -32,25 +34,34 @@ export function testRoutes(app: Elysia) {
                 return { ok: false, error: error?.message ?? "Failed to send test push" };
             }
         })
-        .post("/test", async ({ body, set }) => {
-            const userId = "usr_WL6ZRTHNTwe63G2RMYU0Xw";
-            try {
-                const achievement = {
-                    id: "1234567890",
-                    name: "test",
-                    description: "test",
-                    points: 100,
-                    badge: "https://png.pngtree.com/png-vector/20240115/ourmid/pngtree-achievement-badge-png-image_11439954.png",
-                };
+        .post("/test/square", async ({ body, set, status }) => {
 
-                return { ok: true, result: "test" };
-            } catch (error: any) {
-                console.error(error);
-                set.status = 500;
-                return {
-                    ok: false,
-                    error: error?.message ?? "Failed to send test push",
-                };
+            const square = new SquarePaymentGateway('EAAAl0X0euRh5YQiMD15NxkUmzyIwQ1cNsqkjCqEyuGjdvwUdjoLMttBo7SIhtlS');
+
+            try {
+                await square.createCharge('18WM5F8024S9H4QDJRZNPQ4ZW0', 'cnon:card-nonce-declined', {
+                    total: 100000,
+                    feesAmount: 1000,
+                    currency: "USD",
+                    note: "Test charge",
+                    referenceId: "1234567890",
+                    squareLocationId: "LY43BJ6XXMPAW",
+                });
+            } catch (e) {
+
+                if (e instanceof SquareError) {
+                    const body = e.body as CreatePaymentResponse | undefined;
+                    if (body) {
+                        status(500, { error: "Failed to create charge" });
+                    }
+                    const payment = body?.payment;
+                    const errors = body?.errors;
+                    console.log("payment", payment);
+                    console.log("errors", errors);
+
+                    return status(500, { error: "Failed to create charge" });
+                }
+                console.error(e);
             }
         });
 }

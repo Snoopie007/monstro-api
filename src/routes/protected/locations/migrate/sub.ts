@@ -163,7 +163,7 @@ export function migrateSubRoutes(app: Elysia) {
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentType,
                     status: 'incomplete',
-                    stripePaymentId: paymentMethodId,
+                    gatewayPaymentId: paymentMethodId,
                 }).returning();
 
                 await tx.update(memberLocations).set({
@@ -259,7 +259,7 @@ export function migrateSubRoutes(app: Elysia) {
                             currency,
                             referenceId: invoice.id,
                             squareLocationId: squareLocationId,
-                            note: `${description}|mid:${mid}|lid:${lid}|subId:${sub.id}`,
+                            note: `${description}|mid:${mid}|lid:${lid}|subId:${sub.id}|pmid:${paymentMethodId}`,
                         });
                     } catch (error) {
                         console.error(error);
@@ -331,9 +331,6 @@ export function migrateSubRoutes(app: Elysia) {
             if (error instanceof Stripe.errors.StripeError) {
                 switch (error.type) {
                     case "StripeCardError":
-                        const paymentIntent = error.payment_intent;
-                        console.log(paymentIntent);
-                        console.log(error.code);
                         return status(400, { error: error.message });
                     default:
                         return status(500, { error: error.message });

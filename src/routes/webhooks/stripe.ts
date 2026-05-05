@@ -50,12 +50,14 @@ type StripeMetadata = {
     memberPlanId: string;
 };
 
+const isProd = process.env.BUN_ENV === "production";
+
 export function stripeWebhookRoutes(app: Elysia) {
 
     app.post('/connected/stripe', async ({ body, headers, request, status }) => {
 
         const signature = headers["stripe-signature"];
-
+        console.log("signature", signature);
         if (typeof signature !== "string") {
             throw new Error("Stripe Hook Signature is not a string");
         }
@@ -65,12 +67,16 @@ export function stripeWebhookRoutes(app: Elysia) {
 
         let event: Stripe.Event;
         try {
-            const rawText = await request.text();
-            event = await stripe.constructEventAsync(
-                Buffer.from(rawText),
-                signature,
-                process.env.STRIPE_CONNECTED_WEBHOOK_SECRET
-            );
+            if (isProd) {
+                const rawText = await request.text();
+                event = await stripe.constructEventAsync(
+                    Buffer.from(rawText),
+                    signature,
+                    process.env.STRIPE_CONNECTED_WEBHOOK_SECRET
+                );
+            } else {
+                event = body as Stripe.Event;
+            }
         } catch (err) {
             console.error("[STRIPE WEBHOOK] Failed to construct event:", err);
             return status(500, { error: "[STRIPE WEBHOOK] Failed to construct event" });
@@ -84,7 +90,7 @@ export function stripeWebhookRoutes(app: Elysia) {
         headers: t.Object({
             "stripe-signature": t.String(),
         }),
-        parse: 'none'
+        parse: isProd ? 'none' : 'json'
     });
     return app;
 }
@@ -170,7 +176,7 @@ async function handleCharge(event: Stripe.Event) {
     const [invoice] = await db.update(memberInvoices).set({
         status: charge.paid ? "paid" : "unpaid",
         paid: charge.paid,
-        stripeReceiptUrl: charge.receipt_url,
+        receiptUrl: charge.receipt_url,
         updated: now,
     }).where(eq(memberInvoices.id, invoiceId)).returning({
         description: memberInvoices.description,
@@ -199,7 +205,7 @@ async function handleCharge(event: Stripe.Event) {
         paymentMethodId: charge.payment_method,
         paymentType,
         chargeDate: now,
-        applicationFeeAmount: charge.application_fee_amount || 0,
+        feeAmount: charge.application_fee_amount || 0,
         metadata: {
             memberPlanId,
         }
@@ -214,7 +220,7 @@ async function handleCharge(event: Stripe.Event) {
             }).where(eq(memberPackages.id, memberPlanId));
         } else {
             await tx.update(memberSubscriptions).set({
-                stripePaymentId: charge.payment_method,
+                gatewayPaymentId: charge.payment_method,
                 status: isActive ? "active" : "past_due",
             }).where(eq(memberSubscriptions.id, memberPlanId));
         }
