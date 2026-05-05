@@ -360,7 +360,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
             updated: new Date(),
         }).where(eq(memberInvoices.id, iid));
 
-        if (invoice.member && invoice.location) {
+        if (invoice.paymentType !== "cash" && invoice.member && invoice.location) {
             await scheduleInvoiceReminderAndOverdue(iid, new Date(invoice.dueDate), {
                 member: {
                     firstName: invoice.member.firstName,

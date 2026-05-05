@@ -243,13 +243,21 @@ async function handleCharge(event: Stripe.Event) {
     }
 
     const isActive = charge.paid;
+    const existingSubscription = memberPlanId && !isPackage
+        ? await db.query.memberSubscriptions.findFirst({
+            where: (subscription, { eq }) => eq(subscription.id, memberPlanId),
+            columns: { status: true },
+        })
+        : null;
+    const canUpdateSubscriptionStatus = existingSubscription?.status !== "canceled";
+
     await db.transaction(async (tx) => {
 
         if (isPackage && isActive) {
             await tx.update(memberPackages).set({
                 status: "active",
             }).where(eq(memberPackages.id, memberPlanId));
-        } else if (memberPlanId) {
+        } else if (memberPlanId && canUpdateSubscriptionStatus) {
             await tx.update(memberSubscriptions).set({
                 gatewayPaymentId: charge.payment_method,
                 status: isActive ? "active" : "past_due",
@@ -339,6 +347,12 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
     }
 
     if (memberPlanId && !memberPlanId.startsWith("pkg_")) {
+        const existingSubscription = await db.query.memberSubscriptions.findFirst({
+            where: (subscription, { eq }) => eq(subscription.id, memberPlanId),
+            columns: { status: true },
+        });
+        if (existingSubscription?.status === "canceled") return;
+
         await db.update(memberSubscriptions).set({
             status: "past_due",
         }).where(eq(memberSubscriptions.id, memberPlanId));
