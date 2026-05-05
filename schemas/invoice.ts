@@ -23,7 +23,7 @@ export const memberInvoices = pgTable('member_invoices', {
     dueDate: timestamp('due_date', { withTimezone: true }).notNull().defaultNow(),
     attemptCount: integer('attempt_count').notNull().default(0),
     invoicePdf: text('invoice_pdf'),
-    stripeReceiptUrl: text('stripe_receipt_url'),
+    receiptUrl: text('receipt_url'),
     status: InvoiceStatusEnum('status').notNull().default('draft'),
     paymentType: PaymentTypeEnum('payment_type').notNull().default('cash'),
     invoiceType: text('invoice_type').notNull().default('one-off'),
