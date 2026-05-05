@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import type { Currency } from "../types/currency";
 import type { InvoiceItem } from "../types/invoices";
 import { InvoiceStatusEnum, PaymentTypeEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
@@ -8,7 +9,7 @@ import { members } from "./members";
 export const memberInvoices = pgTable('member_invoices', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
     metadata: jsonb('metadata').$type<Record<string, any>>().default(sql`'{}'::jsonb`),
-    currency: text('currency').notNull().default('usd'),
+    currency: text('currency').$type<Currency>().notNull().default('USD'),
     memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
     locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
     memberPlanId: text('member_plan_id'),
