@@ -324,6 +324,9 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
         chargeDate: now,
         feeAmount: paymentIntent.application_fee_amount || 0,
         metadata: {
+            ...metadata,
+            gatewayService: "stripe",
+            paymentIntentId: paymentIntent.id,
             memberPlanId,
         },
         updated: now,

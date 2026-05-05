@@ -152,10 +152,13 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         tax: invoice.tax,
                         currency: invoice.currency || "usd",
                         feeAmount: chargeDetails.feesAmount,
+                        failedCode: null,
+                        failedReason: null,
                         metadata: {
                             ...invoiceMetadata,
                             invoiceId: invoice.id,
                             gatewayService: "square" as const,
+                            paymentMethodId: selectedPaymentMethodId,
                             squarePaymentId: payment?.id,
                             chargeId: payment?.id,
                             squarePaymentStatus: payment?.status,
