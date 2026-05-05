@@ -117,6 +117,7 @@ export async function removeRenewalJobs(sid: string) {
 
     const jobIds = [
         `renewal:recursive:${sid}`,
+        `renewal:cash-recursive:${sid}`,
         `renewal:cash:recursive:${sid}`,
     ];
 

@@ -50,7 +50,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
 
         const location = sub.location;
         const currency = getCurrency(location.country);
-        const nextBillingAt = resumeAt ? new Date(resumeAt) : new Date();
+        const nextBillingAt = resumeAt ? new Date(resumeAt) : sub.currentPeriodEnd ?? new Date();
 
         const memberLocation = await db.query.memberLocations.findFirst({
             where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
@@ -60,11 +60,12 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         });
 
         if (sub.paymentType !== "cash" && !memberLocation?.gatewayCustomerId) {
-            return status(400, { error: "Member location is missing Stripe customer" });
+            return status(400, { error: "Member location is missing gateway customer" });
         }
 
         await db.update(memberSubscriptions).set({
             status: sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active",
+            cancelAt: null,
             cancelAtPeriodEnd: false,
             updated: new Date(),
         }).where(eq(memberSubscriptions.id, sid));
@@ -86,11 +87,9 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     address: location.address,
                 },
                 taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
-                stripeCustomerId: memberLocation.stripeCustomerId,
                 pricing: {
                     name: sub.pricing.name,
                     price: sub.pricing.price,
-                    currency: currency || "usd",
                     interval: sub.pricing.interval!,
                     intervalThreshold: sub.pricing.intervalThreshold!,
                 },

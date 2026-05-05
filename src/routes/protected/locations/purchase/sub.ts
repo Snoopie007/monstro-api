@@ -6,7 +6,6 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
-    triggerNewMember,
     triggerPurchase,
     getCurrency,
     fetchPromoDiscount,
@@ -17,7 +16,6 @@ import {
 import type { SubscriptionJobData } from "@subtrees/bullmq";
 import Stripe from "stripe";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
-import type { MemberPlanPricing } from "@subtrees/types";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 
 
@@ -241,7 +239,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         currency,
                         referenceId: `${invoice.id}`,
                         squareLocationId,
-                        note: `${description}|mid:${mid}|lid:${lid}|subId:${memberPlanId}|promoId:${promoId}`,
+                        note: `${description}|invId:${invoice.id}|mid:${mid}|lid:${lid}|subId:${memberPlanId}|promoId:${promoId}`,
                     });
                 }
 
@@ -259,7 +257,6 @@ export function purchaseSubRoutes(app: Elysia) {
                                 email: member.email,
                             },
                             taxRate: taxRate?.percentage || 0,
-                            stripeCustomerId: ml.gatewayCustomerId,
                             location: {
                                 name: ml.location.name,
                                 phone: ml.location.phone,
@@ -268,7 +265,6 @@ export function purchaseSubRoutes(app: Elysia) {
                             pricing: {
                                 name: pricing.name,
                                 price: pricing.price,
-                                currency: "usd",
                                 interval: pricing.interval,
                                 intervalThreshold: pricing.intervalThreshold,
                             },
@@ -408,6 +404,4 @@ async function getData(lid: string, mid: string, priceId: string, memberPlanId: 
     ]);
 
 }
-
-
 

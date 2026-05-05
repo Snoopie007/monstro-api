@@ -7,7 +7,21 @@ import {
     reservations,
     transactions,
 } from "@subtrees/schemas";
-import { StripePaymentGateway } from "@/libs/PaymentGateway";
+import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+
+function getRefundPlanIds(txMeta: Record<string, unknown>, invoiceMemberPlanId: string | null) {
+    const packageId =
+        (typeof txMeta.memberPackageId === "string" && txMeta.memberPackageId)
+        || (typeof txMeta.packageId === "string" && txMeta.packageId)
+        || (invoiceMemberPlanId?.startsWith("pkg_") ? invoiceMemberPlanId : null);
+
+    const subscriptionId =
+        (typeof txMeta.memberSubscriptionId === "string" && txMeta.memberSubscriptionId)
+        || (typeof txMeta.subscriptionId === "string" && txMeta.subscriptionId)
+        || (invoiceMemberPlanId && !invoiceMemberPlanId.startsWith("pkg_") ? invoiceMemberPlanId : null);
+
+    return { packageId, subscriptionId };
+}
 
 export const xTransactions = new Elysia({ prefix: "/transactions" })
     .post("/:tid/refund", async ({ params, body, status }) => {
@@ -39,29 +53,130 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
         }
 
         const txMeta = (transaction.metadata as Record<string, unknown> | null) || {};
-        const subscriptionFromMeta =
-            (typeof txMeta.memberSubscriptionId === "string" && txMeta.memberSubscriptionId)
-            || (typeof txMeta.subscriptionId === "string" && txMeta.subscriptionId)
-            || null;
-        const subscriptionFromInvoice = transaction.invoice?.memberPlanId || null;
+        const { packageId, subscriptionId } = getRefundPlanIds(
+            txMeta,
+            transaction.invoice?.memberPlanId || null
+        );
 
-        if (subscriptionFromMeta || subscriptionFromInvoice) {
+        if (subscriptionId) {
             return status(409, {
                 error: "Please cancel the subscription instead to refund",
                 code: "SUBSCRIPTION_REFUND_BLOCKED",
             });
         }
 
-        const packageId =
-            (typeof txMeta.memberPackageId === "string" && txMeta.memberPackageId)
-            || (typeof txMeta.packageId === "string" && txMeta.packageId)
-            || null;
+		if (transaction.paymentType === "cash") {
+			return status(400, { error: "Cash transactions cannot be refunded through Stripe" });
+		}
 
-        if (transaction.paymentType === "cash") {
-            return status(400, { error: "Cash transactions cannot be refunded through Stripe" });
-        }
+		if (txMeta.gatewayService === "square") {
+			const squarePaymentId = typeof txMeta.squarePaymentId === "string"
+				? txMeta.squarePaymentId
+				: typeof txMeta.chargeId === "string"
+					? txMeta.chargeId
+					: null;
 
-        const integration = await db.query.integrations.findFirst({
+			if (!squarePaymentId) {
+				return status(400, { error: "Square payment ID not found in transaction metadata" });
+			}
+
+			const squareIntegration = await db.query.integrations.findFirst({
+				where: (ig, { and, eq }) => and(eq(ig.locationId, lid), eq(ig.service, "square")),
+				columns: { accessToken: true, metadata: true },
+			});
+
+			if (!squareIntegration || !squareIntegration.accessToken) {
+				return status(404, { error: "Square integration not found" });
+			}
+
+			let refundAmount = transaction.total;
+			if (amountType === "partial") {
+				if (typeof amount !== "number" || amount <= 0) {
+					return status(400, { error: "Valid amount is required for partial refunds" });
+				}
+				refundAmount = Math.min(amount, transaction.total);
+			}
+
+			const square = new SquarePaymentGateway(squareIntegration.accessToken);
+
+			const refund = await square.refundPayment(
+				squarePaymentId,
+				refundAmount,
+				reason || "Vendor requested refund",
+			);
+
+			await db.transaction(async (tx) => {
+				await tx.update(transactions).set({
+					refunded: true,
+					refundedAmount: refundAmount,
+					updated: new Date(),
+					metadata: {
+						...txMeta,
+						squarePaymentId,
+						squareRefundId: refund.id,
+						squareRefundStatus: refund.status,
+						gatewayService: "square",
+						refund: {
+							id: refund.id,
+							amount: refundAmount,
+							reason: reason || null,
+							note: note || null,
+							refundedAt: new Date().toISOString(),
+						},
+					},
+				}).where(eq(transactions.id, tid));
+
+				if (transaction.invoiceId) {
+					const invoice = await tx.query.memberInvoices.findFirst({
+						where: (inv, { eq }) => eq(inv.id, transaction.invoiceId!),
+					});
+					if (invoice) {
+						await tx.update(memberInvoices).set({
+							...(amountType === "full" ? { status: "void", paid: false } : {}),
+							updated: new Date(),
+						}).where(eq(memberInvoices.id, transaction.invoiceId!));
+					}
+				}
+
+				if (packageId) {
+					const memberPackage = await tx.query.memberPackages.findFirst({
+						where: (pkg, { and, eq }) => and(eq(pkg.id, packageId), eq(pkg.locationId, lid)),
+					});
+					if (memberPackage) {
+						await tx.update(memberPackages).set({
+							...(amountType === "full" ? { status: "incomplete" } : {}),
+							updated: new Date(),
+						}).where(eq(memberPackages.id, packageId));
+
+						if (amountType === "full") {
+							const now = new Date();
+							await tx.update(reservations).set({
+								status: "cancelled_by_vendor",
+								cancelledAt: now,
+								cancelledReason: "Cancelled due to package refund",
+								updated: now,
+							}).where(and(
+								eq(reservations.memberPackageId, packageId),
+								eq(reservations.locationId, lid),
+								gte(reservations.startOn, now),
+								eq(reservations.status, "confirmed")
+							));
+						}
+					}
+				}
+			});
+
+			return status(200, {
+				success: true,
+				refunded: true,
+				transactionId: tid,
+				refundId: refund.id,
+				amount: refundAmount,
+				message: "Square refund processed successfully",
+			});
+		}
+
+		const integration = await db.query.integrations.findFirst({
             where: (ig, { and, eq }) => and(eq(ig.locationId, lid), eq(ig.service, "stripe")),
             columns: { accountId: true, accessToken: true },
         });
@@ -86,11 +201,19 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             refundAmount = Math.min(amount, transaction.total);
         }
 
-        const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
-        const refund = await stripe.createRefund({
-            payment_intent: paymentIntentId,
-            amount: refundAmount,
-        });
+		const stripeGateway = new StripePaymentGateway(integration.accessToken ?? "");
+		let refund: Awaited<ReturnType<typeof stripeGateway.createRefund>>;
+		try {
+			refund = await stripeGateway.createRefund(paymentIntentId, refundAmount, transaction.currency);
+		} catch (error) {
+			if ((error as Error & { code?: string }).code === "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE") {
+				return status(400, {
+					error: "Connected Stripe account has insufficient available balance to process this refund",
+					code: "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE",
+				});
+			}
+			throw error;
+		}
 
         await db.transaction(async (tx) => {
             await tx.update(transactions).set({
@@ -222,23 +345,17 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
         }
 
         const txMeta = (transaction.metadata as Record<string, unknown> | null) || {};
-        const subscriptionFromMeta =
-            (typeof txMeta.memberSubscriptionId === "string" && txMeta.memberSubscriptionId)
-            || (typeof txMeta.subscriptionId === "string" && txMeta.subscriptionId)
-            || null;
-        const subscriptionFromInvoice = transaction.invoice?.memberPlanId || null;
+        const { packageId, subscriptionId } = getRefundPlanIds(
+            txMeta,
+            transaction.invoice?.memberPlanId || null
+        );
 
-        if (subscriptionFromMeta || subscriptionFromInvoice) {
+        if (subscriptionId) {
             return status(409, {
                 error: "Please cancel the subscription instead to refund",
                 code: "SUBSCRIPTION_REFUND_BLOCKED",
             });
         }
-
-        const packageId =
-            (typeof txMeta.memberPackageId === "string" && txMeta.memberPackageId)
-            || (typeof txMeta.packageId === "string" && txMeta.packageId)
-            || null;
 
         let refundAmount = transaction.total;
         if (amountType === "partial") {

@@ -113,14 +113,14 @@ async function processSquareEvent(event: unknown): Promise<void> {
     }
 
     const { memberPlanId, memberId, locationId, id: invoiceId } = invoiceRow;
-    if (!memberPlanId || !memberId || !locationId) {
+    if (!memberId || !locationId) {
         console.warn("[SQUARE WEBHOOK] Invoice missing relation ids:", invoiceId);
         return;
     }
 
     const now = new Date();
     const amount = Number(payment.amountMoney?.amount) || 0;
-    const feesAmount = Number(payment.appFeeMoney?.amount) || 0;
+    const feeAmount = Number(payment.appFeeMoney?.amount) || 0;
 
     const paymentMethodId = payment.cardDetails?.card?.id || payment.id || null;
 
@@ -132,7 +132,7 @@ async function processSquareEvent(event: unknown): Promise<void> {
             locationId,
             payment,
             amount,
-            feesAmount,
+            feeAmount,
             paymentType: 'card',
             paymentMethodId,
             now,
@@ -145,7 +145,7 @@ async function processSquareEvent(event: unknown): Promise<void> {
             locationId,
             payment,
             amount,
-            feesAmount,
+            feeAmount,
             paymentType: 'card',
             paymentMethodId,
             now,
@@ -156,12 +156,12 @@ async function processSquareEvent(event: unknown): Promise<void> {
 
 async function handleSquarePaymentCompleted(ctx: {
     invoiceId: string;
-    memberPlanId: string;
+    memberPlanId: string | null;
     memberId: string;
     locationId: string;
     payment: Square.Payment;
     amount: number;
-    feesAmount: number;
+    feeAmount: number;
     paymentType: PaymentType;
     paymentMethodId: string | null;
     now: Date;
@@ -173,7 +173,7 @@ async function handleSquarePaymentCompleted(ctx: {
         locationId,
         payment,
         amount,
-        feesAmount,
+        feeAmount,
         paymentType,
         paymentMethodId,
         now,
@@ -184,7 +184,7 @@ async function handleSquarePaymentCompleted(ctx: {
         .set({
             status: "paid",
             paid: true,
-            stripeReceiptUrl: payment.receiptUrl ?? undefined,
+            receiptUrl: payment.receiptUrl ?? undefined,
             updated: now,
         })
         .where(eq(memberInvoices.id, invoiceId))
@@ -211,10 +211,21 @@ async function handleSquarePaymentCompleted(ctx: {
         memberId,
         invoiceId,
         paymentMethodId,
+        paymentIntentId: payment.id,
         paymentType,
         chargeDate: now,
-        feesAmount,
-        metadata: { memberPlanId },
+        feeAmount,
+        metadata: {
+            ...(memberPlanId ? {
+                memberPlanId,
+                memberSubscriptionId: memberPlanId,
+            } : {}),
+            invoiceId,
+            gatewayService: "square" as const,
+            squarePaymentId: payment.id,
+            chargeId: payment.id,
+            squarePaymentStatus: payment.status,
+        },
         updated: now,
     };
 
@@ -228,18 +239,30 @@ async function handleSquarePaymentCompleted(ctx: {
         await db.insert(transactions).values(txValues);
     }
 
-    const isPackage = memberPlanId.startsWith("pkg_");
+    const isPackage = memberPlanId?.startsWith("pkg_") ?? false;
+    const existingSubscription = memberPlanId && !isPackage
+        ? await db.query.memberSubscriptions.findFirst({
+            where: (subscription, { eq }) => eq(subscription.id, memberPlanId),
+            columns: { status: true },
+        })
+        : null;
+    const canUpdateSubscriptionStatus = existingSubscription?.status !== "canceled";
+
     await db.transaction(async (tx) => {
+        if (!memberPlanId) {
+            return;
+        }
+
         if (isPackage) {
             await tx
                 .update(memberPackages)
                 .set({ status: "active" })
                 .where(eq(memberPackages.id, memberPlanId));
-        } else {
+        } else if (canUpdateSubscriptionStatus) {
             await tx
                 .update(memberSubscriptions)
                 .set({
-                    stripePaymentId: paymentMethodId,
+                    gatewayPaymentId: paymentMethodId,
                     status: "active",
                 })
                 .where(eq(memberSubscriptions.id, memberPlanId));
@@ -257,12 +280,12 @@ async function handleSquarePaymentCompleted(ctx: {
 
 async function handleSquarePaymentFailed(ctx: {
     invoiceId: string;
-    memberPlanId: string;
+    memberPlanId: string | null;
     memberId: string;
     locationId: string;
     payment: Square.Payment;
     amount: number;
-    feesAmount: number;
+    feeAmount: number;
     paymentType: PaymentType;
     paymentMethodId: string | null;
     now: Date;
@@ -275,7 +298,7 @@ async function handleSquarePaymentFailed(ctx: {
         locationId,
         payment,
         amount,
-        feesAmount,
+        feeAmount,
         paymentType,
         paymentMethodId,
         now,
@@ -313,10 +336,21 @@ async function handleSquarePaymentFailed(ctx: {
         memberId,
         invoiceId,
         paymentMethodId,
+        paymentIntentId: payment.id,
         paymentType,
         chargeDate: now,
-        feesAmount,
-        metadata: { memberPlanId },
+        feeAmount,
+        metadata: {
+            ...(memberPlanId ? {
+                memberPlanId,
+                memberSubscriptionId: memberPlanId,
+            } : {}),
+            invoiceId,
+            gatewayService: "square" as const,
+            squarePaymentId: payment.id,
+            chargeId: payment.id,
+            squarePaymentStatus: payment.status,
+        },
         updated: now,
     };
 
@@ -330,7 +364,13 @@ async function handleSquarePaymentFailed(ctx: {
         await db.insert(transactions).values(txValues);
     }
 
-    if (!memberPlanId.startsWith("pkg_")) {
+    if (memberPlanId && !memberPlanId.startsWith("pkg_")) {
+        const existingSubscription = await db.query.memberSubscriptions.findFirst({
+            where: (subscription, { eq }) => eq(subscription.id, memberPlanId),
+            columns: { status: true },
+        });
+        if (existingSubscription?.status === "canceled") return;
+
         await db
             .update(memberSubscriptions)
             .set({ status: "past_due" })

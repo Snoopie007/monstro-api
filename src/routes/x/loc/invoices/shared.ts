@@ -48,7 +48,7 @@ export async function scheduleInvoiceReminderAndOverdue(invoiceId: string, dueDa
             location: payload.location,
         },
     }, {
-        jobId: `overdue:${invoiceId}:reminder:0`,
+        jobId: `invoice:overdue:${invoiceId}-r0`,
         delay: overdueDelay,
         attempts: 3,
         backoff: { type: "exponential", delay: 5000 },
@@ -72,6 +72,7 @@ export const createInvoiceBody = t.Object({
     ]),
     collectionMethod: t.Optional(t.Union([t.Literal("send_invoice"), t.Literal("charge_automatically")])),
     paymentType: t.Union([t.Literal("cash"), t.Literal("card"), t.Literal("us_bank_account")]),
+    paymentMethodId: t.Optional(t.String()),
     subscriptionId: t.Optional(t.String()),
     selectedSubscriptionId: t.Optional(t.String()),
     items: t.Optional(t.Array(invoiceItemBody)),
@@ -82,4 +83,5 @@ export const createInvoiceBody = t.Object({
     notes: t.Optional(t.String()),
     isRecurring: t.Optional(t.Boolean()),
     recurringSettings: t.Optional(t.Any()),
+    gatewayService: t.Optional(t.Union([t.Literal("stripe"), t.Literal("square")])),
 });

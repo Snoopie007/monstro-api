@@ -170,8 +170,8 @@ export function SquarePaymentMethodsRoutes(app: Elysia) {
                     }
                 }
 
-                const card = await square.createCard(mid, nonce);
-                console.log(card);
+                const cardholderName = [ml.member?.firstName, ml.member?.lastName].filter(Boolean).join(" ") || "Cardholder";
+                const card = await square.createCard(mid, cardholderName, nonce);
                 if (!card || !card.id) {
                     return status(400, { error: "Failed to create card" });
                 }

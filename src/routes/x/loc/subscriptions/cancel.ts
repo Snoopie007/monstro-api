@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { StripePaymentGateway } from "@/libs/PaymentGateway";
+import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { removeRenewalJobs } from "@/queues/subscriptions";
 import { memberSubscriptions, transactions } from "@subtrees/schemas";
 import type Elysia from "elysia";
@@ -57,22 +57,42 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                     return status(400, { error: "No payment intent found for latest transaction" });
                 }
 
-                const integration = await db.query.integrations.findFirst({
-                    where: (integration, { and, eq }) => and(
-                        eq(integration.locationId, lid),
-                        eq(integration.service, "stripe")
-                    ),
+                const transactionMetadata = latestPaidTransaction.metadata as {
+                    gatewayService?: "stripe" | "square";
+                    squarePaymentId?: string;
+                    chargeId?: string;
+                } | null;
+
+                const locationState = await db.query.locationState.findFirst({
+                    where: (state, { eq }) => eq(state.locationId, lid),
                     columns: {
-                        accountId: true,
-                        accessToken: true,
+                        paymentGatewayId: true,
                     },
                 });
 
-                if (!integration || !integration.accountId || !integration.accessToken) {
-                    return status(404, { error: "Stripe integration not found" });
-                }
+                const integration = transactionMetadata?.gatewayService
+                    ? await db.query.integrations.findFirst({
+                        where: (integration, { and, eq }) => and(
+                            eq(integration.locationId, lid),
+                            eq(integration.service, transactionMetadata.gatewayService!)
+                        ),
+                        columns: {
+                            accountId: true,
+                            accessToken: true,
+                            service: true,
+                        },
+                    })
+                    : locationState?.paymentGatewayId
+                        ? await db.query.integrations.findFirst({
+                            where: (integration, { eq }) => eq(integration.id, locationState.paymentGatewayId!),
+                            columns: {
+                                accountId: true,
+                                accessToken: true,
+                                service: true,
+                            },
+                        })
+                        : null;
 
-                const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
                 const requestedAmount =
                     refund.amountType === "partial" && typeof refund.amount === "number"
                         ? Math.max(0, Math.min(refund.amount, latestPaidTransaction.total))
@@ -82,11 +102,28 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                     return status(400, { error: "Refund amount must be greater than 0" });
                 }
 
+                if (!integration || !integration.accessToken) {
+                    return status(404, { error: "Payment gateway integration not found" });
+                }
+
                 try {
-                    await stripe.createRefund({
-                        payment_intent: paymentIntentId,
-                        amount: requestedAmount,
-                    });
+                    if (integration.service === "stripe") {
+                        if (!integration.accountId) {
+                            return status(404, { error: "Stripe integration not found" });
+                        }
+
+                        const stripe = new StripePaymentGateway(integration.accessToken);
+                        await stripe.createRefund(paymentIntentId, requestedAmount, "usd");
+                    } else if (integration.service === "square") {
+                        const square = new SquarePaymentGateway(integration.accessToken);
+                        await square.refundPayment(
+                            transactionMetadata?.squarePaymentId || transactionMetadata?.chargeId || paymentIntentId,
+                            requestedAmount,
+                            reason || "Subscription cancellation"
+                        );
+                    } else {
+                        return status(400, { error: "Unsupported payment gateway for subscription refunds" });
+                    }
                 } catch (error) {
                     const message = error instanceof Error ? error.message : "Failed to process refund";
                     const code = typeof error === "object"
@@ -105,6 +142,10 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                 await db.update(transactions).set({
                     refunded: true,
                     refundedAmount: requestedAmount,
+                    metadata: {
+                        ...(latestPaidTransaction.metadata || {}),
+                        refundGatewayService: integration.service,
+                    },
                     updated: new Date(),
                 }).where(eq(transactions.id, latestPaidTransaction.id));
 
