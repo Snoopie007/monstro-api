@@ -11,6 +11,7 @@ import {
 	locations, locationState,
 } from "./locations";
 import { memberLocations } from "./MemberLocation";
+import { memberPasses } from "./MemberPasses";
 import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions } from "./MemberPlans";
 import {
 	familyMembers,
@@ -20,9 +21,7 @@ import {
 	memberReferrals,
 	members,
 } from "./members";
-import { memberPasses } from "./MemberPasses";
 import { migrateMembers } from "./MigrateMembers";
-import { memberPaymentMethods, paymentMethods } from "./PaymentMethods";
 import { planPrograms, programs, programSessions, sessionWaitlist } from "./programs";
 import { promos } from "./promos";
 import { reservationExceptions, reservations } from "./reservations";
@@ -330,10 +329,6 @@ export const memberLocationsRelations = relations(
 		attendances: many(attendances),
 		pointsHistory: many(memberPointsHistory, {
 			relationName: 'pointsHistory',
-		}),
-		memberPaymentMethods: many(memberPaymentMethods, {
-			relationName: 'memberPaymentMethods',
-
 		}),
 	})
 );
@@ -707,33 +702,6 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 	}),
 }));
 
-// ============================================================================
-// PAYMENT METHOD RELATIONS
-// ============================================================================
-
-export const paymentMethodsRelations = relations(paymentMethods, ({ many }) => ({
-	memberPaymentMethods: many(memberPaymentMethods),
-}));
-
-export const memberPaymentMethodsRelations = relations(memberPaymentMethods, ({ one }) => ({
-	member: one(members, {
-		fields: [memberPaymentMethods.memberId],
-		references: [members.id],
-	}),
-	location: one(locations, {
-		fields: [memberPaymentMethods.locationId],
-		references: [locations.id],
-	}),
-	paymentMethod: one(paymentMethods, {
-		fields: [memberPaymentMethods.paymentMethodId],
-		references: [paymentMethods.id],
-	}),
-	memberLocation: one(memberLocations, {
-		fields: [memberPaymentMethods.memberId, memberPaymentMethods.locationId],
-		references: [memberLocations.memberId, memberLocations.locationId],
-		relationName: 'memberPaymentMethods',
-	}),
-}));
 
 // ============================================================================
 // INTEGRATION RELATIONS

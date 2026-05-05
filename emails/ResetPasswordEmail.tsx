@@ -14,7 +14,10 @@ import { DummyData } from './_shared/data';
 import type { Member } from '../types';
 interface ResetPasswordEmailProps {
 	member: Pick<Member, 'firstName' | 'lastName' | 'email'>;
-	url: string;
+	url?: string;
+	ui?: {
+		btnUrl?: string;
+	};
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -34,7 +37,10 @@ const styles: Record<string, React.CSSProperties> = {
 export default function ResetPasswordEmail({
 	member,
 	url,
+	ui,
 }: ResetPasswordEmailProps) {
+	const resetUrl = url ?? ui?.btnUrl ?? 'https://example.com/reset-password';
+
 	return (
 		<Html>
 			<Head />
@@ -54,7 +60,7 @@ export default function ResetPasswordEmail({
 						<Section style={styles.buttonSection}>
 							<Button
 								style={styles.button}
-								href={url}
+								href={resetUrl}
 							>
 								Reset Password
 							</Button>
