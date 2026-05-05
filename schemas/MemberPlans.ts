@@ -80,7 +80,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	endedAt: timestamp("ended_at", { withTimezone: true }),
 	classCredits: integer("class_credits").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
-	stripePaymentId: text("stripe_payment_id"),
+	gatewayPaymentId: text("gateway_payment_id"),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	makeUpCredits: integer("make_up_credits").notNull().default(0),
 	allowMakeUpCarryOver: boolean("allow_make_up_carry_over").notNull().default(false),
