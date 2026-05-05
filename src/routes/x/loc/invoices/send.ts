@@ -1,11 +1,40 @@
 import { db } from "@/db/db";
-import { StripePaymentGateway } from "@/libs/PaymentGateway";
+import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
-import { memberInvoices } from "@subtrees/schemas";
+import { memberInvoices, transactions } from "@subtrees/schemas";
 import { scheduleInvoiceReminderAndOverdue } from "./shared";
+import type { Currency } from "square";
+
+type InvoiceChargeMetadata = {
+    collectionMethod?: "send_invoice" | "charge_automatically";
+    paymentMethodId?: string;
+    gatewayService?: "stripe" | "square";
+};
+
+function squareLocationIdFromMetadata(metadata: unknown) {
+    return typeof metadata === "object" && metadata !== null && "squareLocationId" in metadata
+        ? String((metadata as { squareLocationId?: unknown }).squareLocationId || "")
+        : "";
+}
+
+function squareChargeFailure(error: unknown) {
+    const raw = error as any;
+    const body = raw?.body ?? raw?.response?.body ?? raw?.details ?? raw;
+    const errors = body?.errors ?? raw?.errors ?? [];
+    const firstError = Array.isArray(errors) ? errors[0] : undefined;
+    const payment = body?.payment ?? raw?.payment;
+
+    return {
+        payment,
+        code: firstError?.code ?? raw?.code ?? "SQUARE_CHARGE_FAILED",
+        detail: firstError?.detail ?? raw?.message ?? "Square charge failed",
+        category: firstError?.category,
+        errors,
+    };
+}
 
 export async function sendInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/send", async ({ params, body, status }) => {
@@ -27,11 +56,12 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     with: {
                         locationState: true,
                         integrations: {
-                            where: (integration, { eq }) => eq(integration.service, "stripe"),
                             columns: {
+                                id: true,
                                 accountId: true,
                                 service: true,
                                 accessToken: true,
+                                metadata: true,
                             },
                         },
                     },
@@ -52,34 +82,191 @@ export async function sendInvoiceRoutes(app: Elysia) {
         const ml = await db.query.memberLocations.findFirst({
             where: (ml, { eq, and }) => and(eq(ml.locationId, lid), eq(ml.memberId, invoice?.memberId)),
             columns: {
-                stripeCustomerId: true,
+                gatewayCustomerId: true,
             },
         });
-        if (!ml || !ml.stripeCustomerId) {
+        if (!ml || !ml.gatewayCustomerId) {
             return status(404, { error: "Member location or Stripe customer not found" });
         }
-        const collectionMethod = (invoice.metadata as { collectionMethod?: "send_invoice" | "charge_automatically" } | null)?.collectionMethod || "send_invoice";
+        const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
+        const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
 
         if (shouldAutoCharge) {
-            const integration = invoice.location?.integrations?.[0];
-            if (!integration || !integration.accountId || !integration.accessToken) {
+            const integration = invoice.location?.integrations?.find((candidate) => {
+                if (invoiceMetadata?.gatewayService) return candidate.service === invoiceMetadata.gatewayService;
+                return candidate.id === invoice.location?.locationState?.paymentGatewayId;
+            }) ?? invoice.location?.integrations?.[0];
+            if (!integration || !integration.accessToken) {
+                return status(404, { error: "Payment gateway integration not found" });
+            }
+
+            if (integration.service === "square") {
+                const selectedPaymentMethodId = paymentMethodId || invoiceMetadata?.paymentMethodId;
+                if (!selectedPaymentMethodId) {
+                    return status(400, { error: "Selected Square payment method is required for automatic charging" });
+                }
+
+                if (ml.gatewayCustomerId.startsWith("cus_")) {
+                    return status(400, { error: "Member location does not have a Square customer ID" });
+                }
+
+                const squareLocationId = squareLocationIdFromMetadata(integration.metadata);
+                if (!squareLocationId) {
+                    return status(400, { error: "Square location ID not found" });
+                }
+
+                const square = new SquarePaymentGateway(integration.accessToken);
+                const chargeDetails = calculateChargeDetails({
+                    amount: invoice.total,
+                    discount: 0,
+                    taxRate: 0,
+                    usagePercent: invoice.location?.locationState?.usagePercent ?? 0,
+                    paymentType: "card",
+                    isRecurring: false,
+                    passOnFees: false,
+                });
+
+                try {
+                    const payment = await square.createCharge(ml.gatewayCustomerId, selectedPaymentMethodId, {
+                        total: chargeDetails.total,
+                        feesAmount: chargeDetails.feesAmount,
+                        currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
+                        referenceId: invoice.id,
+                        squareLocationId,
+                        note: `${invoice.description || `Invoice ${invoice.id}`}|invId:${invoice.id}|mid:${invoice.memberId}|lid:${lid}`,
+                    });
+
+                    const transactionValues = {
+                        memberId: invoice.memberId,
+                        locationId: lid,
+                        invoiceId: invoice.id,
+                        description: invoice.description || `Invoice ${invoice.id}`,
+                        type: "inbound" as const,
+                        status: "paid" as const,
+                        paymentType: "card" as const,
+                        paymentMethodId: selectedPaymentMethodId,
+                        paymentIntentId: payment?.id,
+                        total: invoice.total,
+                        subTotal: invoice.subTotal,
+                        tax: invoice.tax,
+                        currency: invoice.currency || "usd",
+                        feeAmount: chargeDetails.feesAmount,
+                        metadata: {
+                            ...invoiceMetadata,
+                            invoiceId: invoice.id,
+                            gatewayService: "square" as const,
+                            squarePaymentId: payment?.id,
+                            chargeId: payment?.id,
+                            squarePaymentStatus: payment?.status,
+                        },
+                        items: invoice.items || [],
+                        updated: new Date(),
+                    };
+
+                    const existingTransaction = await db.query.transactions.findFirst({
+                        where: (transaction, { eq }) => eq(transaction.invoiceId, invoice.id),
+                    });
+
+                    if (existingTransaction) {
+                        await db.update(transactions).set(transactionValues).where(eq(transactions.id, existingTransaction.id));
+                    } else {
+                        await db.insert(transactions).values(transactionValues);
+                    }
+
+                    await db.update(memberInvoices).set({
+                        status: "paid",
+                        paid: true,
+                        sentAt: new Date(),
+                        metadata: {
+                            ...invoiceMetadata,
+                            paymentMethodId: selectedPaymentMethodId,
+                            gatewayService: "square" as const,
+                            squarePaymentId: payment?.id,
+                            chargeId: payment?.id,
+                            squarePaymentStatus: payment?.status,
+                        },
+                        updated: new Date(),
+                    }).where(eq(memberInvoices.id, iid));
+
+                    return status(200, {
+                        success: true,
+                        message: "Invoice charged successfully",
+                        invoice: {
+                            id: iid,
+                            status: "paid",
+                        },
+                        paymentId: payment?.id,
+                    });
+                } catch (error) {
+                    const failure = squareChargeFailure(error);
+                    const transactionValues = {
+                        memberId: invoice.memberId,
+                        locationId: lid,
+                        invoiceId: invoice.id,
+                        description: invoice.description || `Invoice ${invoice.id}`,
+                        type: "inbound" as const,
+                        status: "failed" as const,
+                        paymentType: "card" as const,
+                        paymentMethodId: selectedPaymentMethodId,
+                        paymentIntentId: failure.payment?.id,
+                        total: invoice.total,
+                        subTotal: invoice.subTotal,
+                        tax: invoice.tax,
+                        currency: invoice.currency || "usd",
+                        feeAmount: chargeDetails.feesAmount,
+                        failedCode: failure.code,
+                        failedReason: failure.detail,
+                        metadata: {
+                            ...invoiceMetadata,
+                            invoiceId: invoice.id,
+                            gatewayService: "square" as const,
+                            squarePaymentId: failure.payment?.id,
+                            chargeId: failure.payment?.id,
+                            squarePaymentStatus: failure.payment?.status ?? "FAILED",
+                            squareErrorCode: failure.code,
+                            squareErrorDetail: failure.detail,
+                            squareErrorCategory: failure.category,
+                            squareErrors: failure.errors,
+                        },
+                        items: invoice.items || [],
+                        updated: new Date(),
+                    };
+
+                    const existingTransaction = await db.query.transactions.findFirst({
+                        where: (transaction, { eq }) => eq(transaction.invoiceId, invoice.id),
+                    });
+
+                    if (existingTransaction) {
+                        await db.update(transactions).set(transactionValues).where(eq(transactions.id, existingTransaction.id));
+                    } else {
+                        await db.insert(transactions).values(transactionValues);
+                    }
+
+                    return status(400, { error: failure.detail, code: failure.code });
+                }
+            }
+
+            if (integration.service !== "stripe") {
+                return status(400, { error: "Automatic invoice charging is not supported for this payment gateway" });
+            }
+
+            if (!integration.accountId) {
                 return status(404, { error: "Stripe integration not found" });
             }
 
-            const stripe = new MemberStripePayments(integration.accountId, integration.accessToken);
-            stripe.setCustomer(ml.stripeCustomerId);
+            const stripe = new StripePaymentGateway(integration.accessToken);
 
             let paymentMethod: { id: string; type: string } | undefined;
 
             if (paymentMethodId) {
                 try {
-                    paymentMethod = await stripe.retrievePaymentMethod(ml.stripeCustomerId, paymentMethodId);
+                    paymentMethod = await stripe.retrievePaymentMethod(ml.gatewayCustomerId, paymentMethodId);
                 } catch {
                     return status(400, { error: "Selected payment method cannot be used for automatic charging" });
                 }
             } else {
-                const customer = await stripe.getCustomer(ml.stripeCustomerId);
+                const customer = await stripe.getCustomer(ml.gatewayCustomerId);
                 if (!customer) {
                     return status(404, { error: "Stripe customer not found" });
                 }
@@ -91,7 +278,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
 
                 if (typeof defaultPaymentMethod === "string") {
                     try {
-                        paymentMethod = await stripe.retrievePaymentMethod(ml.stripeCustomerId, defaultPaymentMethod);
+                        paymentMethod = await stripe.retrievePaymentMethod(ml.gatewayCustomerId, defaultPaymentMethod);
                     } catch {
                         return status(400, { error: "Default payment method cannot be used for automatic charging" });
                     }
@@ -130,13 +317,12 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 passOnFees: false,
             });
 
-            const { id: paymentIntentId } = await stripe.processPayment({
+            const { id: paymentIntentId } = await stripe.createCharge(ml.gatewayCustomerId, selectedPaymentMethod.id, {
                 total: chargeDetails.total,
                 unitCost: chargeDetails.unitCost,
                 tax: chargeDetails.tax,
-                applicationFeeAmount: chargeDetails.applicationFeeAmount,
+                feesAmount: chargeDetails.feesAmount,
                 description: invoice.description || `Invoice ${invoice.id}`,
-                paymentMethodId: selectedPaymentMethod.id,
                 metadata: {
                     lid,
                     locationId: lid,
@@ -145,7 +331,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     memberPlanId: invoice.memberPlanId || "",
                 },
                 productName: invoice.description || "Invoice",
-                currency: invoice.currency || "usd",
+                currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
             });
 
             await db.update(memberInvoices).set({

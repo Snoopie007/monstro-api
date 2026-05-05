@@ -56,7 +56,7 @@ export class SquarePaymentGateway {
         return c.customer;
     }
 
-    async createCard(memberId: string, source: string, verificationToken?: string, billingAddress?: Address) {
+    async createCard(memberId: string, cardholderName: string, source: string, verificationToken?: string, billingAddress?: Address) {
 
         if (!this._customerId) {
             throw new Error("Customer not set");
@@ -68,7 +68,7 @@ export class SquarePaymentGateway {
             sourceId: source,
             card: {
                 customerId: this._customerId,
-                cardholderName: "Amelia Earhart",
+                cardholderName: cardholderName,
                 billingAddress: billingAddress ? {
                     ...billingAddress,
                     country: billingAddress.country || "US",
@@ -84,8 +84,19 @@ export class SquarePaymentGateway {
         const cards = await this._client.cards.list({
             customerId: customerId,
         });
-        console.log(cards);
         return cards.data;
+    }
+
+    async retrieveCardForCustomer(customerId: string, cardId: string) {
+        const cards = await this.getCards(customerId);
+        const card = cards.find((candidate: { id?: string }) => candidate.id === cardId);
+        if (!card) {
+            const error = new Error("Square card does not belong to customer");
+            (error as Error & { code?: string; statusCode?: number }).code = "resource_missing";
+            (error as Error & { code?: string; statusCode?: number }).statusCode = 404;
+            throw error;
+        }
+        return card;
     }
 
     async createCharge(customerId: string, sourceId: string, options: SquareChargeOptions) {
@@ -104,11 +115,11 @@ export class SquarePaymentGateway {
             customerId,
             appFeeMoney: {
                 amount: BigInt(feesAmount),
-                currency: currency,
+                currency: Currency.Usd,
             },
             amountMoney: {
                 amount: BigInt(total),
-                currency: currency,
+                currency: Currency.Usd,
             },
             note,
             autocomplete: true,
@@ -116,10 +127,23 @@ export class SquarePaymentGateway {
             referenceId: referenceId,
             locationId: squareLocationId,
         });
-        console.log(data);
-        console.log(data.payment);
         return data.payment;
     }
 
+    async refundPayment(paymentId: string, amount: number, reason?: string) {
+        const data = await this._client.refunds.refundPayment({
+            idempotencyKey: this.generateIdempotencyKey(),
+            paymentId,
+            amountMoney: {
+                amount: BigInt(amount),
+                currency: Currency.Usd,
+            },
+            reason,
+        });
+        if (!data.refund) {
+            throw new Error("Square refund was not created");
+        }
+        return data.refund;
+    }
 
 }

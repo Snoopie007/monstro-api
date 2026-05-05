@@ -120,7 +120,7 @@ async function processSquareEvent(event: unknown): Promise<void> {
 
     const now = new Date();
     const amount = Number(payment.amountMoney?.amount) || 0;
-    const feesAmount = Number(payment.appFeeMoney?.amount) || 0;
+    const feeAmount = Number(payment.appFeeMoney?.amount) || 0;
 
     const paymentMethodId = payment.cardDetails?.card?.id || payment.id || null;
 
@@ -132,7 +132,7 @@ async function processSquareEvent(event: unknown): Promise<void> {
             locationId,
             payment,
             amount,
-            feesAmount,
+            feeAmount,
             paymentType: 'card',
             paymentMethodId,
             now,
@@ -145,7 +145,7 @@ async function processSquareEvent(event: unknown): Promise<void> {
             locationId,
             payment,
             amount,
-            feesAmount,
+            feeAmount,
             paymentType: 'card',
             paymentMethodId,
             now,
@@ -161,7 +161,7 @@ async function handleSquarePaymentCompleted(ctx: {
     locationId: string;
     payment: Square.Payment;
     amount: number;
-    feesAmount: number;
+    feeAmount: number;
     paymentType: PaymentType;
     paymentMethodId: string | null;
     now: Date;
@@ -173,7 +173,7 @@ async function handleSquarePaymentCompleted(ctx: {
         locationId,
         payment,
         amount,
-        feesAmount,
+        feeAmount,
         paymentType,
         paymentMethodId,
         now,
@@ -184,7 +184,7 @@ async function handleSquarePaymentCompleted(ctx: {
         .set({
             status: "paid",
             paid: true,
-            stripeReceiptUrl: payment.receiptUrl ?? undefined,
+            receiptUrl: payment.receiptUrl ?? undefined,
             updated: now,
         })
         .where(eq(memberInvoices.id, invoiceId))
@@ -211,10 +211,19 @@ async function handleSquarePaymentCompleted(ctx: {
         memberId,
         invoiceId,
         paymentMethodId,
+        paymentIntentId: payment.id,
         paymentType,
         chargeDate: now,
-        feesAmount,
-        metadata: { memberPlanId },
+        feeAmount,
+        metadata: {
+            memberPlanId,
+            memberSubscriptionId: memberPlanId,
+            invoiceId,
+            gatewayService: "square" as const,
+            squarePaymentId: payment.id,
+            chargeId: payment.id,
+            squarePaymentStatus: payment.status,
+        },
         updated: now,
     };
 
@@ -239,7 +248,7 @@ async function handleSquarePaymentCompleted(ctx: {
             await tx
                 .update(memberSubscriptions)
                 .set({
-                    stripePaymentId: paymentMethodId,
+                    gatewayPaymentId: paymentMethodId,
                     status: "active",
                 })
                 .where(eq(memberSubscriptions.id, memberPlanId));
@@ -262,7 +271,7 @@ async function handleSquarePaymentFailed(ctx: {
     locationId: string;
     payment: Square.Payment;
     amount: number;
-    feesAmount: number;
+    feeAmount: number;
     paymentType: PaymentType;
     paymentMethodId: string | null;
     now: Date;
@@ -275,7 +284,7 @@ async function handleSquarePaymentFailed(ctx: {
         locationId,
         payment,
         amount,
-        feesAmount,
+        feeAmount,
         paymentType,
         paymentMethodId,
         now,
@@ -313,10 +322,19 @@ async function handleSquarePaymentFailed(ctx: {
         memberId,
         invoiceId,
         paymentMethodId,
+        paymentIntentId: payment.id,
         paymentType,
         chargeDate: now,
-        feesAmount,
-        metadata: { memberPlanId },
+        feeAmount,
+        metadata: {
+            memberPlanId,
+            memberSubscriptionId: memberPlanId,
+            invoiceId,
+            gatewayService: "square" as const,
+            squarePaymentId: payment.id,
+            chargeId: payment.id,
+            squarePaymentStatus: payment.status,
+        },
         updated: now,
     };
 

@@ -163,7 +163,7 @@ export function migrateSubRoutes(app: Elysia) {
                     memberPlanPricingId: pricing.id,
                     paymentType: paymentType,
                     status: 'incomplete',
-                    stripePaymentId: paymentMethodId,
+                    gatewayPaymentId: paymentMethodId,
                 }).returning();
 
                 await tx.update(memberLocations).set({
@@ -281,6 +281,7 @@ export function migrateSubRoutes(app: Elysia) {
                         lastName: member.lastName,
                         email: member.email,
                     },
+                    // TODO(cleanup): Subscription workers no longer use this field.
                     stripeCustomerId: ml.gatewayCustomerId,
                     location: {
                         name: location.name,

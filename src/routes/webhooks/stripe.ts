@@ -170,7 +170,7 @@ async function handleCharge(event: Stripe.Event) {
     const [invoice] = await db.update(memberInvoices).set({
         status: charge.paid ? "paid" : "unpaid",
         paid: charge.paid,
-        stripeReceiptUrl: charge.receipt_url,
+        receiptUrl: charge.receipt_url,
         updated: now,
     }).where(eq(memberInvoices.id, invoiceId)).returning({
         description: memberInvoices.description,
@@ -199,7 +199,7 @@ async function handleCharge(event: Stripe.Event) {
         paymentMethodId: charge.payment_method,
         paymentType,
         chargeDate: now,
-        applicationFeeAmount: charge.application_fee_amount || 0,
+        feeAmount: charge.application_fee_amount || 0,
         metadata: {
             memberPlanId,
         }
@@ -214,7 +214,7 @@ async function handleCharge(event: Stripe.Event) {
             }).where(eq(memberPackages.id, memberPlanId));
         } else {
             await tx.update(memberSubscriptions).set({
-                stripePaymentId: charge.payment_method,
+                gatewayPaymentId: charge.payment_method,
                 status: isActive ? "active" : "past_due",
             }).where(eq(memberSubscriptions.id, memberPlanId));
         }
@@ -285,7 +285,7 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
         paymentMethodId: typeof paymentIntent.payment_method === "string" ? paymentIntent.payment_method : null,
         paymentType,
         chargeDate: now,
-        applicationFeeAmount: paymentIntent.application_fee_amount || 0,
+        feeAmount: paymentIntent.application_fee_amount || 0,
         metadata: {
             memberPlanId,
         },
