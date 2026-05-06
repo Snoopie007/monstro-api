@@ -39,6 +39,7 @@ export function migrateAcceptRoutes(app: Elysia) {
                             with: {
                                 plan: {
                                     columns: {
+                                        groupId: true,
                                         totalClassLimit: true,
                                     },
                                 },
@@ -119,13 +120,9 @@ export function migrateAcceptRoutes(app: Elysia) {
                 }
             }
 
-            if (!hasPayment && migrate?.pricing && migrate?.planType) {
+            if (!hasPayment && pricing && migrate?.planType) {
 
                 await db.transaction(async (tx) => {
-                    const pricing = migrate?.pricing;
-
-                    if (!pricing) return;
-
                     const commonValues = {
                         memberId: mid,
                         locationId: lid,
@@ -191,10 +188,16 @@ export function migrateAcceptRoutes(app: Elysia) {
             }).where(eq(migrateMembers.id, migrateId));
 
 
-            Promise.all([
-                addMembertoGroup(lid, member.userId),
-                createLocationChat(lid, member, location),
-            ]);
+            const groupId = pricing?.plan?.groupId;
+            if (groupId) {
+                Promise.all([
+                    addMembertoGroup(groupId, member.userId),
+                    createLocationChat(lid, member, location),
+                ]);
+            } else {
+                createLocationChat(lid, member, location);
+            }
+
 
             return status(200, ml);
         } catch (error) {
