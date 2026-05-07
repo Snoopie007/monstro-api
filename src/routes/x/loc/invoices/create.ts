@@ -212,7 +212,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                     total,
                     subTotal: subtotal,
                     tax,
-                    currency: "usd",
+                    currency: "USD",
                     metadata: {
                         intendedPaymentType,
                         collectionMethod,

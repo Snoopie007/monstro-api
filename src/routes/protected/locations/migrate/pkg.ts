@@ -75,7 +75,7 @@ export function migratePkgRoutes(app: Elysia) {
                     paymentType: paymentType,
                     totalClassLimit,
                     totalClassAttended,
-                    stripePaymentId: paymentMethodId,
+                    gatewayPaymentId: paymentMethodId,
                     expireDate,
                     status: "active"
                 }).returning();

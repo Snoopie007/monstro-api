@@ -259,7 +259,6 @@ export function purchaseSubRoutes(app: Elysia) {
                                 email: member.email,
                             },
                             taxRate: taxRate?.percentage || 0,
-                            stripeCustomerId: ml.gatewayCustomerId,
                             location: {
                                 name: ml.location.name,
                                 phone: ml.location.phone,
@@ -268,7 +267,6 @@ export function purchaseSubRoutes(app: Elysia) {
                             pricing: {
                                 name: pricing.name,
                                 price: pricing.price,
-                                currency: "usd",
                                 interval: pricing.interval,
                                 intervalThreshold: pricing.intervalThreshold,
                             },

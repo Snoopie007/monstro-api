@@ -52,11 +52,11 @@ export async function sendInvoiceRoutes(app: Elysia) {
         const ml = await db.query.memberLocations.findFirst({
             where: (ml, { eq, and }) => and(eq(ml.locationId, lid), eq(ml.memberId, invoice?.memberId)),
             columns: {
-                stripeCustomerId: true,
+                gatewayCustomerId: true,
             },
         });
-        if (!ml || !ml.stripeCustomerId) {
-            return status(404, { error: "Member location or Stripe customer not found" });
+        if (!ml || !ml.gatewayCustomerId) {
+            return status(404, { error: "Member location or gateway customer not found" });
         }
         const collectionMethod = (invoice.metadata as { collectionMethod?: "send_invoice" | "charge_automatically" } | null)?.collectionMethod || "send_invoice";
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
