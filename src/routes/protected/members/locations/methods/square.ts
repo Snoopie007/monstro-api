@@ -59,7 +59,6 @@ export function SquarePaymentMethodsRoutes(app: Elysia) {
                 if (ml.gatewayCustomerId) {
                     const pms = await square.getCards(ml.gatewayCustomerId);
 
-
                     if (pms.length > 0) {
                         pms.forEach(pm => {
                             // Ensure all required PaymentMethod fields are present and not undefined

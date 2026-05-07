@@ -145,25 +145,29 @@ export function StripePaymentMethodsRoutes(app: Elysia) {
                 if (!ml) {
                     return status(404, { error: "Member location not found" })
                 }
-
-                const stripeIntegration = await db.query.integrations.findFirst({
-                    where: (integration, { eq, and }) => and(
-                        eq(integration.locationId, lid),
-                        eq(integration.service, "stripe")
-                    ),
+                const locationState = await db.query.locationState.findFirst({
+                    where: (locationState, { eq }) => eq(locationState.locationId, lid),
                     columns: {
-                        accountId: true,
-                        accessToken: true,
+                        paymentGatewayId: true,
                     },
                 });
+                if (!locationState) {
+                    return status(404, { error: "Location state not found" });
+                }
+                const paymentGatewayId = locationState.paymentGatewayId;
+                if (!paymentGatewayId) {
+                    return status(404, { error: "Payment gateway not found" });
+                }
+                const gateway = await db.query.integrations.findFirst({
+                    where: (i, { eq }) => eq(i.id, paymentGatewayId),
+                    columns: { accountId: true, accessToken: true },
+                });
 
-                if (!stripeIntegration || !stripeIntegration.accountId || !stripeIntegration.accessToken) {
+                if (!gateway || !gateway.accountId || !gateway.accessToken) {
                     return status(404, { error: "Stripe integration not found" });
                 }
 
-                const stripe = new StripePaymentGateway(
-                    stripeIntegration.accessToken,
-                );
+                const stripe = new StripePaymentGateway(gateway.accessToken);
                 let stripeCustomerId = ml.gatewayCustomerId;
                 if (!stripeCustomerId) {
                     const { member } = ml;
@@ -188,7 +192,8 @@ export function StripePaymentMethodsRoutes(app: Elysia) {
 
                 let ek = undefined;
                 if (ephemeralKey) {
-                    const ephemeralKey = await stripe.createEphemeralKey(stripeCustomerId, stripeIntegration.accountId);
+                    const ephemeralKey = await stripe.createEphemeralKey(stripeCustomerId, gateway.accountId);
+
                     ek = ephemeralKey;
                 }
 

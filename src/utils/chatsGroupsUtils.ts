@@ -54,20 +54,20 @@ async function createLocationChat(lid: string, member: Pick<Member, "userId" | '
 
 async function addMembertoGroup(gid: string, uid: string) {
 
-    await db.insert(groupMembers).values({
-        groupId: gid,
-        userId: uid,
+    await db.transaction(async (tx) => {
+        await tx.insert(groupMembers).values({
+            groupId: gid,
+            userId: uid,
+        });
+        const [chat] = await tx.select({ id: chats.id }).from(chats).where(eq(chats.groupId, gid)).limit(1);
+        if (!chat) return await tx.rollback();
+        await tx.insert(chatMembers).values({
+            chatId: chat.id,
+            userId: uid,
+        });
     });
 
 
-    const [chat] = await db.select({ id: chats.id }).from(chats).where(eq(chats.groupId, gid)).limit(1);
-    if (!chat) {
-        return;
-    }
-    await db.insert(chatMembers).values({
-        chatId: chat.id,
-        userId: uid,
-    });
 }
 
 export { createLocationChat, addMembertoGroup };

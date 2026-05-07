@@ -50,12 +50,14 @@ type StripeMetadata = {
     memberPlanId: string;
 };
 
+const isProd = process.env.BUN_ENV === "production";
+
 export function stripeWebhookRoutes(app: Elysia) {
 
     app.post('/connected/stripe', async ({ body, headers, request, status }) => {
 
         const signature = headers["stripe-signature"];
-
+        console.log("signature", signature);
         if (typeof signature !== "string") {
             throw new Error("Stripe Hook Signature is not a string");
         }
@@ -65,12 +67,16 @@ export function stripeWebhookRoutes(app: Elysia) {
 
         let event: Stripe.Event;
         try {
-            const rawText = await request.text();
-            event = await stripe.constructEventAsync(
-                Buffer.from(rawText),
-                signature,
-                process.env.STRIPE_CONNECTED_WEBHOOK_SECRET
-            );
+            if (isProd) {
+                const rawText = await request.text();
+                event = await stripe.constructEventAsync(
+                    Buffer.from(rawText),
+                    signature,
+                    process.env.STRIPE_CONNECTED_WEBHOOK_SECRET
+                );
+            } else {
+                event = body as Stripe.Event;
+            }
         } catch (err) {
             console.error("[STRIPE WEBHOOK] Failed to construct event:", err);
             return status(500, { error: "[STRIPE WEBHOOK] Failed to construct event" });
@@ -84,7 +90,7 @@ export function stripeWebhookRoutes(app: Elysia) {
         headers: t.Object({
             "stripe-signature": t.String(),
         }),
-        parse: 'none'
+        parse: isProd ? 'none' : 'json'
     });
     return app;
 }

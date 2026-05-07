@@ -86,7 +86,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
             },
         });
         if (!ml || !ml.gatewayCustomerId) {
-            return status(404, { error: "Member location or Stripe customer not found" });
+            return status(404, { error: "Member location or gateway customer not found" });
         }
         const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
         const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
@@ -134,7 +134,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
                         referenceId: invoice.id,
                         squareLocationId,
-                        note: `${invoice.description || `Invoice ${invoice.id}`}|invId:${invoice.id}|mid:${invoice.memberId}|lid:${lid}`,
+                        note: `${invoice.description || `Invoice ${invoice.id}`}|invId:${invoice.id}|mid:${invoice.memberId}|lid:${lid}|pmid:${selectedPaymentMethodId}`,
                     });
 
                     const transactionValues = {

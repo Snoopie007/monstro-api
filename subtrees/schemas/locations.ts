@@ -9,10 +9,10 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import type { LocationSettings } from "../types";
+import type { Currency } from "../types/currency";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { vendors } from "./vendors";
 import { integrations } from "./integrations";
-import type { Currency } from "square";
 export const locations = pgTable("locations", {
 	id: uuid("id")
 		.primaryKey()
@@ -46,7 +46,7 @@ export const locationState = pgTable("location_state", {
 	paymentGatewayId: text("payment_gateway_id").references(() => integrations.id, { onDelete: "cascade" }),
 	planId: integer("plan_id").notNull().default(1),
 	waiverId: text("waiver_id"),
-	currency: text("currency").$type<Currency>().notNull().default("USD"),
+	currency: text("currency").$type<Currency>().notNull().default("UNKNOWN_CURRENCY"),
 	agreeToTerms: boolean("agree_to_terms").notNull().default(false),
 	allowAppCheckIns: boolean("allow_app_check_ins").notNull().default(true),
 	lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true, }).defaultNow(),
