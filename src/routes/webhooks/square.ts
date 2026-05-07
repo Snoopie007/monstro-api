@@ -70,14 +70,21 @@ const ALLOWED_EVENTS = [
     "payment.updated",
 ];
 
+const isProd = process.env.BUN_ENV === "production";
+const url = isProd ? "https://api.monstro-x.com/webhooks/square" :
+    "https://3e26-70-26-74-111.ngrok-free.app/webhooks/square";
 // Generate a signature from the notification url, signature key,
 // and request body and compare it to the Square signature header.
 async function isFromSquare(signature: string, body: string): Promise<boolean> {
+    const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+    if (!signatureKey) {
+        return false;
+    }
     return await WebhooksHelper.verifySignature({
         requestBody: body,
         signatureHeader: signature,
-        signatureKey: '6r9NXRT-19LC5EddUyrm1w',
-        notificationUrl: 'https://3e26-70-26-74-111.ngrok-free.app/webhooks/square'
+        signatureKey,
+        notificationUrl: url
     });
 }
 
