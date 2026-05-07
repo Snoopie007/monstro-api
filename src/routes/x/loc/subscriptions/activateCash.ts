@@ -13,16 +13,31 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid)),
             with: {
+                member: {
+                    columns: {
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
                 pricing: true,
                 location: {
+                    with: {
+                        taxRates: true,
+                    },
                     columns: {
                         country: true,
+                        name: true,
+                        email: true,
+                        phone: true,
+                        address: true,
+                        vendorId: true,
                     },
                 },
             },
         });
 
-        if (!sub || !sub.pricing) {
+        if (!sub || !sub.pricing || !sub.member || !sub.location) {
             return status(404, { error: "Subscription not found" });
         }
 
@@ -111,7 +126,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         return status(200, {
             status: isTrialing ? "trialing" : "active",
             nextBillingAt: getNextBillingDate(sub),
-            scheduledJobKey: `renewal:cash:${sid}`,
+            scheduledJobKey: null,
         });
     });
 }

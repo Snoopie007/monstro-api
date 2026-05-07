@@ -238,7 +238,7 @@ export function purchasePkgRoutes(app: Elysia) {
                             total: chargeDetails.total,
                             feesAmount: chargeDetails.feesAmount,
                             currency,
-                            note: `${productName}|${description}|mid:${mid}|lid:${lid}`,
+                            note: `${productName}|${description}|invId:${invoice.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`,
                             referenceId: `${invoice.id}`,
                             squareLocationId: squareLocationId,
                         });

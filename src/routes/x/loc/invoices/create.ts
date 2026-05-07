@@ -24,6 +24,7 @@ export async function createInvoiceRoutes(app: Elysia) {
             type,
             collectionMethod,
             paymentType,
+            paymentMethodId,
             subscriptionId,
             selectedSubscriptionId,
             items,
@@ -31,6 +32,8 @@ export async function createInvoiceRoutes(app: Elysia) {
             description,
             tax = 0,
             discount = 0,
+            recurringSettings,
+            gatewayService,
         } = payload;
 
         const member = await db.query.members.findFirst({
@@ -46,6 +49,7 @@ export async function createInvoiceRoutes(app: Elysia) {
         }
 
         if (type === "from-subscription") {
+            // Subscription-generated invoices should use the subscription's own billing state.
             const sid = selectedSubscriptionId || subscriptionId;
             if (!sid) {
                 return status(400, { error: "subscriptionId is required for from-subscription" });
@@ -165,7 +169,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                 subTotal: subtotal,
                 total,
                 tax,
-                currency: "usd",
+                currency: "USD",
                 status: "draft",
                 dueDate: dueDate ? new Date(dueDate) : new Date(),
                 paymentType,
@@ -173,6 +177,9 @@ export async function createInvoiceRoutes(app: Elysia) {
                 metadata: {
                     type,
                     collectionMethod,
+                    ...(type === "recurring" && recurringSettings ? { recurringSettings } : {}),
+                    ...(paymentMethodId ? { paymentMethodId } : {}),
+                    ...(gatewayService ? { gatewayService } : {}),
                 },
             }).returning();
             invoice = createdInvoice;
