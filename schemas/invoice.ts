@@ -5,7 +5,6 @@ import type { InvoiceItem } from "../types/invoices";
 import { InvoiceStatusEnum, PaymentTypeEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { members } from "./members";
-import type { Currency } from "square";
 
 export const memberInvoices = pgTable('member_invoices', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
