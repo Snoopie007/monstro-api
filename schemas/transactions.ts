@@ -14,7 +14,7 @@ import { memberInvoices } from "./invoice";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
 import type { TransactionMetadata } from "../types";
 import type { InvoiceItem } from "../types/invoices";
-
+import type { Currency } from "../types/currency";
 
 export const transactions = pgTable("transactions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -35,7 +35,7 @@ export const transactions = pgTable("transactions", {
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	invoiceId: text("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
 	chargeDate: timestamp("charge_date", { withTimezone: true }).notNull().defaultNow(),
-	currency: text("currency").notNull().default("USD"),
+	currency: text("currency").$type<Currency>().notNull().default("USD"),
 	metadata: jsonb("metadata").$type<TransactionMetadata>().notNull().default(sql`'{}'::jsonb`),
 	refunded: boolean("refunded").notNull().default(false),
 	refundedAmount: integer("refunded_amount").notNull().default(0),
