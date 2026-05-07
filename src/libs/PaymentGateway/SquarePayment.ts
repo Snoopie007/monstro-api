@@ -115,11 +115,11 @@ export class SquarePaymentGateway {
             customerId,
             appFeeMoney: {
                 amount: BigInt(feesAmount),
-                currency: Currency.Usd,
+                currency
             },
             amountMoney: {
                 amount: BigInt(total),
-                currency: Currency.Usd,
+                currency
             },
             note,
             autocomplete: true,
@@ -136,6 +136,7 @@ export class SquarePaymentGateway {
             paymentId,
             amountMoney: {
                 amount: BigInt(amount),
+                // TEMP: We only accepting usd for now
                 currency: Currency.Usd,
             },
             reason,

@@ -276,7 +276,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 squarePayment = await withTimeout(
                     square.createCharge(memberLocation.gatewayCustomerId!, paymentMethod.value.id, {
                         ...chargeDetails,
-                        currency: currency || "usd",
+                        currency: currency || "USD",
                         referenceId: invoice.id,
                         squareLocationId,
                         note: `${chargeDescription}|invId:${invoice.id}|mid:${sub.memberId}|lid:${lid}|subId:${sub.id}`,
