@@ -7,6 +7,7 @@ import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
+import { orderItems, orders, productImages, products, productVariants } from "./ecommerce";
 import {
 	locations, locationState,
 } from "./locations";
@@ -127,6 +128,7 @@ export const membersRelations = relations(members, ({ many, one }) => ({
 	memberTags: many(memberHasTags),
 	customFields: many(memberCustomFields),
 	passes: many(memberPasses),
+	orders: many(orders),
 }));
 
 export const memberPassesRelations = relations(memberPasses, ({ one }) => ({
@@ -305,6 +307,8 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		references: [wallets.locationId],
 	}),
 	taxRates: many(taxRates),
+	products: many(products),
+	orders: many(orders),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -699,6 +703,61 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 	invoice: one(memberInvoices, {
 		fields: [transactions.invoiceId],
 		references: [memberInvoices.id],
+	}),
+	order: one(orders, {
+		fields: [transactions.id],
+		references: [orders.transactionId],
+	}),
+}));
+
+export const productsRelations = relations(products, ({ many, one }) => ({
+	location: one(locations, {
+		fields: [products.locationId],
+		references: [locations.id],
+	}),
+	images: many(productImages),
+	variants: many(productVariants),
+}));
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+	product: one(products, {
+		fields: [productImages.productId],
+		references: [products.id],
+	}),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ many, one }) => ({
+	product: one(products, {
+		fields: [productVariants.productId],
+		references: [products.id],
+	}),
+	orderItems: many(orderItems),
+}));
+
+export const ordersRelations = relations(orders, ({ many, one }) => ({
+	location: one(locations, {
+		fields: [orders.locationId],
+		references: [locations.id],
+	}),
+	member: one(members, {
+		fields: [orders.memberId],
+		references: [members.id],
+	}),
+	transaction: one(transactions, {
+		fields: [orders.transactionId],
+		references: [transactions.id],
+	}),
+	items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+	order: one(orders, {
+		fields: [orderItems.orderId],
+		references: [orders.id],
+	}),
+	variant: one(productVariants, {
+		fields: [orderItems.variantId],
+		references: [productVariants.id],
 	}),
 }));
 

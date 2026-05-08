@@ -4,6 +4,7 @@ export * from "./attendances";
 export * from "./chat";
 export * from "./contracts";
 export * from "./DatabaseEnums";
+export * from "./ecommerce";
 export * from "./integrations";
 export * from "./invoice";
 export * from "./locations";
@@ -36,4 +37,3 @@ export * from "./verifications";
 // Export all relations from the relations file
 export * from "./relations";
 export * from "./wallets";
-

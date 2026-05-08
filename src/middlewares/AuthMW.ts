@@ -48,7 +48,9 @@ async function verifyToken(token: string): Promise<MobileTokenReturnType> {
 type VendorTokenReturnType = {
     ok: boolean;
     data: {
-        vendorId: string;
+        vendorId?: string;
+        staffId?: string;
+        userRole?: string;
         userId: string;
     } | null;
     code: string;
@@ -75,7 +77,9 @@ async function verifyTokenX(token: string): Promise<VendorTokenReturnType> {
         return {
             ok: true,
             data: {
-                vendorId: user.vendorId,
+                vendorId: user.vendorId || user.user_metadata?.vendorId,
+                staffId: user.staffId || user.user_metadata?.staffId,
+                userRole: user.userRole || user.user_metadata?.role,
                 userId,
             },
             code: "SUCCESS",
@@ -141,7 +145,7 @@ export async function AuthMiddleware(app: Elysia) {
     })
 }
 
-export async function AuthXMiddleware(app: Elysia) {
+export function AuthXMiddleware(app: Elysia) {
     return app.resolve(async ({ headers, status }) => {
 
         const auth = headers['authorization']
@@ -165,9 +169,9 @@ export async function AuthXMiddleware(app: Elysia) {
             });
         };
 
-        const { vendorId, userId } = res.data;
+        const { vendorId, staffId, userId, userRole } = res.data;
 
-        return { vendorId: vendorId, userId: userId };
+        return { vendorId, staffId, userId, userRole };
 
     })
 }
