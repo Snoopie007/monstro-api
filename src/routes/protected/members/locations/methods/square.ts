@@ -132,6 +132,7 @@ export function SquarePaymentMethodsRoutes(app: Elysia) {
 
 
                 if (!ml) {
+                    console.log("Member location not found");
                     return status(404, { error: "Member location not found" });
                 }
 
@@ -152,7 +153,8 @@ export function SquarePaymentMethodsRoutes(app: Elysia) {
 
                 const square = new SquarePaymentGateway(squareGateway.accessToken);
 
-                if (!ml.gatewayCustomerId) {
+                let customerId: string | undefined = ml.gatewayCustomerId || undefined;
+                if (!customerId) {
                     try {
                         const customer = await square.createCustomer({
                             ...ml.member,
@@ -163,14 +165,22 @@ export function SquarePaymentMethodsRoutes(app: Elysia) {
                             eq(memberLocations.memberId, mid),
                             eq(memberLocations.locationId, lid)
                         ));
+                        customerId = customer.id;
                     } catch (err) {
                         console.log(err);
                         return status(500, { error: "Failed to create customer" });
                     }
                 }
 
-                const cardholderName = [ml.member?.firstName, ml.member?.lastName].filter(Boolean).join(" ") || "Cardholder";
-                const card = await square.createCard(mid, cardholderName, nonce);
+                if (!customerId) {
+                    return status(400, { error: "Customer ID not found" });
+                }
+                const cardholderName = `${ml.member?.firstName} ${ml.member?.lastName}`;
+
+                const card = await square.createCard(customerId, nonce, {
+                    cardholderName,
+                    referenceId: mid,
+                });
                 if (!card || !card.id) {
                     return status(400, { error: "Failed to create card" });
                 }
@@ -191,7 +201,6 @@ export function SquarePaymentMethodsRoutes(app: Elysia) {
                 return status(200, pm);
 
             } catch (err) {
-
                 if (err instanceof SquareError) {
                     if (err.errors.length > 0) {
                         const error = err.errors[0]

@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 export function publicLocationPaymentGateway(app: Elysia) {
     return app.get('/gateway', async ({ params, status }) => {
         const { lid } = params;
+        console.log(lid);
         try {
 
             const locationState = await db.query.locationState.findFirst({
@@ -12,7 +13,6 @@ export function publicLocationPaymentGateway(app: Elysia) {
                     paymentGatewayId: true,
                 }
             });
-
             if (!locationState) {
                 return status(404, { error: "Location state not found" });
             }
@@ -32,6 +32,7 @@ export function publicLocationPaymentGateway(app: Elysia) {
                     apiKey: true,
                     service: true,
                     accountId: true,
+                    metadata: true,
                 }
             });
 
@@ -43,6 +44,7 @@ export function publicLocationPaymentGateway(app: Elysia) {
                 key: gateway.apiKey,
                 service: gateway.service,
                 accountId: gateway.accountId,
+                squareLocationId: gateway.metadata?.squareLocationId,
             }
 
             return status(200, data);
