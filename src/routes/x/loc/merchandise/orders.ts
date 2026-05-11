@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { orders } from "@subtrees/schemas";
+import { orders, productImages } from "@subtrees/schemas";
 import { and, desc, eq } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";
@@ -24,7 +24,13 @@ export async function orderRoutes(app: Elysia) {
 						with: {
 							variant: {
 								with: {
-									product: true,
+									product: {
+										with: {
+											images: {
+												orderBy: [productImages.sortOrder],
+											},
+										},
+									},
 								},
 							},
 						},
@@ -47,7 +53,13 @@ export async function orderRoutes(app: Elysia) {
 						with: {
 							variant: {
 								with: {
-									product: true,
+									product: {
+										with: {
+											images: {
+												orderBy: [productImages.sortOrder],
+											},
+										},
+									},
 								},
 							},
 						},

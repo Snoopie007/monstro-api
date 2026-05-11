@@ -2,6 +2,7 @@ import { canAccessLocation } from "@/utils/merchandise";
 import { Elysia, type Context } from "elysia";
 import { merchandiseRoutes } from "./merchandise";
 import { orderRoutes } from "./orders";
+import { imageRoutes } from "./images";
 import { productRoutes } from "./products";
 
 type XAuthContext = Context & { vendorId?: string; staffId?: string };
@@ -16,4 +17,5 @@ export const xMerchandise = new Elysia({ prefix: "/merchandise" })
 	})
 	.use(productRoutes)
 	.use(merchandiseRoutes)
-	.use(orderRoutes);
+	.use(orderRoutes)
+	.use(imageRoutes);
