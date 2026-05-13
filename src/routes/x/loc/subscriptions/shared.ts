@@ -38,3 +38,25 @@ export function getNextBillingDate(sub: {
     }
     return sub.currentPeriodEnd;
 }
+
+type TransactionMetadata = Record<string, unknown>;
+
+export const RETRYABLE_SUBSCRIPTION_STATUSES = new Set(["past_due", "unpaid"]);
+
+export function getString(value: unknown): string | null {
+    return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+export function resolveGatewayService(metadata: TransactionMetadata): "stripe" | "square" {
+    return metadata.gatewayService === "square" || getString(metadata.squarePaymentId) ? "square" : "stripe";
+}
+
+export function resolveGatewayPaymentId(transaction: {
+    paymentIntentId: string | null;
+    metadata: TransactionMetadata;
+}): string | null {
+    return transaction.paymentIntentId
+        || getString(transaction.metadata.paymentIntentId)
+        || getString(transaction.metadata.squarePaymentId)
+        || getString(transaction.metadata.chargeId);
+}

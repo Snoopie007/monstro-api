@@ -6,6 +6,7 @@ import { createSubscriptionRoutes } from "./create";
 import { subscriptionMakeupCreditsRoutes } from "./makeupCredits";
 import { pauseSubscriptionRoutes } from "./pause";
 import { resumeSubscriptionRoutes } from "./resume";
+import { retrySubscriptionPaymentRoutes } from "./retryPayment";
 import { updateSubscriptionRoutes } from "./update";
 
 export const xSubscriptions = new Elysia({ prefix: "/subscriptions" })
@@ -16,4 +17,5 @@ export const xSubscriptions = new Elysia({ prefix: "/subscriptions" })
     .use(resumeSubscriptionRoutes)
     .use(updateSubscriptionRoutes)
     .use(cancelSubscriptionRoutes)
+    .use(retrySubscriptionPaymentRoutes)
     .use(subscriptionMakeupCreditsRoutes);
