@@ -4,7 +4,6 @@ import { db } from "@/db/db";
 export function publicLocationPaymentGateway(app: Elysia) {
     return app.get('/gateway', async ({ params, status }) => {
         const { lid } = params;
-        console.log(lid);
         try {
 
             const locationState = await db.query.locationState.findFirst({

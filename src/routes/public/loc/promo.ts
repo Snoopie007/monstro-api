@@ -15,8 +15,6 @@ export function publicLocationPromos(app: Elysia) {
             const promo = await db.query.promos.findFirst({
                 where: (p, { eq, and }) => and(eq(p.locationId, lid), eq(p.code, code), eq(p.isActive, true)),
                 columns: {
-                    stripeCouponId: false,
-                    stripePromoId: false,
                     created: false,
                     updated: false,
                 },
