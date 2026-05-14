@@ -6,8 +6,6 @@ import { PromoTypeEnum, PromoDurationEnum } from "./DatabaseEnums";
 export const promos = pgTable("promos", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    stripeCouponId: text("stripe_coupon_id"),
-    stripePromoId: text("stripe_promo_id"),
     code: text("code").notNull(),
     type: PromoTypeEnum("type").notNull(),
     value: integer("value").notNull(),
