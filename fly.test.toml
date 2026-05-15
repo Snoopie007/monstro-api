@@ -11,7 +11,7 @@ primary_region = "sjc"
 
 [env]
   PORT = "3000"
-  BUN_ENV = "production"
+  BUN_ENV = "test"
 
 [[vm]]
   memory = "512mb"
