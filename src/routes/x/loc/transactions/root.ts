@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { and, eq, gte } from "drizzle-orm";
+import { retryTransactionRoutes } from "./retry";
 import { db } from "@/db/db";
 import {
     memberInvoices,
@@ -469,4 +470,5 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             reason: t.Optional(t.String()),
             note: t.Optional(t.String()),
         }),
-    });
+    })
+    .use(retryTransactionRoutes);
