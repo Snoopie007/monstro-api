@@ -16,6 +16,8 @@ import type { ProductSize } from "../types/product";
 export const products = pgTable("products", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    subCategory: text("sub_category").notNull(),
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
