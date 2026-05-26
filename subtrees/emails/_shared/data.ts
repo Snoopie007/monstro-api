@@ -1,7 +1,8 @@
 
-
 export const BASE_MONSTRO_X_URL = 'https://m.monstro-x.com';
 export const BASE_MONSTRO_URL = 'https://mymonstro.com';
+export const APPLE_APP_STORE_URL = 'https://apps.apple.com/app/monstro-x/id123456789';
+export const GOOGLE_PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.monstro.x';
 
 
 export const DummyData = {
@@ -25,4 +26,3 @@ export const DummyData = {
         phone: '(555) 123-4567',
     }
 }
-
