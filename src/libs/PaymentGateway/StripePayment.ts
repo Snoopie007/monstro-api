@@ -218,25 +218,11 @@ export class StripePaymentGateway {
     }
 
     async createRefund(paymentIntentId: string, amount: number, currency: string) {
-        // Check connected account available balance before attempting refund
-        const balance = await this._client.balance.retrieve();
-        const available = balance.available
-            .filter((e) => e.currency.toLowerCase() === currency.toLowerCase())
-            .reduce((sum, e) => sum + e.amount, 0);
-
-        if (available - amount < 0) {
-            const error = new Error(
-                "Connected Stripe account has insufficient available balance to reverse this transfer."
-            );
-            (error as Error & { code?: string }).code = "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE";
-            throw error;
-        }
-
         return this._client.refunds.create({
             payment_intent: paymentIntentId,
             amount: amount > 0 ? amount : undefined,
             refund_application_fee: false,
-            reverse_transfer: true,
+            reverse_transfer: false,
             reason: "requested_by_customer",
         });
     }

@@ -186,6 +186,54 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 scheduledJobKey: `renewal:${sub.id}`,
             });
         }
+        // Defer first charge to future startDate
+        if (isFuture(sub.startDate)) {
+            const payload = buildRenewalPayload({
+                sub,
+                lid,
+                location,
+                memberLocationGatewayCustomerId: memberLocation.gatewayCustomerId || null,
+                currency,
+                taxRate: sub.location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
+                promoMeta,
+            });
+
+            await db.update(memberSubscriptions).set({
+                gatewayPaymentId: paymentMethod.value.id,
+                metadata: {
+                    ...(sub.metadata || {}),
+                    paymentMethodId: paymentMethod.value.id,
+                    gatewayService,
+                },
+                updated: new Date(),
+            }).where(eq(memberSubscriptions.id, sub.id));
+
+            await removeRenewalJobs(sub.id);
+
+            const firstBillingAt = new Date(sub.startDate);
+            if (["month", "year"].includes(sub.pricing.interval || "") && sub.pricing.intervalThreshold === 1) {
+                await scheduleCronBasedRenewal({
+                    startDate: firstBillingAt,
+                    interval: sub.pricing.interval as "month" | "year",
+                    data: payload,
+                });
+            } else {
+                await scheduleRecursiveRenewal({
+                    startDate: firstBillingAt,
+                    data: {
+                        ...payload,
+                        recurrenceCount: 1,
+                    },
+                });
+            }
+
+            return status(200, {
+                status: "incomplete",
+                nextBillingAt: firstBillingAt,
+                scheduledJobKey: `renewal:${sub.id}`,
+                message: "First charge scheduled for start date",
+            });
+        }
 
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
         const planName = `${sub.pricing.plan?.name || "Plan"}/${sub.pricing.name}`;

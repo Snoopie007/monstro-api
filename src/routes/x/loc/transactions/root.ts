@@ -203,18 +203,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
         }
 
 		const stripeGateway = new StripePaymentGateway(integration.accessToken ?? "");
-		let refund: Awaited<ReturnType<typeof stripeGateway.createRefund>>;
-		try {
-			refund = await stripeGateway.createRefund(paymentIntentId, refundAmount, transaction.currency);
-		} catch (error) {
-			if ((error as Error & { code?: string }).code === "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE") {
-				return status(400, {
-					error: "Connected Stripe account has insufficient available balance to process this refund",
-					code: "INSUFFICIENT_CONNECTED_ACCOUNT_BALANCE",
-				});
-			}
-			throw error;
-		}
+		const refund = await stripeGateway.createRefund(paymentIntentId, refundAmount, transaction.currency);
 
         await db.transaction(async (tx) => {
             await tx.update(transactions).set({
