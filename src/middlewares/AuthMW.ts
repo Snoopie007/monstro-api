@@ -104,13 +104,13 @@ export async function AuthMiddleware(app: Elysia) {
         // Get token from Authorization header
         const auth = headers['authorization'];
         const isMobile = headers['x-mobile'] === 'true';
-
-        if (isMobile) {
+        if (!isMobile) {
             return status(401, {
                 message: "Unauthorized",
                 code: "UNAUTHORIZED"
             });
         }
+
 
         if (!auth) {
             console.log('AuthMiddleware: No Authorization header');
@@ -121,7 +121,6 @@ export async function AuthMiddleware(app: Elysia) {
         }
 
         const token = auth.split(" ")[1];
-
         if (!token) {
             console.log('AuthMiddleware: No token in Authorization header');
             return status(401, {

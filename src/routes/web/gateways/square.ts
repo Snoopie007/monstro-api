@@ -7,11 +7,7 @@ import { SquarePaymentGateway } from "@/libs/PaymentGateway/SquarePayment";
 import { SquareError } from "square";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 
-const SharedProps = {
-    params: t.Object({
-        mid: t.String(),
-    }),
-};
+
 
 
 export const webSquareGateway = new Elysia()
@@ -23,11 +19,11 @@ export const webSquareGateway = new Elysia()
         if (!session) {
             return status(401, { error: "Unauthorized" });
         }
-        const { mid } = params;
+        const mid = session.user.memberId;
         try {
             const ml = await db.query.memberLocations.findFirst({
                 where: (memberLocation, { eq, and }) => and(
-                    eq(memberLocation.memberId, params.mid),
+                    eq(memberLocation.memberId, mid),
                     eq(memberLocation.locationId, lid)
                 ),
                 columns: {
@@ -94,7 +90,7 @@ export const webSquareGateway = new Elysia()
             console.log(err);
             return status(500, { error: err });
         }
-    }, SharedProps)
+    })
     .post("/square", async ({ params, status, body, lid, session }) => {
         if (!lid) {
             return status(401, { error: "Unauthorized" });
@@ -102,7 +98,7 @@ export const webSquareGateway = new Elysia()
         if (!session) {
             return status(401, { error: "Unauthorized" });
         }
-        const { mid } = params;
+        const mid = session.user.memberId;
         const { nonce } = body;
         try {
             const ml = await db.query.memberLocations.findFirst({
@@ -215,10 +211,6 @@ export const webSquareGateway = new Elysia()
             }
         }
     }, {
-        params: t.Object({
-            mid: t.String(),
-            lid: t.String(),
-        }),
         body: t.Object({
             nonce: t.String(),
         }),

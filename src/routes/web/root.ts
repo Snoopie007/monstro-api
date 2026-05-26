@@ -6,6 +6,8 @@ import { webLocationSchedulesRoutes } from "./schedules";
 import { webLocationStateRoutes } from "./LocationState";
 import { webPlansRoutes } from "./plans";
 import { webStripeGateway, webSquareGateway, webGatewaysRoutes } from "./gateways";
+import { webContractRoutes } from "./contract";
+import { webContentRoutes } from "./content";
 const ACCEPTED_METHODS = ["GET", "POST"];
 
 export const WebRoutes = new Elysia()
@@ -14,6 +16,8 @@ export const WebRoutes = new Elysia()
     .use(webLocationSchedulesRoutes)
     .use(webLocationStateRoutes)
     .use(webPlansRoutes)
+    .use(webContractRoutes)
+    .use(webContentRoutes)
     .group('/gateway', (app) => {
         app.use(webGatewaysRoutes)
         app.use(webStripeGateway)

@@ -37,23 +37,15 @@ export const members = pgTable('members', {
     updated: timestamp('updated_at', { withTimezone: true }),
 })
 
-export const memberReferrals = pgTable(
-    "member_referrals",
-    {
-        memberId: text("member_id")
-            .notNull()
-            .references(() => members.id, { onDelete: "cascade" }),
-        referredMemberId: text("referred_member_id")
-            .notNull()
-            .references(() => members.id, { onDelete: "cascade" }),
-        locationId: text("location_id")
-            .notNull()
-            .references(() => locations.id, { onDelete: "cascade" }),
-        created: timestamp("created_at", { withTimezone: true })
-            .notNull()
-            .defaultNow(),
-        updated: timestamp("updated_at", { withTimezone: true }),
-    },
+export const memberReferrals = pgTable("member_referrals", {
+    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    referredMemberId: text("referred_member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    created: timestamp("created_at", { withTimezone: true })
+        .notNull()
+        .defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+},
     (t) => [
         primaryKey({ columns: [t.memberId, t.referredMemberId, t.locationId] }),
         unique("unique_referred_member_location").on(
@@ -65,24 +57,15 @@ export const memberReferrals = pgTable(
 );
 
 export const memberContracts = pgTable("member_contracts", {
-    id: uuid("id")
-        .primaryKey()
-        .notNull()
-        .default(sql`uuid_base62()`),
-    memberId: text("member_id")
-        .notNull()
-        .references(() => members.id, { onDelete: "cascade" }),
-    templateId: text("contract_id")
-        .notNull()
-        .references(() => contractTemplates.id, { onDelete: "cascade" }),
-    locationId: text("location_id")
-        .notNull()
-        .references(() => locations.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    templateId: text("contract_id").notNull().references(() => contractTemplates.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     signature: text("signature"),
     pdfFilename: text("pdf_filename"),
-    created: timestamp("created_at", { withTimezone: true })
-        .notNull()
-        .defaultNow(),
+    signedOn: timestamp("signed_on", { withTimezone: true }),
+    memberPlanId: text("member_plan_id"),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
 

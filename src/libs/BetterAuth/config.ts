@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
-import { getOAuthState } from "better-auth/api";
+import { getOAuthState, APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { customSession } from "better-auth/plugins";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { users } from "subtrees/schemas";
@@ -213,5 +214,51 @@ export const auth = betterAuth({
     secret: Bun.env.AUTH_SECRET,
     plugins: [
         sessionBridge(),
+        customSession(async ({ user, session }) => {
+
+            const userData = await db.query.users.findFirst({
+                where: (users, { eq }) => eq(users.id, user.id),
+                with: {
+                    member: {
+                        columns: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            phone: true,
+                        },
+                    },
+                },
+            });
+
+
+            if (!userData) {
+                throw new APIError("BAD_REQUEST", {
+                    message: "User not found",
+                });
+            }
+
+            const { member, ...rest } = userData;
+            if (!member) {
+                throw new APIError("BAD_REQUEST", {
+                    message: "User not found",
+                });
+            }
+
+
+            return {
+                session: {
+                    ...session,
+                },
+                user: {
+                    ...rest,
+                    memberId: member?.id,
+                    email: member?.email,
+                    firstName: member?.firstName,
+                    lastName: member?.lastName,
+                    phone: member?.phone,
+                },
+            };
+        }),
     ],
 });
