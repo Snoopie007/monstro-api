@@ -105,7 +105,7 @@ export async function AuthMiddleware(app: Elysia) {
         const auth = headers['authorization'];
         const isMobile = headers['x-mobile'] === 'true';
 
-        if (isMobile) {
+        if (!isMobile) {
             return status(401, {
                 message: "Unauthorized",
                 code: "UNAUTHORIZED"
