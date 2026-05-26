@@ -37,3 +37,4 @@ export * from "./verifications";
 // Export all relations from the relations file
 export * from "./relations";
 export * from "./wallets";
+export * from "./WebsiteContents";

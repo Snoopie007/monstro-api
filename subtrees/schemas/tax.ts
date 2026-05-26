@@ -19,7 +19,6 @@ export const taxRates = pgTable("tax_rates", {
     state: text("state").notNull(),
     status: text("status").notNull().default("inactive"),
     inclusive: boolean("inclusive").notNull().default(false),
-    stripeRateId: text("stripe_rate_id"),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),

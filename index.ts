@@ -8,6 +8,7 @@ import {
 } from "./src/routes";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
 import { startOnlineChannel } from "./src/libs/broadcast";
+import { WebRoutes } from "./src/routes/web";
 
 const CORS_CONFIG = {
 	origin: "*",
@@ -74,6 +75,7 @@ app.use(cors(CORS_CONFIG))
 	.group("/api/realtime", (app) =>
 		app.use(realtimeRoutes).use(realtimeHealthRoutes)
 	)
+	.group("/web", (app) => app.use(WebRoutes))
 	.use(PublicRoutes)
 	.use(webhooksRoutes)
 	.listen({

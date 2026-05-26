@@ -8,3 +8,4 @@ export * from "./triggers";
 export * from "./posts";
 export * from "./getCurrency";
 export * from "./fetchPromo";
+export * from "./generatePDF";

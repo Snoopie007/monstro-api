@@ -1,16 +1,16 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
+import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 
-const PublicLocationPromosProps = {
-    params: t.Object({
-        lid: t.String(),
-        code: t.String(),
-    }),
-};
 
-export function publicLocationPromos(app: Elysia) {
-    return app.get('/promos/:code', async ({ params, status }) => {
-        const { lid, code } = params;
+
+export const webCoupon = new Elysia({ prefix: "/coupon" })
+    .use(WebAuthMiddleware)
+    .get('/:code', async ({ params, status, lid }) => {
+        const { code } = params;
+        if (!lid) {
+            return status(401, { message: "No Location ID provided" });
+        }
         try {
             const promo = await db.query.promos.findFirst({
                 where: (p, { eq, and }) => and(eq(p.locationId, lid), eq(p.code, code), eq(p.isActive, true)),
@@ -29,5 +29,8 @@ export function publicLocationPromos(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch coupons" });
         }
-    }, PublicLocationPromosProps);
-}
+    }, {
+        params: t.Object({
+            code: t.String(),
+        }),
+    });

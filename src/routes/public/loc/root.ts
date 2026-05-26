@@ -4,8 +4,6 @@ import { publicLocationPromos } from "./promo";
 import { publicLocationPaymentGateway } from "./PaymentGateway";
 import { publicLocationPlans } from "./plans";
 import { db } from "@/db/db";
-import { publicLocationSchedulesRoutes } from "./schedules";
-
 export const publicLocationRoutes = new Elysia({ prefix: "/loc" })
     .group('/:lid', (app) => {
 
@@ -47,6 +45,5 @@ export const publicLocationRoutes = new Elysia({ prefix: "/loc" })
         app.use(publicLocationPromos)
         app.use(publicLocationPaymentGateway)
         app.use(publicLocationPlans)
-        app.use(publicLocationSchedulesRoutes)
         return app;
     })

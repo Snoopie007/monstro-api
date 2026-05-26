@@ -1,11 +1,17 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
+import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
 
-export function publicLocationPaymentGateway(app: Elysia) {
-    return app.get('/gateway', async ({ params, status }) => {
-        const { lid } = params;
-        try {
 
+export const webGatewaysRoutes = new Elysia()
+    .use(WebAuthMiddleware)
+    .get('/', async ({ status, lid }) => {
+
+        if (!lid) {
+            return status(401, { message: "No Location ID provided" });
+        }
+
+        try {
             const locationState = await db.query.locationState.findFirst({
                 where: (locationState, { eq }) => eq(locationState.locationId, lid),
                 columns: {
@@ -49,11 +55,6 @@ export function publicLocationPaymentGateway(app: Elysia) {
             return status(200, data);
         } catch (error) {
             console.error(error);
-            return status(500, { error: "Failed to get integration" });
+            return status(500, { error: "Failed to fetch products" });
         }
-    }, {
-        params: t.Object({
-            lid: t.String(),
-        }),
     });
-}

@@ -19,7 +19,6 @@ export type SquareChargeOptions = ChargeOptions & {
 
 export class SquarePaymentGateway {
     private _client: SquareClient;
-    private _customerId: string | undefined = undefined;
     constructor(accessToken: string) {
         this._client = new SquareClient({
 
@@ -52,28 +51,29 @@ export class SquarePaymentGateway {
         if (!c.customer) {
             throw new Error("Customer not created");
         }
-        this._customerId = c.customer.id;
         return c.customer;
     }
 
-    async createCard(memberId: string, cardholderName: string, source: string, verificationToken?: string, billingAddress?: Address) {
 
-        if (!this._customerId) {
-            throw new Error("Customer not set");
-        }
+    async createCard(customerId: string, source: string, props: {
+        cardholderName: string;
+        billingAddress?: Address;
+        referenceId: string;
+    }) {
+        const { cardholderName, billingAddress, referenceId } = props;
 
 
         const c = await this._client.cards.create({
             idempotencyKey: this.generateIdempotencyKey(),
             sourceId: source,
             card: {
-                customerId: this._customerId,
+                customerId: customerId,
                 cardholderName: cardholderName,
                 billingAddress: billingAddress ? {
                     ...billingAddress,
                     country: billingAddress.country || "US",
                 } : undefined,
-                referenceId: memberId,
+                referenceId,
             }
         });
         return c.card;

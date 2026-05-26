@@ -107,6 +107,14 @@ export async function AuthMiddleware(app: Elysia) {
     return app.resolve(async ({ headers, status }) => {
         // Get token from Authorization header
         const auth = headers['authorization'];
+        const isMobile = headers['x-mobile'] === 'true';
+        if (!isMobile) {
+            return status(401, {
+                message: "Unauthorized",
+                code: "UNAUTHORIZED"
+            });
+        }
+
 
         if (!auth) {
             console.log('AuthMiddleware: No Authorization header');
@@ -117,7 +125,6 @@ export async function AuthMiddleware(app: Elysia) {
         }
 
         const token = auth.split(" ")[1];
-
         if (!token) {
             console.log('AuthMiddleware: No token in Authorization header');
             return status(401, {
@@ -137,15 +144,19 @@ export async function AuthMiddleware(app: Elysia) {
         }
         const { mid, userId, isServiceRole } = res.data;
 
+
         return {
             memberId: mid,
             userId: userId,
-            isServiceRole: isServiceRole
+            isServiceRole: isServiceRole,
         };
     })
 }
 
-export function AuthXMiddleware(app: Elysia) {
+
+
+
+export async function AuthXMiddleware(app: Elysia) {
     return app.resolve(async ({ headers, status }) => {
 
         const auth = headers['authorization']
@@ -159,6 +170,8 @@ export function AuthXMiddleware(app: Elysia) {
         const token = auth.split(" ")[1];
 
         if (!token) return status(401, error);
+
+
 
         const res = await verifyTokenX(token);
 
