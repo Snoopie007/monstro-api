@@ -16,6 +16,7 @@ import { Elysia } from "elysia";
 import { locationEmail } from "./email";
 import { db } from "@/db/db";
 import { z } from "zod";
+import { locationMercs } from "./mercs";
 const LocationGetProps = {
     params: z.object({
         lid: z.string(),
@@ -67,6 +68,7 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationPass);
         app.use(locationPromos);
         app.use(locationSupport);
+        app.use(locationMercs);
         app.use(locationLeaderboard);
         app.use(locationPurchaseRoutes);
         app.use(locationMigrateRoutes);

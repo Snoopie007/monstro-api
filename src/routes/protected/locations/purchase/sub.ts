@@ -17,6 +17,7 @@ import type { SubscriptionJobData } from "@subtrees/bullmq";
 import Stripe from "stripe";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import { SquareError } from "square";
 
 
 
@@ -31,22 +32,50 @@ export function purchaseSubRoutes(app: Elysia) {
     app.group('/sub', (app) => {
         app.post('/', async ({ params, status, body }) => {
             const { lid } = params;
-            const { priceId, mid, paymentType } = body;
+            const {
+                paymentMethodId,
+                mid,
+                priceId,
+                promoId,
+                paymentType
+            } = body;
+
             try {
 
-                const pricing = await db.query.memberPlanPricing.findFirst({
-                    where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
-                    with: {
-                        plan: true,
-                    },
-                });
+                const [pricing, ml] = await getData(lid, mid, priceId);
+
+                if (!ml) {
+                    return status(404, { error: "Member or location not found" });
+                }
+
 
                 if (!pricing) {
                     return status(404, { error: "Pricing not found" });
                 }
 
-                if (!pricing.interval || !pricing.intervalThreshold) {
-                    return status(400, { error: "Invalid pricing for subscription plan." });
+                const { location, gatewayCustomerId } = ml;
+
+                if (!gatewayCustomerId) {
+                    return status(404, { error: "Gateway customer not linked to this location" });
+                }
+
+                const { taxRates, locationState } = location;
+                const { paymentGatewayId, usagePercent, settings } = locationState;
+                /* Find the payment gateway */
+
+                if (!paymentGatewayId) {
+                    return status(400, { error: "This location does not have a payment gateway set." });
+                }
+
+                const gateway = await db.query.integrations.findFirst({
+                    where: (integration, { eq }) => eq(integration.id, paymentGatewayId),
+                    columns: { accountId: true, accessToken: true, service: true, metadata: true },
+                });
+
+
+                // create subscription
+                if (!pricing.interval || !pricing.intervalThreshold || !pricing.plan) {
+                    throw new Error("Invalid pricing for subscription plan.");
                 }
 
                 const today = new Date();
@@ -65,101 +94,7 @@ export function purchaseSubRoutes(app: Elysia) {
                         interval: pricing.expireInterval,
                     });
                 }
-
                 const classCredits = pricing.plan.classLimitInterval === 'term' ? pricing.plan.totalClassLimit || 0 : 0;
-
-                const [subscription] = await db.insert(memberSubscriptions).values({
-                    startDate: today,
-                    currentPeriodStart: today,
-                    currentPeriodEnd,
-                    locationId: lid,
-                    memberId: mid,
-                    cancelAt,
-                    memberPlanPricingId: pricing.id,
-                    paymentType: paymentType,
-                    classCredits,
-                    status: 'incomplete'
-                }).returning();
-
-                if (!subscription) {
-                    return status(500, { error: "Failed to create subscription" });
-                }
-
-                const { plan, ...rest } = pricing;
-                return status(200, {
-                    ...subscription,
-                    plan: plan,
-                    pricing: rest,
-                    planId: plan.id,
-                });
-            } catch (error) {
-                console.error(error);
-                return status(500, { error: "Failed to checkout" });
-            }
-        }, {
-            ...PurchaseSubProps,
-            body: t.Object({
-                startDate: t.Optional(t.String()),
-                priceId: t.String(),
-                mid: t.String(),
-                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
-            }),
-        })
-        app.post('/checkout', async ({ params, status, body }) => {
-            const { lid } = params;
-            const {
-                paymentMethodId,
-                mid,
-                priceId,
-                memberPlanId,
-                promoId,
-                paymentType
-            } = body;
-
-            try {
-
-                const [sub, pricing, ml] = await getData(lid, mid, priceId, memberPlanId);
-                if (!sub) {
-                    return status(404, { error: "Subscription not found" });
-                }
-                const { member, currentPeriodEnd, currentPeriodStart } = sub;
-
-                if (!ml) {
-                    return status(404, { error: "Member or location not found" });
-                }
-
-                if (!pricing) {
-                    return status(404, { error: "Pricing not found" });
-                }
-
-                if (!pricing.interval || !pricing.intervalThreshold) {
-                    return status(400, { error: "Invalid pricing for subscription plan." });
-                }
-                const { location, gatewayCustomerId } = ml;
-
-                if (!gatewayCustomerId) {
-                    return status(404, { error: "Gateway customer not linked to this location" });
-                }
-
-                const { taxRates, locationState } = location;
-                const { paymentGatewayId, usagePercent, settings } = locationState;
-                /* Find the payment gateway */
-
-                if (!paymentGatewayId) {
-                    return status(400, { error: "This location does not have a payment gateway set." });
-                }
-                const gateway = await db.query.integrations.findFirst({
-                    where: (integration, { eq }) => eq(integration.id, paymentGatewayId),
-                    columns: { accountId: true, accessToken: true, service: true, metadata: true },
-                });
-                if (!gateway || !gateway.accountId || !gateway.accessToken) {
-                    throw new Error("Integration not found");
-                }
-
-
-                /* Calculate the start date */
-                const startDate = new Date(currentPeriodStart);
-
                 /* Find the default tax rate */
                 const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
 
@@ -185,71 +120,109 @@ export function purchaseSubRoutes(app: Elysia) {
 
 
                 const currency = getCurrency(ml.location.country);
-                const [invoice] = await db.insert(memberInvoices).values({
-                    description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
-                    status: "draft",
-                    memberPlanId,
-                    memberId: mid,
-                    locationId: lid,
-                    ...chargeDetails,
-                    forPeriodStart: startDate,
-                    forPeriodEnd: currentPeriodEnd,
-                    currency,
-                    dueDate: startDate,
-                }).returning({
-                    id: memberInvoices.id
+                const sub = await db.transaction(async (tx) => {
+                    if (!gateway || !gateway.accountId || !gateway.accessToken) {
+                        throw new Error("Integration not found");
+                    }
+
+                    const [s] = await tx.insert(memberSubscriptions).values({
+                        startDate: today,
+                        currentPeriodStart: today,
+                        currentPeriodEnd,
+                        locationId: lid,
+                        memberId: mid,
+                        cancelAt,
+                        classCredits,
+                        status: 'incomplete',
+                        paymentType: paymentType,
+                        memberPlanPricingId: pricing.id
+                    }).returning();
+
+                    if (!s) {
+                        throw new Error("Failed to create subscription");
+                    }
+
+                    const [invoice] = await db.insert(memberInvoices).values({
+                        description,
+                        items: [{
+                            name: productName,
+                            quantity: 1,
+                            price: chargeDetails.unitCost,
+                            discount,
+                        }],
+                        status: "draft",
+                        memberPlanId: s.id,
+                        memberId: mid,
+                        locationId: lid,
+                        ...chargeDetails,
+                        forPeriodStart: s.currentPeriodStart,
+                        forPeriodEnd: s.currentPeriodEnd,
+                        currency,
+                        dueDate: s.currentPeriodStart,
+                    }).returning({
+                        id: memberInvoices.id
+                    });
+
+                    if (!invoice) {
+                        tx.rollback();
+                        throw new Error("Failed to create invoice");
+                    }
+
+                    if (gateway.service === "stripe") {
+                        try {
+                            const stripe = new StripePaymentGateway(gateway.accessToken);
+                            await stripe.createCharge(gatewayCustomerId, paymentMethodId, {
+                                ...chargeDetails,
+                                currency,
+                                description,
+                                productName,
+                                metadata: {
+                                    memberPlanId: s.id,
+                                    invoiceId: invoice.id,
+                                    locationId: lid,
+                                    memberId: mid,
+                                },
+                            });
+                        } catch (error) {
+                            console.error(error);
+                            tx.rollback();
+                            throw error;
+                        }
+                    }
+
+                    if (gateway.service === "square") {
+                        try {
+                            const square = new SquarePaymentGateway(gateway.accessToken);
+                            const squareLocationId = gateway.metadata?.squareLocationId;
+                            if (!squareLocationId) {
+                                throw new Error("Square location ID not found");
+                            }
+                            await square.createCharge(gatewayCustomerId, paymentMethodId, {
+                                ...chargeDetails,
+                                currency,
+                                referenceId: `${invoice.id}`,
+                                squareLocationId,
+                                note: `${description}|invId:${invoice.id}|mid:${mid}|lid:${lid}|subId:${s.id}|promoId:${promoId}`,
+                            });
+                        } catch (error) {
+                            console.error(error);
+                            tx.rollback();
+                            throw error;
+                        }
+                    }
+
+                    return s;
                 });
 
-                if (!invoice) {
-                    return status(500, { error: "Failed to create invoice" });
-                }
 
                 /* Process payment */
-
-                if (gateway.service === "stripe") {
-                    const stripe = new StripePaymentGateway(gateway.accessToken);
-                    await stripe.createCharge(gatewayCustomerId, paymentMethodId, {
-                        ...chargeDetails,
-                        currency,
-                        description,
-                        productName,
-                        metadata: {
-                            memberPlanId,
-                            invoiceId: invoice.id,
-                            locationId: lid,
-                            memberId: mid,
-                        },
-                    });
-                }
-
-                if (gateway.service === "square") {
-                    const square = new SquarePaymentGateway(gateway.accessToken);
-                    const squareLocationId = gateway.metadata?.squareLocationId;
-                    if (!squareLocationId) {
-                        throw new Error("Square location ID not found");
-                    }
-                    await square.createCharge(gatewayCustomerId, paymentMethodId, {
-                        ...chargeDetails,
-                        currency,
-                        referenceId: `${invoice.id}`,
-                        squareLocationId,
-                        note: `${description}|invId:${invoice.id}|mid:${mid}|lid:${lid}|subId:${memberPlanId}|promoId:${promoId}`,
-                    });
-                }
-
-
+                const member = ml.member;
                 // Schedule cron or recursive renewal
                 if (pricing.interval && pricing.intervalThreshold) {
-                    const nextBillingDate = new Date(currentPeriodEnd);
+                    const nextBillingDate = new Date(sub.currentPeriodEnd);
                     if (["month", "year"].includes(pricing.interval)) {
                         const payload: SubscriptionJobData = {
-                            sid: memberPlanId,
+                            sid: sub.id,
                             lid: lid,
                             member: {
                                 firstName: member.firstName,
@@ -306,24 +279,25 @@ export function purchaseSubRoutes(app: Elysia) {
 
                 return status(200, { success: true });
             } catch (error) {
-                console.log(error);
+                console.error(error);
                 if (error instanceof Stripe.errors.StripeError) {
                     switch (error.type) {
                         case "StripeCardError":
-                            const paymentIntent = error.payment_intent;
                             return status(400, { error: error.message });
                         default:
                             return status(500, { error: error.message });
                     }
                 }
-                return status(500, { error: "Failed to checkout" });
+                if (error instanceof SquareError) {
+                    return status(400, { error: error.message });
+                }
+                return status(500, { error: "Failed to purchase subscription" });
             }
         }, {
             ...PurchaseSubProps,
             body: t.Object({
                 paymentMethodId: t.String(),
                 priceId: t.String(),
-                memberPlanId: t.String(),
                 mid: t.String(),
                 promoId: t.Optional(t.String()),
                 paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account')),
@@ -338,25 +312,9 @@ export function purchaseSubRoutes(app: Elysia) {
 }
 
 
-async function getData(lid: string, mid: string, priceId: string, memberPlanId: string) {
+async function getData(lid: string, mid: string, priceId: string) {
     return Promise.all([
-        db.query.memberSubscriptions.findFirst({
-            where: (memberSubscription, { eq }) => eq(memberSubscription.id, memberPlanId),
-            columns: {
-                currentPeriodStart: true,
-                currentPeriodEnd: true,
-            },
-            with: {
-                member: {
-                    columns: {
-                        firstName: true,
-                        lastName: true,
-                        userId: true,
-                        email: true,
-                    },
-                },
-            },
-        }),
+
 
         db.query.memberPlanPricing.findFirst({
             where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
@@ -370,6 +328,14 @@ async function getData(lid: string, mid: string, priceId: string, memberPlanId: 
                 eq(memberLocation.locationId, lid)
             ),
             with: {
+                member: {
+                    columns: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
                 location: {
                     columns: {
                         name: true,
@@ -390,6 +356,7 @@ async function getData(lid: string, mid: string, priceId: string, memberPlanId: 
                                 planId: true,
                                 usagePercent: true,
                                 settings: true,
+                                waiverId: true,
                             },
                         },
 
