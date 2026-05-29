@@ -5,11 +5,6 @@ import type { Member, MemberPackage, MemberSubscription } from "./member";
 export type Contract = typeof contractTemplates.$inferSelect & {
     location?: Location;
     planName?: string;
-    memberPlanId?: string;
-    signedContractId?: string;
-    signedContractPdf?: string;
-    pricingId?: string;
-    signedOn?: Date;
 }
 
 export type MemberContract = typeof memberContracts.$inferSelect & {
