@@ -15,9 +15,7 @@ export const memberLocations = pgTable("member_locations", {
     gatewayCustomerId: text("gateway_customer_id").unique(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: false }),
-    waiverId: text("waiver_id").references(() => locations.id, {
-        onDelete: "set null",
-    }),
+    signedWaiverOn: timestamp("signed_waivered_on", { withTimezone: true }),
     onboarded: boolean("onboarded").notNull().default(false),
     profile: jsonb("profile").$type<MemberLocationProfile>(),
     botMetadata: jsonb("bot_metadata").default(sql`'{}'::jsonb`),
