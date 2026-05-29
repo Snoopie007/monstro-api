@@ -18,6 +18,7 @@ import {
 import { contractTemplates } from "./contracts";
 import { locations } from "./locations";
 import { users } from "./users";
+import { memberPlanPricing } from "./MemberPlans";
 
 export const members = pgTable('members', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
@@ -65,6 +66,7 @@ export const memberContracts = pgTable("member_contracts", {
     pdfFilename: text("pdf_filename"),
     signedOn: timestamp("signed_on", { withTimezone: true }),
     memberPlanId: text("member_plan_id"),
+    pricingId: text("pricing_id").references(() => memberPlanPricing.id, { onDelete: "set null" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
