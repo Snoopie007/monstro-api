@@ -6,30 +6,19 @@ import { Elysia, t } from "elysia";
 import { z } from "zod";
 
 import {
-    calculateThresholdDate,
     calculateChargeDetails,
     triggerPurchase,
     getCurrency,
     fetchPromoDiscount,
+    calculateThresholdDate,
 } from "@/utils";
 
 import Stripe from "stripe";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { ErrorCategory, SquareError, ErrorCode } from "square";
+import { SquareError } from "square";
+import { handleSquareError, handleStripeError } from "@/utils";
 
-
-
-const CreatePackageBody = {
-    params: t.Object({
-        lid: t.String(),
-    }),
-    body: t.Object({
-        priceId: t.String(),
-        mid: t.String(),
-        paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
-    })
-};
 
 
 
@@ -50,62 +39,8 @@ const PurchasePkgProps = {
 export function purchasePkgRoutes(app: Elysia) {
 
     app.group('/pkg', (app) => {
+
         app.post('/', async ({ params, status, body }) => {
-
-            const { lid } = params;
-            const { priceId, mid, paymentType } = body;
-            try {
-
-                const pricing = await db.query.memberPlanPricing.findFirst({
-                    where: (mpp, { eq }) => eq(mpp.id, priceId),
-                    with: {
-                        plan: true,
-                    },
-                });
-
-                if (!pricing) {
-                    return status(404, { error: "Pricing not found" });
-                }
-
-                const today = new Date();
-                let endDate: Date | undefined = undefined;
-                if (pricing.expireThreshold && pricing.expireInterval) {
-                    endDate = calculateThresholdDate({
-                        startDate: today,
-                        threshold: pricing.expireThreshold,
-                        interval: pricing.expireInterval,
-                    });
-                }
-
-
-                const [pkg] = await db.insert(memberPackages).values({
-                    locationId: lid,
-                    memberId: mid,
-                    totalClassLimit: pricing.plan?.totalClassLimit ?? 0,
-                    memberPlanPricingId: pricing.id,
-                    paymentType: paymentType,
-                    startDate: today,
-                    expireDate: endDate,
-                    status: "incomplete",
-                }).returning();
-
-                if (!pkg) {
-                    return status(500, { error: "Failed to create package" });
-                }
-                const { plan, ...rest } = pricing;
-
-                return status(200, {
-                    ...pkg,
-                    pricing: rest,
-                    plan: plan,
-                    planId: plan.id,
-                });
-            } catch (error) {
-                console.error(error);
-                return status(500, { error: "Failed to checkout" });
-            }
-        }, CreatePackageBody)
-        app.post('/checkout', async ({ params, status, body }) => {
             const { lid } = params;
             const {
                 paymentMethodId,
@@ -143,9 +78,7 @@ export function purchasePkgRoutes(app: Elysia) {
                     where: (integration, { eq }) => eq(integration.id, paymentGatewayId),
                     columns: { accountId: true, accessToken: true, service: true, metadata: true },
                 });
-                if (!gateway || !gateway.accountId || !gateway.accessToken) {
-                    throw new Error("Integration not found");
-                }
+
 
                 const discount = await fetchPromoDiscount(promoId, pricing);
                 const taxRate = taxRates.find((taxRate) => taxRate.isDefault) || taxRates[0];
@@ -166,88 +99,102 @@ export function purchasePkgRoutes(app: Elysia) {
 
                 const now = new Date();
                 const currency = getCurrency(ml.location.country);
-                const [invoice] = await db.insert(memberInvoices).values({
-                    ...chargeDetails,
-                    description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
-                    memberId: mid,
-                    locationId: lid,
-                    memberPlanId,
-                    paymentType,
-                    currency,
-                    dueDate: now,
-                }).returning({ id: memberInvoices.id });
 
-
-                if (!invoice) {
-                    return status(500, { error: "Failed to create invoice" });
+                const today = new Date();
+                let endDate: Date | undefined = undefined;
+                if (pricing.expireThreshold && pricing.expireInterval) {
+                    endDate = calculateThresholdDate({
+                        startDate: today,
+                        threshold: pricing.expireThreshold,
+                        interval: pricing.expireInterval,
+                    });
                 }
+                await db.transaction(async (tx) => {
+                    if (!gateway || !gateway.accountId || !gateway.accessToken) {
+                        throw new Error("Integration not found");
+                    }
+                    await tx.insert(memberPackages).values({
+                        locationId: lid,
+                        memberId: mid,
+                        totalClassLimit: pricing.plan?.totalClassLimit ?? 0,
+                        memberPlanPricingId: pricing.id,
+                        paymentType: paymentType,
+                        startDate: today,
+                        expireDate: endDate,
+                        status: "incomplete",
+                    });
+
+                    const [invoice] = await tx.insert(memberInvoices).values({
+                        ...chargeDetails,
+                        description,
+                        items: [{
+                            name: productName,
+                            quantity: 1,
+                            price: chargeDetails.unitCost,
+                            discount,
+                        }],
+                        memberId: mid,
+                        locationId: lid,
+                        memberPlanId,
+                        paymentType,
+                        currency,
+                        dueDate: now,
+                    }).returning({ id: memberInvoices.id });
 
 
-                if (gateway.service === "stripe") {
-                    try {
+                    if (!invoice) {
+                        tx.rollback();
+                        throw new Error("Failed to create invoice");
+                    }
 
-                        const stripe = new StripePaymentGateway(gateway.accessToken);
 
-                        await stripe.createCharge(gatewayCustomerId, paymentMethodId, {
-                            ...chargeDetails,
-                            currency,
-                            description,
-                            productName,
-                            metadata: {
-                                memberPlanId,
-                                invoiceId: invoice.id,
-                                locationId: lid,
-                                memberId: mid,
-                            },
-                        });
-                    } catch (error) {
-                        if (error instanceof Stripe.errors.StripeCardError) {
+                    if (gateway.service === "stripe") {
+                        try {
 
-                            switch (error.decline_code) {
-                                case "insufficient_funds":
-                                    return status(400, { error: "Insufficient funds" });
-                                case "card_declined":
-                                    return status(400, { error: "Card declined" });
-                                case "card_expired":
-                                    return status(400, { error: "Card expired" });
-                                case "card_not_supported":
-                                    return status(400, { error: "Card not supported" });
-                                default:
-                                    return status(400, { error: "Failed to charge payment" });
+                            const stripe = new StripePaymentGateway(gateway.accessToken);
+
+                            await stripe.createCharge(gatewayCustomerId, paymentMethodId, {
+                                ...chargeDetails,
+                                currency,
+                                description,
+                                productName,
+                                metadata: {
+                                    memberPlanId,
+                                    invoiceId: invoice.id,
+                                    locationId: lid,
+                                    memberId: mid,
+                                },
+                            });
+                        } catch (error) {
+                            console.error(error);
+                            throw error;
+                        }
+                    }
+
+                    if (gateway.service === "square") {
+                        try {
+                            const square = new SquarePaymentGateway(gateway.accessToken);
+                            const squareLocationId = gateway.metadata?.squareLocationId;
+                            if (!squareLocationId) {
+                                throw new Error("Square location ID not found");
                             }
+
+                            await square.createCharge(gatewayCustomerId, paymentMethodId, {
+                                total: chargeDetails.total,
+                                feesAmount: chargeDetails.feesAmount,
+                                currency,
+                                note: `${productName}|${description}|invId:${invoice.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`,
+                                referenceId: `${invoice.id}`,
+                                squareLocationId: squareLocationId,
+                            });
+                        } catch (error) {
+                            console.error(error);
+                            throw error;
                         }
-                        throw new Error("Failed to charge payment");
                     }
-                }
+                })
 
-                if (gateway.service === "square") {
-                    try {
-                        const square = new SquarePaymentGateway(gateway.accessToken);
-                        const squareLocationId = gateway.metadata?.squareLocationId;
-                        if (!squareLocationId) {
-                            throw new Error("Square location ID not found");
-                        }
 
-                        await square.createCharge(gatewayCustomerId, paymentMethodId, {
-                            total: chargeDetails.total,
-                            feesAmount: chargeDetails.feesAmount,
-                            currency,
-                            note: `${productName}|${description}|invId:${invoice.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`,
-                            referenceId: `${invoice.id}`,
-                            squareLocationId: squareLocationId,
-                        });
-                    } catch (error) {
-                        console.error(error);
-
-                        throw new Error("Failed to charge payment");
-                    }
-                }
                 triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {
                     if (a) {
                         broadcastAchievement(ml.member.userId, a)
@@ -263,53 +210,17 @@ export function purchasePkgRoutes(app: Elysia) {
                     return status(400, { error: message });
                 }
                 if (error instanceof Stripe.errors.StripeError) {
-                    const lastError = error.payment_intent?.last_payment_error;
-                    const declineCode = lastError?.decline_code;
-                    if (declineCode) {
-                        return status(400, { error: error.message });
-                    }
+                    const { code, message } = handleStripeError({ error });
                     return status(500, { error: error.message });
                 }
                 return status(500, { error: "Failed to checkout" });
             }
         }, PurchasePkgProps);
-
-
-
         return app;
     });
 
     return app
 
-}
-
-
-function handleSquareError(error: SquareError): { code: string, message: string } {
-    if (error.errors.length > 0) {
-        const squareError = error.errors[0];
-        if (!squareError) {
-            return { code: "UNKNOWN_ERROR", message: error.message };
-        }
-        if (squareError?.category === ErrorCategory.PaymentMethodError) {
-            switch (squareError?.code) {
-                case ErrorCode.InsufficientFunds:
-                case ErrorCode.PaymentLimitExceeded:
-                    return { code: "INSUFFICIENT_FUNDS", message: 'insufficient funds' };
-
-                case ErrorCode.InvalidCard:
-                case ErrorCode.GenericDecline:
-                case ErrorCode.CardDeclined:
-                    return { code: "CARD_DECLINED", message: 'card declined' };
-                case ErrorCode.ExpirationFailure:
-                    return { code: "EXPIRATION_FAILURE", message: 'card expired' };
-                case ErrorCode.CardNotSupported:
-                    return { code: "CARD_NOT_SUPPORTED", message: 'card not supported' };
-                default:
-                    return { code: "UNKNOWN_ERROR", message: 'unable to process payment' };
-            }
-        }
-    }
-    return { code: "UNKNOWN_ERROR", message: 'unable to process payment' };
 }
 
 
@@ -349,6 +260,7 @@ async function fetchData(lid: string, mid: string, priceId: string) {
                                 usagePercent: true,
                                 paymentGatewayId: true,
                                 settings: true,
+                                waiverId: true,
                             },
                         },
                     },
@@ -365,6 +277,7 @@ async function fetchData(lid: string, mid: string, priceId: string) {
             columns: {
                 gatewayCustomerId: true,
                 status: true,
+                signedWaiverId: true,
             },
         })
     ]);

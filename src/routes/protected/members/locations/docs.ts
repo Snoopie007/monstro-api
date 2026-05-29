@@ -64,137 +64,63 @@ async function generatePDF({ memberContractId, member, template, pricing }: Gene
 
 }
 
+type Variables = {
+	pricing?: {
+		id: string;
+		name: string;
+		price: number;
+		interval: string | null;
+		intervalThreshold: number | null;
+	};
+	plan?: {
+		id: string;
+		name: string;
+	};
+}
+
 export function mlDocsRoutes(app: Elysia) {
 	app.get("/docs", async ({ params, status }) => {
 		const { mid, lid } = params;
 		try {
 
 
-			const pkgs = await db.query.memberPackages.findMany({
-				where: (pkg, { eq, and }) => and(eq(pkg.memberId, mid), eq(pkg.locationId, lid)),
+			const memberDocs = await db.query.memberContracts.findMany({
+				where: (mc, { eq, and }) => and(eq(mc.memberId, mid), eq(mc.locationId, lid)),
 				with: {
-					contract: {
+					contractTemplate: {
 						columns: {
 							id: true,
-							pdfFilename: true,
-							created: true,
-							updated: true,
+							title: true,
+							type: true,
 						},
 					},
-				},
-				columns: {
-					id: true,
-					memberContractId: true,
-					memberPlanPricingId: true,
-				},
-			});
-			const subs = await db.query.memberSubscriptions.findMany({
-				where: (sub, { eq, and }) => and(eq(sub.memberId, mid), eq(sub.locationId, lid)),
-				with: {
-					contract: {
+					pricing: {
 						columns: {
 							id: true,
-							pdfFilename: true,
-							created: true,
-							updated: true,
-						},
-					},
-				},
-				columns: {
-					id: true,
-					memberContractId: true,
-					memberPlanPricingId: true,
-				},
-			});
-			// Improved: Avoids errors due to missing memberPlanPricingId in the selected columns.
-			const pricingIds = new Set([
-				...subs
-					.map((sub) => sub.memberPlanPricingId)
-					.filter((id): id is string => typeof id === "string"),
-				...pkgs
-					.map((pkg) => pkg.memberPlanPricingId)
-					.filter((id): id is string => typeof id === "string"),
-			]);
-
-			const pricings = await db.query.memberPlanPricing.findMany({
-				where: (p, { inArray }) => inArray(p.id, Array.from(pricingIds)),
-				with: {
-					plan: {
-						columns: {
-							id: true,
-							contractId: true,
 							name: true,
+							price: true,
+						},
+						with: {
+							plan: {
+								columns: {
+									id: true,
+									name: true,
+								},
+							},
 						},
 					},
 				},
 			});
 
-			const docIds: string[] = Array.from(
-				new Set(pricings.map((p) => p.plan.contractId)
-					.filter((id): id is string => !!id)
-					.map((id) => id.toString())
-				)
-			);
 
-			const documents = await db.query.contractTemplates.findMany({
-				where: (ct, { inArray, or, eq, and, not }) =>
-					or(
-						and(inArray(ct.id, docIds), eq(ct.isDraft, false)),
-						and(eq(ct.type, "waiver"), eq(ct.isDraft, false))
-					),
-				columns: {
-					id: true,
-					title: true,
-					type: true,
-				},
-			});
 
-			const extendedDocuments: Partial<Contract>[] = [];
-
-			// Ensure type correctness: only spread contract if found and all required fields are present
-			subs.forEach((sub) => {
-
-				const pricing = pricings.find((p) => p.id === sub.memberPlanPricingId);
-				const contractId = pricing?.plan.contractId;
-				if (!contractId) return;
-				const contract = documents.find((d) => d.id === contractId);
-				if (!contract) return;
-				const { contract: signedContract } = sub;
-				extendedDocuments.push({
-					...contract,
-					signedOn: signedContract ? signedContract.created : undefined,
-					signedContractId: signedContract ? signedContract.id : undefined,
-					signedContractPdf: signedContract ? signedContract.pdfFilename || undefined : undefined,
-					pricingId: sub.memberPlanPricingId,
-					planName: pricing?.plan?.name,
-					memberPlanId: sub.id,
-				});
-			});
-
-			pkgs.forEach((pkg) => {
-				const pricing = pricings.find((p) => p.id === pkg.memberPlanPricingId);
-				const contractId = pricing?.plan.contractId;
-				if (!contractId) return;
-				const contract = documents.find((d) => d.id === contractId);
-				if (!contract) return;
-				const { contract: signedContract } = pkg;
-				extendedDocuments.push({
-					...contract,
-					signedOn: signedContract ? signedContract.created : undefined,
-					signedContractId: signedContract ? signedContract.id : undefined,
-					signedContractPdf: signedContract ? signedContract.pdfFilename || undefined : undefined,
-					pricingId: pkg.memberPlanPricingId,
-					planName: pricing?.plan?.name,
-					memberPlanId: pkg.id,
-				});
-			});
-
-			return status(200, extendedDocuments);
+			return status(200, memberDocs);
 		} catch (err) {
 			console.log(err);
 			return status(500, { error: err });
 		}
 	}, DocsProps)
+
 	app.post("/docs", async ({ params, status, body }) => {
 		const { lid, mid } = params;
 		const { priceId, memberPlanId, signature, templateId } = body;
@@ -251,7 +177,7 @@ export function mlDocsRoutes(app: Elysia) {
 			}, 1000);
 
 			if (!memberPlanId) {
-				await db.update(memberLocations).set({ waiverId: c.id }).where(
+				await db.update(memberLocations).set({ signedWaiverId: c.id }).where(
 					and(
 						eq(memberLocations.locationId, lid),
 						eq(memberLocations.memberId, mid)

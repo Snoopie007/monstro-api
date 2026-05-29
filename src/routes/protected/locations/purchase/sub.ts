@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions } from "@subtrees/schemas";
+import { memberContracts, memberInvoices, memberSubscriptions } from "@subtrees/schemas";
 
 import { Elysia, t } from "elysia";
 import { z } from "zod";
@@ -18,6 +18,7 @@ import Stripe from "stripe";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { SquareError } from "square";
+import { handleSquareError } from "@/utils";
 
 
 
@@ -140,6 +141,25 @@ export function purchaseSubRoutes(app: Elysia) {
 
                     if (!s) {
                         throw new Error("Failed to create subscription");
+                    }
+
+                    if (pricing.plan.contractId) {
+                        await tx.insert(memberContracts).values({
+                            memberId: mid,
+                            templateId: pricing.plan.contractId,
+                            locationId: lid,
+                            memberPlanId: s.id,
+                        })
+
+                    }
+
+                    if (locationState.waiverId && !ml.signedWaiverId) {
+                        await tx.insert(memberContracts).values({
+                            memberId: mid,
+                            templateId: locationState.waiverId,
+                            locationId: lid,
+                            memberPlanId: s.id,
+                        })
                     }
 
                     const [invoice] = await db.insert(memberInvoices).values({
@@ -289,7 +309,8 @@ export function purchaseSubRoutes(app: Elysia) {
                     }
                 }
                 if (error instanceof SquareError) {
-                    return status(400, { error: error.message });
+                    const { code, message } = handleSquareError(error);
+                    return status(400, { error: message });
                 }
                 return status(500, { error: "Failed to purchase subscription" });
             }
@@ -365,6 +386,7 @@ async function getData(lid: string, mid: string, priceId: string) {
             },
             columns: {
                 gatewayCustomerId: true,
+                signedWaiverId: true,
                 onboarded: true,
             },
         })

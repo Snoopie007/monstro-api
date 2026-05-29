@@ -9,3 +9,4 @@ export * from "./posts";
 export * from "./getCurrency";
 export * from "./fetchPromo";
 export * from "./generatePDF";
+export * from "./paymentErrors";
