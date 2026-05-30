@@ -193,6 +193,10 @@ export const memberContractsRelations = relations(memberContracts, ({ one }) => 
 		fields: [memberContracts.templateId],
 		references: [contractTemplates.id],
 	}),
+	pricing: one(memberPlanPricing, {
+		fields: [memberContracts.pricingId],
+		references: [memberPlanPricing.id],
+	}),
 	location: one(locations, {
 		fields: [memberContracts.locationId],
 		references: [locations.id],
