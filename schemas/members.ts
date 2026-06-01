@@ -18,7 +18,7 @@ import {
 import { contractTemplates } from "./contracts";
 import { locations } from "./locations";
 import { users } from "./users";
-import { memberPlanPricing } from "./MemberPlans";
+import { memberPlanPricing } from "./MemberPlan";
 
 export const members = pgTable('members', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
