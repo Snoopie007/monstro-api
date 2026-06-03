@@ -1052,10 +1052,6 @@ export const productVariantsRelations = relations(productVariants, ({ one, many 
 		fields: [productVariants.productId],
 		references: [products.id],
 	}),
-	order: one(orders, {
-		fields: [productVariants.productId],
-		references: [orders.id],
-	}),
 	images: many(productImages),
 }));
 
@@ -1074,6 +1070,5 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
 		fields: [orders.memberId],
 		references: [members.id],
 	}),
-	products: many(productVariants),
 }));
 
