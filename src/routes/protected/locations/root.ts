@@ -6,7 +6,7 @@ import { locationReservations } from "./reservations";
 import { locationRewards } from "./rewards";
 import { locationSessions } from "./sessions";
 import { locationSupport } from "./support";
-import { locationPurchaseRoutes } from "./purchase";
+import { locationPurchaseRoutes } from "./enroll";
 import { locationLeaderboard } from "./leaderboard";
 import { onboardingRoutes } from "./onboarding";
 import { locationPromos } from "./promos";

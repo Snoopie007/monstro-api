@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
 import type { Elysia } from "elysia";
 import { z } from "zod";
+import { locationMercsCheckout } from "./checkout";
 
 const LocationMercsProps = {
     params: z.object({
@@ -9,7 +10,7 @@ const LocationMercsProps = {
 };
 
 export async function locationMercs(app: Elysia) {
-    return app.get('/mercs', async ({ params, status }) => {
+    app.get('/mercs', async ({ params, status }) => {
         const { lid } = params;
 
         try {
@@ -26,5 +27,10 @@ export async function locationMercs(app: Elysia) {
             console.error(error);
             return status(500, "Failed to fetch achievements");
         }
-    }, LocationMercsProps)
+    }, LocationMercsProps);
+
+    app.use(locationMercsCheckout);
+
+    return app;
+
 }

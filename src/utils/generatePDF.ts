@@ -1,5 +1,5 @@
 import type { Contract } from "@subtrees/types/contract";
-import type { MemberPlanPricing } from "@subtrees/types";
+import type { MemberPlanPricing, Member } from "@subtrees/types";
 import { db } from "@/db/db";
 import { memberContracts } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
@@ -10,20 +10,13 @@ const s3 = new S3Bucket();
 
 interface GeneratePDFProps {
     memberContractId: string;
-    member: {
-        id: string;
-        firstName: string;
-        lastName: string;
-        email: string;
-        phone: string;
-    };
+    member: Member;
     template: Contract;
-    pricing: MemberPlanPricing | undefined;
+    pricing: MemberPlanPricing | null;
 }
 
 export async function generatePDF({ memberContractId, member, template, pricing }: GeneratePDFProps) {
     try {
-        console.log("Generating PDF for member contract:", memberContractId);
         const location = template.location;
 
         const variables: Record<string, any> = {
