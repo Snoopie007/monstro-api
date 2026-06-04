@@ -5,7 +5,6 @@ import { handleEnrollPackage, mapEnrollPkgError } from "@/handlers/enroll";
 const EnrollPkgBody = t.Object({
     paymentMethodId: t.String(),
     priceId: t.String(),
-    memberPlanId: t.String(),
     promoId: t.Optional(t.Nullable(t.String())),
     paymentType: t.Union([
         t.Literal("card"),
@@ -23,12 +22,12 @@ export const webEnrollPkgRoutes = new Elysia({ prefix: "/enroll" })
             return status(401, { message: "Unauthorized" });
         }
 
+        const mid = session.user.memberId;
         try {
             const result = await handleEnrollPackage({
                 lid,
-                mid: session.user.memberId,
+                mid,
                 priceId: body.priceId,
-                memberPlanId: body.memberPlanId,
                 paymentMethodId: body.paymentMethodId,
                 paymentType: body.paymentType,
                 promoId: body.promoId,

@@ -22,10 +22,12 @@ export const webEnrollSubRoutes = new Elysia({ prefix: "/enroll" })
             return status(401, { message: "Unauthorized" });
         }
 
+        const mid = session.user.memberId;
+
         try {
             const result = await handleEnrollSubscription({
                 lid,
-                mid: session.user.memberId,
+                mid,
                 priceId: body.priceId,
                 paymentMethodId: body.paymentMethodId,
                 paymentType: body.paymentType,

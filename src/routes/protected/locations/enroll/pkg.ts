@@ -8,7 +8,6 @@ const EnrollPkgProps = {
     body: t.Object({
         paymentMethodId: t.String(),
         priceId: t.String(),
-        memberPlanId: t.String(),
         mid: t.String(),
         paymentType: t.Union([
             t.Literal("card"),
@@ -26,7 +25,6 @@ export function purchasePkgRoutes(app: Elysia) {
                 paymentMethodId,
                 mid,
                 priceId,
-                memberPlanId,
                 promoId,
                 paymentType,
             } = body;
@@ -36,17 +34,11 @@ export function purchasePkgRoutes(app: Elysia) {
                     lid,
                     mid,
                     priceId,
-                    memberPlanId,
                     paymentMethodId,
                     paymentType,
                     promoId,
                 });
-                if (result.ok) {
-                    return status(200, {
-                        requiredContractIds: result.requiredContractIds,
-                    });
-                }
-                return status(500, { error: "Failed to enroll package" });
+                return status(200, result);
             } catch (error) {
                 return mapEnrollPkgError(status, error);
             }

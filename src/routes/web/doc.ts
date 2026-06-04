@@ -51,7 +51,6 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
             return status(401, { message: "No session provided" });
         }
         const { user } = session;
-        const mid = user?.memberId;
         try {
             const doc = await db.query.memberContracts.findFirst({
                 where: (m, { eq }) => eq(m.id, docId),

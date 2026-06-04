@@ -15,7 +15,6 @@ export type EnrollPkgInput = {
     lid: string;
     mid: string;
     priceId: string;
-    memberPlanId: string;
     paymentMethodId: string;
     paymentType: PaymentType;
     promoId?: string | null;
@@ -26,7 +25,6 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
         lid,
         mid,
         priceId,
-        memberPlanId,
         paymentMethodId,
         paymentType,
         promoId,
@@ -69,7 +67,7 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
         });
     }
 
-    let requiredContractIds: string[] = [];
+    let unsignedDocs: string[] = [];
     await db.transaction(async (tx) => {
         const [p] = await tx.insert(memberPackages).values({
             locationId: lid,
@@ -98,7 +96,7 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
             }],
             memberId: mid,
             locationId: lid,
-            memberPlanId,
+            memberPlanId: p.id,
             paymentType,
             currency,
             dueDate: new Date(),
@@ -118,7 +116,7 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
                     description,
                     productName,
                     metadata: {
-                        memberPlanId,
+                        memberPlanId: p.id,
                         invoiceId: invoice.id,
                         locationId: lid,
                         memberId: mid,
@@ -160,7 +158,7 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
                 id: memberContracts.id,
             });
             if (c) {
-                requiredContractIds.push(c.id);
+                unsignedDocs.push(c.id);
             }
         }
 
@@ -174,7 +172,7 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
                 id: memberContracts.id,
             });
             if (w) {
-                requiredContractIds.push(w.id);
+                unsignedDocs.push(w.id);
             }
         }
     });
@@ -187,5 +185,5 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
         console.error("Error triggering purchase:", err);
     });
 
-    return { ok: true, requiredContractIds };
+    return { ok: true, };
 }

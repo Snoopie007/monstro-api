@@ -1,8 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
-import { interpolate } from "@/utils";
-
 
 
 export const webPlansRoutes = new Elysia({ prefix: "/plans" })

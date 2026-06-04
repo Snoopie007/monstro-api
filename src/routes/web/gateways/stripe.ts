@@ -171,7 +171,7 @@ export const webStripeGateway = new Elysia()
             let stripeCustomerId = ml.gatewayCustomerId;
             if (!stripeCustomerId) {
                 const { member } = ml;
-                const newCustomer = await stripe.createCustomer({
+                const c = await stripe.createCustomer({
                     email: member.email,
                     phone: member.phone,
                     firstName: member.firstName,
@@ -179,13 +179,18 @@ export const webStripeGateway = new Elysia()
                 }, undefined, {
                     memberId: mid,
                 });
-                await db.update(memberLocations).set({
-                    gatewayCustomerId: newCustomer.id,
-                }).where(and(
-                    eq(memberLocations.memberId, mid),
-                    eq(memberLocations.locationId, lid)
-                ));
-                stripeCustomerId = newCustomer.id;
+                await db.insert(memberLocations).values({
+                    memberId: mid,
+                    locationId: lid,
+                    gatewayCustomerId: c.id,
+                }).onConflictDoUpdate({
+                    target: [memberLocations.memberId, memberLocations.locationId],
+                    set: {
+                        gatewayCustomerId: c.id,
+                        updated: new Date(),
+                    },
+                });
+                stripeCustomerId = c.id;
             }
 
             const setupIntent = await stripe.createSetupIntent(stripeCustomerId);

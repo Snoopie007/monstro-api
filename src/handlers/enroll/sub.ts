@@ -80,7 +80,7 @@ export async function handleEnrollSubscription(input: EnrollSubInput) {
     const productName = pricing.name;
     const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
 
-    let requiredContractIds: string[] = [];
+    let unsignedDocs: string[] = [];
     const sub = await db.transaction(async (tx) => {
         const [s] = await tx.insert(memberSubscriptions).values({
             startDate: today,
@@ -181,7 +181,7 @@ export async function handleEnrollSubscription(input: EnrollSubInput) {
                 id: memberContracts.id,
             });
             if (c) {
-                requiredContractIds.push(c.id);
+                unsignedDocs.push(c.id);
             }
         }
 
@@ -195,7 +195,7 @@ export async function handleEnrollSubscription(input: EnrollSubInput) {
                 id: memberContracts.id,
             });
             if (w) {
-                requiredContractIds.push(w.id);
+                unsignedDocs.push(w.id);
             }
         }
         return s;
@@ -259,5 +259,5 @@ export async function handleEnrollSubscription(input: EnrollSubInput) {
         }
     });
 
-    return { ok: true, requiredContractIds };
+    return { ok: true, unsignedDocs };
 }
