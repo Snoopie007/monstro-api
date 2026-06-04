@@ -34,3 +34,5 @@ export * from "./user";
 export * from "./wallet";
 export * from "./vendor";
 export * from "./MemberPass";
+export * from "./mercs";
+export * from "./product";

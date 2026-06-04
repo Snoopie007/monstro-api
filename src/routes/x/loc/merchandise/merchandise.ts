@@ -3,6 +3,7 @@ import { products, productVariants } from "@subtrees/schemas";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";
+import type { ProductSize } from "@subtrees/types";
 
 type MerchandiseAccessContext = {
 	merchandiseLocationAccess: { allowed: boolean };
@@ -45,11 +46,10 @@ export async function merchandiseRoutes(app: Elysia) {
 				productId: body.productId,
 				sku: body.sku,
 				color: body.color ?? null,
-				size: body.size ?? null,
+				size: (body.size ?? null) as ProductSize | null,
 				price: body.price,
 				stock: body.stock ?? 0,
 				active: body.active ?? true,
-				metadata: body.metadata ?? {},
 			}).returning();
 
 			return status(201, { variant });
@@ -77,11 +77,10 @@ export async function merchandiseRoutes(app: Elysia) {
 			const [updated] = await db.update(productVariants).set({
 				...(body.sku !== undefined ? { sku: body.sku } : {}),
 				...(body.color !== undefined ? { color: body.color } : {}),
-				...(body.size !== undefined ? { size: body.size } : {}),
+				...(body.size !== undefined ? { size: body.size as ProductSize | null } : {}),
 				...(body.price !== undefined ? { price: body.price } : {}),
 				...(body.stock !== undefined ? { stock: body.stock } : {}),
 				...(body.active !== undefined ? { active: body.active } : {}),
-				...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
 				updated: new Date(),
 			}).where(and(
 				eq(productVariants.id, variantId),

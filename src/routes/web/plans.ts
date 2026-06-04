@@ -3,7 +3,6 @@ import { Elysia } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 
 
-
 export const webPlansRoutes = new Elysia({ prefix: "/plans" })
     .use(WebAuthMiddleware)
     .get('/', async ({ status, lid }) => {
@@ -69,4 +68,27 @@ export const webPlansRoutes = new Elysia({ prefix: "/plans" })
             console.error(error);
             return status(500, { error: "Failed to fetch products" });
         }
+    })
+    .group('/:planId', (app) => {
+        app.get('/docs', async ({ params, status }) => {
+            const { planId } = params;
+            try {
+                const plan = await db.query.memberPlans.findFirst({
+                    where: (plans, { eq }) => eq(plans.id, planId),
+                    with: {
+                        contract: true,
+                    },
+                });
+                if (!plan) {
+                    return status(404, { error: "Plan not found" });
+                }
+
+                return status(200, {});
+            } catch (error) {
+                console.error(error);
+                return status(500, { error: "Failed to fetch plan" });
+            }
+
+        });
+        return app;
     });

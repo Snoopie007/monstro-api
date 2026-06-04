@@ -11,6 +11,8 @@ export const webGatewaysRoutes = new Elysia()
             return status(401, { message: "No Location ID provided" });
         }
 
+
+
         try {
             const locationState = await db.query.locationState.findFirst({
                 where: (locationState, { eq }) => eq(locationState.locationId, lid),
@@ -21,6 +23,7 @@ export const webGatewaysRoutes = new Elysia()
             if (!locationState) {
                 return status(404, { error: "Location state not found" });
             }
+
 
             const paymentGatewayId = locationState.paymentGatewayId;
 

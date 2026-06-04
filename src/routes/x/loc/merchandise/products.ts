@@ -44,10 +44,11 @@ export async function productRoutes(app: Elysia) {
 				locationId: lid,
 				slug,
 				name: body.name,
-				description: body.description ?? null,
+				category: body.category ?? "merchandise",
+				subCategory: body.subCategory ?? "general",
+				description: body.description ?? "",
 				brand: body.brand ?? null,
 				active: body.active ?? true,
-				metadata: body.metadata ?? {},
 			}).returning();
 
 			return status(201, { product });
@@ -55,6 +56,8 @@ export async function productRoutes(app: Elysia) {
 			body: t.Object({
 				slug: t.Optional(t.String()),
 				name: t.String(),
+				category: t.Optional(t.String()),
+				subCategory: t.Optional(t.String()),
 				description: t.Optional(t.Nullable(t.String())),
 				brand: t.Optional(t.Nullable(t.String())),
 				active: t.Optional(t.Boolean()),
@@ -85,10 +88,9 @@ export async function productRoutes(app: Elysia) {
 			const [product] = await db.update(products).set({
 				...(body.slug !== undefined ? { slug: body.slug } : {}),
 				...(body.name !== undefined ? { name: body.name } : {}),
-				...(body.description !== undefined ? { description: body.description } : {}),
+				...(body.description !== undefined ? { description: body.description ?? "" } : {}),
 				...(body.brand !== undefined ? { brand: body.brand } : {}),
 				...(body.active !== undefined ? { active: body.active } : {}),
-				...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
 				updated: new Date(),
 			}).where(and(eq(products.id, productId), eq(products.locationId, lid))).returning();
 

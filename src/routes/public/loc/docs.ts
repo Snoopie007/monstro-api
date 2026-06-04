@@ -11,7 +11,6 @@ const DocsProps = {
 	}),
 	query: z.object({
 		mid: z.string(),
-		pricingId: z.string().optional(),
 		theme: z.string().optional(),
 	}),
 };
@@ -21,64 +20,81 @@ const DocsProps = {
 export const publicDocsRoutes = new Elysia({ prefix: "/docs" })
 	.get("/:did/:type", async ({ params, set, query }) => {
 		const { did, type } = params;
-		const { theme, mid, pricingId } = query;
+		const { theme, mid } = query;
 
 
 		try {
 
-			const ct = await db.query.contractTemplates.findFirst({
-				where: (c, { eq, and }) => and(eq(c.id, did), eq(c.type, type)),
+			const memberContract = await db.query.memberContracts.findFirst({
+				where: (mc, { eq }) => eq(mc.id, did),
 				with: {
 					location: true,
+					pricing: {
+						columns: {
+							id: true,
+							name: true,
+							price: true,
+							interval: true,
+							intervalThreshold: true,
+						},
+						with: {
+							plan: {
+								columns: {
+									id: true,
+									name: true,
+								},
+							},
+						},
+					},
+					contractTemplate: {
+						columns: {
+							id: true,
+							title: true,
+							content: true,
+						},
+					},
 				},
-			});
-
+			})
 
 			const member = await db.query.members.findFirst({
 				where: (member, { eq }) => eq(member.id, mid!),
 			});
-
-			if (!ct || !member) {
+			if (!memberContract || !member) {
 				set.status = 404;
 				set.headers["Content-Type"] = "text/html; charset=utf-8";
 				return NotFoundPageTemplate(theme);
 			}
 
+			const { contractTemplate, location, pricing } = memberContract;
+
+
+
 			let variables: Record<string, any> = {
-				location: ct.location,
+				location: location,
 				member: {
 					...member,
 					name: member.firstName + " " + member.lastName,
 				},
 			};
 
-			if (type === "contract" && pricingId) {
-				const pricing = await db.query.memberPlanPricing.findFirst({
-					where: (p, { eq }) => eq(p.id, pricingId!),
-					with: {
-						plan: true,
-					},
-				});
-
-				if (pricing) {
-					const { plan, ...rest } = pricing;
-					variables["plan"] = {
-						name: plan.name,
-						price: rest.price,
-						interval: `${rest.interval} ${rest.intervalThreshold}`,
-						pricingName: rest.name,
-					};
-				}
+			if (type === "contract" && pricing) {
+				const { plan, ...rest } = pricing;
+				variables["plan"] = {
+					name: plan.name,
+					price: rest.price,
+					interval: `${rest.interval} ${rest.intervalThreshold}`,
+					pricingName: rest.name,
+				};
 			}
 
 			const interpolatedContent = interpolate(
-				ct?.content || "",
+				contractTemplate?.content || "",
 				variables
 			);
 
 			// Return HTML similar to the original Next.js page
 			const html = DocumentPageTemplate(
-				ct?.title || (type === "contract" ? "Contract" : "Waiver"),
+				contractTemplate?.title || (type === "contract" ? "Contract" : "Waiver"),
 				interpolatedContent,
 				theme
 			);

@@ -10,7 +10,6 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
-    getCurrency,
 } from "@/utils";
 import { isToday } from "date-fns";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
@@ -185,7 +184,7 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(500, { error: "Failed to create subscription" });
             }
 
-            const currency = getCurrency(location.country);
+            const currency = locationState.currency;
             if (isToday(currentPeriodStart)) {
                 const productName = pricing.name;
                 const description = `Payment for ${pricing.name}`;

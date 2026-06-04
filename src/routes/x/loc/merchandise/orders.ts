@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
 import {
 	members,
-	orderItems,
 	orders,
 	productImages,
 	productVariants,
@@ -10,27 +9,13 @@ import { and, desc, eq } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { adjustStock, capturePayment } from "./shared";
+import type { OrderLineItem } from "@subtrees/types";
 
 type MerchandiseAccessContext = {
 	merchandiseLocationAccess: { allowed: boolean };
 };
 
 export async function orderRoutes(app: Elysia) {
-	const itemsWithImages = {
-		with: {
-			variant: {
-				with: {
-					product: {
-						with: {
-							images: {
-								orderBy: [productImages.sortOrder],
-							},
-						},
-					},
-				},
-			},
-		},
-	};
 	return app
 		.get("/orders", async (ctx) => {
 			const { params, status, merchandiseLocationAccess } = ctx as typeof ctx & MerchandiseAccessContext;
@@ -42,7 +27,6 @@ export async function orderRoutes(app: Elysia) {
 				orderBy: [desc(orders.created)],
 				with: {
 					member: true,
-					items: itemsWithImages,
 				},
 			});
 
@@ -57,7 +41,6 @@ export async function orderRoutes(app: Elysia) {
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
 				with: {
 					member: true,
-					items: itemsWithImages,
 				},
 			});
 
@@ -75,12 +58,7 @@ export async function orderRoutes(app: Elysia) {
 			});
 			if (!member) return status(404, { error: "Member not found" });
 
-			const itemRows: Array<{
-				variantId: string;
-				quantity: number;
-				unitPrice: number;
-				productSnapshot: Record<string, unknown>;
-			}> = [];
+			const itemRows: OrderLineItem[] = [];
 			let subtotal = 0;
 
 			for (const item of body.items) {
@@ -113,18 +91,11 @@ export async function orderRoutes(app: Elysia) {
 				itemRows.push({
 					variantId: item.variantId,
 					quantity: item.quantity,
-					unitPrice,
-					productSnapshot: {
-						productName: variant.product?.name ?? "",
-						productSlug: variant.product?.slug ?? "",
-						sku: variant.sku,
-						color: variant.color,
-						size: variant.size,
-						imageUrl: variant.product?.images?.[0]?.imageUrl ?? null,
-					},
-	});
-}
-
+					unitCost: unitPrice,
+					productName: variant.product?.name ?? "",
+					tax: 0,
+				});
+			}
 
 			const tax = body.tax ?? 0;
 			const shipping = body.shipping ?? 0;
@@ -134,26 +105,17 @@ export async function orderRoutes(app: Elysia) {
 			const [order] = await db.insert(orders).values({
 				locationId: lid,
 				memberId: body.memberId,
+				trackingNumber: Math.floor(1000000000 + Math.random() * 9000000000),
 				status: "pending",
 				subtotal,
 				shipping,
 				tax,
 				total,
-				currency,
-				metadata: body.notes ? { notes: body.notes } : {},
+				items: itemRows,
+				processingFee: 0,
 			}).returning();
 
 			if (!order) return status(500, { error: "Failed to create order" });
-
-			await db.insert(orderItems).values(
-				itemRows.map((row) => ({
-					orderId: order.id,
-					variantId: row.variantId,
-					quantity: row.quantity,
-					unitPrice: row.unitPrice,
-					productSnapshot: row.productSnapshot,
-				}))
-			);
 
 			await adjustStock(order.id, -1);
 
@@ -165,7 +127,6 @@ export async function orderRoutes(app: Elysia) {
 				where: eq(orders.id, order.id),
 				with: {
 					member: true,
-					items: itemsWithImages,
 				},
 			});
 
@@ -192,16 +153,17 @@ export async function orderRoutes(app: Elysia) {
 
 			const order = await db.query.orders.findFirst({
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
-				columns: { id: true, status: true, memberId: true, subtotal: true, shipping: true, tax: true, total: true, currency: true },
+				columns: { id: true, status: true, memberId: true, subtotal: true, shipping: true, tax: true, total: true },
 			});
 
 			if (!order) return status(404, { error: "Order not found" });
 			if (order.status !== "pending") return status(409, { error: "Order is not pending" });
+			if (!order.memberId) return status(409, { error: "Order is missing member" });
 
 			if (body.paymentMethodId) {
 				await capturePayment(
 					order.id, lid, order.memberId, body.paymentMethodId,
-					order.subtotal, order.shipping, order.tax, order.total, order.currency
+					order.subtotal, order.shipping, order.tax, order.total, "USD"
 				);
 			} else {
 				await db.update(orders).set({ status: "paid", updated: new Date() })
@@ -212,7 +174,6 @@ export async function orderRoutes(app: Elysia) {
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
 				with: {
 					member: true,
-					items: itemsWithImages,
 				},
 			});
 
@@ -231,11 +192,9 @@ export async function orderRoutes(app: Elysia) {
 
 			const [order] = await db.update(orders).set({
 				...(body.status !== undefined ? { status: body.status } : {}),
-				...(body.transactionId !== undefined ? { transactionId: body.transactionId } : {}),
-				...(body.paymentIntentId !== undefined ? { paymentIntentId: body.paymentIntentId } : {}),
-				...(body.shippingAddress !== undefined ? { shippingAddress: body.shippingAddress } : {}),
-				...(body.billingAddress !== undefined ? { billingAddress: body.billingAddress } : {}),
-				...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
+				...(body.paymentIntentId !== undefined ? { gatewayPaymentId: body.paymentIntentId } : {}),
+				...(body.shippingAddress !== undefined ? { shippingAddress: body.shippingAddress as any } : {}),
+				...(body.billingAddress !== undefined ? { billingAddress: body.billingAddress as any } : {}),
 				updated: new Date(),
 			}).where(and(eq(orders.id, orderId), eq(orders.locationId, lid))).returning();
 

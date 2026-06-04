@@ -107,7 +107,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             const [newMemberLocation] = await db.insert(memberLocations).values({
                 memberId: mid,
                 locationId: lid,
-                status: "incomplete",
+                status: "active",
             }).onConflictDoNothing().returning();
 
 

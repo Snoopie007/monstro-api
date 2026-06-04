@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
 import { triggerNewMember } from "@/utils";
-import { memberLocations, memberPasses } from "@subtrees/schemas";
+import { AchievementTriggers } from "@subtrees/constants/data";
+import { achievements, memberLocations, memberPasses, memberPlans } from "@subtrees/schemas";
 import type { MemberPass } from "@subtrees/types";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
@@ -15,6 +16,31 @@ const OnboardingProps = {
 };
 export function onboardingRoutes(app: Elysia) {
     app.group('/onboard', (app) => {
+        app.get('/check', async ({ params, status }) => {
+            const { lid } = params;
+            try {
+                const [hasAchievement] = await db
+                    .select({ id: achievements.id })
+                    .from(achievements)
+                    .where(and(
+                        eq(achievements.locationId, lid),
+                        eq(achievements.triggerId, AchievementTriggers.SIGNUP),
+                    ))
+                    .limit(1);
+
+
+                return status(200, {
+                    hasAchievement: hasAchievement ? true : false,
+                });
+            } catch (error) {
+                console.error(error);
+                return status(500, { error: 'Internal server error' });
+            }
+        }, {
+            params: t.Object({
+                lid: t.String(),
+            }),
+        });
         app.post('/', async ({ body, params, status }) => {
             const { lid } = params;
             const { mid } = body;

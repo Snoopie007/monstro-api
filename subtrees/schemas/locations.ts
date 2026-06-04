@@ -8,11 +8,11 @@ import {
 	timestamp,
 	uuid,
 } from "drizzle-orm/pg-core";
-import type { LocationSettings } from "../types";
+import type { GMBLocation, LocationSettings } from "../types";
 import type { Currency } from "../types/currency";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import { vendors } from "./vendors";
 import { integrations } from "./integrations";
+import { vendors } from "./vendors";
 export const locations = pgTable("locations", {
 	id: uuid("id")
 		.primaryKey()
@@ -53,6 +53,7 @@ export const locationState = pgTable("location_state", {
 	startDate: timestamp("start_date", { withTimezone: true }),
 	settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
 	usagePercent: integer("usage_percent").notNull().default(0),
+	gmb: jsonb("gmb").$type<GMBLocation>(),
 	premiumSupport: boolean("premium_support").notNull().default(false),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

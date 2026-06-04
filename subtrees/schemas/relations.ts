@@ -7,7 +7,6 @@ import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
-import { orderItems, orders, productImages, products, productVariants } from "./ecommerce";
 import {
 	locations, locationState,
 } from "./locations";
@@ -51,6 +50,8 @@ import { supportConversations, supportMessages } from "./SupportConversations";
 import { supportTriggers } from "./SupportTriggers";
 import { vendorLevels } from "./VendorProgress";
 import { vendorReferrals } from "./VendorReferrals";
+import { orders } from "./orders";
+import { productImages, productVariants, products } from "./products";
 
 // ============================================================================
 // USER RELATIONS
@@ -192,6 +193,10 @@ export const memberContractsRelations = relations(memberContracts, ({ one }) => 
 		fields: [memberContracts.templateId],
 		references: [contractTemplates.id],
 	}),
+	pricing: one(memberPlanPricing, {
+		fields: [memberContracts.pricingId],
+		references: [memberPlanPricing.id],
+	}),
 	location: one(locations, {
 		fields: [memberContracts.locationId],
 		references: [locations.id],
@@ -308,8 +313,6 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		references: [wallets.locationId],
 	}),
 	taxRates: many(taxRates),
-	products: many(products),
-	orders: many(orders),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -705,61 +708,6 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		fields: [transactions.invoiceId],
 		references: [memberInvoices.id],
 	}),
-	order: one(orders, {
-		fields: [transactions.id],
-		references: [orders.transactionId],
-	}),
-}));
-
-export const productsRelations = relations(products, ({ many, one }) => ({
-	location: one(locations, {
-		fields: [products.locationId],
-		references: [locations.id],
-	}),
-	images: many(productImages),
-	variants: many(productVariants),
-}));
-
-export const productImagesRelations = relations(productImages, ({ one }) => ({
-	product: one(products, {
-		fields: [productImages.productId],
-		references: [products.id],
-	}),
-}));
-
-export const productVariantsRelations = relations(productVariants, ({ many, one }) => ({
-	product: one(products, {
-		fields: [productVariants.productId],
-		references: [products.id],
-	}),
-	orderItems: many(orderItems),
-}));
-
-export const ordersRelations = relations(orders, ({ many, one }) => ({
-	location: one(locations, {
-		fields: [orders.locationId],
-		references: [locations.id],
-	}),
-	member: one(members, {
-		fields: [orders.memberId],
-		references: [members.id],
-	}),
-	transaction: one(transactions, {
-		fields: [orders.transactionId],
-		references: [transactions.id],
-	}),
-	items: many(orderItems),
-}));
-
-export const orderItemsRelations = relations(orderItems, ({ one }) => ({
-	order: one(orders, {
-		fields: [orderItems.orderId],
-		references: [orders.id],
-	}),
-	variant: one(productVariants, {
-		fields: [orderItems.variantId],
-		references: [productVariants.id],
-	}),
 }));
 
 
@@ -1087,5 +1035,39 @@ export const supportTriggersRelations = relations(supportTriggers, ({ one }) => 
 	assistant: one(supportAssistants, {
 		fields: [supportTriggers.supportAssistantId],
 		references: [supportAssistants.id],
+	}),
+}));
+
+
+// ============================================================================
+// PRODUCT RELATIONS
+// ============================================================================
+export const productsRelations = relations(products, ({ one, many }) => ({
+	variants: many(productVariants),
+	images: many(productImages),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
+	product: one(products, {
+		fields: [productVariants.productId],
+		references: [products.id],
+	}),
+	images: many(productImages),
+}));
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+	product: one(products, {
+		fields: [productImages.productId],
+		references: [products.id],
+	}),
+}));
+
+// ============================================================================
+// ORDER RELATIONS
+// ============================================================================
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+	member: one(members, {
+		fields: [orders.memberId],
+		references: [members.id],
 	}),
 }));

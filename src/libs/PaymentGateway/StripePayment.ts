@@ -3,7 +3,6 @@ import type { ChargeOptions, Customer } from "./PaymentGateway";
 import type { PaymentType } from "@subtrees/types";
 
 const BASE_MONSTRO_X_URL = 'https://m.monstro-x.com';
-const isProd = process.env.BUN_ENV === "production";
 const STRIPE_API_VERSION = '2026-03-25.dahlia';
 
 
@@ -25,6 +24,15 @@ export type StripeChargeOptions = ChargeOptions & {
     authorizeOnly?: boolean;
     metadata?: Record<string, any>;
 };
+
+
+export type StripeOrderOptions = ChargeOptions & {
+    customerId: string;
+    paymentMethodId: string;
+    metadata?: Record<string, any>;
+    currency: string;
+}
+
 
 export class StripePaymentGateway {
 
@@ -180,7 +188,7 @@ export class StripePaymentGateway {
             payment_method_types: ['card', 'us_bank_account'],
             customer: customerId,
             amount: total,
-            currency: currency || "usd",
+            currency,
             amount_details: {
                 line_items: [{
                     product_name: productName || "",
@@ -215,6 +223,23 @@ export class StripePaymentGateway {
             }
             throw new Error("Failed to charge payment");
         }
+    }
+
+    async createOrder(customerId: string, paymentMethodId: string, options: StripeOrderOptions) {
+        const { total, currency, metadata, feesAmount } = options || {};
+        const option: Stripe.PaymentIntentCreateParams = {
+            customer: customerId,
+            amount: total,
+            payment_method: paymentMethodId,
+            application_fee_amount: feesAmount,
+            currency: currency,
+            confirm: true,
+            capture_method: "automatic",
+            return_url: `${BASE_MONSTRO_X_URL}/account/location/${metadata?.lid}/purchase/confirm`,
+            description: `Payment for order ${metadata?.orderId}`,
+            metadata: metadata || undefined,
+        }
+        return this._client.paymentIntents.create(option);
     }
 
     async createRefund(paymentIntentId: string, amount: number, currency: string) {

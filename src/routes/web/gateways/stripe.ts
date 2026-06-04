@@ -20,7 +20,6 @@ export const webStripeGateway = new Elysia()
         if (!session) {
             return status(401, { error: "Unauthorized" });
         }
-        console.log(session)
         try {
             const member = await db.query.members.findFirst({
                 where: (member, { eq }) => eq(member.userId, session.user.id),
@@ -120,7 +119,7 @@ export const webStripeGateway = new Elysia()
         if (!session) {
             return status(401, { error: "Unauthorized" });
         }
-        const { mid } = params;
+        const mid = session.user.memberId;
         const { ephemeralKey } = query;
         try {
             const ml = await db.query.memberLocations.findFirst({
@@ -172,7 +171,7 @@ export const webStripeGateway = new Elysia()
             let stripeCustomerId = ml.gatewayCustomerId;
             if (!stripeCustomerId) {
                 const { member } = ml;
-                const newCustomer = await stripe.createCustomer({
+                const c = await stripe.createCustomer({
                     email: member.email,
                     phone: member.phone,
                     firstName: member.firstName,
@@ -180,13 +179,18 @@ export const webStripeGateway = new Elysia()
                 }, undefined, {
                     memberId: mid,
                 });
-                await db.update(memberLocations).set({
-                    gatewayCustomerId: newCustomer.id,
-                }).where(and(
-                    eq(memberLocations.memberId, mid),
-                    eq(memberLocations.locationId, lid)
-                ));
-                stripeCustomerId = newCustomer.id;
+                await db.insert(memberLocations).values({
+                    memberId: mid,
+                    locationId: lid,
+                    gatewayCustomerId: c.id,
+                }).onConflictDoUpdate({
+                    target: [memberLocations.memberId, memberLocations.locationId],
+                    set: {
+                        gatewayCustomerId: c.id,
+                        updated: new Date(),
+                    },
+                });
+                stripeCustomerId = c.id;
             }
 
             const setupIntent = await stripe.createSetupIntent(stripeCustomerId);
@@ -208,21 +212,18 @@ export const webStripeGateway = new Elysia()
             return status(500, { error: err })
         }
     }, {
-        params: t.Object({
-            mid: t.String(),
-        }),
         query: t.Object({
             ephemeralKey: t.Optional(t.Boolean()),
         }),
     })
-    .post("stripe", async ({ status, body, params, lid, session }) => {
+    .post("stripe", async ({ status, body, lid, session }) => {
         if (!lid) {
             return status(401, { error: "Unauthorized" });
         }
         if (!session) {
             return status(401, { error: "Unauthorized" });
         }
-        const { mid } = params;
+        const mid = session.user.memberId;
         const { userAgent, secret } = body;
         // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
         const setupIntentId = secret.split('_secret_')[0];
@@ -290,9 +291,6 @@ export const webStripeGateway = new Elysia()
             return status(500, { error: err })
         }
     }, {
-        params: t.Object({
-            mid: t.String(),
-        }),
         body: t.Object({
             userAgent: t.Optional(t.String()),
             secret: t.String(),

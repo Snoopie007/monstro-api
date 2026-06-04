@@ -166,13 +166,7 @@ export const auth = betterAuth({
 
                         if (member && ctx && ctx.path === "/callback/:id") {
                             const additionalData = await getOAuthState();
-                            if (additionalData?.migrateId) {
-                                // Handle migration logic
-                                await db.update(migrateMembers).set({
-                                    memberId: member.id,
-                                    viewedOn: new Date(),
-                                }).where(eq(migrateMembers.id, additionalData.migrateId));
-                            }
+                            if (additionalData?.locationId) { }
                         }
 
 

@@ -1,12 +1,12 @@
 import type { PaymentType, ChargeDetails } from "@subtrees/types";
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
 
-const STRIPE_BILLING_FEE = 0.7;
-const STRIPE_FEE_PERCENT = 2.9;
-const STRIPE_FEE_AMOUNT = 0.3;
-const STRIPE_BANK_FEE = 0.8;
+const GATEWAY_BILLING_FEE = 0.7;
+const GATEWAY_FEE_PERCENT = 2.9;
+const GATEWAY_FEE_AMOUNT = 30;
+const GATEWAY_BANK_FEE = 0.8;
 
-export function calculateStripeFeeAmount(
+export function calculateGatewayFeeAmount(
 	amount: number,
 	paymentType: PaymentType,
 	isRecurring?: boolean,
@@ -14,14 +14,14 @@ export function calculateStripeFeeAmount(
 	if (amount <= 0) return 0;
 
 	if (paymentType === "us_bank_account") {
-		return Math.ceil(amount * (STRIPE_BANK_FEE / 100));
+		return Math.ceil(amount * (GATEWAY_BANK_FEE / 100));
 	}
 
 	const percentage = isRecurring
-		? STRIPE_BILLING_FEE + STRIPE_FEE_PERCENT
-		: STRIPE_FEE_PERCENT;
+		? GATEWAY_BILLING_FEE + GATEWAY_FEE_PERCENT
+		: GATEWAY_FEE_PERCENT;
 
-	const fees = Math.ceil(amount * (percentage / 100)) + STRIPE_FEE_AMOUNT * 100;
+	const fees = Math.ceil(amount * (percentage / 100)) + GATEWAY_FEE_AMOUNT;
 	const feeOnStripeFees = Math.ceil(fees * (percentage / 100));
 
 	return fees + feeOnStripeFees;
@@ -61,7 +61,7 @@ export function calculateChargeDetails(
 	if (usagePercent > 0) {
 		feesAmount = Math.floor((total * usagePercent) / 100);
 	}
-	const stripeFee = calculateStripeFeeAmount(
+	const gatewayFee = calculateGatewayFeeAmount(
 		total,
 		paymentType,
 		isRecurring || false,
@@ -69,7 +69,7 @@ export function calculateChargeDetails(
 
 
 	if (passOnFees) {
-		const fees = feesAmount + stripeFee;
+		const fees = feesAmount + gatewayFee;
 		total += fees;
 		price += fees;
 	}
@@ -82,6 +82,7 @@ export function calculateChargeDetails(
 		feesAmount: feesAmount,
 	};
 }
+
 
 export interface ThresholdDateParams {
 	startDate: Date;
@@ -107,4 +108,3 @@ export function calculateThresholdDate({
 			return startDate;
 	}
 }
-

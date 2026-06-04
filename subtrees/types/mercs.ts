@@ -1,0 +1,10 @@
+import { productImages, products, productVariants } from "../schemas/products";
+
+export type MercImage = typeof productImages.$inferSelect;
+
+export type MercVariant = typeof productVariants.$inferSelect;
+
+export type Merc = typeof products.$inferSelect & {
+    variants: MercVariant[];
+    images?: MercImage[];
+};

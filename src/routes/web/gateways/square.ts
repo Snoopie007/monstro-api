@@ -150,12 +150,17 @@ export const webSquareGateway = new Elysia()
                     const customer = await square.createCustomer({
                         ...ml.member,
                     });
-                    await db.update(memberLocations).set({
+                    await db.insert(memberLocations).values({
+                        memberId: mid,
+                        locationId: lid,
                         gatewayCustomerId: customer.id,
-                    }).where(and(
-                        eq(memberLocations.memberId, mid),
-                        eq(memberLocations.locationId, lid)
-                    ));
+                    }).onConflictDoUpdate({
+                        target: [memberLocations.memberId, memberLocations.locationId],
+                        set: {
+                            gatewayCustomerId: customer.id,
+                            updated: new Date(),
+                        },
+                    });
                     customerId = customer.id;
                 } catch (err) {
                     console.log(err);

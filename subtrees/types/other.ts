@@ -24,3 +24,18 @@ export type Address = {
     postalCode: string
     country: string
 }
+
+export type GMBLocation = {
+    name: string;
+    title?: string;
+    websiteUri?: string;
+    accountName?: string;
+    reviewParent?: string;
+    storefrontAddress?: {
+        addressLines?: string[];
+        locality?: string;
+        administrativeArea?: string;
+        postalCode?: string;
+        regionCode?: string;
+    };
+};
