@@ -21,4 +21,6 @@ export type OrderLineItem = {
     discount?: number;
     productName: string;
     tax: number;
+    sku?: string | null;
+    imageUrl?: string | null;
 }
