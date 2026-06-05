@@ -216,83 +216,83 @@ export const webStripeGateway = new Elysia()
             ephemeralKey: t.Optional(t.Boolean()),
         }),
     })
-    .post("stripe", async ({ status, body, lid, session }) => {
-        if (!lid) {
-            return status(401, { error: "Unauthorized" });
-        }
-        if (!session) {
-            return status(401, { error: "Unauthorized" });
-        }
-        const mid = session.user.memberId;
-        const { userAgent, secret } = body;
-        // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
-        const setupIntentId = secret.split('_secret_')[0];
-        if (!setupIntentId) {
-            return status(400, { error: "Setup intent ID is required" })
-        }
-        try {
+// .post("stripe", async ({ status, body, lid, session }) => {
+//     if (!lid) {
+//         return status(401, { error: "Unauthorized" });
+//     }
+//     if (!session) {
+//         return status(401, { error: "Unauthorized" });
+//     }
+//     const mid = session.user.memberId;
+//     const { userAgent, secret } = body;
+//     // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
+//     const setupIntentId = secret.split('_secret_')[0];
+//     if (!setupIntentId) {
+//         return status(400, { error: "Setup intent ID is required" })
+//     }
+//     try {
 
-            const stripeIntegration = await db.query.integrations.findFirst({
-                where: (integration, { eq, and }) => and(
-                    eq(integration.locationId, lid),
-                    eq(integration.service, "stripe")
-                ),
-                columns: {
-                    accountId: true,
-                    accessToken: true,
-                },
-            });
+//         const stripeIntegration = await db.query.integrations.findFirst({
+//             where: (integration, { eq, and }) => and(
+//                 eq(integration.locationId, lid),
+//                 eq(integration.service, "stripe")
+//             ),
+//             columns: {
+//                 accountId: true,
+//                 accessToken: true,
+//             },
+//         });
 
-            if (!stripeIntegration || !stripeIntegration.accountId || !stripeIntegration.accessToken) {
-                return status(404, { error: "Stripe integration not found" });
-            }
+//         if (!stripeIntegration || !stripeIntegration.accountId || !stripeIntegration.accessToken) {
+//             return status(404, { error: "Stripe integration not found" });
+//         }
 
-            // const isTestMember = member.email === 'mtest@yahoo.com';
-            const stripe = new StripePaymentGateway(stripeIntegration.accessToken);
-
-
-            const setupIntent = await stripe.getSetupIntent(setupIntentId);
+//         // const isTestMember = member.email === 'mtest@yahoo.com';
+//         const stripe = new StripePaymentGateway(stripeIntegration.accessToken);
 
 
-            if (setupIntent.status === 'succeeded') {
-                // Save the payment method to your database
-                const paymentMethod = setupIntent.payment_method as Stripe.PaymentMethod;
+//         const setupIntent = await stripe.getSetupIntent(setupIntentId);
 
-                const mappedPaymentMethod: PaymentMethod = {
-                    id: paymentMethod.id,
-                    source: 'stripe',
-                    type: paymentMethod.type as PaymentType,
-                    isDefault: false,
-                    card: undefined,
-                    usBankAccount: undefined,
-                };
-                if (paymentMethod.type === 'card' && paymentMethod.card) {
-                    mappedPaymentMethod.card = {
-                        brand: paymentMethod.card.brand,
-                        last4: paymentMethod.card.last4,
-                        expMonth: paymentMethod.card.exp_month,
-                        expYear: paymentMethod.card.exp_year,
-                    };
-                }
-                if (paymentMethod.type === 'us_bank_account' && paymentMethod.us_bank_account) {
-                    mappedPaymentMethod.usBankAccount = {
-                        bankName: paymentMethod.us_bank_account.bank_name,
-                        last4: paymentMethod.us_bank_account.last4,
-                        accountType: paymentMethod.us_bank_account.account_type,
-                    };
-                }
-                return status(200, mappedPaymentMethod);
-            } else {
-                return status(400, { error: 'Setup intent not succeeded' });
-            }
 
-        } catch (err) {
-            console.log(err)
-            return status(500, { error: err })
-        }
-    }, {
-        body: t.Object({
-            userAgent: t.Optional(t.String()),
-            secret: t.String(),
-        }),
-    })
+//         if (setupIntent.status === 'succeeded') {
+//             // Save the payment method to your database
+//             const paymentMethod = setupIntent.payment_method as Stripe.PaymentMethod;
+
+//             const mappedPaymentMethod: PaymentMethod = {
+//                 id: paymentMethod.id,
+//                 source: 'stripe',
+//                 type: paymentMethod.type as PaymentType,
+//                 isDefault: false,
+//                 card: undefined,
+//                 usBankAccount: undefined,
+//             };
+//             if (paymentMethod.type === 'card' && paymentMethod.card) {
+//                 mappedPaymentMethod.card = {
+//                     brand: paymentMethod.card.brand,
+//                     last4: paymentMethod.card.last4,
+//                     expMonth: paymentMethod.card.exp_month,
+//                     expYear: paymentMethod.card.exp_year,
+//                 };
+//             }
+//             if (paymentMethod.type === 'us_bank_account' && paymentMethod.us_bank_account) {
+//                 mappedPaymentMethod.usBankAccount = {
+//                     bankName: paymentMethod.us_bank_account.bank_name,
+//                     last4: paymentMethod.us_bank_account.last4,
+//                     accountType: paymentMethod.us_bank_account.account_type,
+//                 };
+//             }
+//             return status(200, mappedPaymentMethod);
+//         } else {
+//             return status(400, { error: 'Setup intent not succeeded' });
+//         }
+
+//     } catch (err) {
+//         console.log(err)
+//         return status(500, { error: err })
+//     }
+// }, {
+//     body: t.Object({
+//         userAgent: t.Optional(t.String()),
+//         secret: t.String(),
+//     }),
+// })

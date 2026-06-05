@@ -1,6 +1,5 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { and, eq } from "drizzle-orm";
 import type { PaymentMethod } from "@subtrees/types";
 import { memberLocations } from "@subtrees/schemas";
 import { SquarePaymentGateway } from "@/libs/PaymentGateway/SquarePayment";
@@ -38,6 +37,7 @@ export const webSquareGateway = new Elysia()
                 return status(200, []);
             }
 
+
             const squareGateway = await db.query.integrations.findFirst({
                 where: (i, { eq, and }) => and(
                     eq(i.locationId, lid),
@@ -47,8 +47,13 @@ export const webSquareGateway = new Elysia()
                     accountId: true,
                     accessToken: true,
                     metadata: true,
+                    expires: true,
                 },
             });
+
+            if (squareGateway?.expires && squareGateway.expires < Date.now()) {
+                console.error("Square integration expired");
+            }
 
 
 

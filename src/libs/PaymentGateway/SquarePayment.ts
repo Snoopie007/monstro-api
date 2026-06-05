@@ -45,7 +45,6 @@ export class SquarePaymentGateway {
                 locality: customer.address?.city || "",
                 administrativeDistrictLevel1: customer.address?.state || "",
             },
-
         });
 
         if (!c.customer) {

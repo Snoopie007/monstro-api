@@ -16,6 +16,7 @@ export const promos = pgTable("promos", {
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     isActive: boolean("is_active").notNull().default(true),
     allowedPlans: text("allowed_plans").array(),
+    forOrders: boolean("for_orders").notNull().default(false),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

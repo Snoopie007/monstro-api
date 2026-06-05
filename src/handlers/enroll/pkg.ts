@@ -185,5 +185,5 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
         console.error("Error triggering purchase:", err);
     });
 
-    return { ok: true, };
+    return { ok: true, unsignedDocs };
 }

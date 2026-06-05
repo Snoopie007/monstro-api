@@ -5,12 +5,12 @@ import { handleMercCheckout, mapMercCheckoutError } from "@/handlers/merc";
 export function locationMercsCheckout(app: Elysia) {
     return app.post("/mercs/checkout", async ({ params, status, body }) => {
         const { lid } = params;
-        const { items, promoId, paymentMethodId, memberId } = body;
+        const { items, promoId, paymentMethodId, mid } = body;
 
         try {
             const order = await handleMercCheckout({
                 lid,
-                mid: memberId,
+                mid,
                 items,
                 paymentMethodId,
                 promoId,
@@ -24,7 +24,7 @@ export function locationMercsCheckout(app: Elysia) {
             lid: t.String(),
         }),
         body: t.Object({
-            memberId: t.String(),
+            mid: t.String(),
             items: t.Array(t.Object({
                 variantId: t.String(),
                 quantity: t.Number(),

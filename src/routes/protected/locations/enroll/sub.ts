@@ -17,7 +17,7 @@ const EnrollSubProps = {
     }),
 };
 
-export function purchaseSubRoutes(app: Elysia) {
+export function subEnrollRoutes(app: Elysia) {
     app.group("/sub", (app) => {
         app.post("/", async ({ params, status, body }) => {
             const { lid } = params;

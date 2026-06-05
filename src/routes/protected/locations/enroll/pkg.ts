@@ -17,7 +17,7 @@ const EnrollPkgProps = {
     }),
 };
 
-export function purchasePkgRoutes(app: Elysia) {
+export function pkgEnrollRoutes(app: Elysia) {
     app.group("/pkg", (app) => {
         app.post("/", async ({ params, status, body }) => {
             const { lid } = params;
