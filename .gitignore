@@ -50,3 +50,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .env.development.local
 
 supabase/seed.sql
+src/scripts**
+scripts**
+.env.scripts
+tmp**
