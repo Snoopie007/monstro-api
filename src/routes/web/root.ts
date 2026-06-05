@@ -11,7 +11,7 @@ import { webContentRoutes } from "./content";
 import { webGHLRoutes } from "./ghl";
 import { webEnrollRoutes } from "./enroll";
 import { webCouponRoutes } from "./coupon";
-const ACCEPTED_METHODS = ["GET", "POST"];
+const ACCEPTED_METHODS = ["GET", "POST", "PATCH"];
 
 export const WebRoutes = new Elysia()
     .all('/*', ({ request, status }) => {

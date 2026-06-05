@@ -1,4 +1,4 @@
-import type { productImages, productVariants, products } from "@subtrees/schemas/products";
+import type { productImages, productVariants, products } from "@subtrees/schemas/ecommerce";
 import type { Location } from "./location";
 
 export type ProductSize = "XS" | "S" | "M" | "L" | "XL" | "XXL";
@@ -21,4 +21,6 @@ export type OrderLineItem = {
     discount?: number;
     productName: string;
     tax: number;
+    sku?: string | null;
+    imageUrl?: string | null;
 }

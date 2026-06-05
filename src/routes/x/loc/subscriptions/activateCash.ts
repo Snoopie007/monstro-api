@@ -95,12 +95,6 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                         subTotal: sub.pricing.price,
                         tax: 0,
                         currency: currency || "usd",
-                        items: [{
-                            name: sub.pricing.name,
-                            amount: sub.pricing.price,
-                            quantity: 1,
-                            tax: 0,
-                        }],
                     });
                 }
             }

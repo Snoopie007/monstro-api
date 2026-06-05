@@ -61,7 +61,7 @@ export async function imageRoutes(app: Elysia) {
 			const { params, body, status, merchandiseLocationAccess } = ctx as typeof ctx & MerchandiseAccessContext;
 			if (!merchandiseLocationAccess.allowed) return status(403, { error: "Location access denied" });
 			const { lid } = params as { lid: string };
-			const { productId, imageUrl, altText, sortOrder } = body;
+			const { productId, imageUrl, sortOrder } = body;
 
 			const product = await db.query.products.findFirst({
 				where: and(eq(products.id, productId), eq(products.locationId, lid)),
@@ -73,7 +73,6 @@ export async function imageRoutes(app: Elysia) {
 			const [image] = await db.insert(productImages).values({
 				productId,
 				imageUrl,
-				altText: altText ?? null,
 				sortOrder: sortOrder ?? 0,
 			}).returning();
 
@@ -101,9 +100,7 @@ export async function imageRoutes(app: Elysia) {
 			}
 
 			const [image] = await db.update(productImages).set({
-				...(body.altText !== undefined ? { altText: body.altText } : {}),
 				...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
-				updated: new Date(),
 			}).where(eq(productImages.id, imageId)).returning();
 
 			return status(200, { image });
