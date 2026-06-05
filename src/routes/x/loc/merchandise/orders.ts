@@ -8,7 +8,7 @@ import {
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { adjustStock, capturePayment } from "./shared";
+import { adjustStock, markOrderPaid } from "./shared";
 import type { OrderLineItem } from "@subtrees/types";
 
 type MerchandiseAccessContext = {
@@ -170,7 +170,6 @@ export async function orderRoutes(app: Elysia) {
 			const tax = body.tax ?? 0;
 			const shipping = body.shipping ?? 0;
 			const total = subtotal + shipping + tax;
-			const currency = body.currency ?? "USD";
 
 			const [order] = await db.insert(orders).values({
 				locationId: lid,
@@ -189,9 +188,6 @@ export async function orderRoutes(app: Elysia) {
 
 			await adjustStock(order.id, -1);
 
-			if (body.capturePayment && body.paymentMethodId) {
-				await capturePayment(order.id, lid, body.memberId, body.paymentMethodId, subtotal, shipping, tax, total, currency);
-			}
 
 			const createdOrder = await db.query.orders.findFirst({
 				where: eq(orders.id, order.id),
@@ -208,37 +204,23 @@ export async function orderRoutes(app: Elysia) {
 					variantId: t.String(),
 					quantity: t.Number(),
 				})),
-				currency: t.Optional(t.String()),
 				shipping: t.Optional(t.Number()),
 				tax: t.Optional(t.Number()),
-				notes: t.Optional(t.String()),
-				capturePayment: t.Optional(t.Boolean()),
-				paymentMethodId: t.Optional(t.String()),
 			}),
 		})
 		.post("/orders/:orderId/capture", async (ctx) => {
-			const { params, body, status, merchandiseLocationAccess } = ctx as typeof ctx & MerchandiseAccessContext;
+			const { params, status, merchandiseLocationAccess } = ctx as typeof ctx & MerchandiseAccessContext;
 			if (!merchandiseLocationAccess.allowed) return status(403, { error: "Location access denied" });
 			const { lid, orderId } = params as { lid: string; orderId: string };
 
 			const order = await db.query.orders.findFirst({
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
-				columns: { id: true, status: true, memberId: true, subtotal: true, shipping: true, tax: true, total: true },
+				columns: { id: true, status: true },
 			});
 
 			if (!order) return status(404, { error: "Order not found" });
 			if (order.status !== "pending") return status(409, { error: "Order is not pending" });
-			if (!order.memberId) return status(409, { error: "Order is missing member" });
-
-			if (body.paymentMethodId) {
-				await capturePayment(
-					order.id, lid, order.memberId, body.paymentMethodId,
-					order.subtotal, order.shipping, order.tax, order.total, "USD"
-				);
-			} else {
-				await db.update(orders).set({ status: "paid", updated: new Date() })
-					.where(and(eq(orders.id, orderId), eq(orders.locationId, lid)));
-			}
+			await markOrderPaid(order.id);
 
 			const updatedOrder = await db.query.orders.findFirst({
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
@@ -249,9 +231,7 @@ export async function orderRoutes(app: Elysia) {
 
 			return status(200, { order: updatedOrder });
 		}, {
-			body: t.Object({
-				paymentMethodId: t.Optional(t.String()),
-			}),
+			body: t.Object({}),
 		})
 		.patch("/orders/:orderId", async (ctx) => {
 			const { params, body, status, merchandiseLocationAccess } = ctx as typeof ctx & MerchandiseAccessContext;
@@ -262,7 +242,7 @@ export async function orderRoutes(app: Elysia) {
 
 			const [order] = await db.update(orders).set({
 				...(body.status !== undefined ? { status: body.status } : {}),
-				...(body.paymentIntentId !== undefined ? { gatewayPaymentId: body.paymentIntentId } : {}),
+				...(body.gatewayPaymentId !== undefined ? { gatewayPaymentId: body.gatewayPaymentId } : {}),
 				...(body.shippingAddress !== undefined ? { shippingAddress: body.shippingAddress as any } : {}),
 				...(body.billingAddress !== undefined ? { billingAddress: body.billingAddress as any } : {}),
 				updated: new Date(),
@@ -284,11 +264,9 @@ export async function orderRoutes(app: Elysia) {
 					t.Literal("cancelled"),
 					t.Literal("refunded"),
 				])),
-				transactionId: t.Optional(t.Nullable(t.String())),
-				paymentIntentId: t.Optional(t.Nullable(t.String())),
+				gatewayPaymentId: t.Optional(t.Nullable(t.String())),
 				shippingAddress: t.Optional(t.Nullable(t.Record(t.String(), t.Unknown()))),
 				billingAddress: t.Optional(t.Nullable(t.Record(t.String(), t.Unknown()))),
-				metadata: t.Optional(t.Record(t.String(), t.Unknown())),
 			}),
 		});
 }
