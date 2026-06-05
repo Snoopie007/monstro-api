@@ -14,3 +14,11 @@ export type Product = typeof products.$inferSelect & {
     images: ProductImage[];
 }
 
+export type OrderLineItem = {
+    variantId: string;
+    unitCost: number;
+    quantity: number;
+    discount?: number;
+    productName: string;
+    tax: number;
+}

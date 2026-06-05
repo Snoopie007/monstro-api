@@ -7,8 +7,20 @@ import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
+<<<<<<< HEAD
 import { locations } from "./locations";
 import { locationState } from "./locationState";
+=======
+<<<<<<< HEAD
+import { orderItems, orders, productImages, products, productVariants } from "./ecommerce";
+import {
+	locations, locationState,
+} from "./locations";
+=======
+import { locations } from "./locations";
+import { locationState } from "./locationState";
+>>>>>>> e7469fce2a0bdfd6e1515d17ed8833a6875e4b84
+>>>>>>> f0c12d64e7939fb033104c7250d3bd4034af0cef
 import { memberLocations } from "./MemberLocation";
 import { memberPasses } from "./MemberPasses";
 import { memberPlanPricing, memberPlans } from "./MemberPlan";
@@ -50,8 +62,6 @@ import { supportConversations, supportMessages } from "./SupportConversations";
 import { supportTriggers } from "./SupportTriggers";
 import { vendorLevels } from "./VendorProgress";
 import { vendorReferrals } from "./VendorReferrals";
-import { orders } from "./orders";
-import { productImages, productVariants, products } from "./products";
 
 // ============================================================================
 // USER RELATIONS
@@ -313,6 +323,8 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		references: [wallets.locationId],
 	}),
 	taxRates: many(taxRates),
+	products: many(products),
+	orders: many(orders),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -708,6 +720,61 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		fields: [transactions.invoiceId],
 		references: [memberInvoices.id],
 	}),
+	order: one(orders, {
+		fields: [transactions.id],
+		references: [orders.transactionId],
+	}),
+}));
+
+export const productsRelations = relations(products, ({ many, one }) => ({
+	location: one(locations, {
+		fields: [products.locationId],
+		references: [locations.id],
+	}),
+	images: many(productImages),
+	variants: many(productVariants),
+}));
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+	product: one(products, {
+		fields: [productImages.productId],
+		references: [products.id],
+	}),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ many, one }) => ({
+	product: one(products, {
+		fields: [productVariants.productId],
+		references: [products.id],
+	}),
+	orderItems: many(orderItems),
+}));
+
+export const ordersRelations = relations(orders, ({ many, one }) => ({
+	location: one(locations, {
+		fields: [orders.locationId],
+		references: [locations.id],
+	}),
+	member: one(members, {
+		fields: [orders.memberId],
+		references: [members.id],
+	}),
+	transaction: one(transactions, {
+		fields: [orders.transactionId],
+		references: [transactions.id],
+	}),
+	items: many(orderItems),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+	order: one(orders, {
+		fields: [orderItems.orderId],
+		references: [orders.id],
+	}),
+	variant: one(productVariants, {
+		fields: [orderItems.variantId],
+		references: [productVariants.id],
+	}),
 }));
 
 
@@ -1037,6 +1104,7 @@ export const supportTriggersRelations = relations(supportTriggers, ({ one }) => 
 		references: [supportAssistants.id],
 	}),
 }));
+<<<<<<< HEAD
 
 
 // ============================================================================
@@ -1051,10 +1119,6 @@ export const productVariantsRelations = relations(productVariants, ({ one, many 
 	product: one(products, {
 		fields: [productVariants.productId],
 		references: [products.id],
-	}),
-	order: one(orders, {
-		fields: [productVariants.productId],
-		references: [orders.id],
 	}),
 	images: many(productImages),
 }));
@@ -1074,6 +1138,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
 		fields: [orders.memberId],
 		references: [members.id],
 	}),
-	products: many(productVariants),
 }));
 
+=======
+>>>>>>> 6be4b732016f4efa7d4d7c57a97eeb58e92e844e
