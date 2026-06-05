@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
     bigint,
-    jsonb,
     pgTable,
     text,
     timestamp,
