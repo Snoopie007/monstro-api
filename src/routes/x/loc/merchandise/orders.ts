@@ -5,7 +5,7 @@ import {
 	productImages,
 	productVariants,
 } from "@subtrees/schemas";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { adjustStock, capturePayment } from "./shared";
@@ -14,6 +14,59 @@ import type { OrderLineItem } from "@subtrees/types";
 type MerchandiseAccessContext = {
 	merchandiseLocationAccess: { allowed: boolean };
 };
+
+type OrderLineItemDisplay = OrderLineItem & {
+	sku: string | null;
+	imageUrl: string | null;
+};
+
+async function attachLineItemDisplayData<T extends { items: OrderLineItem[] | null }>(
+	order: T,
+): Promise<Omit<T, "items"> & { items: OrderLineItemDisplay[] }> {
+	const items = order.items ?? [];
+	if (items.length === 0) return { ...order, items: [] };
+
+	const variantIds: string[] = [];
+	const seenVariantIds = new Set<string>();
+	for (const item of items) {
+		if (!seenVariantIds.has(item.variantId)) {
+			seenVariantIds.add(item.variantId);
+			variantIds.push(item.variantId);
+		}
+	}
+
+	const variants = await db.query.productVariants.findMany({
+		where: inArray(productVariants.id, variantIds),
+		columns: { id: true, sku: true },
+		with: {
+			product: {
+				columns: { name: true },
+				with: {
+					images: {
+						columns: { imageUrl: true },
+						orderBy: [productImages.sortOrder],
+						limit: 1,
+					},
+				},
+			},
+		},
+	});
+
+	const variantById = new Map(variants.map((variant) => [variant.id, variant]));
+
+	return {
+		...order,
+		items: items.map((item) => {
+			const variant = variantById.get(item.variantId);
+			return {
+				...item,
+				productName: item.productName || variant?.product?.name || "",
+				sku: variant?.sku ?? null,
+				imageUrl: variant?.product?.images?.[0]?.imageUrl ?? null,
+			};
+		}),
+	};
+}
 
 export async function orderRoutes(app: Elysia) {
 	return app
@@ -24,10 +77,13 @@ export async function orderRoutes(app: Elysia) {
 
 			const orderList = await db.query.orders.findMany({
 				where: eq(orders.locationId, lid),
-				orderBy: [desc(orders.created)],
-				with: {
-					member: true,
+				columns: {
+					id: true,
+					status: true,
+					total: true,
+					created: true,
 				},
+				orderBy: [desc(orders.created)],
 			});
 
 			return status(200, { orders: orderList });
@@ -40,12 +96,19 @@ export async function orderRoutes(app: Elysia) {
 			const order = await db.query.orders.findFirst({
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
 				with: {
-					member: true,
+					member: {
+						columns: {
+							firstName: true,
+							lastName: true,
+							email: true,
+							phone: true,
+						},
+					},
 				},
 			});
 
 			if (!order) return status(404, { error: "Order not found" });
-			return status(200, { order });
+			return status(200, { order: await attachLineItemDisplayData(order) });
 		})
 		.post("/orders", async (ctx) => {
 			const { params, body, status, merchandiseLocationAccess } = ctx as typeof ctx & MerchandiseAccessContext;
@@ -57,25 +120,33 @@ export async function orderRoutes(app: Elysia) {
 				columns: { id: true },
 			});
 			if (!member) return status(404, { error: "Member not found" });
+			if (body.items.length === 0) return status(400, { error: "At least one item is required" });
+
+			const variantIds: string[] = [];
+			const seenVariantIds = new Set<string>();
+			for (const item of body.items) {
+				if (!seenVariantIds.has(item.variantId)) {
+					seenVariantIds.add(item.variantId);
+					variantIds.push(item.variantId);
+				}
+			}
+
+			const variants = await db.query.productVariants.findMany({
+				where: and(inArray(productVariants.id, variantIds), eq(productVariants.active, true)),
+				columns: { id: true, stock: true, sku: true, price: true },
+				with: {
+					product: {
+						columns: { name: true },
+					},
+				},
+			});
+			const variantById = new Map(variants.map((variant) => [variant.id, variant]));
 
 			const itemRows: OrderLineItem[] = [];
 			let subtotal = 0;
 
 			for (const item of body.items) {
-				const variant = await db.query.productVariants.findFirst({
-					where: and(eq(productVariants.id, item.variantId), eq(productVariants.active, true)),
-					with: {
-						product: {
-							columns: { id: true, name: true, slug: true },
-							with: {
-								images: {
-									orderBy: [productImages.sortOrder],
-									limit: 1,
-								},
-							},
-						},
-					},
-				});
+				const variant = variantById.get(item.variantId);
 
 				if (!variant) {
 					return status(404, { error: `Variant ${item.variantId} not found or inactive` });
@@ -85,13 +156,12 @@ export async function orderRoutes(app: Elysia) {
 					return status(409, { error: `Insufficient stock for variant ${variant.sku}` });
 				}
 
-				const unitPrice = variant.price;
-				subtotal += unitPrice * item.quantity;
+				subtotal += variant.price * item.quantity;
 
 				itemRows.push({
 					variantId: item.variantId,
 					quantity: item.quantity,
-					unitCost: unitPrice,
+					unitCost: variant.price,
 					productName: variant.product?.name ?? "",
 					tax: 0,
 				});

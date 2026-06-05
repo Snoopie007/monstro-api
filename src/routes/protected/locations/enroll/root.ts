@@ -1,14 +1,16 @@
 
 import { Elysia } from "elysia"
-import { purchaseSubRoutes } from "./sub";
-import { purchasePkgRoutes } from "./pkg";
+import { subEnrollRoutes } from "./sub";
+import { pkgEnrollRoutes } from "./pkg";
+import { enrollRequestRoutes } from "./request";
 
 
 
-export function locationPurchaseRoutes(app: Elysia) {
-    app.group('/purchase', (app) => {
-        app.use(purchaseSubRoutes);
-        app.use(purchasePkgRoutes);
+export function locationEnrollRoutes(app: Elysia) {
+    app.group('/enroll', (app) => {
+        app.use(subEnrollRoutes);
+        app.use(pkgEnrollRoutes);
+        app.use(enrollRequestRoutes);
         return app;
     })
     return app;
