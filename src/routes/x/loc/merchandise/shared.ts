@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberLocations, orderItems, orders, productImages, productVariants, transactions } from "@subtrees/schemas";
+import { memberLocations, orders, productImages, productVariants, transactions } from "@subtrees/schemas";
 import { eq, sql } from "drizzle-orm";
 import { StripePaymentGateway, SquarePaymentGateway } from "@/libs/PaymentGateway";
 
