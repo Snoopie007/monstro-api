@@ -7,7 +7,8 @@ import type {
   Transaction,
   Wallet,
 } from ".";
-import { locations, locationState } from "../schemas/locations";
+import { locations } from "../schemas/locations";
+import { locationState } from "../schemas/locationState";
 import type { MemberPlan } from "./member";
 import type { Vendor } from "./vendor";
 

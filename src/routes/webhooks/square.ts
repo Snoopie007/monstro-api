@@ -124,6 +124,11 @@ type SquareInvoiceTransactionInput = {
     now: Date;
 };
 
+function getTransactionInvoiceFields(invoice: SquareInvoiceTransactionInput["invoice"]) {
+    const { items: _items, ...fields } = invoice;
+    return fields;
+}
+
 const ALLOWED_EVENTS = ["payment.created", "payment.updated"];
 
 const isProd = process.env.BUN_ENV === "production";
@@ -261,9 +266,10 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
     }
 
     await db.insert(transactions).values({
-        ...invoice,
+        ...getTransactionInvoiceFields(invoice),
         total: amount,
-        items: invoice.items ?? [],
+        locationId,
+        memberId,
         type: "inbound",
         status: "paid",
         paymentMethodId: pmid,
@@ -364,9 +370,10 @@ async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
     }
 
     await db.insert(transactions).values({
-        ...invoice,
+        ...getTransactionInvoiceFields(invoice),
         total: amount,
-        items: invoice.items ?? [],
+        locationId,
+        memberId,
         type: "inbound",
         status: "failed",
         failedReason,
@@ -413,9 +420,8 @@ async function handleOneOffInvoicePayment(ctx: SquareInvoiceTransactionInput) {
     } = ctx;
 
     const values = {
-        ...invoice,
+        ...getTransactionInvoiceFields(invoice),
         total: amount,
-        items: invoice.items ?? [],
         type: "inbound" as const,
         status,
         failedReason: status === "paid" ? null : failedReason,
@@ -517,9 +523,8 @@ async function handleReconcileInvoice(payment: SquareWebhookPayment) {
     if (!invoice) throw new Error("Invoice not found for Square webhook reconciliation");
 
     const txValues = {
-        ...invoice,
+        ...getTransactionInvoiceFields(invoice),
         total: amount,
-        items: invoice.items ?? [],
         type: "inbound" as const,
         status: isCompleted ? "paid" as const : "failed" as const,
         failedReason: isCompleted ? null : getSquareFailureReason(payment, statusUpper),

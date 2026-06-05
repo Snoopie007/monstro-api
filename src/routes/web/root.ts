@@ -10,6 +10,7 @@ import { webDocRoutes } from "./doc";
 import { webContentRoutes } from "./content";
 import { webGHLRoutes } from "./ghl";
 import { webEnrollRoutes } from "./enroll";
+import { webCouponRoutes } from "./coupon";
 const ACCEPTED_METHODS = ["GET", "POST", "PATCH"];
 
 export const WebRoutes = new Elysia()
@@ -22,6 +23,7 @@ export const WebRoutes = new Elysia()
     })
     .use(webOrderRoutes)
     .use(webMercsRoutes)
+    .use(webCouponRoutes)
     .use(webLocationSchedulesRoutes)
     .use(webLocationStateRoutes)
     .use(webPlansRoutes)

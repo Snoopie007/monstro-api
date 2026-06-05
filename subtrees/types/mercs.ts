@@ -1,4 +1,4 @@
-import { productImages, products, productVariants } from "../schemas/products";
+import { productImages, products, productVariants } from "../schemas/ecommerce";
 
 export type MercImage = typeof productImages.$inferSelect;
 

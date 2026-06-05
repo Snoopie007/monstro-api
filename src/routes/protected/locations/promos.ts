@@ -1,24 +1,19 @@
 import type { Elysia } from "elysia";
 import { z } from "zod";
-import { db } from "@/db/db";
-const LocationPromosProps = {
+import { handlePromo } from "@/handlers/promo";
 
+const LocationPromosProps = {
     params: z.object({
         lid: z.string(),
         code: z.string(),
     }),
 };
+
 export function locationPromos(app: Elysia) {
     return app.get('/promos/:code', async ({ params, status }) => {
         const { lid, code } = params;
         try {
-            const promo = await db.query.promos.findFirst({
-                where: (p, { eq, and }) => and(eq(p.locationId, lid), eq(p.code, code), eq(p.isActive, true)),
-                columns: {
-                    created: false,
-                    updated: false,
-                },
-            });
+            const promo = await handlePromo(lid, code);
 
             if (!promo) {
                 return status(404, { code: 'PROMO_NOT_FOUND', message: 'Promotion code not found' });

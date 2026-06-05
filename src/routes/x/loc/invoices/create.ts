@@ -134,12 +134,6 @@ export async function createInvoiceRoutes(app: Elysia) {
                         intendedPaymentType: sub.paymentType,
                         collectionMethod,
                     },
-                    items: lineItems.map((item) => ({
-                        name: item.name,
-                        amount: item.price,
-                        quantity: item.quantity,
-                        tax: 0,
-                    })),
                 });
             }
 
@@ -224,12 +218,6 @@ export async function createInvoiceRoutes(app: Elysia) {
                         intendedPaymentType,
                         collectionMethod,
                     },
-                    items: invoiceItems.map((item) => ({
-                        name: item.name,
-                        amount: item.price,
-                        quantity: item.quantity,
-                        tax: 0,
-                    })),
                 });
             } catch (error) {
                 console.error("[x/invoices:create] Transaction insert threw", {

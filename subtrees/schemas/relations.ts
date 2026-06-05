@@ -7,12 +7,12 @@ import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
-import {
-	locations, locationState,
-} from "./locations";
+import { locations } from "./locations";
+import { locationState } from "./locationState";
 import { memberLocations } from "./MemberLocation";
 import { memberPasses } from "./MemberPasses";
-import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions } from "./MemberPlans";
+import { memberPlanPricing, memberPlans } from "./MemberPlan";
+import { memberPackages, memberSubscriptions } from "./MemberEnrollment";
 import {
 	familyMembers,
 	memberContracts,
@@ -36,13 +36,22 @@ import { supportPlans, vendors } from "./vendors";
 import { wallets, walletUsages } from "./wallets";
 
 // Chat tables
-import { chatMembers, chats, messages } from "./chat/chats";
-import { comments } from "./chat/comments";
-import { friends } from "./chat/friends";
-import { groupMembers, groupPosts, groups } from "./chat/groups";
-import { media } from "./chat/medias";
-import { momentLikes, moments, userFeeds } from "./chat/moments";
-import { reactions } from "./chat/reactions";
+import {
+	comments,
+	friends,
+	reactions,
+	chatMembers,
+	chats,
+	messages,
+	groupMembers,
+	groupPosts,
+	groups,
+	momentLikes,
+	moments,
+	media,
+	userFeeds,
+} from "./chat";
+
 
 // Support tables
 import { supportAssistants } from "./SupportAssistants";
@@ -50,8 +59,9 @@ import { supportConversations, supportMessages } from "./SupportConversations";
 import { supportTriggers } from "./SupportTriggers";
 import { vendorLevels } from "./VendorProgress";
 import { vendorReferrals } from "./VendorReferrals";
-import { orders } from "./orders";
-import { productImages, productVariants, products } from "./products";
+
+// Ecommerce tables
+import { orders, products, productImages, productVariants } from "./ecommerce";
 
 // ============================================================================
 // USER RELATIONS
@@ -642,27 +652,25 @@ export const reservationsRelations = relations(reservations, ({ one, many }) => 
 	}),
 }));
 
-export const reservationExceptionsRelations = relations(reservationExceptions,
-	({ one }) => ({
-		reservation: one(reservations, {
-			fields: [reservationExceptions.reservationId],
-			references: [reservations.id],
-			relationName: "reservationExceptions",
-		}),
-		location: one(locations, {
-			fields: [reservationExceptions.locationId],
-			references: [locations.id],
-		}),
-		session: one(programSessions, {
-			fields: [reservationExceptions.sessionId],
-			references: [programSessions.id],
-		}),
-		createdByStaff: one(staffs, {
-			fields: [reservationExceptions.createdBy],
-			references: [staffs.id],
-		}),
-	})
-);
+export const reservationExceptionsRelations = relations(reservationExceptions, ({ one }) => ({
+	reservation: one(reservations, {
+		fields: [reservationExceptions.reservationId],
+		references: [reservations.id],
+		relationName: "reservationExceptions",
+	}),
+	location: one(locations, {
+		fields: [reservationExceptions.locationId],
+		references: [locations.id],
+	}),
+	session: one(programSessions, {
+		fields: [reservationExceptions.sessionId],
+		references: [programSessions.id],
+	}),
+	createdByStaff: one(staffs, {
+		fields: [reservationExceptions.createdBy],
+		references: [staffs.id],
+	}),
+}));
 
 // ============================================================================
 // ATTENDANCE RELATIONS
@@ -708,8 +716,45 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		fields: [transactions.invoiceId],
 		references: [memberInvoices.id],
 	}),
+	order: one(orders, {
+		fields: [transactions.orderId],
+		references: [orders.id],
+	})
 }));
 
+export const productsRelations = relations(products, ({ many, one }) => ({
+	location: one(locations, {
+		fields: [products.locationId],
+		references: [locations.id],
+	}),
+	images: many(productImages),
+	variants: many(productVariants),
+}));
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+	product: one(products, {
+		fields: [productImages.productId],
+		references: [products.id],
+	}),
+}));
+
+export const productVariantsRelations = relations(productVariants, ({ many, one }) => ({
+	product: one(products, {
+		fields: [productVariants.productId],
+		references: [products.id],
+	}),
+}));
+
+export const ordersRelations = relations(orders, ({ many, one }) => ({
+	location: one(locations, {
+		fields: [orders.locationId],
+		references: [locations.id],
+	}),
+	member: one(members, {
+		fields: [orders.memberId],
+		references: [members.id],
+	})
+}));
 
 // ============================================================================
 // INTEGRATION RELATIONS
@@ -1038,36 +1083,3 @@ export const supportTriggersRelations = relations(supportTriggers, ({ one }) => 
 	}),
 }));
 
-
-// ============================================================================
-// PRODUCT RELATIONS
-// ============================================================================
-export const productsRelations = relations(products, ({ one, many }) => ({
-	variants: many(productVariants),
-	images: many(productImages),
-}));
-
-export const productVariantsRelations = relations(productVariants, ({ one, many }) => ({
-	product: one(products, {
-		fields: [productVariants.productId],
-		references: [products.id],
-	}),
-	images: many(productImages),
-}));
-
-export const productImagesRelations = relations(productImages, ({ one }) => ({
-	product: one(products, {
-		fields: [productImages.productId],
-		references: [products.id],
-	}),
-}));
-
-// ============================================================================
-// ORDER RELATIONS
-// ============================================================================
-export const ordersRelations = relations(orders, ({ one, many }) => ({
-	member: one(members, {
-		fields: [orders.memberId],
-		references: [members.id],
-	}),
-}));
