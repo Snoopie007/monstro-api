@@ -10,7 +10,7 @@ import {
 import type { MigrateStatus } from "../types/DatabaseEnums";
 import { PlanType } from "./DatabaseEnums";
 import { locations } from "./locations";
-import { memberPlanPricing } from "./MemberPlans";
+import { memberPlanPricing } from "./MemberPlan";
 import { members } from "./members";
 
 export const migrateMembers = pgTable('migrate_members', {

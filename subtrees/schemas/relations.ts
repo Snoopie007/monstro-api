@@ -7,13 +7,19 @@ import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
+<<<<<<< HEAD
 import { orderItems, orders, productImages, products, productVariants } from "./ecommerce";
 import {
 	locations, locationState,
 } from "./locations";
+=======
+import { locations } from "./locations";
+import { locationState } from "./locationState";
+>>>>>>> e7469fce2a0bdfd6e1515d17ed8833a6875e4b84
 import { memberLocations } from "./MemberLocation";
 import { memberPasses } from "./MemberPasses";
-import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions } from "./MemberPlans";
+import { memberPlanPricing, memberPlans } from "./MemberPlan";
+import { memberPackages, memberSubscriptions } from "./MemberEnrollment";
 import {
 	familyMembers,
 	memberContracts,
