@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
-	integer,
 	index,
+	integer,
 	pgTable,
 	primaryKey,
 	smallint,
@@ -13,7 +13,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { ExceptionInitiatorEnum, ReservationStatusEnum } from "./DatabaseEnums";
-import { memberPackages, memberSubscriptions } from "./MemberPlans";
+import { memberPackages, memberSubscriptions } from "./MemberEnrollment";
 import { locations } from "./locations";
 import { members } from "./members";
 import { programSessions, programs } from "./programs";
