@@ -13,13 +13,15 @@ import { members } from "./members";
 import { memberInvoices } from "./invoice";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
 import type { TransactionMetadata } from "../types";
-import type { InvoiceItem } from "../types/invoices";
+// import type { InvoiceItem } from "../types/invoices";
 import type { Currency } from "../types/currency";
+import { orders } from "./ecommerce";
 
 export const transactions = pgTable("transactions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	description: text("description"),
-	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
+	// items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
+	orderId: text("order_id").references(() => orders.id),
 	type: TransactionTypeEnum("type").notNull(),
 	feeAmount: integer("fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
