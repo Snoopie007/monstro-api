@@ -17,17 +17,10 @@ export function migrateAcceptRoutes(app: Elysia) {
 
         try {
             // Fetch migrate record to get custom field values
-            const [migrate, location] = await Promise.all([
+            const [migrate, location, member] = await Promise.all([
                 await db.query.migrateMembers.findFirst({
                     where: (mm, { eq }) => eq(mm.id, migrateId),
                     with: {
-
-                        member: {
-                            columns: {
-                                userId: true,
-                                firstName: true,
-                            },
-                        },
                         pricing: {
                             columns: {
                                 id: true,
@@ -62,28 +55,45 @@ export function migrateAcceptRoutes(app: Elysia) {
                         },
                     },
                 }),
+                db.query.members.findFirst({
+                    where: (member, { eq }) => eq(member.id, mid),
+                    columns: {
+                        id: true,
+                        userId: true,
+                        firstName: true,
+                    },
+                }),
             ]);
-
 
             if (!location) {
                 return status(404, { error: "Location not found" });
             }
 
-            if (!migrate || !migrate?.member) {
+            if (!member) {
+                return status(404, { error: "Member not found" });
+            }
+
+            if (!migrate) {
                 return status(404, { error: "Migrate not found" });
             }
 
-            const { pricing, planType, member } = migrate;
+            const { pricing, planType, payment } = migrate;
+
 
             const hasPlan = pricing && planType;
-            const hasPayment = migrate?.payment;
+            const hasPayment = payment;
             const state = hasPlan && hasPayment ? "incomplete" : "active";
 
+            if (migrate.memberId) {
+                await db.update(migrateMembers).set({
+                    memberId: mid,
+                }).where(eq(migrateMembers.id, migrateId));
+            }
 
 
 
             const [ml] = await db.insert(memberLocations).values({
-                memberId: mid,
+                memberId: member.id,
                 locationId: lid,
                 status: state,
             }).onConflictDoUpdate({
@@ -93,7 +103,6 @@ export function migrateAcceptRoutes(app: Elysia) {
                     status: state,
                 },
             }).returning();
-
 
 
             // Transfer custom field values if they exist
