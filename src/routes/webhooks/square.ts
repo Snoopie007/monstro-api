@@ -3,6 +3,7 @@ import { WebhooksHelper } from "square";
 import type { NoteData, SquareWebhookPayment } from "./handlers/square/type";
 import { handleSquarePlanSuccess } from "./handlers/square/squarePlanSuccess";
 import { handleSquarePlanFail } from "./handlers/square/squarePlanFail";
+import { handleSquareOrderSuccess } from "./handlers/square/squareOrderSuccess";
 
 const ALLOWED_EVENTS = ["payment.created", "payment.updated"];
 
@@ -82,7 +83,7 @@ async function processSquareEvent(event: { type?: string; data?: { object?: { pa
 async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
     const { app_fee_money, reference_id, total_money } = payment;
     const parsedNote = parseNote(payment.note ?? "");
-    const { pmid } = parsedNote;
+    const { pmid, lid, mid } = parsedNote;
 
 
     if (!reference_id) {
@@ -96,9 +97,23 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
     const paymentType = payment.source_type === "CARD" ? "card" : "cash";
     const receiptUrl = payment.receipt_url ?? null;
 
+
     if (reference_id?.startsWith("ord_")) {
-        const orderId = reference_id;
+      const orderId = reference_id;
+      const failedReason = `${payment.card_details?.errors?.[0]?.category}: ${payment.card_details?.errors?.[0]?.detail}`
         // TODO: Handle order success
+        await handleSquareOrderSuccess({
+            orderId,
+            locationId: lid ?? '',
+            memberId: mid ?? '',
+            paymentMethodId: pmid ?? '',
+            paymentIntentId: payment.id ?? '',
+            paymentType: paymentType,
+            feeAmount: feesAmount,
+            amount,
+            failedReason,
+            failedCode: payment.card_details?.errors?.[0]?.code,
+        });
     }
 
     if (reference_id.startsWith("inv_")) {
@@ -106,7 +121,7 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
         await handleSquarePlanSuccess({
             invoiceId,
             paymentType,
-            paymentMethodId: pmid,
+            paymentMethodId: pmid ?? '',
             feeAmount: feesAmount,
             receiptUrl,
             amount,
@@ -134,8 +149,20 @@ async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
     const failedReason = getSquareFailureReason(payment, payment.status ?? "");
     const failedCode = getSquareFailureCode(payment, payment.status ?? "");
     if (reference_id?.startsWith("ord_")) {
-        const orderId = reference_id;
-        // TODO: Handle order failed
+      const orderId = reference_id;
+      await handleSquareOrderFail({
+        orderId,
+        locationId: ,
+        memberId: ,
+        paymentMethodId: pmid,
+        paymentIntentId: payment.id,
+        paymentType,
+        feeAmount: feesAmount,
+        amount,
+        failedReason,
+        failedCode,
+        stripeChargeId: ,
+      });
     }
 
     if (reference_id.startsWith("inv_")) {
@@ -239,4 +266,3 @@ function getSquareFailureReason(payment: SquareWebhookPayment, statusUpper: stri
 function getSquareFailureCode(payment: SquareWebhookPayment, statusUpper: string) {
     return payment.card_details?.errors?.[0]?.code || payment.status || statusUpper;
 }
-
