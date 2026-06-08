@@ -263,7 +263,6 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
     await db.insert(transactions).values({
         ...invoice,
         total: amount,
-        items: invoice.items ?? [],
         type: "inbound",
         status: "paid",
         paymentMethodId: pmid,
@@ -366,7 +365,6 @@ async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
     await db.insert(transactions).values({
         ...invoice,
         total: amount,
-        items: invoice.items ?? [],
         type: "inbound",
         status: "failed",
         failedReason,
