@@ -1,15 +1,9 @@
 import { contractTemplates, memberContracts } from "../schemas";
 import type { Location } from "./location";
-import type { Member, MemberPackage, MemberSubscription } from "./member";
+import type { Member, MemberPackage, MemberPlanPricing, MemberSubscription } from "./member";
 
 export type Contract = typeof contractTemplates.$inferSelect & {
     location?: Location;
-    planName?: string;
-    memberPlanId?: string;
-    signedContractId?: string;
-    signedContractPdf?: string;
-    pricingId?: string;
-    signedOn?: Date;
 }
 
 export type MemberContract = typeof memberContracts.$inferSelect & {
@@ -18,6 +12,5 @@ export type MemberContract = typeof memberContracts.$inferSelect & {
     package?: MemberPackage | null;
     contractTemplate?: Contract;
     location?: Location;
-    contract?: Contract;
-    pdfUrl?: string;
+    pricing?: MemberPlanPricing;
 }

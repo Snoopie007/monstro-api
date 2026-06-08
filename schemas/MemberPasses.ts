@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { memberPlans } from "./MemberPlans";
+import { memberPlans } from "./MemberPlan";
 import { members } from "./members";
 
 export const memberPasses = pgTable("member_passes", {
