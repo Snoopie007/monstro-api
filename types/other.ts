@@ -15,6 +15,8 @@ export type UploadUrl = {
 }
 
 
+export type ProductSize = "XS" | "S" | "M" | "L" | "XL" | "XXL";
+
 
 export type Address = {
     line1: string
