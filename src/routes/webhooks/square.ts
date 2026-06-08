@@ -99,8 +99,8 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
 
 
     if (reference_id?.startsWith("ord_")) {
-      const orderId = reference_id;
-      const failedReason = `${payment.card_details?.errors?.[0]?.category}: ${payment.card_details?.errors?.[0]?.detail}`
+        const orderId = reference_id;
+        const failedReason = `${payment.card_details?.errors?.[0]?.category}: ${payment.card_details?.errors?.[0]?.detail}`
         // TODO: Handle order success
         await handleSquareOrderSuccess({
             orderId,
@@ -149,20 +149,17 @@ async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
     const failedReason = getSquareFailureReason(payment, payment.status ?? "");
     const failedCode = getSquareFailureCode(payment, payment.status ?? "");
     if (reference_id?.startsWith("ord_")) {
-      const orderId = reference_id;
-      await handleSquareOrderFail({
-        orderId,
-        locationId: ,
-        memberId: ,
-        paymentMethodId: pmid,
-        paymentIntentId: payment.id,
-        paymentType,
-        feeAmount: feesAmount,
-        amount,
-        failedReason,
-        failedCode,
-        stripeChargeId: ,
-      });
+        const orderId = reference_id;
+        await handleSquareOrderFail({
+            orderId,
+            paymentMethodId: pmid,
+            paymentIntentId: payment.id,
+            paymentType,
+            feeAmount: feesAmount,
+            amount,
+            failedReason,
+            failedCode,
+        });
     }
 
     if (reference_id.startsWith("inv_")) {
