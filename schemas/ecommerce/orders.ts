@@ -12,7 +12,7 @@ import {
 
 import type { Address } from "../../types/other";
 import { members } from "../members";
-import type { OrderLineItem } from "../../types/product";
+import type { OrderLineItem } from "../../types/mercs";
 import { locations } from "../locations";
 
 export const orders = pgTable("orders", {
