@@ -4,6 +4,7 @@ import type { NoteData, SquareWebhookPayment } from "./handlers/square/type";
 import { handleSquarePlanSuccess } from "./handlers/square/squarePlanSuccess";
 import { handleSquarePlanFail } from "./handlers/square/squarePlanFail";
 import { handleSquareOrderSuccess } from "./handlers/square/squareOrderSuccess";
+import { handleSquareOrderFail } from "./handlers/square/squareOrderFail";
 
 const ALLOWED_EVENTS = ["payment.created", "payment.updated"];
 
@@ -81,9 +82,9 @@ async function processSquareEvent(event: { type?: string; data?: { object?: { pa
 }
 
 async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
-    const { app_fee_money, reference_id, total_money } = payment;
+    const { reference_id, total_money } = payment;
     const parsedNote = parseNote(payment.note ?? "");
-    const { pmid, lid, mid } = parsedNote;
+    const { pmid } = parsedNote;
 
 
     if (!reference_id) {
@@ -100,19 +101,13 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
 
     if (reference_id?.startsWith("ord_")) {
         const orderId = reference_id;
-        const failedReason = `${payment.card_details?.errors?.[0]?.category}: ${payment.card_details?.errors?.[0]?.detail}`
-        // TODO: Handle order success
         await handleSquareOrderSuccess({
             orderId,
-            locationId: lid ?? '',
-            memberId: mid ?? '',
             paymentMethodId: pmid ?? '',
             paymentIntentId: payment.id ?? '',
             paymentType: paymentType,
             feeAmount: feesAmount,
             amount,
-            failedReason,
-            failedCode: payment.card_details?.errors?.[0]?.code,
         });
     }
 
@@ -133,10 +128,10 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
 }
 
 async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
-    const { app_fee_money, reference_id, total_money } = payment;
-
+    const { reference_id, total_money } = payment;
     const parsedNote = parseNote(payment.note ?? "");
     const { pmid } = parsedNote;
+
     if (!reference_id) {
         throw new Error("No  reference_id");
     }
@@ -152,8 +147,8 @@ async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
         const orderId = reference_id;
         await handleSquareOrderFail({
             orderId,
-            paymentMethodId: pmid,
-            paymentIntentId: payment.id,
+            paymentMethodId: pmid ?? '',
+            paymentIntentId: payment.id ?? '',
             paymentType,
             feeAmount: feesAmount,
             amount,
