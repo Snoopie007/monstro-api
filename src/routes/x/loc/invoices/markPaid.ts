@@ -127,12 +127,6 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     currency: invoice.currency || "usd",
                     chargeDate: paidDate ? new Date(paidDate) : new Date(),
                     metadata: paymentMetadata,
-                    items: (invoice.items || []).map((item: any) => ({
-                        name: item?.name || "Line item",
-                        amount: Number(item?.price || 0),
-                        quantity: Number(item?.quantity || 1),
-                        tax: 0,
-                    })),
                 });
             }
 
@@ -210,12 +204,6 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 subTotal: sub.pricing.price,
                                 tax: 0,
                                 currency: currency || "usd",
-                                items: [{
-                                    name: sub.pricing.name,
-                                    amount: sub.pricing.price,
-                                    quantity: 1,
-                                    tax: 0,
-                                }],
                             });
                         }
                     }
