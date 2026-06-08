@@ -5,6 +5,7 @@ import { accounts } from "./accounts";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
+import { eventRegistrations, locationEvents } from "./event";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
 import { locations } from "./locations";
@@ -24,6 +25,13 @@ import {
 import { migrateMembers } from "./MigrateMembers";
 import { planPrograms, programs, programSessions, sessionWaitlist } from "./programs";
 import { promos } from "./promos";
+import {
+	memberRankRequirements,
+	memberRanks,
+	rankProcesses,
+	rankRequirements,
+	ranks,
+} from "./rank";
 import { reservationExceptions, reservations } from "./reservations";
 import { memberRewards, rewards } from "./rewards";
 import { sessions } from "./sessions";
@@ -140,6 +148,9 @@ export const membersRelations = relations(members, ({ many, one }) => ({
 	memberTags: many(memberHasTags),
 	customFields: many(memberCustomFields),
 	passes: many(memberPasses),
+	memberRanks: many(memberRanks),
+	memberRankRequirements: many(memberRankRequirements),
+	eventRegistrations: many(eventRegistrations),
 }));
 
 export const memberPassesRelations = relations(memberPasses, ({ one }) => ({
@@ -325,6 +336,9 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	taxRates: many(taxRates),
 	products: many(products),
 	orders: many(orders),
+	rankProcesses: many(rankProcesses),
+	ranks: many(ranks),
+	locationEvents: many(locationEvents),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -444,6 +458,119 @@ export const memberAchievementsRelations = relations(memberAchievements, ({ one 
 
 export const rewardRelations = relations(rewards, ({ many }) => ({
 	claims: many(memberRewards),
+}));
+
+// ============================================================================
+// RANK RELATIONS
+// ============================================================================
+
+export const rankProcessesRelations = relations(rankProcesses, ({ one, many }) => ({
+	location: one(locations, {
+		fields: [rankProcesses.locationId],
+		references: [locations.id],
+	}),
+	ranks: many(ranks),
+	memberRanks: many(memberRanks),
+}));
+
+export const ranksRelations = relations(ranks, ({ one, many }) => ({
+	process: one(rankProcesses, {
+		fields: [ranks.processId],
+		references: [rankProcesses.id],
+	}),
+	location: one(locations, {
+		fields: [ranks.locationId],
+		references: [locations.id],
+	}),
+	requirements: many(rankRequirements),
+	memberRanks: many(memberRanks),
+}));
+
+export const rankRequirementsRelations = relations(rankRequirements, ({ one, many }) => ({
+	rank: one(ranks, {
+		fields: [rankRequirements.rankId],
+		references: [ranks.id],
+	}),
+	memberProgress: many(memberRankRequirements),
+}));
+
+export const memberRankRequirementsRelations = relations(memberRankRequirements, ({ one }) => ({
+	member: one(members, {
+		fields: [memberRankRequirements.memberId],
+		references: [members.id],
+	}),
+	location: one(locations, {
+		fields: [memberRankRequirements.locationId],
+		references: [locations.id],
+	}),
+	requirement: one(rankRequirements, {
+		fields: [memberRankRequirements.requirementId],
+		references: [rankRequirements.id],
+	}),
+	verifier: one(staffs, {
+		fields: [memberRankRequirements.verifiedBy],
+		references: [staffs.id],
+	}),
+}));
+
+export const memberRanksRelations = relations(memberRanks, ({ one }) => ({
+	member: one(members, {
+		fields: [memberRanks.memberId],
+		references: [members.id],
+	}),
+	location: one(locations, {
+		fields: [memberRanks.locationId],
+		references: [locations.id],
+	}),
+	process: one(rankProcesses, {
+		fields: [memberRanks.processId],
+		references: [rankProcesses.id],
+	}),
+	rank: one(ranks, {
+		fields: [memberRanks.rankId],
+		references: [ranks.id],
+	}),
+}));
+
+// ============================================================================
+// EVENT RELATIONS
+// ============================================================================
+
+export const locationEventsRelations = relations(locationEvents, ({ one, many }) => ({
+	location: one(locations, {
+		fields: [locationEvents.locationId],
+		references: [locations.id],
+	}),
+	host: one(staffs, {
+		fields: [locationEvents.staffId],
+		references: [staffs.id],
+		relationName: "eventHost",
+	}),
+	creator: one(staffs, {
+		fields: [locationEvents.createdBy],
+		references: [staffs.id],
+		relationName: "eventCreator",
+	}),
+	registrations: many(eventRegistrations),
+}));
+
+export const eventRegistrationsRelations = relations(eventRegistrations, ({ one }) => ({
+	event: one(locationEvents, {
+		fields: [eventRegistrations.eventId],
+		references: [locationEvents.id],
+	}),
+	member: one(members, {
+		fields: [eventRegistrations.memberId],
+		references: [members.id],
+	}),
+	location: one(locations, {
+		fields: [eventRegistrations.locationId],
+		references: [locations.id],
+	}),
+	transaction: one(transactions, {
+		fields: [eventRegistrations.transactionId],
+		references: [transactions.id],
+	}),
 }));
 
 // ============================================================================
