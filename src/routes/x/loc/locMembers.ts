@@ -94,14 +94,12 @@ function locMembers(app: Elysia) {
             let tagCondition;
             if (tagIds.length > 0) {
                 if (filterByTag === "AND") {
-                    tagCondition = sql`
-                        (
-                            SELECT COUNT(DISTINCT ${memberHasTags.tagId})
-                            FROM ${memberHasTags}
-                            WHERE ${memberHasTags.memberId} = ${members.id}
-                            AND ${memberHasTags.tagId} = ANY(ARRAY[${sql.join(tagIds.map(id => sql`${id}`), sql`, `)}])
-                        ) = ${tagIds.length}
-                    `;
+                    tagCondition = sql` (
+                        SELECT COUNT(DISTINCT ${memberHasTags.tagId})
+                        FROM ${memberHasTags}
+                        WHERE ${memberHasTags.memberId} = ${members.id}
+                        AND ${memberHasTags.tagId} = ANY(ARRAY[${sql.join(tagIds.map(id => sql`${id}`), sql`, `)}])
+                    ) = ${tagIds.length}`;
                 } else {
                     tagCondition = exists(
                         db
