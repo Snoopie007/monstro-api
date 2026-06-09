@@ -29,18 +29,18 @@ const appleClientSecret = await generateAppleClientSecret();
 export const auth = betterAuth({
     baseURL: baseURL,
     basePath: "/web/auth",
-    trustedOrigins: async (request) => {
-        const defaults = [
-            "http://localhost:3000",
-        ];
-        // request is undefined during initialization / auth.api calls
-        if (!request) return defaults;
+    // trustedOrigins: async (request) => {
+    //     const defaults = [
+    //         "http://localhost:3000",
+    //     ];
+    //     // request is undefined during initialization / auth.api calls
+    //     if (!request) return defaults;
 
-        // To load from DB, uncomment:
-        // const rows = await db.select({ origin: origins.origin }).from(origins);
-        // return [...defaults, ...rows.map(r => r.origin)];
-        return defaults;
-    },
+    //     // To load from DB, uncomment:
+    //     // const rows = await db.select({ origin: origins.origin }).from(origins);
+    //     // return [...defaults, ...rows.map(r => r.origin)];
+    //     return defaults;
+    // },
     database: drizzleAdapter(db, {
         provider: "pg",
         schema: {
