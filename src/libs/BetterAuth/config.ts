@@ -9,7 +9,6 @@ import { accounts } from "subtrees/schemas";
 import { sessions } from "subtrees/schemas";
 import { verifications } from "subtrees/schemas";
 import { members } from "subtrees/schemas";
-import { migrateMembers } from "subtrees/schemas";
 import bcrypt from "bcryptjs";
 import { generateUsername } from "@/utils/userUtils";
 import { generateAppleClientSecret } from "./apple";
@@ -21,7 +20,7 @@ const baseURL = Bun.env.BETTER_AUTH_BASE_URL ?? "http://localhost:3001";
 
 const useSecureCookies = isProduction || isPreview || baseURL.startsWith("https://");
 
-;
+console.log("baseURL", baseURL);
 
 
 // Generate Apple secret at startup (will be refreshed on each deploy/restart)
