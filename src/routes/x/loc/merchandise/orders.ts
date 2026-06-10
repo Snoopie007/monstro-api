@@ -10,6 +10,7 @@ import type Elysia from "elysia";
 import { t } from "elysia";
 import { adjustStock, markOrderPaid } from "./shared";
 import type { OrderLineItem } from "@subtrees/types";
+import { queueOrderPaidNotifications, queueOrderStatusUpdateNotification } from "@/utils/orderEmailNotifications";
 
 type MerchandiseAccessContext = {
 	merchandiseLocationAccess: { allowed: boolean };
@@ -215,12 +216,28 @@ export async function orderRoutes(app: Elysia) {
 
 			const order = await db.query.orders.findFirst({
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
-				columns: { id: true, status: true },
+				with: {
+					member: true,
+					location: {
+						with: {
+							vendor: {
+								with: {
+									user: true,
+								},
+							},
+						},
+					},
+				},
 			});
 
 			if (!order) return status(404, { error: "Order not found" });
 			if (order.status !== "pending") return status(409, { error: "Order is not pending" });
 			await markOrderPaid(order.id);
+			await queueOrderPaidNotifications({
+				order: { ...order, status: "paid" },
+				member: order.member,
+				location: order.location,
+			});
 
 			const updatedOrder = await db.query.orders.findFirst({
 				where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
@@ -237,8 +254,28 @@ export async function orderRoutes(app: Elysia) {
 			const { params, body, status, merchandiseLocationAccess } = ctx as typeof ctx & MerchandiseAccessContext;
 			if (!merchandiseLocationAccess.allowed) return status(403, { error: "Location access denied" });
 			const { lid, orderId } = params as { lid: string; orderId: string };
+			const nextStatus = body.status;
 
-			const restoringStock = body.status === "cancelled" || body.status === "refunded";
+			// Only status updates need the pre-update row. It prevents duplicate emails and gives notification context without a second helper fetch.
+			const previousOrder = nextStatus !== undefined
+				? await db.query.orders.findFirst({
+					where: and(eq(orders.id, orderId), eq(orders.locationId, lid)),
+					with: {
+						member: true,
+						location: {
+							with: {
+								vendor: {
+									with: {
+										user: true,
+									},
+								},
+							},
+						},
+					},
+				})
+				: null;
+			if (nextStatus !== undefined && !previousOrder) return status(404, { error: "Order not found" });
+
 
 			const [order] = await db.update(orders).set({
 				...(body.status !== undefined ? { status: body.status } : {}),
@@ -250,8 +287,25 @@ export async function orderRoutes(app: Elysia) {
 
 			if (!order) return status(404, { error: "Order not found" });
 
-			if (restoringStock) {
+			const statusChanged = nextStatus !== undefined && previousOrder != null && nextStatus !== previousOrder.status;
+
+			if (statusChanged && (nextStatus === "cancelled" || nextStatus === "refunded")) {
 				await adjustStock(orderId, 1);
+			}
+			if (statusChanged && previousOrder) {
+				if (nextStatus === "paid") {
+					await queueOrderPaidNotifications({
+						order,
+						member: previousOrder.member,
+						location: previousOrder.location,
+					});
+				} else {
+					await queueOrderStatusUpdateNotification({
+						order,
+						member: previousOrder.member,
+						location: previousOrder.location,
+					}, nextStatus);
+				}
 			}
 			return status(200, { order });
 		}, {

@@ -24,6 +24,19 @@ type NotifyUsersParams = {
     locationId: string
 }
 
+type NotifyVendorUsersNewOrderParams = {
+    users: {
+        id: string,
+        email: string,
+    }[]
+    locationName: string
+    locationId: string
+    orderId: string
+    orderNumber: string
+    memberName: string
+    total: string
+}
+
 /**
  * Trigger a Novu workflow notification
  */
@@ -89,6 +102,55 @@ export async function notifyUsersNewSupportConversation({
                     memberName,
                     locationName,
                     url: `/dashboard/location/${locationId}/support/`,
+                    timestamp: new Date().toISOString(),
+                },
+            })
+        )
+    })
+
+    const results = await Promise.allSettled(notifications)
+    const success = results.filter(
+        (r) => r.status === 'fulfilled' && r.value.success
+    ).length
+    const failed = results.length - success
+    const errors = results
+        .filter((r) => r.status === 'rejected' || !r.value.success)
+        .map((r) => (r.status === 'rejected' ? r.reason : r.value.error))
+
+    return { success, failed, errors }
+}
+
+export async function notifyVendorUsersNewEcommerceOrder({
+    users,
+    locationName,
+    locationId,
+    orderId,
+    orderNumber,
+    memberName,
+    total,
+}: NotifyVendorUsersNewOrderParams) {
+    const WORKFLOW_ID = 'vendor-new-ecommerce-order'
+    const notifications: Promise<{ success: boolean; error?: any }>[] = []
+
+    if (users.length === 0) {
+        return { success: true, error: 'No users to notify' }
+    }
+
+    users.forEach((user) => {
+        notifications.push(
+            triggerNovuWorkflow(WORKFLOW_ID, {
+                to: {
+                    subscriberId: user.id,
+                    email: user.email,
+                },
+                payload: {
+                    locationName,
+                    locationId,
+                    orderId,
+                    orderNumber,
+                    memberName,
+                    total,
+                    url: `/dashboard/location/${locationId}/merchandise/orders/${orderId}`,
                     timestamp: new Date().toISOString(),
                 },
             })

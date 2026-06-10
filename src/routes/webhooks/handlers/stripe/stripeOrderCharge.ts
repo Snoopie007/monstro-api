@@ -2,6 +2,7 @@ import { db } from "@/db/db";
 import type { PaymentType } from "@subtrees/types";
 import { orders, transactions } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
+import { queueOrderPaidNotifications } from "@/utils/orderEmailNotifications";
 
 interface HandleStripeOrderChargeProps {
     orderId: string;
@@ -33,6 +34,23 @@ export async function handleStripeOrderCharge({
     HandleStripeOrderChargeProps
 ) {
     const now = new Date();
+    // Read the pre-update status and notification relations once; the returned order below is post-update.
+    const previousOrder = await db.query.orders.findFirst({
+        where: eq(orders.id, orderId),
+        with: {
+            member: true,
+            location: {
+                with: {
+                    vendor: {
+                        with: {
+                            user: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
 
     const [order] = await db.update(orders).set({
         status: success ? "paid" : "unpaid",
@@ -61,6 +79,13 @@ export async function handleStripeOrderCharge({
             stripeChargeId,
         },
     });
+    if (success && previousOrder && previousOrder.status !== "paid") {
+        await queueOrderPaidNotifications({
+            order,
+            member: previousOrder.member,
+            location: previousOrder.location,
+        });
+    }
     ;
 }
 
