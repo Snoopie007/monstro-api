@@ -79,7 +79,7 @@ export async function handleStripeOrderCharge({
             stripeChargeId,
         },
     });
-    if (success && previousOrder && previousOrder.status !== "paid") {
+    if (success && previousOrder) {
         await queueOrderPaidNotifications({
             order,
             member: previousOrder.member,
@@ -88,4 +88,3 @@ export async function handleStripeOrderCharge({
     }
     ;
 }
-

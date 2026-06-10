@@ -57,7 +57,7 @@ export async function handleSquareOrderSuccess({ orderId, paymentMethodId, payme
             gatewayService: "square",
         },
     });
-    if (previousOrder && previousOrder.status !== "paid") {
+    if (previousOrder) {
         await queueOrderPaidNotifications({
             order,
             member: previousOrder.member,
