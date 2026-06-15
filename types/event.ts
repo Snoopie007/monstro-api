@@ -1,0 +1,19 @@
+import { eventRegistrations, locationEvents } from "../schemas/event";
+import type { Location } from "./location";
+import type { Member } from "./member";
+import type { Staff } from "./staff";
+import type { Transaction } from "./transaction";
+
+export type LocationEvent = typeof locationEvents.$inferSelect & {
+	location?: Location;
+	host?: Staff;
+	creator?: Staff;
+	registrations?: EventRegistration[];
+};
+
+export type EventRegistration = typeof eventRegistrations.$inferSelect & {
+	event?: LocationEvent;
+	member?: Member;
+	location?: Location;
+	transaction?: Transaction;
+};
