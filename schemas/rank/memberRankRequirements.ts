@@ -1,8 +1,8 @@
 import { index, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { staffs } from "../staffs";
+import { rankRequirements } from "./RankRequirements";
 import { locations } from "../locations";
 import { members } from "../members";
-import { staffs } from "../staffs";
-import { rankRequirements } from "./rankRequirements";
 
 export const memberRankRequirements = pgTable("member_rank_requirements", {
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
@@ -10,10 +10,8 @@ export const memberRankRequirements = pgTable("member_rank_requirements", {
 	requirementId: text("requirement_id").notNull().references(() => rankRequirements.id, { onDelete: "cascade" }),
 	achievedAt: timestamp("achieved_at", { withTimezone: true }),
 	verifiedBy: text("verified_by").references(() => staffs.id, { onDelete: "set null" }),
-	progress: integer("progress"),
-	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	updated: timestamp("updated_at", { withTimezone: true }),
+	progress: integer("progress").notNull().default(0),
 }, (t) => [
 	primaryKey({ columns: [t.memberId, t.locationId, t.requirementId] }),
-	index("member_rank_requirements_location_member_idx").on(t.locationId, t.memberId),
+	index("member_rank_requirements_member_location_requirement_idx").on(t.memberId, t.locationId, t.requirementId),
 ]);
