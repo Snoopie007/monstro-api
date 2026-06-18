@@ -10,10 +10,10 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 
+import type { OrderLineItem } from "../../types/order";
 import type { Address } from "../../types/other";
-import { members } from "../members";
-import type { OrderLineItem } from "../../types/mercs";
 import { locations } from "../locations";
+import { members } from "../members";
 
 export const orders = pgTable("orders", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
