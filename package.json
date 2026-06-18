@@ -16,6 +16,7 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/bun": "^1.2.21",
     "@types/cheerio": "^0.22.35",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^24.3.0",
     "bun-types": "latest",
     "react-email": "^4.3.2"
@@ -60,10 +61,13 @@
     "postgres": "^3.4.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
     "sqids": "^0.3.0",
     "square": "^44.0.1",
     "stripe": "^22.0.2",
     "twilio": "^5.8.0",
+    "unified": "^11.0.5",
     "zod": "^4.1.3"
   }
 }

@@ -5,6 +5,7 @@ import {
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia"
 import { generatePDF } from "@/utils/generatePDF";
+import { renderContractContent } from "@/utils/contractUtils";
 
 
 export function mlDocsRoutes(app: Elysia) {
@@ -55,6 +56,51 @@ export function mlDocsRoutes(app: Elysia) {
 		}),
 	})
 
+	app.get("/docs/:did", async ({ params, status }) => {
+		const { did } = params;
+		try {
+			const memberContract = await db.query.memberContracts.findFirst({
+				where: (mc, { eq }) => eq(mc.id, did),
+				with: {
+					contractTemplate: {
+						columns: {
+							id: true,
+							title: true,
+							content: true,
+						},
+					},
+					location: true,
+					member: true,
+					pricing: {
+						with: {
+							plan: true,
+						},
+					},
+				},
+			});
+			if (!memberContract) {
+				return status(404, { error: "Member contract not found" });
+			}
+			const { contractTemplate, pricing } = memberContract;
+			const content = renderContractContent(contractTemplate.content, {
+				location: memberContract.location,
+				member: memberContract.member,
+				pricing,
+			});
+			return status(200, { ...memberContract, mdx: content });
+		}
+		catch (err) {
+			console.log(err);
+			return status(500, { error: err });
+		}
+	}, {
+		params: t.Object({
+			mid: t.String(),
+			lid: t.String(),
+			did: t.String(),
+		}),
+	})
+
 	app.patch("/docs/:did", async ({ params, status, body }) => {
 		const { mid, did } = params;
 		const { signature } = body;
@@ -65,6 +111,7 @@ export function mlDocsRoutes(app: Elysia) {
 				where: (mc, { eq }) => eq(mc.id, did),
 				with: {
 					contractTemplate: true,
+					location: true,
 					pricing: {
 						with: {
 							plan: true,
@@ -91,11 +138,18 @@ export function mlDocsRoutes(app: Elysia) {
 			}).where(eq(memberContracts.id, did));
 
 			setTimeout(() => {
-				generatePDF({
-					memberContractId: did,
-					template: contractTemplate,
+				const content = renderContractContent(contractTemplate.content, {
+					location: memberContract.location,
 					member,
 					pricing,
+				});
+
+				generatePDF({
+					did,
+					mid,
+					lid: memberContract.locationId,
+					title: contractTemplate.title,
+					content,
 				});
 			}, 1000);
 

@@ -7,12 +7,11 @@ import {
 	StyleSheet,
 	pdf,
 } from "@react-pdf/renderer";
-import type { Contract } from "@subtrees/types/contract";
-import { parseHTMLContent } from "./PDFParser";
+import { parseMarkdownToPdf } from "./PDFParser";
 
 interface PDFTemplateProps {
-	template: Contract;
-	variables: Record<string, any>;
+	title: string;
+	content: string;
 }
 
 const styles = StyleSheet.create({
@@ -81,22 +80,14 @@ const styles = StyleSheet.create({
 	},
 });
 
-const ContractDocument: React.FC<PDFTemplateProps> = ({
-	template,
-	variables,
-}) => {
-	// Parse HTML content and convert to react-pdf components
-	const parsedContent = parseHTMLContent(
-		template.content || "",
-		variables,
-		styles
-	);
+const ContractDocument: React.FC<PDFTemplateProps> = ({ title, content }) => {
+	const parsedContent = parseMarkdownToPdf(content, styles);
 
 	return (
 		<Document>
 			<Page size="A4" style={styles.page}>
 				<View style={styles.header}>
-					<Text style={styles.title}>{template.title}</Text>
+					<Text style={styles.title}>{title}</Text>
 				</View>
 				<View style={styles.content}>{parsedContent}</View>
 			</Page>
@@ -105,18 +96,16 @@ const ContractDocument: React.FC<PDFTemplateProps> = ({
 };
 
 export async function generatePDFBuffer(
-	template: Contract,
-	variables: Record<string, any>
+	title: string,
+	content: string,
 ): Promise<Buffer> {
 	try {
-		const doc = <ContractDocument template={template} variables={variables} />;
+		const doc = <ContractDocument title={title} content={content} />;
 
-		// Generate PDF blob and convert to buffer for AWS SDK compatibility
 		const blob = await pdf(doc).toBlob();
 		const arrayBuffer = await blob.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
 
-		// Validate buffer has content
 		if (buffer.length === 0) {
 			throw new Error("Generated PDF buffer is empty");
 		}

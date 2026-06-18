@@ -1,12 +1,11 @@
 import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
-import type { MemberPlan, MemberPlanPricing } from "@subtrees/types";
+import type { MemberPlanPricing } from "@subtrees/types";
 import { eq } from "drizzle-orm";
 import { memberContracts } from "@subtrees/schemas";
 import { generatePDF } from "@/utils/generatePDF";
-import { type } from "os";
-
+import { renderContractContent } from "@/utils/contractUtils";
 
 export const webDocRoutes = new Elysia({ prefix: "/docs" })
     .use(WebAuthMiddleware)
@@ -42,7 +41,7 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
 
 
     })
-    .get('/:docId/variables', async ({ lid, status, session, params }) => {
+    .get('/:docId/content', async ({ lid, status, session, params }) => {
         const { docId } = params;
         if (!lid) {
             return status(401, { message: "No Location ID provided" });
@@ -50,11 +49,11 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
         if (!session) {
             return status(401, { message: "No session provided" });
         }
-        const { user } = session;
         try {
             const doc = await db.query.memberContracts.findFirst({
                 where: (m, { eq }) => eq(m.id, docId),
                 with: {
+                    contractTemplate: true,
                     member: true,
                     location: true,
                     pricing: {
@@ -65,21 +64,12 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                 },
             });
 
-            let variables: Record<string, any> = {
+            const mdx = renderContractContent(doc?.contractTemplate?.content, {
                 location: doc?.location,
                 member: doc?.member,
-            };
-            if (doc?.pricing) {
-                const { plan, ...rest } = doc.pricing;
-                variables["plan"] = {
-                    name: plan.name,
-                    price: rest.price,
-                    interval: `${rest.interval} ${rest.intervalThreshold}`,
-                    pricingName: rest.name,
-                };
-            }
-
-            return status(200, variables);
+                pricing: doc?.pricing,
+            });
+            return status(200, { mdx });
         } catch (error) {
             console.error(error);
             return status(500, { error: "Failed to fetch contract" });
@@ -145,11 +135,18 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
             }
             //Generate PDF
             setTimeout(() => {
-                generatePDF({
-                    memberContractId: docId,
+                const content = renderContractContent(template.content, {
+                    location: template.location,
                     member,
-                    template: template,
                     pricing,
+                });
+
+                generatePDF({
+                    did: docId,
+                    mid: member.id,
+                    lid,
+                    title: template.title,
+                    content,
                 });
             }, 1000);
             return status(200, { message: "Contract signed successfully" });

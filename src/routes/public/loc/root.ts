@@ -1,5 +1,4 @@
 import { Elysia, t } from "elysia";
-import { publicDocsRoutes } from "./docs";
 import { publicLocationPaymentGateway } from "./PaymentGateway";
 import { db } from "@/db/db";
 export const publicLocationRoutes = new Elysia({ prefix: "/loc" })
@@ -39,7 +38,6 @@ export const publicLocationRoutes = new Elysia({ prefix: "/loc" })
                 lid: t.String(),
             }),
         });
-        app.use(publicDocsRoutes)
         app.use(publicLocationPaymentGateway)
         return app;
     })
