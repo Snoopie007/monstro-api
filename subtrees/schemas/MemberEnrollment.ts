@@ -69,8 +69,6 @@ export const memberPackages = pgTable("member_packages", {
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
 	totalClassAttended: integer("total_class_attended").notNull().default(0),
 	totalClassLimit: integer("total_class_limit").notNull().default(0),
-	makeUpCredits: integer("make_up_credits").notNull().default(0),
-	allowMakeUpCarryOver: boolean("allow_make_up_carry_over").notNull().default(false),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 	promoId: text("promo_id").references(() => promos.id, { onDelete: "set null" }),
