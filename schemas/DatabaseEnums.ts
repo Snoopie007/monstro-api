@@ -52,15 +52,4 @@ export const RankRequirementTypeEnum = pgEnum("rank_requirement_type", [
   "attendance_count",
 ]);
 
-export const EventStatusEnum = pgEnum("event_status", [
-  "draft",
-  "published",
-  "cancelled",
-]);
-
-export const EventRegistrationStatusEnum = pgEnum("event_registration_status", [
-  "registered",
-  "waitlisted",
-  "cancelled",
-  "attended",
-]);
+export const EventTicketPricingMethodEnum = pgEnum("event_ticket_pricing_method", ["free", "fixed"]);
