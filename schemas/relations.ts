@@ -5,7 +5,7 @@ import { accounts } from "./accounts";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
-import { eventRegistrations, locationEvents } from "./event";
+import { eventRegistrations, eventTickets, locationEvents } from "./event";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
 import { locations } from "./locations";
@@ -541,15 +541,19 @@ export const locationEventsRelations = relations(locationEvents, ({ one, many })
 		fields: [locationEvents.locationId],
 		references: [locations.id],
 	}),
-	host: one(staffs, {
-		fields: [locationEvents.staffId],
-		references: [staffs.id],
-		relationName: "eventHost",
-	}),
 	creator: one(staffs, {
 		fields: [locationEvents.createdBy],
 		references: [staffs.id],
 		relationName: "eventCreator",
+	}),
+	registrations: many(eventRegistrations),
+	tickets: many(eventTickets),
+}));
+
+export const eventTicketsRelations = relations(eventTickets, ({ one, many }) => ({
+	event: one(locationEvents, {
+		fields: [eventTickets.eventId],
+		references: [locationEvents.id],
 	}),
 	registrations: many(eventRegistrations),
 }));
@@ -566,6 +570,10 @@ export const eventRegistrationsRelations = relations(eventRegistrations, ({ one 
 	location: one(locations, {
 		fields: [eventRegistrations.locationId],
 		references: [locations.id],
+	}),
+	ticket: one(eventTickets, {
+		fields: [eventRegistrations.ticketId],
+		references: [eventTickets.id],
 	}),
 	transaction: one(transactions, {
 		fields: [eventRegistrations.transactionId],

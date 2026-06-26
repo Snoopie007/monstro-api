@@ -12,8 +12,8 @@ import {
 
 import type { OrderLineItem } from "../../types/order";
 import type { Address } from "../../types/other";
-import { locations } from "../locations";
 import { members } from "../members";
+import { locations } from "../locations";
 
 export const orders = pgTable("orders", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
