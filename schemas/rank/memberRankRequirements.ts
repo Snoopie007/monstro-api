@@ -1,6 +1,6 @@
 import { index, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import { staffs } from "../staffs";
-import { rankRequirements } from "./RankRequirements";
+import { rankRequirements } from "./rankRequirements";
 import { locations } from "../locations";
 import { members } from "../members";
 
