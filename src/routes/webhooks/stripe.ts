@@ -5,7 +5,7 @@ import { db } from "@/db/db";
 import { memberLocations } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
 import { and, eq } from "drizzle-orm";
-import { handleStripeOrderCharge, handleStripePlanCharge } from "@/routes/webhooks/handlers/stripe";
+import { handleStripeOrderCharge, handleStripePlanCharge, handleStripeTicketCharge } from "@/routes/webhooks/handlers/stripe";
 
 /**
  * Stripe Webhook Handler for Member Billing Events
@@ -46,6 +46,7 @@ type StripeMetadata = {
     invoiceId?: string;
     memberPlanId?: string;
     orderId?: string;
+    registrationId?: string;
 };
 
 const isProd = process.env.BUN_ENV === "production";
@@ -226,6 +227,23 @@ async function handleCharge(event: Stripe.Event) {
         });
         console.log(`[STRIPE WEBHOOK] Plan charge ${charge.id} processed successfully`);
         return;
+    }
+
+    if (metadata.registrationId) {
+        await handleStripeTicketCharge({
+            registrationId: metadata.registrationId,
+            locationId: metadata.locationId,
+            memberId: metadata.memberId,
+            paymentType,
+            success: charge.paid,
+            failedReason: charge.failure_message,
+            failedCode: charge.failure_code || charge.outcome?.reason || null,
+            amount: charge.amount,
+            paymentMethodId,
+            paymentIntentId,
+            feeAmount: charge.application_fee_amount || 0,
+            stripeChargeId: charge.id,
+        });
     }
 }
 

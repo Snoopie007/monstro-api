@@ -13,7 +13,7 @@ import { memberLocations } from '@subtrees/schemas';
 import { paymentMethodsRoutes } from './methods/root';
 import { createLocationChat } from '@/utils/chatsGroupsUtils';
 import { memberLocationPassesRoutes } from './passes';
-
+import { memberLocationTicketsRoutes } from './tickets';
 const GeMLProps = {
     params: t.Object({
         mid: t.String(),
@@ -140,6 +140,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         app.use(mlPointsRoutes)
         app.use(paymentMethodsRoutes)
         app.use(mlRankRoutes)
+        app.use(memberLocationTicketsRoutes)
         return app;
 
     })

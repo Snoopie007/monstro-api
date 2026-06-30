@@ -13,14 +13,16 @@ import { locationPromos } from "./promos";
 import { locationMigrateRoutes } from "./migrate";
 import { locationPass } from "./pass";
 import { locationPlans } from "./plans";
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { locationEmail } from "./email";
 import { db } from "@/db/db";
-import { z } from "zod";
 import { locationMercs } from "./mercs";
+import { locationEventRoutes } from "./events";
+
+
 const LocationGetProps = {
-    params: z.object({
-        lid: z.string(),
+    params: t.Object({
+        lid: t.String(),
     }),
 };
 
@@ -75,5 +77,6 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationEnrollRoutes);
         app.use(locationMigrateRoutes);
         app.use(onboardingRoutes);
+        app.use(locationEventRoutes);
         return app;
     })

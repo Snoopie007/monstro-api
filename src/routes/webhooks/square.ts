@@ -5,6 +5,7 @@ import { handleSquarePlanSuccess } from "./handlers/square/squarePlanSuccess";
 import { handleSquarePlanFail } from "./handlers/square/squarePlanFail";
 import { handleSquareOrderSuccess } from "./handlers/square/squareOrderSuccess";
 import { handleSquareOrderFail } from "./handlers/square/squareOrderFail";
+import { handleSquareTicketCharge } from "./handlers/square/squareTicketCharge";
 
 const ALLOWED_EVENTS = ["payment.created", "payment.updated"];
 
@@ -125,6 +126,23 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
         });
     }
 
+    if (reference_id.startsWith("erg_")) {
+        await handleSquareTicketCharge({
+            registrationId: reference_id,
+            locationId: parsedNote.lid ?? "",
+            memberId: parsedNote.mid ?? "",
+            paymentMethodId: pmid ?? null,
+            paymentIntentId: payment.id ?? null,
+            paymentType,
+            feeAmount: feesAmount,
+            amount,
+            squarePaymentId,
+            squarePaymentStatus,
+            success: true,
+            failedReason: null,
+            failedCode: null,
+        });
+    }
 }
 
 async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
@@ -169,6 +187,24 @@ async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
             failedCode,
             squarePaymentId,
             squarePaymentStatus,
+        });
+    }
+
+    if (reference_id.startsWith("erg_")) {
+        await handleSquareTicketCharge({
+            registrationId: reference_id,
+            locationId: parsedNote.lid ?? "",
+            memberId: parsedNote.mid ?? "",
+            paymentMethodId: pmid ?? null,
+            paymentIntentId: payment.id ?? null,
+            paymentType,
+            feeAmount: feesAmount,
+            amount,
+            failedReason,
+            failedCode,
+            squarePaymentId,
+            squarePaymentStatus,
+            success: false,
         });
     }
 }

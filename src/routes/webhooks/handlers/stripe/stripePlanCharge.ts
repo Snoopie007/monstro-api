@@ -1,8 +1,8 @@
-import type Stripe from "stripe";
+
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
 import { memberInvoices, memberPackages, memberSubscriptions, memberLocations, transactions } from "@subtrees/schemas";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 
 interface HandleStripePlanChargeProps {
