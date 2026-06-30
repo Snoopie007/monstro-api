@@ -15,23 +15,11 @@ export type PaymentMethodOptions = {
 export type StripeChargeOptions = ChargeOptions & {
     unitCost: number,
     tax: number,
-
-    description?: string,
     productName?: string,
     quantity?: number,
-
-    discount?: number,
-    authorizeOnly?: boolean;
-    metadata?: Record<string, any>;
 };
 
 
-export type StripeOrderOptions = ChargeOptions & {
-    customerId: string;
-    paymentMethodId: string;
-    metadata?: Record<string, any>;
-    currency: string;
-}
 
 
 export class StripePaymentGateway {
@@ -225,8 +213,8 @@ export class StripePaymentGateway {
         }
     }
 
-    async createOrder(customerId: string, paymentMethodId: string, options: StripeOrderOptions) {
-        const { total, currency, metadata, feesAmount } = options || {};
+    async createChargeWithoutLineItems(customerId: string, paymentMethodId: string, options: ChargeOptions) {
+        const { total, currency, metadata, feesAmount, description } = options || {};
         const option: Stripe.PaymentIntentCreateParams = {
             customer: customerId,
             amount: total,
@@ -236,7 +224,7 @@ export class StripePaymentGateway {
             confirm: true,
             capture_method: "automatic",
             return_url: `${BASE_MONSTRO_X_URL}/account/location/${metadata?.lid}/purchase/confirm`,
-            description: `Payment for order ${metadata?.orderId}`,
+            description: description || `Payment for order ${metadata?.orderId}`,
             metadata: metadata || undefined,
         }
         return this._client.paymentIntents.create(option);

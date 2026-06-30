@@ -20,4 +20,8 @@ export type ChargeOptions = {
     total: number,
     feesAmount: number,
     currency: Currency,
+    authorizeOnly?: boolean;
+    description?: string,
+    discount?: number,
+    metadata?: Record<string, any>;
 }

@@ -82,16 +82,14 @@ export async function captureGatewayPaymentAndMarkOrderPaid(input: CaptureGatewa
 
 	if (gateway.service === "stripe") {
 		const stripe = new StripePaymentGateway(gateway.accessToken);
-		const paymentIntent = await stripe.createOrder(gatewayCustomerId, paymentMethodId, {
-			customerId: gatewayCustomerId,
-			paymentMethodId,
+		const paymentIntent = await stripe.createChargeWithoutLineItems(gatewayCustomerId, paymentMethodId, {
+			description: `Payment for order ${orderId} `,
 			total,
 			currency,
 			feesAmount,
 			metadata: {
 				memberId,
 				locationId: lid,
-				lid,
 				orderId,
 			},
 		});

@@ -110,18 +110,21 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         if (gateway.service === "stripe") {
             try {
                 const stripe = new StripePaymentGateway(gateway.accessToken);
-                await stripe.createOrder(gatewayCustomerId, paymentMethodId, {
-                    customerId: gatewayCustomerId,
+                await stripe.createChargeWithoutLineItems(
+                    gatewayCustomerId,
                     paymentMethodId,
-                    total,
-                    currency,
-                    feesAmount,
-                    metadata: {
-                        memberId: mid,
-                        locationId: lid,
-                        orderId: order.id,
-                    },
-                });
+                    {
+                        authorizeOnly: true,
+                        description: `Payment for order ${order.id}`,
+                        total,
+                        currency,
+                        feesAmount,
+                        metadata: {
+                            memberId: mid,
+                            locationId: lid,
+                            orderId: order.id,
+                        },
+                    });
             } catch (error) {
                 console.error(error);
                 tx.rollback();

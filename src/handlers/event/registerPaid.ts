@@ -99,22 +99,21 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     try {
         if (gateway.service === "stripe") {
             const stripe = new StripePaymentGateway(gateway.accessToken);
-            const paymentResult = await stripe.createCharge(gatewayCustomerId, paymentMethodId, {
-                total,
-                unitCost: total,
-                tax,
-                feesAmount,
-                currency,
-                description,
-                productName,
-                metadata: {
-                    locationId: lid,
-                    memberId: mid,
-                    eventId: event.id,
-                    ticketId: ticket.id,
-                    registrationId,
-                },
-            });
+            const paymentResult = await stripe.createChargeWithoutLineItems(
+                gatewayCustomerId,
+                paymentMethodId,
+                {
+                    authorizeOnly: true,
+                    description: `Payment for event registration - ${registrationId}`,
+                    total,
+                    feesAmount,
+                    currency,
+                    metadata: {
+                        locationId: lid,
+                        memberId: mid,
+                        registrationId,
+                    },
+                });
             paymentIntentId = paymentResult.id;
         } else if (gateway.service === "square") {
             if (paymentType !== "card") {
@@ -157,6 +156,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
             );
         }
     } catch (error) {
+
         if (error instanceof EventRegistrationError) {
             throw error;
         }
