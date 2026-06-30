@@ -6,7 +6,7 @@ import type { MemberSubscription, MemberPackage, Reservation } from "@subtrees/t
 import { differenceInMinutes, isSameHour } from "date-fns";
 import { Elysia, t } from "elysia";
 import { sql } from "drizzle-orm";
-import { classQueue } from "@/queues";
+import { classQueue, rankQueue } from "@/queues";
 
 
 const LocationCheckinProps = {
@@ -92,8 +92,38 @@ export async function locationCheckin(app: Elysia) {
                 endTime: rest.endOn,
             }).returning();
 
-            // Evaluate attendance triggers after successful check-in
-            // TODO: Evaluate attendance triggers
+            try {
+                const attendance = checkin[0];
+
+                if (attendance) {
+                    const duration = differenceInMinutes(attendance.endTime, attendance.startTime);
+                    const [hasRankProgram, memberInRank] = await Promise.all([
+                        db.query.rankProcesses.findFirst({
+                            where: (rp, { eq }) => eq(rp.locationId, lid),
+                            columns: { id: true },
+                        }),
+                        db.query.memberRanks.findFirst({
+                            where: (mr, { and, eq }) => and(
+                                eq(mr.memberId, rest.memberId),
+                                eq(mr.locationId, lid),
+                            ),
+                            columns: { id: true },
+                        }),
+                    ]);
+
+                    if (hasRankProgram && memberInRank) {
+                        await rankQueue.add("attendance", {
+                            mid: rest.memberId,
+                            lid,
+                            duration,
+                        }, {
+                            jobId: `rank:${attendance.id}`,
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error("[CHECKIN] Failed to enqueue rank attendance job:", error);
+            }
 
             // Cancel the missed class check job since member checked in
             try {

@@ -109,10 +109,8 @@ export async function locationSessions(app: Elysia) {
         }
     }, SessionsProps)
     app.get('/sessions/today', async ({ params, status, query }) => {
-        const today = new Date();
 
         const { programIds } = query;
-        const programIdsArray = programIds.split(",");
         try {
 
             return status(200, { sessions: [] });
