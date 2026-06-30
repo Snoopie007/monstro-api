@@ -133,6 +133,15 @@ export const RetryWalletSchema = z.object({
     walletId: z.string(),
     lid: z.string(),
 })
+export const RankAttendanceJobSchema = z.object({
+    mid: z.string(),
+    lid: z.string(),
+    attendanceId: z.number(),
+    amount: z.number().optional(),
+});
+
+export type RankAttendanceJobData = z.infer<typeof RankAttendanceJobSchema>;
+
 export type RetrySubPaymentData = z.infer<typeof RetrySubPaymentSchema>;
 export type RetryWalletData = z.infer<typeof RetryWalletSchema>;
 export type CheckMissedClassData = z.infer<typeof CheckMissedClassSchema>;
