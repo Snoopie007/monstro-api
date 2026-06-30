@@ -25,6 +25,8 @@ export type EventRegistrationBaseInput = {
     mid: string;
     event: LocationEvent;
     ticket: EventTicket;
+    transactionId?: string;
+    registrationId?: string;
 };
 
 export type LoadEventContextParams = {
@@ -104,12 +106,24 @@ export async function createEventRegistration(
         mid,
         event,
         ticket,
+        transactionId,
+        registrationId,
     }: EventRegistrationBaseInput,
 ) {
     const eventId = event.id;
     const ticketId = ticket.id;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${eventId}))`);
 
+    const duplicate = await tx.query.eventRegistrations.findFirst({
+        where: and(
+            eq(eventRegistrations.eventId, eventId),
+            eq(eventRegistrations.memberId, mid),
+        ),
+        columns: { id: true, status: true },
+    });
+    if (duplicate && (duplicate.status === "registered" || duplicate.status === "attended")) {
+        throw new EventRegistrationError(409, "Member is already registered for this event");
+    }
 
     /* TODO: Check if event is sold out */
     const [registered] = await tx.select({ count: count() })
@@ -120,12 +134,13 @@ export async function createEventRegistration(
         throw new EventRegistrationError(409, "Event is sold out");
     }
 
-    /* TODO: Create registration */
     const [registration] = await tx.insert(eventRegistrations).values({
+        ...(registrationId ? { id: registrationId } : {}),
         eventId,
         memberId: mid,
         ticketId,
         locationId: lid,
+        transactionId,
     }).returning({ id: eventRegistrations.id });
     /* TODO: Update ticket quantity */
     await tx.update(eventTickets).set({
