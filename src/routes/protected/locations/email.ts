@@ -8,15 +8,17 @@ const LocationEmailProps = {
         template: z.enum(Object.keys(EmailTemplates) as [keyof typeof EmailTemplates]),
         subject: z.string(),
         data: z.record(z.string(), z.any()),
-        sendAt: z.string(),
-        jobId: z.string(),
+        sendAt: z.string().optional(),
+        jobId: z.string().optional(),
+        headers: z.record(z.string(), z.string()).optional(),
+        replyTo: z.string().optional(),
     }),
 };
 
 
 export async function locationEmail(app: Elysia) {
     return app.post('/email', async ({ body }) => {
-        const { recipient, subject, template, data, sendAt, jobId } = body;
+        const { recipient, subject, template, data, sendAt, jobId, headers, replyTo } = body;
 
         try {
             // Calculate delay if sendAt is provided
@@ -51,7 +53,9 @@ export async function locationEmail(app: Elysia) {
                 to: recipient,
                 subject: subject,
                 template: template,
-                metadata: data
+                metadata: data,
+                headers,
+                replyTo
             }, queueOptions);
 
             return {

@@ -16,11 +16,10 @@ import UpdateEmailOTP from "./UpdateEmailOTP";
 import MigrationEmail from "./MigrationEmail";
 import ChildFamilyEmail from "./ChildFamilyEmail";
 import StaffInviteEmail from "./StaffInvite";
-import MemberWelcomeNewAccountEmail from "./MemberWelcomeNewAccount";
-import MemberWelcomeExistingAccountEmail from "./MemberWelcomeExistingAccount";
 import OrderReceiptEmail from "./OrderReceiptEmail";
 import NewOrderAlertEmail from "./NewOrderAlertEmail";
 import OrderStatusUpdateEmail from "./OrderStatusUpdateEmail";
+import InternalSupportCaseMessageEmail from "./InternalSupportCaseMessageEmail";
 
 export const EmailTemplates = {
     ClassReminderEmail,
@@ -41,9 +40,8 @@ export const EmailTemplates = {
     SessionCancellationEmail,
     SimpleOTPEmail,
     UpdateEmailOTP,
-    MemberWelcomeNewAccountEmail,
-    MemberWelcomeExistingAccountEmail,
     OrderReceiptEmail,
     NewOrderAlertEmail,
     OrderStatusUpdateEmail,
+    InternalSupportCaseMessageEmail,
 }
