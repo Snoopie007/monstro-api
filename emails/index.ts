@@ -21,6 +21,7 @@ import MemberWelcomeExistingAccountEmail from "./MemberWelcomeExistingAccount";
 import OrderReceiptEmail from "./OrderReceiptEmail";
 import NewOrderAlertEmail from "./NewOrderAlertEmail";
 import OrderStatusUpdateEmail from "./OrderStatusUpdateEmail";
+import InternalSupportCaseMessageEmail from "./InternalSupportCaseMessageEmail";
 
 export const EmailTemplates = {
     ClassReminderEmail,
@@ -46,4 +47,5 @@ export const EmailTemplates = {
     OrderReceiptEmail,
     NewOrderAlertEmail,
     OrderStatusUpdateEmail,
+    InternalSupportCaseMessageEmail,
 }
