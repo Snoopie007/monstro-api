@@ -46,3 +46,10 @@ export const ExceptionInitiatorEnum = pgEnum("exception_initiator", [
 
 export const PromoTypeEnum = pgEnum("promo_type", ["percentage", "fixed_amount"]);
 export const PromoDurationEnum = pgEnum("promo_duration", ["once", "repeating", "forever"]);
+
+export const RankRequirementTypeEnum = pgEnum("rank_requirement_type", [
+  "manual",
+  "attendance_count",
+]);
+
+export const EventTicketPricingMethodEnum = pgEnum("event_ticket_pricing_method", ["free", "fixed"]);

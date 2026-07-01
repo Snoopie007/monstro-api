@@ -17,6 +17,13 @@ export type ExtendedUser = BaseUser & {
 
 export type ExtendedVendorUser = ExtendedUser & {
   vendorId: string;
+  staffId?: string;
+  userRole?: string;
+  user_metadata?: {
+      vendorId?: string;
+      staffId?: string;
+      role?: string;
+  };
 };
 
 export type AuthAdditionalData = {

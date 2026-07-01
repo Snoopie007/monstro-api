@@ -1,10 +1,10 @@
-import { text, timestamp, time, smallint, pgTable, integer, unique, boolean, primaryKey, uuid } from "drizzle-orm/pg-core";
-import { locations } from "./locations";
 import { sql } from "drizzle-orm";
-import { memberPlans } from "./MemberPlans";
-import { staffs } from "./staffs";
+import { boolean, integer, pgTable, primaryKey, smallint, text, time, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { ProgramStatusEnum } from "./DatabaseEnums";
+import { locations } from "./locations";
+import { memberPlans } from "./MemberPlan";
 import { members } from "./members";
+import { staffs } from "./staffs";
 
 export const programs = pgTable("programs", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
