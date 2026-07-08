@@ -9,6 +9,7 @@ import OTPEmailTemplate from "./OTPEmailTemplate";
 import OverdueInvoiceEmail from "./OverdueInvoiceEmail";
 import PaymentSuccessEmail from "./PaymentSuccessEmail";
 import ResetPasswordEmail from "./ResetPasswordEmail";
+import ResetPasswordEmailMobile from "./ResetPasswordEmailMobile";
 import ResetSuccessEmail from "./ResetSuccessEmail";
 import SessionCancellationEmail from "./SessionCancellationEmail";
 import SimpleOTPEmail from "./SimpleOTP";
@@ -37,6 +38,7 @@ export const EmailTemplates = {
     OverdueInvoiceEmail,
     PaymentSuccessEmail,
     ResetPasswordEmail,
+    ResetPasswordEmailMobile,
     ResetSuccessEmail,
     SessionCancellationEmail,
     SimpleOTPEmail,
