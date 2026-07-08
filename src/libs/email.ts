@@ -8,6 +8,7 @@ type EmailOptions = {
     to: string;
     subject: string;
     headers?: Record<string, string>;
+    replyTo?: string;
 }
 type SendWithTemplateProps = {
     template: keyof typeof EmailTemplates;
@@ -21,6 +22,7 @@ type SendProps = {
     html: string;
     options?: {
         headers?: Record<string, string>;
+        replyTo?: string;
     }
 }
 
