@@ -3,7 +3,7 @@ import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { members } from "../members";
 import { staffs } from "../staffs";
-import { rankProcesses } from "./rankProcesses";
+import { rankProcesses } from "./RankProcesses";
 import { ranks } from "./ranks";
 
 export const memberRankHistory = pgTable("member_rank_history", {
