@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { members } from "../members";
-import { rankProcesses } from "./rankProcesses";
+import { rankProcesses } from "./RankProcesses";
 import { ranks } from "./ranks";
 
 export const memberRanks = pgTable("member_ranks", {
@@ -14,5 +14,5 @@ export const memberRanks = pgTable("member_ranks", {
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
-	uniqueIndex("member_ranks_member_location_process_idx").on(t.memberId, t.locationId, t.processId), 
+	uniqueIndex("member_ranks_member_location_process_idx").on(t.memberId, t.locationId, t.processId),
 ]);
