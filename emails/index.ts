@@ -9,6 +9,7 @@ import OTPEmailTemplate from "./OTPEmailTemplate";
 import OverdueInvoiceEmail from "./OverdueInvoiceEmail";
 import PaymentSuccessEmail from "./PaymentSuccessEmail";
 import ResetPasswordEmail from "./ResetPasswordEmail";
+import ResetPasswordEmailMobile from "./ResetPasswordEmailMobile";
 import ResetSuccessEmail from "./ResetSuccessEmail";
 import SessionCancellationEmail from "./SessionCancellationEmail";
 import SimpleOTPEmail from "./SimpleOTP";
@@ -16,8 +17,10 @@ import UpdateEmailOTP from "./UpdateEmailOTP";
 import MigrationEmail from "./MigrationEmail";
 import ChildFamilyEmail from "./ChildFamilyEmail";
 import StaffInviteEmail from "./StaffInvite";
-import MemberWelcomeNewAccountEmail from "./MemberWelcomeNewAccount";
-import MemberWelcomeExistingAccountEmail from "./MemberWelcomeExistingAccount";
+import OrderReceiptEmail from "./OrderReceiptEmail";
+import NewOrderAlertEmail from "./NewOrderAlertEmail";
+import OrderStatusUpdateEmail from "./OrderStatusUpdateEmail";
+import InternalSupportCaseMessageEmail from "./InternalSupportCaseMessageEmail";
 
 export const EmailTemplates = {
     ClassReminderEmail,
@@ -34,10 +37,13 @@ export const EmailTemplates = {
     OverdueInvoiceEmail,
     PaymentSuccessEmail,
     ResetPasswordEmail,
+    ResetPasswordEmailMobile,
     ResetSuccessEmail,
     SessionCancellationEmail,
     SimpleOTPEmail,
     UpdateEmailOTP,
-    MemberWelcomeNewAccountEmail,
-    MemberWelcomeExistingAccountEmail,
+    OrderReceiptEmail,
+    NewOrderAlertEmail,
+    OrderStatusUpdateEmail,
+    InternalSupportCaseMessageEmail,
 }

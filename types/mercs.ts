@@ -13,13 +13,3 @@ export type Merc = typeof products.$inferSelect & {
 
 export type ProductVariant = MercVariant
 
-export type OrderLineItem = {
-    variantId: string;
-    unitCost: number;
-    quantity: number;
-    discount?: number;
-    productName: string;
-    tax: number;
-    sku?: string | null;
-    imageUrl?: string | null;
-}

@@ -133,6 +133,15 @@ export const RetryWalletSchema = z.object({
     walletId: z.string(),
     lid: z.string(),
 })
+export const RankAttendanceJobSchema = z.object({
+    mid: z.string(),
+    lid: z.string(),
+    attendanceId: z.number(),
+    amount: z.number().optional(),
+});
+
+export type RankAttendanceJobData = z.infer<typeof RankAttendanceJobSchema>;
+
 export type RetrySubPaymentData = z.infer<typeof RetrySubPaymentSchema>;
 export type RetryWalletData = z.infer<typeof RetryWalletSchema>;
 export type CheckMissedClassData = z.infer<typeof CheckMissedClassSchema>;
@@ -142,3 +151,11 @@ export type DiscountData = z.infer<typeof DiscountSchema>;
 export type SubscriptionJobData = z.infer<typeof SubscriptionJobSchema>;
 export type CashSubscriptionJobData = z.infer<typeof CashSubscriptionJobSchema>;
 export type RecursiveSubscriptionJobData = z.infer<typeof RecursiveSubscriptionJobSchema>;
+
+export const RankAttendanceTriggerSchema = z.object({
+    mid: z.string(),
+    lid: z.string(),
+    duration: z.coerce.number().optional(),
+});
+
+export type RankAttendanceTriggerData = z.infer<typeof RankAttendanceTriggerSchema>;
