@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
-import { rankProcesses } from "./RankProcesses";
+import { rankProcesses } from "./rankProcesses";
 
 export const ranks = pgTable("ranks", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),

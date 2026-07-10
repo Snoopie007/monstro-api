@@ -1,6 +1,7 @@
 
 import type { PaymentType } from "./DatabaseEnums"
 import type { Address } from "./other"
+
 export type PaymentMethod = {
     id: string
     source: 'stripe' | 'square'
