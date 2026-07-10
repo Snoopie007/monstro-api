@@ -4,6 +4,7 @@ export * from "./attendance";
 export * from "./assistant";
 export * from "./chat";
 export * from "./contract";
+export * from "./course";
 export * from "./database";
 export * from "./DatabaseEnums";
 export * from "./event";
