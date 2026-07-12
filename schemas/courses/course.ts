@@ -9,7 +9,6 @@ export const courses = pgTable("courses", {
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	slug: text("slug").notNull(),
 	title: text("title").notNull(),
-	summary: text("summary"),
 	description: text("description"),
 	coverImage: text("cover_image"),
 	status: text("status").$type<CourseStatus>().notNull().default("draft"),
