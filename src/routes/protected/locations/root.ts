@@ -17,6 +17,7 @@ import { Elysia, t } from "elysia";
 import { locationEmail } from "./email";
 import { db } from "@/db/db";
 import { locationMercs } from "./mercs";
+import { locationCourses } from "./courses";
 import { locationEventRoutes } from "./events";
 
 
@@ -72,10 +73,12 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationPromos);
         app.use(locationSupport);
         app.use(locationMercs);
+        app.use(locationCourses);
         app.use(locationLeaderboard);
         app.use(locationPlans);
         app.use(locationEnrollRoutes);
         app.use(locationMigrateRoutes);
+        app.use(locationCourses);
         app.use(onboardingRoutes);
         app.use(locationEventRoutes);
         return app;

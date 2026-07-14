@@ -71,6 +71,9 @@ import { vendorReferrals } from "./VendorReferrals";
 // Ecommerce tables
 import { orders, products, productImages, productVariants } from "./ecommerce";
 
+// Course tables
+import { courseChapters, courseLessons, courses } from "./courses";
+
 // ============================================================================
 // USER RELATIONS
 // ============================================================================
@@ -339,6 +342,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	rankProcesses: many(rankProcesses),
 	ranks: many(ranks),
 	locationEvents: many(locationEvents),
+	courses: many(courses),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -879,6 +883,29 @@ export const productVariantsRelations = relations(productVariants, ({ many, one 
 	product: one(products, {
 		fields: [productVariants.productId],
 		references: [products.id],
+	}),
+}));
+
+export const coursesRelations = relations(courses, ({ many, one }) => ({
+	location: one(locations, {
+		fields: [courses.locationId],
+		references: [locations.id],
+	}),
+	chapters: many(courseChapters),
+}));
+
+export const courseChaptersRelations = relations(courseChapters, ({ many, one }) => ({
+	course: one(courses, {
+		fields: [courseChapters.courseId],
+		references: [courses.id],
+	}),
+	lessons: many(courseLessons),
+}));
+
+export const courseLessonsRelations = relations(courseLessons, ({ one }) => ({
+	chapter: one(courseChapters, {
+		fields: [courseLessons.chapterId],
+		references: [courseChapters.id],
 	}),
 }));
 

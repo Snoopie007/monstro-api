@@ -7,8 +7,8 @@
     "moduleDetection": "force",
     "jsx": "react",
     "allowJs": true,
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@/*": ["./src/*"],
       "@subtrees/*": ["./subtrees/*"]
     },
