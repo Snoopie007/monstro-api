@@ -19,6 +19,10 @@ export type StripeChargeOptions = ChargeOptions & {
     quantity?: number,
 };
 
+export function stripePaymentIntentRequestOptions(idempotencyKey?: string): Stripe.RequestOptions | undefined {
+    return idempotencyKey ? { idempotencyKey } : undefined;
+}
+
 
 
 
@@ -166,7 +170,8 @@ export class StripePaymentGateway {
             productName,
             currency,
             tax,
-            feesAmount
+            feesAmount,
+            idempotencyKey
         } = options || {};
 
 
@@ -199,7 +204,10 @@ export class StripePaymentGateway {
         }
 
         try {
-            const { id, client_secret } = await this._client.paymentIntents.create(option);
+            const requestOptions = stripePaymentIntentRequestOptions(idempotencyKey);
+            const { id, client_secret } = requestOptions
+                ? await this._client.paymentIntents.create(option, requestOptions)
+                : await this._client.paymentIntents.create(option);
 
             return {
                 id,
@@ -214,7 +222,7 @@ export class StripePaymentGateway {
     }
 
     async createChargeWithoutLineItems(customerId: string, paymentMethodId: string, options: ChargeOptions) {
-        const { total, currency, metadata, feesAmount, description } = options || {};
+        const { total, currency, metadata, feesAmount, description, idempotencyKey } = options || {};
         const option: Stripe.PaymentIntentCreateParams = {
             customer: customerId,
             amount: total,
@@ -227,7 +235,10 @@ export class StripePaymentGateway {
             description: description || `Payment for order ${metadata?.orderId}`,
             metadata: metadata || undefined,
         }
-        return this._client.paymentIntents.create(option);
+        const requestOptions = stripePaymentIntentRequestOptions(idempotencyKey);
+        return requestOptions
+            ? this._client.paymentIntents.create(option, requestOptions)
+            : this._client.paymentIntents.create(option);
     }
 
     async createRefund(paymentIntentId: string, amount: number, currency: string) {

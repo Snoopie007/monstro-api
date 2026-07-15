@@ -3,8 +3,8 @@ import { cors } from "@elysiajs/cors";
 import { serverConfig } from "./src/config";
 import { RateLimitMiddleware } from "./src/middlewares";
 import {
-	AuthRoutes, ProtectedRoutes, PublicRoutes
-	, XRoutes, webhooksRoutes
+	AuthRoutes, MemberCourseRoutes, ProtectedRoutes, PublicRoutes,
+	XRoutes, webhooksRoutes
 } from "./src/routes";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
 import { startOnlineChannel } from "./src/libs/broadcast";
@@ -13,10 +13,10 @@ import { WebRoutes } from "./src/routes/web";
 const CORS_CONFIG = {
 	origin: "*",
 	methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-	allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Key", "x-correlation-id"],
+	allowedHeaders: ["Content-Type", "Authorization", "X-Mobile", "X-Admin-Key", "x-correlation-id"],
 };
 
-const app = new Elysia({
+export const app = new Elysia({
 	serve: {
 		maxRequestBodySize: 1024 * 1024 * 10, // 10MB
 	}
@@ -71,19 +71,20 @@ app.use(cors(CORS_CONFIG))
 		return "";
 	})
 
-	.group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes))
+	.group("/api", (app) => app.use(AuthRoutes).use(MemberCourseRoutes).use(ProtectedRoutes))
 	.group("/x", (app) => app.use(XRoutes))
 	.group("/api/realtime", (app) =>
 		app.use(realtimeRoutes).use(realtimeHealthRoutes)
 	)
 	.group("/web", (app) => app.use(WebRoutes))
 	.use(PublicRoutes)
-	.use(webhooksRoutes)
-	.listen({
-		hostname: "0.0.0.0",
-		port: serverConfig.port
-	});
+	.use(webhooksRoutes);
 
-console.log(`🚀 Bun server running on http://localhost:${serverConfig.port}`);
-// Start online channel
-startOnlineChannel();
+if (import.meta.main) {
+	app.listen({
+		hostname: "0.0.0.0",
+		port: serverConfig.port,
+	});
+	console.log(`🚀 Bun server running on http://localhost:${serverConfig.port}`);
+	startOnlineChannel();
+}

@@ -5,18 +5,20 @@ import { locations, staffsLocations } from "@subtrees/schemas";
 type LocationAccessResult = {
 	allowed: boolean;
 };
+type LocationAccessReader = Pick<typeof db, "query">;
 
 export async function canAccessLocation(
 	lid: string,
 	vendorId?: string,
-	staffId?: string
+	staffId?: string,
+	database: LocationAccessReader = db
 ): Promise<LocationAccessResult> {
 	if (!vendorId && !staffId) {
 		return { allowed: false };
 	}
 
 	if (vendorId) {
-		const location = await db.query.locations.findFirst({
+		const location = await database.query.locations.findFirst({
 			where: and(eq(locations.id, lid), eq(locations.vendorId, vendorId)),
 			columns: { id: true },
 		});
@@ -25,7 +27,7 @@ export async function canAccessLocation(
 	}
 
 	if (staffId) {
-		const staffLocation = await db.query.staffsLocations.findFirst({
+		const staffLocation = await database.query.staffsLocations.findFirst({
 			where: and(
 				eq(staffsLocations.staffId, staffId),
 				eq(staffsLocations.locationId, lid),
