@@ -39,6 +39,7 @@ app.use(cors(CORS_CONFIG))
 			return { error: "Route not found" };
 		}
 
+		console.error(error);
 		set.status = 500;
 		return { error: "Internal server error" };
 	})
