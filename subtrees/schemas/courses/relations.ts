@@ -2,11 +2,13 @@ import { relations } from "drizzle-orm";
 import { locations } from "../locations";
 import { members } from "../members";
 import { transactions } from "../transactions";
+import { courseLessonAttachments } from "./attachment";
 import { courseChapters } from "./chapter";
 import { courseLessonCompletions } from "./completion";
 import { courses } from "./course";
 import { courseEnrollments } from "./enrollment";
 import { courseLessons } from "./lesson";
+ 
 
 export const coursesRelations = relations(courses, ({ many, one }) => ({
 	location: one(locations, { fields: [courses.locationId], references: [locations.id] }),
@@ -22,6 +24,11 @@ export const courseChaptersRelations = relations(courseChapters, ({ many, one })
 export const courseLessonsRelations = relations(courseLessons, ({ many, one }) => ({
 	chapter: one(courseChapters, { fields: [courseLessons.chapterId], references: [courseChapters.id] }),
 	completions: many(courseLessonCompletions),
+	attachments: many(courseLessonAttachments),
+}));
+
+export const courseLessonAttachmentsRelations = relations(courseLessonAttachments, ({ one }) => ({
+	lesson: one(courseLessons, { fields: [courseLessonAttachments.lessonId], references: [courseLessons.id] }),
 }));
 
 export const courseEnrollmentsRelations = relations(courseEnrollments, ({ many, one }) => ({

@@ -4,6 +4,7 @@ import {
 	DeleteObjectCommand,
 	ListObjectsV2Command,
 	GetObjectCommand,
+	HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { tryCatch } from "@/utils";
@@ -12,6 +13,15 @@ type Result = {
 	key: string;
 	url: string;
 };
+
+function sanitizeResponseFilename(filename: string) {
+	const sanitized = filename
+		.replace(/[\/\\]/g, "_")
+		.replace(/[\u0000-\u001f\u007f"]/g, "_")
+		.trim()
+		.slice(0, 255);
+	return sanitized || "download";
+}
 
 export default class S3Bucket {
 	private s3Client: S3Client;
@@ -45,6 +55,7 @@ export default class S3Bucket {
 			xls: "application/vnd.ms-excel",
 			xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 			jpg: "image/jpeg",
+			pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 			jpeg: "image/jpeg",
 			png: "image/png",
 			gif: "image/gif",
@@ -93,6 +104,16 @@ export default class S3Bucket {
 		};
 	}
 
+
+	async headObject(key: string) {
+		const command = new HeadObjectCommand({
+			Bucket: this.BUCKET_NAME,
+			Key: key,
+		});
+		const { result, error } = await tryCatch(this.s3Client.send(command));
+		if (error) throw error;
+		return result;
+	}
 	async removeObject(key: string) {
 		const command = new DeleteObjectCommand({
 			Bucket: this.BUCKET_NAME,
@@ -200,17 +221,20 @@ export default class S3Bucket {
 	async getSignedUrl(
 		key: string,
 		expiresIn: number = 300,
-		forceDownload: boolean = true
+		forceDownload: boolean = true,
+		originalFilename?: string,
 	) {
-		const filename = key.split("/").pop() || "download";
+		const filename = originalFilename === undefined
+			? key.split("/").pop() || "download"
+			: sanitizeResponseFilename(originalFilename);
 		const contentType = this.getContentTypeFromKey(key);
 
 		const command = new GetObjectCommand({
 			Bucket: this.BUCKET_NAME,
 			Key: key,
-			...(forceDownload && {
-				ResponseContentDisposition: `attachment; filename="${filename}"`,
-				ResponseContentType: contentType,
+			...((forceDownload || originalFilename !== undefined) && {
+				ResponseContentDisposition: `${forceDownload ? "attachment" : "inline"}; filename="${filename}"`,
+				...(forceDownload ? { ResponseContentType: contentType } : {}),
 			}),
 		});
 

@@ -2,6 +2,7 @@ import { canAccessLocation } from "@/utils/merchandise";
 import { Elysia } from "elysia";
 import { courseRoutes } from "./courses";
 import { courseEnrollmentRoutes } from "./enrollments";
+import { courseLessonAttachmentRoutes } from "./attachments";
 import { courseLessonRoutes } from "./lessons";
 import type { XAuthContext } from "./shared";
 import { courseUploadRoutes } from "./uploads";
@@ -14,6 +15,7 @@ const courseManagementRoutes = new Elysia()
 	})
 	.use(courseRoutes)
 	.use(courseLessonRoutes)
+	.use(courseLessonAttachmentRoutes)
 	.use(courseUploadRoutes);
 
 export const xCourses = new Elysia({ prefix: "/courses" })
