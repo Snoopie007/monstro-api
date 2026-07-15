@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
 import { check, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { courses } from "./course";
 
@@ -14,3 +14,6 @@ export const courseChapters = pgTable("course_chapters", {
 	unique("course_chapters_course_sort_order_unique").on(t.courseId, t.sortOrder),
 	check("course_chapters_sort_order_nonnegative", sql`${t.sortOrder} >= 0`),
 ]);
+
+export type CourseChapter = InferSelectModel<typeof courseChapters>;
+export type NewCourseChapter = InferInsertModel<typeof courseChapters>;

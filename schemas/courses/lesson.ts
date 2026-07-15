@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { courseChapters } from "./chapter";
 
@@ -11,6 +11,7 @@ export const courseLessons = pgTable("course_lessons", {
 	summary: text("summary"),
 	mdx: text("mdx").notNull().default(""),
 	videoUrl: text("video_url"),
+	videoDurationSeconds: integer("video_duration_seconds"),
 	sortOrder: integer("sort_order").notNull().default(0),
 	status: text("status").$type<LessonStatus>().notNull().default("draft"),
 	requiresEnrollment: boolean("requires_enrollment").notNull().default(true),
@@ -22,4 +23,8 @@ export const courseLessons = pgTable("course_lessons", {
 	index("course_lessons_chapter_idx").on(t.chapterId),
 	check("course_lessons_sort_order_nonnegative", sql`${t.sortOrder} >= 0`),
 	check("course_lessons_status_check", sql`${t.status} in ('draft', 'published', 'archived')`),
+	check("course_lessons_video_duration_nonnegative", sql`${t.videoDurationSeconds} is null or ${t.videoDurationSeconds} >= 0`),
 ]);
+
+export type CourseLesson = InferSelectModel<typeof courseLessons>;
+export type NewCourseLesson = InferInsertModel<typeof courseLessons>;
