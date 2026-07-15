@@ -53,11 +53,17 @@ export const courseLessonRoutes = new Elysia()
 					: videoObjectKeyChanged
 						? null
 						: currentLesson.videoDurationSeconds;
+			const nextVideoThumbnail = nextVideoObjectKey === null
+				? null
+				: body.videoThumbnail !== undefined
+					? body.videoThumbnail
+					: currentLesson.videoThumbnail;
 			const [lesson] = await tx.update(courseLessons).set({
 				...(title !== undefined ? { title } : {}),
 				...(body.summary !== undefined ? { summary: body.summary } : {}),
 				...(body.mdx !== undefined ? { mdx: body.mdx } : {}),
 				...(body.videoObjectKey !== undefined ? { videoObjectKey: nextVideoObjectKey } : {}),
+				...(body.videoThumbnail !== undefined || body.videoObjectKey !== undefined ? { videoThumbnail: nextVideoThumbnail } : {}),
 				...(body.videoObjectKey !== undefined || body.videoDurationSeconds !== undefined ? { videoDurationSeconds: nextVideoDurationSeconds } : {}),
 				...(body.status !== undefined ? { status: body.status as LessonStatus } : {}),
 				...(body.requiresEnrollment !== undefined ? { requiresEnrollment: body.requiresEnrollment } : {}),
@@ -82,6 +88,7 @@ export const courseLessonRoutes = new Elysia()
 			summary: t.Optional(t.Nullable(t.String())),
 			mdx: t.Optional(t.String()),
 			videoObjectKey: t.Optional(t.Nullable(t.String())),
+			videoThumbnail: t.Optional(t.Nullable(t.String())),
 			videoDurationSeconds: t.Optional(t.Nullable(t.Integer({ minimum: 0 }))),
 			status: t.Optional(LessonStatusSchema),
 			requiresEnrollment: t.Optional(t.Boolean()),

@@ -11,6 +11,7 @@ export const courseLessons = pgTable("course_lessons", {
 	summary: text("summary"),
 	mdx: text("mdx").notNull().default(""),
 	videoObjectKey: text("video_object_key"),
+	videoThumbnail: text("video_thumbnail"),
 	videoDurationSeconds: integer("video_duration_seconds"),
 	sortOrder: integer("sort_order").notNull().default(0),
 	status: text("status").$type<LessonStatus>().notNull().default("draft"),
