@@ -93,6 +93,16 @@ export default class S3Bucket {
 		};
 	}
 
+	async removeObject(key: string) {
+		const command = new DeleteObjectCommand({
+			Bucket: this.BUCKET_NAME,
+			Key: key,
+		});
+		const { error } = await tryCatch(this.s3Client.send(command));
+		if (error) throw error;
+		return true;
+	}
+
 	async removeFile(fileDirectory: string, name: string) {
 		const command = new DeleteObjectCommand({
 			Bucket: this.BUCKET_NAME,
@@ -214,6 +224,26 @@ export default class S3Bucket {
 	}
 
 
+
+	async getPresignedUploadUrlWithObjectKey(
+		fileDirectory: string,
+		fileName: string,
+		contentType: string,
+		expiresIn: number = 300,
+	): Promise<{ uploadUrl: string; objectKey: string }> {
+		const objectKey = `${fileDirectory}/${fileName}`;
+		const command = new PutObjectCommand({
+			Bucket: this.BUCKET_NAME,
+			Key: objectKey,
+			ContentType: contentType,
+		});
+		const { result: uploadUrl, error } = await tryCatch(
+			getSignedUrl(this.s3Client, command, { expiresIn }),
+		);
+		if (error) throw error;
+		if (!uploadUrl) throw new Error("Failed to generate upload URL");
+		return { uploadUrl, objectKey };
+	}
 
 	/**
 	 * Generates a presigned URL for direct client-to-S3 upload

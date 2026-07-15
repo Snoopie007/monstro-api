@@ -10,7 +10,7 @@ export const courseLessons = pgTable("course_lessons", {
 	title: text("title").notNull(),
 	summary: text("summary"),
 	mdx: text("mdx").notNull().default(""),
-	videoUrl: text("video_url"),
+	videoObjectKey: text("video_object_key"),
 	videoDurationSeconds: integer("video_duration_seconds"),
 	sortOrder: integer("sort_order").notNull().default(0),
 	status: text("status").$type<LessonStatus>().notNull().default("draft"),
@@ -18,7 +18,7 @@ export const courseLessons = pgTable("course_lessons", {
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-}, (t) => [
+  }, (t) => [
 	uniqueIndex("course_lessons_chapter_sort_order_active_unique").on(t.chapterId, t.sortOrder).where(sql`${t.status} <> 'archived'`),
 	index("course_lessons_chapter_idx").on(t.chapterId),
 	check("course_lessons_sort_order_nonnegative", sql`${t.sortOrder} >= 0`),
