@@ -1,29 +1,37 @@
 import { db } from "@/db/db";
-import { Elysia, t } from "elysia"
-import { renderContractContent } from "@/utils/contractUtils";
+import { courseChapters, courseLessons, courses as coursesTable } from "@subtrees/schemas";
+import { sql } from "drizzle-orm";
+import { Elysia, t } from "elysia";
 
+const MemberLocationCoursesProps = {
+    params: t.Object({
+        mid: t.String(),
+        lid: t.String(),
+    }),
+};
 
 export function mlCoursesRoutes(app: Elysia) {
-    app.get("/docs", async ({ params, status }) => {
+    return app.get("/courses", async ({ params, status }) => {
         const { mid, lid } = params;
         try {
+            const enrollments = await db.query.courseEnrollments.findMany({
+                where: (ce, { eq, and }) => and(eq(ce.memberId, mid), eq(ce.locationId, lid)),
+                with: {
+
+                    completions: {
+                        columns: {
+                            lessonId: true,
+                            completedAt: true,
+                        },
+                    },
+                },
+            });
 
 
-
-
-
-            return status(200, {});
+            return status(200, enrollments);
         } catch (err) {
-            console.log(err);
-            return status(500, { error: err });
+            console.error(err);
+            return status(500, { error: "Failed to fetch course enrollments" });
         }
-    }, {
-        params: t.Object({
-            mid: t.String(),
-            lid: t.String(),
-        }),
-    })
-
-
-    return app;
+    }, MemberLocationCoursesProps);
 }

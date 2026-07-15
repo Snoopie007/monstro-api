@@ -72,7 +72,7 @@ import { vendorReferrals } from "./VendorReferrals";
 import { orders, products, productImages, productVariants } from "./ecommerce";
 
 // Course tables
-import { courseChapters, courseLessons, courses } from "./courses";
+import { courseChapters, courseEnrollments, courseLessonCompletions, courseLessons, courses } from "./courses";
 
 // ============================================================================
 // USER RELATIONS
@@ -892,6 +892,7 @@ export const coursesRelations = relations(courses, ({ many, one }) => ({
 		references: [locations.id],
 	}),
 	chapters: many(courseChapters),
+	enrollments: many(courseEnrollments),
 }));
 
 export const courseChaptersRelations = relations(courseChapters, ({ many, one }) => ({
@@ -902,10 +903,42 @@ export const courseChaptersRelations = relations(courseChapters, ({ many, one })
 	lessons: many(courseLessons),
 }));
 
-export const courseLessonsRelations = relations(courseLessons, ({ one }) => ({
+export const courseLessonsRelations = relations(courseLessons, ({ one, many }) => ({
 	chapter: one(courseChapters, {
 		fields: [courseLessons.chapterId],
 		references: [courseChapters.id],
+	}),
+	completions: many(courseLessonCompletions),
+}));
+
+export const courseEnrollmentsRelations = relations(courseEnrollments, ({ one, many }) => ({
+	course: one(courses, {
+		fields: [courseEnrollments.courseId],
+		references: [courses.id],
+	}),
+	member: one(members, {
+		fields: [courseEnrollments.memberId],
+		references: [members.id],
+	}),
+	location: one(locations, {
+		fields: [courseEnrollments.locationId],
+		references: [locations.id],
+	}),
+	transaction: one(transactions, {
+		fields: [courseEnrollments.transactionId],
+		references: [transactions.id],
+	}),
+	completions: many(courseLessonCompletions),
+}));
+
+export const courseLessonCompletionsRelations = relations(courseLessonCompletions, ({ one }) => ({
+	enrollment: one(courseEnrollments, {
+		fields: [courseLessonCompletions.enrollmentId],
+		references: [courseEnrollments.id],
+	}),
+	lesson: one(courseLessons, {
+		fields: [courseLessonCompletions.lessonId],
+		references: [courseLessons.id],
 	}),
 }));
 
