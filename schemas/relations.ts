@@ -72,7 +72,11 @@ import { vendorReferrals } from "./VendorReferrals";
 import { orders, products, productImages, productVariants } from "./ecommerce";
 
 // Course tables
-import { courseChapters, courseEnrollments, courseLessonCompletions, courseLessons, courses } from "./courses";
+import {
+	courseChapters, courseEnrollments,
+	courseLessonCompletions, courseLessons, courses,
+	courseLessonAttachments,
+} from "./courses";
 
 // ============================================================================
 // USER RELATIONS
@@ -908,7 +912,15 @@ export const courseLessonsRelations = relations(courseLessons, ({ one, many }) =
 		fields: [courseLessons.chapterId],
 		references: [courseChapters.id],
 	}),
+	attachments: many(courseLessonAttachments),
 	completions: many(courseLessonCompletions),
+}));
+
+export const courseLessonAttachmentsRelations = relations(courseLessonAttachments, ({ one }) => ({
+	lesson: one(courseLessons, {
+		fields: [courseLessonAttachments.lessonId],
+		references: [courseLessons.id],
+	}),
 }));
 
 export const courseEnrollmentsRelations = relations(courseEnrollments, ({ one, many }) => ({

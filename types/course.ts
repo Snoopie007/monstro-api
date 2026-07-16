@@ -26,6 +26,7 @@ export type CourseChapter = typeof courseChapters.$inferSelect & {
 };
 export type CourseLessonAttachment = typeof courseLessonAttachments.$inferSelect & {
 	lesson?: CourseLesson;
+	contentUrl?: string;
 };
 export type CourseLesson = typeof courseLessons.$inferSelect & {
 	chapter?: CourseChapter;
