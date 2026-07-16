@@ -1,5 +1,11 @@
-import { courseChapters, courseEnrollments, courseLessonCompletions, courseLessons, courses } from "../schemas/courses";
 import type { CourseStatus, LessonStatus } from "../schemas/courses";
+import {
+	courseChapters,
+	courseEnrollments,
+	courseLessonCompletions,
+	courseLessons,
+	courses,
+} from "../schemas/courses";
 import type { Location } from "./location";
 import type { Member } from "./member";
 import type { Transaction } from "./transaction";
@@ -9,6 +15,8 @@ export type { CourseStatus, LessonStatus };
 export type Course = typeof courses.$inferSelect & {
 	location?: Location;
 	chapters?: CourseChapter[];
+	chapterCount?: number;
+	lessonCount?: number;
 	enrollments?: CourseEnrollment[];
 };
 
@@ -26,8 +34,8 @@ export type CourseEnrollment = typeof courseEnrollments.$inferSelect & {
 	course?: Course;
 	member?: Member;
 	location?: Location;
-	transaction?: Transaction;
-	completions?: CourseLessonCompletion[];
+	transaction?: Transaction | null;
+	lessonCompletions?: CourseLessonCompletion[];
 };
 
 export type CourseLessonCompletion = typeof courseLessonCompletions.$inferSelect & {

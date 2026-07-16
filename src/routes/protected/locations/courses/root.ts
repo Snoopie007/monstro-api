@@ -58,6 +58,8 @@ export async function locationCourses(app: Elysia) {
                                     summary: true,
                                     sortOrder: true,
                                     status: true,
+                                    videoUrl: true,
+                                    videoDuration: true,
                                 },
                             },
                         },
@@ -86,7 +88,6 @@ export async function locationCourses(app: Elysia) {
             const lesson = await db.query.courseLessons.findFirst({
                 where: (cl, { eq }) => eq(cl.id, lessonId),
             });
-
             return status(200, lesson);
         }
         catch (error) {

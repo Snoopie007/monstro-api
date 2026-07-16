@@ -11,5 +11,4 @@ export type Merc = typeof products.$inferSelect & {
     images?: MercImage[];
 };
 
-export type ProductVariant = MercVariant
 
