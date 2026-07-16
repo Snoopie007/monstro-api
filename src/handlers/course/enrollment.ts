@@ -1,14 +1,10 @@
+import { createHash } from "node:crypto";
+
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateGatewayFeeAmount } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import {
-	deterministicCourseEnrollmentId,
-	deterministicCourseEnrollmentIdempotencyKey,
-	deterministicCourseTransactionId,
-	duplicateCourseEnrollmentMessage,
-	isCourseEnrollmentUniqueViolation,
-	isMissingOwnedPaymentMethod,
 	MemberCourseEnrollmentError,
 	type MemberCourseEnrollmentBody,
 	validateMemberCourseEnrollmentBody,
@@ -29,6 +25,12 @@ const defaultGateways: GatewayFactory = {
 	stripe: (accessToken) => new StripePaymentGateway(accessToken),
 	square: (accessToken) => new SquarePaymentGateway(accessToken),
 };
+
+const duplicateCourseEnrollmentMessage = "Member is already enrolled in this course";
+
+function hash24(value: string) {
+	return createHash("sha256").update(value).digest("hex").slice(0, 24);
+}
 
 
 
@@ -59,7 +61,16 @@ export async function courseEnrollmentTransaction<T>(database: typeof db, run: (
 	try {
 		return await database.transaction(run as never);
 	} catch (error) {
-		if (isCourseEnrollmentUniqueViolation(error)) throw new MemberCourseEnrollmentError(409, duplicateCourseEnrollmentMessage, "DUPLICATE_ENROLLMENT");
+		if (
+			error !== null
+			&& typeof error === "object"
+			&& "code" in error
+			&& error.code === "23505"
+			&& "constraint" in error
+			&& error.constraint === "course_enrollments_course_member_unique"
+		) {
+			throw new MemberCourseEnrollmentError(409, duplicateCourseEnrollmentMessage, "DUPLICATE_ENROLLMENT");
+		}
 		throw error;
 	}
 }
@@ -95,7 +106,7 @@ export async function enrollMemberInCourseCore(input: {
 	});
 	if (duplicate) throw new MemberCourseEnrollmentError(409, duplicateCourseEnrollmentMessage, "DUPLICATE_ENROLLMENT");
 
-	const enrollmentId = deterministicCourseEnrollmentId(input.lid, input.courseId, input.memberId);
+	const enrollmentId = `cen_${hash24(`${input.lid}:${input.courseId}:${input.memberId}`)}`;
 	if (!course.paid) {
 		await tx.insert(courseEnrollments).values({
 			id: enrollmentId,
@@ -150,8 +161,8 @@ export async function enrollMemberInCourseCore(input: {
 	}
 
 	const paymentType = "card";
-	const transactionId = deterministicCourseTransactionId(enrollmentId);
-	const idempotencyKey = deterministicCourseEnrollmentIdempotencyKey(input.lid, input.courseId, input.memberId, checkoutAttemptId);
+	const transactionId = `txn_${hash24(enrollmentId)}`;
+	const idempotencyKey = `course-enrollment:${hash24(`${input.lid}:${input.courseId}:${input.memberId}:${checkoutAttemptId}`)}`;
 	const paymentIntentId = await chargeCourse({
 		gateways,
 		gateway: { ...gateway, accessToken: gatewayAccessToken },
@@ -267,7 +278,7 @@ async function chargeCourse(input: {
 		throw new MemberCourseEnrollmentError(400, "No payment gateway configured for this location", "NO_PAYMENT_GATEWAY");
 	} catch (error) {
 		if (error instanceof MemberCourseEnrollmentError) throw error;
-		if (isMissingOwnedPaymentMethod(error)) {
+		if (error !== null && typeof error === "object" && "code" in error && error.code === "resource_missing") {
 			throw new MemberCourseEnrollmentError(400, "Payment method does not belong to member", "PAYMENT_METHOD_INVALID");
 		}
 		const mapped = error instanceof Stripe.errors.StripeError

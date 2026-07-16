@@ -5,7 +5,6 @@ import {
 	type GatewayFactory,
 } from "@/handlers/course/enrollment";
 import {
-	duplicateCourseEnrollmentMessage,
 	memberCourseEnrollmentHttpError,
 	MemberCourseEnrollmentError,
 	validateMemberCourseEnrollmentBody,
@@ -14,15 +13,6 @@ import { canAccessLocation } from "@/utils/merchandise";
 import { Elysia, t } from "elysia";
 import type { XAuthContext } from "./shared";
 
-export const duplicateEnrollmentMessage = duplicateCourseEnrollmentMessage;
-
-export function isUniqueViolation(error: unknown, constraint?: string) {
-	return error !== null
-		&& typeof error === "object"
-		&& "code" in error
-		&& error.code === "23505"
-		&& (constraint === undefined || ("constraint" in error && error.constraint === constraint));
-}
 
 export async function enrollMemberInCourse(database: typeof db, lid: string, courseId: string, memberId: string, vendorId?: string, staffId?: string, body: unknown = {}, gateways?: GatewayFactory) {
 	const paymentBody = validateMemberCourseEnrollmentBody(body);

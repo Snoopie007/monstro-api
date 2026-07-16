@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export type MemberCourseEnrollmentBody = {
 	paymentMethodId?: string;
 	paymentType?: "card";
@@ -13,19 +11,6 @@ export class MemberCourseEnrollmentError extends Error {
 	}
 }
 
-export const duplicateCourseEnrollmentMessage = "Member is already enrolled in this course";
-
-export function deterministicCourseEnrollmentId(lid: string, courseId: string, memberId: string) {
-	return `cen_${hash(`${lid}:${courseId}:${memberId}`).slice(0, 24)}`;
-}
-
-export function deterministicCourseTransactionId(enrollmentId: string) {
-	return `txn_${hash(enrollmentId).slice(0, 24)}`;
-}
-
-export function deterministicCourseEnrollmentIdempotencyKey(lid: string, courseId: string, memberId: string, attemptId: string) {
-	return `course-enrollment:${hash(`${lid}:${courseId}:${memberId}:${attemptId}`).slice(0, 24)}`;
-}
 
 export function validateMemberCourseEnrollmentBody(body: unknown): MemberCourseEnrollmentBody {
 	if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -57,24 +42,4 @@ export function memberCourseEnrollmentHttpError(error: unknown) {
 		return { status: error.status, body: { error: error.message, ...(error.code ? { code: error.code } : {}) } };
 	}
 	throw error;
-}
-
-export function isCourseEnrollmentUniqueViolation(error: unknown) {
-	return error !== null
-		&& typeof error === "object"
-		&& "code" in error
-		&& error.code === "23505"
-		&& "constraint" in error
-		&& error.constraint === "course_enrollments_course_member_unique";
-}
-
-export function isMissingOwnedPaymentMethod(error: unknown) {
-	return error !== null
-		&& typeof error === "object"
-		&& "code" in error
-		&& error.code === "resource_missing";
-}
-
-function hash(value: string) {
-	return createHash("sha256").update(value).digest("hex");
 }
