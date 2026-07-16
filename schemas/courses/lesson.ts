@@ -15,6 +15,7 @@ export const courseLessons = pgTable("course_lessons", {
 	status: text("status").$type<LessonStatus>().notNull().default("draft"),
 	requiresEnrollment: boolean("requires_enrollment").notNull().default(true),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+	videoDuration: integer("video_duration_seconds").default(0),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
