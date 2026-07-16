@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import S3Bucket from "@/libs/s3";
 import { courseChapters, courseLessons, courses as coursesTable } from "@subtrees/schemas";
 import { sql } from "drizzle-orm";
 import type { Elysia } from "elysia";
@@ -87,10 +88,40 @@ export async function locationCourses(app: Elysia) {
         try {
             const lesson = await db.query.courseLessons.findFirst({
                 where: (cl, { eq }) => eq(cl.id, lessonId),
+                with: {
+                    attachments: {
+                        columns: {
+                            id: true,
+                            objectKey: true,
+                            fileName: true,
+                            contentType: true,
+                            sizeBytes: true,
+                        },
+                    },
+                },
             });
-            return status(200, lesson);
-        }
-        catch (error) {
+
+            if (!lesson) {
+                return status(404, "Lesson not found");
+            }
+
+            const s3 = new S3Bucket();
+            const expiresIn = 24 * 60 * 60; // 24 hours
+
+            const [videoUrl, ...attachmentUrls] = await Promise.all([
+                lesson.videoObjectKey ? s3.getSignedUrl(lesson.videoObjectKey, expiresIn, false) : Promise.resolve(null),
+                ...lesson.attachments.map((attachment) => s3.getSignedUrl(attachment.objectKey, expiresIn, true)),
+            ]);
+
+            return status(200, {
+                ...lesson,
+                videoUrl,
+                attachments: lesson.attachments.map((attachment, index) => ({
+                    ...attachment,
+                    contentUrl: attachmentUrls[index] ?? null,
+                })),
+            });
+        } catch (error) {
             console.error(error);
             return status(500, "Failed to fetch lesson");
         }
