@@ -47,28 +47,11 @@ async function courseDetail(courseId: string, lid: string, reader: Pick<typeof d
 
 type CourseDraftChapter = { id: string; title: string; lessons: { id: string; title: string }[] };
 
-async function saveCourseDraft(lid: string, courseId: string, body: {
-	title: string;
-	slug: string;
-	description: string | null;
-	coverImage: string | null;
-	status: CourseStatus;
-	paid?: boolean;
-	price?: number;
-	chapters: CourseDraftChapter[];
-}) {
+async function saveCourseStructure(lid: string, courseId: string, chapters: CourseDraftChapter[]) {
 	return db.transaction(async (tx) => {
 		await tx.execute(sql`select id from courses where id = ${courseId} and location_id = ${lid} for update`);
-		const course = await tx.query.courses.findFirst({ where: and(eq(courses.id, courseId), eq(courses.locationId, lid)), columns: { id: true, status: true, paid: true, price: true } });
+		const course = await tx.query.courses.findFirst({ where: and(eq(courses.id, courseId), eq(courses.locationId, lid)), columns: { id: true } });
 		if (!course) return { status: "course-missing" as const };
-		const pricing = coursePricingFields(body, course);
-		if ("error" in pricing) return { status: "pricing-error" as const, error: pricing.error };
-
-		const slugOwner = await tx.query.courses.findFirst({
-			where: and(eq(courses.locationId, lid), eq(courses.slug, body.slug), ne(courses.id, courseId)),
-			columns: { id: true },
-		});
-		if (slugOwner) return { status: "slug-conflict" as const };
 
 		await tx.execute(sql`select id from course_chapters where course_id = ${courseId} for update`);
 		const dbChapters = await tx.query.courseChapters.findMany({
@@ -76,9 +59,9 @@ async function saveCourseDraft(lid: string, courseId: string, body: {
 			columns: { id: true, sortOrder: true },
 		});
 		const dbChapterIds = new Set(dbChapters.map((chapter) => chapter.id));
-		const inputChapterIds = body.chapters.map((chapter) => chapter.id);
+		const inputChapterIds = chapters.map((chapter) => chapter.id);
 		const inputChapterIdSet = new Set(inputChapterIds);
-		const inputLessonIds = body.chapters.flatMap((chapter) => chapter.lessons.map((lesson) => lesson.id));
+		const inputLessonIds = chapters.flatMap((chapter) => chapter.lessons.map((lesson) => lesson.id));
 		const inputLessonIdSet = new Set(inputLessonIds);
 		const missingChapterIds = inputChapterIds.filter((id) => !dbChapterIds.has(id));
 		const badChapterId = missingChapterIds.find((id) => !id.startsWith("chp_"));
@@ -127,19 +110,9 @@ async function saveCourseDraft(lid: string, courseId: string, body: {
 		}
 
 		const now = new Date();
-		await tx.update(courses).set({
-			title: body.title,
-			slug: body.slug,
-			description: body.description,
-			coverImage: body.coverImage,
-			status: pricing.status,
-			paid: pricing.paid,
-			price: pricing.price,
-			updated: now,
-		}).where(eq(courses.id, courseId));
 
-		const chapterTempBase = Math.max(body.chapters.length - 1, ...dbChapters.map((chapter) => chapter.sortOrder)) + 1;
-		const finalLessonMax = Math.max(-1, ...body.chapters.map((chapter) => chapter.lessons.length - 1));
+		const chapterTempBase = Math.max(chapters.length - 1, ...dbChapters.map((chapter) => chapter.sortOrder)) + 1;
+		const finalLessonMax = Math.max(-1, ...chapters.map((chapter) => chapter.lessons.length - 1));
 		const lessonTempBase = Math.max(finalLessonMax, ...activeLessons.map((lesson) => lesson.sortOrder)) + 1;
 		for (const [index, chapter] of dbChapters.entries()) {
 			await tx.update(courseChapters).set({ sortOrder: chapterTempBase + index }).where(eq(courseChapters.id, chapter.id));
@@ -148,7 +121,7 @@ async function saveCourseDraft(lid: string, courseId: string, body: {
 			await tx.update(courseLessons).set({ sortOrder: lessonTempBase + index }).where(eq(courseLessons.id, lesson.id));
 		}
 
-		for (const [chapterIndex, chapter] of body.chapters.entries()) {
+		for (const [chapterIndex, chapter] of chapters.entries()) {
 			if (dbChapterIds.has(chapter.id)) {
 				await tx.update(courseChapters).set({ title: chapter.title, sortOrder: chapterIndex, updated: now }).where(eq(courseChapters.id, chapter.id));
 			} else {
@@ -221,11 +194,6 @@ export const courseRoutes = new Elysia()
 		const pricing = coursePricingFields({ status: body.status as CourseStatus | undefined, paid: body.paid, price: body.price });
 		if ("error" in pricing) return status(400, { error: pricing.error });
 
-		const existing = await db.query.courses.findFirst({
-			where: and(eq(courses.locationId, lid), eq(courses.slug, slug)),
-			columns: { id: true },
-		});
-		if (existing) return status(409, { error: "Course slug already exists for this location" });
 
 		try {
 			const course = await db.transaction(async (tx) => {
@@ -290,13 +258,6 @@ export const courseRoutes = new Elysia()
 		const pricing = coursePricingFields(pricingInput, currentCourse ?? undefined);
 		if ("error" in pricing) return status(400, { error: pricing.error });
 
-		if (slug) {
-			const existing = await db.query.courses.findFirst({
-				where: and(eq(courses.locationId, lid), eq(courses.slug, slug), ne(courses.id, courseId)),
-				columns: { id: true },
-			});
-			if (existing) return status(409, { error: "Course slug already exists for this location" });
-		}
 
 		try {
 			const [course] = await db.update(courses).set({
@@ -352,10 +313,6 @@ export const courseRoutes = new Elysia()
 		const { params, body, status, courseLocationAccess } = ctx as typeof ctx & CourseAccessContext;
 		if (!courseLocationAccess.allowed) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 		const { lid, courseId } = params as { lid: string; courseId: string };
-		const title = body.title.trim();
-		const slug = slugify(body.slug.trim());
-		if (!title) return status(400, { error: "Course title is required" });
-		if (!slug) return status(400, { error: "Course slug is required" });
 		if (body.chapters.length === 0) return status(400, { error: "Course must include at least one chapter" });
 
 		const chapterIds = body.chapters.map((chapter) => chapter.id);
@@ -369,45 +326,20 @@ export const courseRoutes = new Elysia()
 		const blankLesson = body.chapters.flatMap((chapter) => chapter.lessons).find((lesson) => !lesson.title.trim());
 		if (blankLesson) return status(400, { error: "Lesson title is required", id: blankLesson.id });
 
-		try {
-			const result = await saveCourseDraft(lid, courseId, {
-				title,
-				slug,
-				description: body.description,
-				coverImage: body.coverImage,
-				status: body.status as CourseStatus,
-				paid: body.paid,
-				price: body.price,
-				chapters: body.chapters.map((chapter) => ({
-					id: chapter.id,
-					title: chapter.title.trim(),
-					lessons: chapter.lessons.map((lesson) => ({ id: lesson.id, title: lesson.title.trim() })),
-				})),
-			});
+		const result = await saveCourseStructure(lid, courseId, body.chapters.map((chapter) => ({
+			id: chapter.id,
+			title: chapter.title.trim(),
+			lessons: chapter.lessons.map((lesson) => ({ id: lesson.id, title: lesson.title.trim() })),
+		})));
 
-			if (result.status === "course-missing") return status(404, { error: "Course not found" });
-			if (result.status === "slug-conflict") return status(409, { error: "Course slug already exists for this location" });
-			if (result.status === "bad-chapter-id") return status(400, { error: "Chapter id is not valid for this course", id: result.id });
-			if (result.status === "bad-lesson-id") return status(400, { error: "Lesson id is not valid for this course", id: result.id });
-			if (result.status === "chapter-not-empty") return status(409, { error: "Chapter must be empty before deletion", id: result.id });
-			if (result.status === "pricing-error") return status(400, { error: result.error });
+		if (result.status === "course-missing") return status(404, { error: "Course not found" });
+		if (result.status === "bad-chapter-id") return status(400, { error: "Chapter id is not valid for this course", id: result.id });
+		if (result.status === "bad-lesson-id") return status(400, { error: "Lesson id is not valid for this course", id: result.id });
+		if (result.status === "chapter-not-empty") return status(409, { error: "Chapter must be empty before deletion", id: result.id });
 
-			return status(200, { course: result.course });
-		} catch (error) {
-			if (isCourseSlugConflict(error)) {
-				return status(409, { error: "Course slug already exists for this location" });
-			}
-			throw error;
-		}
+		return status(200, { course: result.course });
 	}, {
 		body: t.Object({
-			title: t.String(),
-			slug: t.String(),
-			description: t.Nullable(t.String()),
-			coverImage: t.Nullable(t.String()),
-			status: CourseStatusSchema,
-			paid: t.Optional(t.Boolean()),
-			price: t.Optional(t.Integer()),
 			chapters: t.Array(t.Object({
 				id: t.String(),
 				title: t.String(),
