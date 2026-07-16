@@ -1,4 +1,4 @@
-import type { CourseStatus, LessonStatus } from "../schemas/courses";
+import type { courseLessonAttachments, CourseStatus, LessonStatus } from "../schemas/courses";
 import {
 	courseChapters,
 	courseEnrollments,
@@ -24,11 +24,17 @@ export type CourseChapter = typeof courseChapters.$inferSelect & {
 	course?: Course;
 	lessons?: CourseLesson[];
 };
-
+export type CourseLessonAttachment = typeof courseLessonAttachments.$inferSelect & {
+	lesson?: CourseLesson;
+};
 export type CourseLesson = typeof courseLessons.$inferSelect & {
 	chapter?: CourseChapter;
 	completions?: CourseLessonCompletion[];
+	attachments?: CourseLessonAttachment[];
+	videoUrl?: string;
 };
+
+
 
 export type CourseEnrollment = typeof courseEnrollments.$inferSelect & {
 	course?: Course;
