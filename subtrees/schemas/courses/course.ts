@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { check, index, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 
 export type CourseStatus = "draft" | "published" | "archived";
@@ -13,7 +13,6 @@ export const courses = pgTable("courses", {
 	description: text("description"),
 	coverImage: text("cover_image"),
 	status: text("status").$type<CourseStatus>().notNull().default("draft"),
-	paid: boolean("paid").notNull().default(false),
 	price: integer("price").notNull().default(0),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

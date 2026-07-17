@@ -64,7 +64,7 @@ export async function enrollMemberInCourseCore(input: {
 
 	const course = await tx.query.courses.findFirst({
 		where: and(eq(courses.id, input.courseId), eq(courses.locationId, input.lid)),
-		columns: { id: true, title: true, status: true, paid: true },
+		columns: { id: true, title: true, status: true, price: true },
 	});
 	if (!course) throw new MemberCourseEnrollmentError(404, "Course not found", "COURSE_NOT_FOUND");
 	if (course.status !== "published") throw new MemberCourseEnrollmentError(400, "Course must be published to enroll", "COURSE_NOT_PUBLISHED");
@@ -82,7 +82,7 @@ export async function enrollMemberInCourseCore(input: {
 	if (duplicate) throw new MemberCourseEnrollmentError(409, duplicateCourseEnrollmentMessage, "DUPLICATE_ENROLLMENT");
 
 	const enrollmentId = `cen_${hash24(`${input.lid}:${input.courseId}:${input.memberId}`)}`;
-	if (!course.paid) {
+	if (course.price === 0) {
 		await tx.insert(courseEnrollments).values({
 			id: enrollmentId,
 			courseId: input.courseId,
@@ -92,16 +92,10 @@ export async function enrollMemberInCourseCore(input: {
 		});
 		return { id: enrollmentId, transactionId: null };
 	}
-
-	const pricedCourse = await tx.query.courses.findFirst({
-		where: and(eq(courses.id, input.courseId), eq(courses.locationId, input.lid)),
-		columns: { price: true },
-	});
-	const price = pricedCourse?.price ?? 0;
-	if (price <= 0) throw new MemberCourseEnrollmentError(400, "Paid course must have a positive price", "INVALID_PRICE");
-	if (!input.body.paymentMethodId) throw new MemberCourseEnrollmentError(400, "paymentMethodId is required for paid courses", "PAYMENT_METHOD_REQUIRED");
+	const price = course.price;
+	if (!input.body.paymentMethodId) throw new MemberCourseEnrollmentError(400, "paymentMethodId is required for courses with a price", "PAYMENT_METHOD_REQUIRED");
 	const checkoutAttemptId = input.body.attemptId;
-	if (!checkoutAttemptId) throw new MemberCourseEnrollmentError(400, "attemptId is required for paid courses", "PAYMENT_ATTEMPT_REQUIRED");
+	if (!checkoutAttemptId) throw new MemberCourseEnrollmentError(400, "attemptId is required for courses with a price", "PAYMENT_ATTEMPT_REQUIRED");
 	if (!memberLocation.gatewayCustomerId) throw new MemberCourseEnrollmentError(400, "No gateway customer found for this location", "NO_GATEWAY_CUSTOMER");
 
 	const state = await tx.query.locationState.findFirst({

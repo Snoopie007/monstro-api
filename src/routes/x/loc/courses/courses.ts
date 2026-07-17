@@ -3,7 +3,6 @@ import { slugify } from "@/utils/merchandise";
 import { courseChapters, courseLessons, courses, type CourseStatus } from "@subtrees/schemas";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
-import { coursePricingFields, coursePricingInputError } from "./pricing";
 import { CourseStatusSchema, duplicateId, isCourseSlugConflict, type CourseAccessContext } from "./shared";
 
 async function courseDetail(courseId: string, lid: string, reader: Pick<typeof db, "query" | "select"> = db) {
@@ -191,8 +190,8 @@ export const courseRoutes = new Elysia()
 		const slug = slugify(body.slug?.trim() || title);
 		if (!slug) return status(400, { error: "Course slug is required" });
 
-		const pricing = coursePricingFields({ status: body.status as CourseStatus | undefined, paid: body.paid, price: body.price });
-		if ("error" in pricing) return status(400, { error: pricing.error });
+		const price = body.price ?? 0;
+		if (!Number.isInteger(price) || price < 0) return status(400, { error: "Course price must be zero or greater whole cents" });
 
 
 		try {
@@ -203,9 +202,8 @@ export const courseRoutes = new Elysia()
 					title,
 					description: body.description ?? null,
 					coverImage: body.coverImage ?? null,
-					status: pricing.status,
-					paid: pricing.paid,
-					price: pricing.price,
+					status: body.status as CourseStatus | undefined ?? "draft",
+					price,
 					metadata: body.metadata ?? {},
 				}).returning();
 				if (!createdCourse) throw new Error("Course was not created");
@@ -233,8 +231,7 @@ export const courseRoutes = new Elysia()
 			description: t.Optional(t.Nullable(t.String())),
 			coverImage: t.Optional(t.Nullable(t.String())),
 			status: t.Optional(CourseStatusSchema),
-			paid: t.Optional(t.Boolean()),
-			price: t.Optional(t.Integer()),
+			price: t.Optional(t.Integer({ minimum: 0 })),
 			metadata: t.Optional(t.Record(t.String(), t.Unknown())),
 		}),
 	})
@@ -247,16 +244,12 @@ export const courseRoutes = new Elysia()
 		const slug = body.slug === undefined ? undefined : slugify(body.slug.trim());
 		if (slug !== undefined && !slug) return status(400, { error: "Course slug is required" });
 
-		const pricingInput = { status: body.status as CourseStatus | undefined, paid: body.paid, price: body.price };
-		const pricingInputError = coursePricingInputError(pricingInput);
-		if (pricingInputError) return status(400, pricingInputError);
-
-		const currentCourse = body.status !== undefined || body.paid !== undefined || body.price !== undefined
-			? await db.query.courses.findFirst({ where: and(eq(courses.id, courseId), eq(courses.locationId, lid)), columns: { status: true, paid: true, price: true } })
-			: null;
-		if ((body.status !== undefined || body.paid !== undefined || body.price !== undefined) && !currentCourse) return status(404, { error: "Course not found" });
-		const pricing = coursePricingFields(pricingInput, currentCourse ?? undefined);
-		if ("error" in pricing) return status(400, { error: pricing.error });
+		const hasPricingChange = body.status !== undefined || body.price !== undefined;
+		if (body.price !== undefined && (!Number.isInteger(body.price) || body.price < 0)) return status(400, { error: "Course price must be zero or greater whole cents" });
+		if (hasPricingChange) {
+			const exists = await db.query.courses.findFirst({ where: and(eq(courses.id, courseId), eq(courses.locationId, lid)), columns: { id: true } });
+			if (!exists) return status(404, { error: "Course not found" });
+		}
 
 
 		try {
@@ -265,7 +258,8 @@ export const courseRoutes = new Elysia()
 				...(title !== undefined ? { title } : {}),
 				...(body.description !== undefined ? { description: body.description } : {}),
 				...(body.coverImage !== undefined ? { coverImage: body.coverImage } : {}),
-				...(body.status !== undefined || body.paid !== undefined || body.price !== undefined ? { status: pricing.status, paid: pricing.paid, price: pricing.price } : {}),
+				...(body.status !== undefined ? { status: body.status as CourseStatus } : {}),
+				...(body.price !== undefined ? { price: body.price } : {}),
 				...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
 				updated: new Date(),
 			}).where(and(eq(courses.id, courseId), eq(courses.locationId, lid))).returning();
@@ -285,8 +279,7 @@ export const courseRoutes = new Elysia()
 			description: t.Optional(t.Nullable(t.String())),
 			coverImage: t.Optional(t.Nullable(t.String())),
 			status: t.Optional(CourseStatusSchema),
-			paid: t.Optional(t.Boolean()),
-			price: t.Optional(t.Integer()),
+			price: t.Optional(t.Integer({ minimum: 0 })),
 			metadata: t.Optional(t.Record(t.String(), t.Unknown())),
 		}),
 	})
