@@ -3,7 +3,6 @@ import {
     eventRegistrations,
     eventTickets,
     locationEvents,
-    memberLocations,
 } from "@subtrees/schemas";
 import type { LocationEvent, EventTicket } from "@subtrees/types";
 import { and, count, eq, sql } from "drizzle-orm";
@@ -43,14 +42,7 @@ export async function loadEventRegistrationContext({
     ticketId,
 }: LoadEventContextParams) {
 
-    const [memberLocation, event, ticket, duplicate] = await Promise.all([
-        db.query.memberLocations.findFirst({
-            where: and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)),
-            columns: {
-                gatewayCustomerId: true,
-            },
-
-        }),
+    const [event, ticket, duplicate] = await Promise.all([
         db.query.locationEvents.findFirst({
             where: and(eq(locationEvents.id, eventId), eq(locationEvents.locationId, lid)),
         }),
@@ -65,9 +57,6 @@ export async function loadEventRegistrationContext({
         }),
     ]);
 
-    if (!memberLocation) {
-        throw new EventRegistrationError(404, "Member not found at this location");
-    }
     if (!event) {
         throw new EventRegistrationError(404, "Event not found");
     }
@@ -95,7 +84,7 @@ export async function loadEventRegistrationContext({
         throw new EventRegistrationError(400, "Ticket sale has ended");
     }
 
-    return { memberLocation, event, ticket };
+    return { event, ticket };
 }
 
 type RegistrationTx = Parameters<Parameters<typeof db.transaction>[0]>[0];

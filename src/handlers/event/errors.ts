@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { SquareError } from "square";
+import { CheckoutError } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import { EventRegistrationError } from "./shared";
 
@@ -12,6 +13,9 @@ export function mapEventRegistrationError(status: StatusFn, error: unknown) {
             error: error.message,
             ...(error.code ? { code: error.code } : {}),
         });
+    }
+    if (error instanceof CheckoutError) {
+        return status(error.status, { error: error.message });
     }
     if (error instanceof Stripe.errors.StripeError) {
         const { message } = handleStripeError({ error });

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { fetchMercCheckoutContext } from "@/utils";
+import { getCheckoutContext } from "@/utils";
 import { orders, productVariants } from "@subtrees/schemas";
 import { eq, inArray } from "drizzle-orm";
 import type { Currency } from "square";
@@ -76,7 +76,7 @@ export async function captureGatewayPaymentAndMarkOrderPaid(input: CaptureGatewa
 		total,
 		currency,
 	} = input;
-	const { gatewayCustomerId, gateway } = await fetchMercCheckoutContext({ lid, mid: memberId });
+	const { gatewayCustomerId, gateway } = await getCheckoutContext({ lid, mid: memberId });
 	const feesAmount = Math.max(total - subtotal - shipping - tax, 0);
 	let gatewayPaymentId: string | null;
 

@@ -1,23 +1,56 @@
 import type { Elysia } from "elysia";
 import { t } from "elysia";
-import { handleCourseCheckout, mapCourseCheckoutError } from "@/handlers/course";
+import { handleCourseEnrollPaid, handleCourseEnrollFree, CourseEnrollError } from "@/handlers/course";
+import { db } from "src/db/db";
 
 export function locationCoursesEnroll(app: Elysia) {
     return app.post("/courses/enroll", async ({ params, status, body }) => {
         const { lid } = params;
-        const { items, promoId, paymentMethodId, mid } = body;
+        const { paymentMethodId, courseId, mid, paymentType } = body;
 
         try {
-            const order = await handleCourseCheckout({
-                lid,
-                mid,
-                items,
-                paymentMethodId,
-                promoId,
+            const course = await db.query.courses.findFirst({
+                where: (c, { eq }) => eq(c.id, courseId),
+                columns: {
+                    title: true,
+                    price: true,
+                },
             });
-            return status(200, order);
+            if (!course) {
+                throw new CourseEnrollError(404, "Course not found");
+            }
+
+            if (course.price <= 0) {
+                const enrollment = await handleCourseEnrollFree({
+                    lid,
+                    mid,
+                    courseId,
+                });
+                return status(200, enrollment);
+            } else {
+                if (!paymentMethodId || !paymentType) {
+                    throw new CourseEnrollError(400, "Payment method ID and payment type are required");
+                }
+                const enrollment = await handleCourseEnrollPaid({
+                    lid,
+                    mid,
+                    courseId,
+                    paymentMethodId,
+                    paymentType,
+                    courseTitle: course.title,
+                    coursePrice: course.price,
+                });
+                return status(200, enrollment);
+            }
+
+
         } catch (error) {
-            return mapCourseCheckoutError(status, error);
+
+            console.error(error);
+            if (error instanceof CourseEnrollError) {
+                return status(error.status, { error: error.message });
+            }
+            return status(500, { error: "Failed to enroll in course" });
         }
     }, {
         params: t.Object({
@@ -25,12 +58,12 @@ export function locationCoursesEnroll(app: Elysia) {
         }),
         body: t.Object({
             mid: t.String(),
-            items: t.Array(t.Object({
-                courseId: t.String(),
-                quantity: t.Number(),
-            })),
-            promoId: t.Optional(t.Nullable(t.String())),
-            paymentMethodId: t.String(),
+            courseId: t.String(),
+            paymentMethodId: t.Optional(t.String()),
+            paymentType: t.Optional(t.Union([
+                t.Literal("card"),
+                t.Literal("us_bank_account"),
+            ])),
         }),
     });
 }

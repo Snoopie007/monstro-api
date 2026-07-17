@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { calculateGatewayFeeAmount } from "@/utils";
+import { calculateChargeDetails, getCheckoutContext } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import { transactions } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
@@ -19,73 +19,34 @@ type HandlePaidEventRegistrationProps = LoadEventContextParams & { paymentMethod
 export async function handlePaidEventRegistration(props: HandlePaidEventRegistrationProps) {
     const { lid, mid, paymentMethodId, paymentType = "card" } = props;
 
-    const { event, ticket, memberLocation } = await loadEventRegistrationContext(props);
+    const { event, ticket } = await loadEventRegistrationContext(props);
 
     if (ticket.pricingMethod === "free" || ticket.price <= 0) {
         throw new EventRegistrationError(400, "This ticket is free");
     }
 
-    const { gatewayCustomerId } = memberLocation;
+    const {
+        gatewayCustomerId,
+        locationState,
+        taxRates,
+        gateway,
+    } = await getCheckoutContext({ lid, mid });
 
-    const location = await db.query.locations.findFirst({
-        where: (l, { eq }) => eq(l.id, lid),
-        with: {
-            locationState: true,
-            taxRates: true,
-        },
-    });
-
-    const locationState = location?.locationState;
-    const taxRate = location?.taxRates.find((r) => r.isDefault)?.percentage || 0;
-
-    if (!locationState) {
-        throw new EventRegistrationError(400, "No location state found for this location");
-    }
-    const { paymentGatewayId, currency } = locationState;
-
-    if (!paymentGatewayId) {
-        throw new EventRegistrationError(400, "No payment gateway set for this location");
-    }
-
-    const gateway = await db.query.integrations.findFirst({
-        where: (g, { eq }) => eq(g.id, paymentGatewayId),
-        columns: {
-            service: true,
-            accessToken: true,
-            metadata: true,
-        },
-    });
-
-    if (!gateway?.accessToken) {
-        throw new EventRegistrationError(400, "No payment gateway found for this location");
-    }
-    if (!gatewayCustomerId) {
-        throw new EventRegistrationError(400, "No gateway customer found for this location");
-    }
-
+    const taxRate = taxRates.find((r) => r.isDefault)?.percentage || 0;
+    const { currency } = locationState;
     const description = `${event.name} - ${ticket.name}`;
     const passOnFees = locationState.settings?.passOnFees || false;
     const usagePercent = locationState.usagePercent || 0;
 
-    const subtotal = ticket.price;
-    const tax = Math.floor((subtotal * taxRate) / 100);
-    let total = subtotal + tax;
-    let processingFee = 0;
-    let feesAmount = 0;
+    const { total, feesAmount, tax, subTotal } = calculateChargeDetails({
+        amount: ticket.price,
+        taxRate,
+        passOnFees,
+        usagePercent,
+        paymentType,
+        isRecurring: false,
+    });
 
-    if (passOnFees) {
-        processingFee = calculateGatewayFeeAmount(subtotal, "card", false);
-        total += processingFee;
-    }
-
-    if (usagePercent > 0) {
-        feesAmount = Math.floor((subtotal * usagePercent) / 100);
-        total += feesAmount;
-    }
-
-    const productName = `${event.name} - ${ticket.name}`;
-    const resolvedPaymentType: PaymentType = paymentType === "us_bank_account" ? "us_bank_account" : "card";
-    const feeAmount = feesAmount + processingFee;
     const registrationId = generateUUID("erg_");
 
     let paymentIntentId: string;
@@ -174,7 +135,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
         const [transaction] = await tx.insert(transactions).values({
             description,
             total,
-            subTotal: subtotal,
+            subTotal,
             tax,
             type: "inbound",
             status: "paid",
@@ -182,9 +143,9 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
             memberId: mid,
             paymentMethodId,
             paymentIntentId,
-            paymentType: resolvedPaymentType,
+            paymentType,
             chargeDate: now,
-            feeAmount,
+            feeAmount: feesAmount,
             currency,
             metadata: gatewayMetadata,
         }).returning({ id: transactions.id });

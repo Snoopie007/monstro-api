@@ -1,12 +1,12 @@
 import Stripe from "stripe";
 import { SquareError } from "square";
-import { MercCheckoutError, handleSquareError, handleStripeError } from "@/utils";
+import { CheckoutError, handleSquareError, handleStripeError } from "@/utils";
 
 type StatusFn = (code: number, body: { error: string } | string) => unknown;
 
 export function mapMercCheckoutError(status: StatusFn, error: unknown) {
     console.error(error);
-    if (error instanceof MercCheckoutError) {
+    if (error instanceof CheckoutError) {
         return status(error.status, { error: error.message });
     }
     if (error instanceof Stripe.errors.StripeError) {

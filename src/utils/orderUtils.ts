@@ -1,5 +1,7 @@
-import type { OrderLineItem, ProductVariant, Promo } from "@subtrees/types";
+import type { OrderLineItem, Promo } from "@subtrees/types";
+
 import { calculateGatewayFeeAmount } from "./enrollUtils";
+import type { MercVariant } from "@subtrees/types/mercs";
 type OrderItems = {
     variantId: string;
     quantity: number;
@@ -15,7 +17,7 @@ type OrderTotalResult = {
 }
 export function calculateOrderTotals(
     items: OrderItems[],
-    variants: Pick<ProductVariant, "id" | "name" | "price">[],
+    variants: Pick<MercVariant, "id" | "name" | "price">[],
     taxRate: number,
     passOnFees: boolean,
     usagePercent: number,

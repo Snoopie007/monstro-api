@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import type { Promo } from "@subtrees/types";
 import {
     calculateOrderTotals,
-    fetchMercCheckoutContext,
+    getCheckoutContext,
 } from "@/utils";
 import { orders } from "@subtrees/schemas";
 import { StripePaymentGateway, SquarePaymentGateway } from "@/libs/PaymentGateway";
@@ -32,7 +32,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         locationState,
         taxRates,
         gateway,
-    } = await fetchMercCheckoutContext({ lid, mid });
+    } = await getCheckoutContext({ lid, mid });
 
     const variants = await db.query.productVariants.findMany({
         where: (v, { inArray }) => inArray(v.id, items.map((item) => item.variantId)),
