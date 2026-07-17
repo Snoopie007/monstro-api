@@ -1,14 +1,11 @@
 import { createHash } from "node:crypto";
 
-import { db } from "@/db/db";
-import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import type { db } from "@/db/db";
+import type { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateGatewayFeeAmount } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
-import {
-	MemberCourseEnrollmentError,
-	type MemberCourseEnrollmentBody,
-	validateMemberCourseEnrollmentBody,
-} from "./shared";
+import { MemberCourseEnrollmentError } from "./shared";
+import type { MemberCourseEnrollmentBody } from "./shared";
 import { courseEnrollments, courses, integrations, locationState, memberLocations, taxRates, transactions } from "@subtrees/schemas";
 import { and, eq, sql } from "drizzle-orm";
 import { SquareError } from "square";
@@ -34,28 +31,6 @@ function hash24(value: string) {
 
 
 
-export async function enrollAuthenticatedMemberInCourse(input: {
-	lid: string;
-	courseId: string;
-	memberId?: string | null;
-	body: unknown;
-	database?: typeof db;
-	gateways?: GatewayFactory;
-}) {
-	const database = input.database ?? db;
-	const memberId = input.memberId;
-	if (!memberId) throw new MemberCourseEnrollmentError(401, "Unauthorized", "UNAUTHORIZED");
-	const body = validateMemberCourseEnrollmentBody(input.body);
-
-	return courseEnrollmentTransaction(database, async (tx) => enrollMemberInCourseCore({
-		tx,
-		lid: input.lid,
-		courseId: input.courseId,
-		memberId,
-		body,
-		gateways: input.gateways ?? defaultGateways,
-	}));
-}
 
 export async function courseEnrollmentTransaction<T>(database: typeof db, run: (tx: typeof db) => Promise<T>) {
 	try {
