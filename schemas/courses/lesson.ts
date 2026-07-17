@@ -14,7 +14,7 @@ export const courseLessons = pgTable("course_lessons", {
 	videoDurationSeconds: integer("video_duration_seconds"),
 	sortOrder: integer("sort_order").notNull().default(0),
 	status: text("status").$type<LessonStatus>().notNull().default("draft"),
-	requiresEnrollment: boolean("requires_enrollment").notNull().default(true),
+	isPreview: boolean("is_preview").notNull().default(false),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
