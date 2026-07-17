@@ -17,6 +17,10 @@ export type SquareChargeOptions = ChargeOptions & {
     note?: string;
 };
 
+export function squarePaymentIdempotencyKey(idempotencyKey: string | undefined, generateIdempotencyKey: () => string = () => crypto.randomUUID()) {
+    return idempotencyKey || generateIdempotencyKey();
+}
+
 export class SquarePaymentGateway {
     private _client: SquareClient;
     constructor(accessToken: string) {
@@ -106,11 +110,12 @@ export class SquarePaymentGateway {
             referenceId,
             squareLocationId,
             note,
+            idempotencyKey,
         } = options || {};
 
 
         const data = await this._client.payments.create({
-            idempotencyKey: this.generateIdempotencyKey(),
+            idempotencyKey: squarePaymentIdempotencyKey(idempotencyKey, () => this.generateIdempotencyKey()),
             customerId,
             appFeeMoney: {
                 amount: BigInt(feesAmount),

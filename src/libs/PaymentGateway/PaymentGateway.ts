@@ -24,4 +24,5 @@ export type ChargeOptions = {
     description?: string,
     discount?: number,
     metadata?: Record<string, any>;
+    idempotencyKey?: string;
 }
