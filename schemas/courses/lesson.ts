@@ -25,19 +25,3 @@ export const courseLessons = pgTable("course_lessons", {
 	check("course_lessons_status_check", sql`${t.status} in ('draft', 'published', 'archived')`),
 	check("course_lessons_video_duration_nonnegative", sql`${t.videoDurationSeconds} is null or ${t.videoDurationSeconds} >= 0`),
 ]);
-
-
-export const courseLessonAttachments = pgTable("course_lesson_attachments", {
-	id: text("id").primaryKey().notNull().default(sql`uuid_base62('att_')`),
-	lessonId: text("lesson_id").notNull().references(() => courseLessons.id, { onDelete: "cascade" }),
-	objectKey: text("object_key").notNull(),
-	fileName: text("file_name").notNull(),
-	contentType: text("content_type").notNull(),
-	sizeBytes: integer("size_bytes").notNull(),
-	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [
-	unique("course_lesson_attachments_object_key_unique").on(t.objectKey),
-	index("course_lesson_attachments_lesson_created_idx").on(t.lessonId, t.created, t.id),
-	check("course_lesson_attachments_file_name_check", sql`char_length(btrim(${t.fileName})) between 1 and 255`),
-	check("course_lesson_attachments_size_bytes_check", sql`${t.sizeBytes} between 1 and 26214400`),
-]);
