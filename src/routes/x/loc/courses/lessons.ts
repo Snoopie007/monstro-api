@@ -66,7 +66,7 @@ export const courseLessonRoutes = new Elysia()
 				...(body.videoThumbnail !== undefined || body.videoObjectKey !== undefined ? { videoThumbnail: nextVideoThumbnail } : {}),
 				...(body.videoObjectKey !== undefined || body.videoDurationSeconds !== undefined ? { videoDurationSeconds: nextVideoDurationSeconds } : {}),
 				...(body.status !== undefined ? { status: body.status as LessonStatus } : {}),
-				...(body.requiresEnrollment !== undefined ? { requiresEnrollment: body.requiresEnrollment } : {}),
+				...(body.isPreview !== undefined ? { isPreview: body.isPreview } : {}),
 				...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
 				updated: new Date(),
 			}).where(and(eq(courseLessons.id, lessonId), ne(courseLessons.status, "archived"))).returning();
@@ -91,7 +91,7 @@ export const courseLessonRoutes = new Elysia()
 			videoThumbnail: t.Optional(t.Nullable(t.String())),
 			videoDurationSeconds: t.Optional(t.Nullable(t.Integer({ minimum: 0 }))),
 			status: t.Optional(LessonStatusSchema),
-			requiresEnrollment: t.Optional(t.Boolean()),
+			isPreview: t.Optional(t.Boolean()),
 			metadata: t.Optional(t.Record(t.String(), t.Unknown())),
 		}),
 	});
