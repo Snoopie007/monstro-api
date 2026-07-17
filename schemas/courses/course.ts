@@ -1,4 +1,5 @@
-import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 
@@ -9,6 +10,7 @@ export const courses = pgTable("courses", {
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	slug: text("slug").notNull(),
 	title: text("title").notNull(),
+	summary: text("summary"),
 	description: text("description"),
 	coverImage: text("cover_image"),
 	status: text("status").$type<CourseStatus>().notNull().default("draft"),
