@@ -8,6 +8,7 @@ import { courseEnrollments, transactions, } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
 import { CourseEnrollError } from "./errors";
 
+import { generateUUID } from "@subtrees/utils/generateUUID";
 
 type CourseEnrollParams = {
     lid: string;
@@ -48,22 +49,13 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
     const currency = locationState.currency;
     const now = new Date();
     return db.transaction(async (tx) => {
-        const [enrollment] = await tx.insert(courseEnrollments).values({
-            memberId: mid,
-            locationId: lid,
-            courseId,
-            enrolledAt: now,
-        }).returning();
-
-        if (!enrollment) {
-            throw new Error("Failed to create enrollment");
-        }
+        const enrollmentId = generateUUID('cen_');
 
         const description = `Payment for course enrollment ${courseTitle}`;
         let paymentIntentId: string | null = null;
         let gatewayMetadata: Record<string, unknown> = {
             gatewayService: gateway.service,
-            enrollmentId: enrollment.id,
+            enrollmentId,
             courseId,
         };
         if (gateway.service === "stripe") {
@@ -78,7 +70,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                     metadata: {
                         memberId: mid,
                         locationId: lid,
-                        enrollmentId: enrollment.id,
+                        enrollmentId,
                     },
                 });
                 paymentIntentId = result.id;
@@ -100,9 +92,9 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                     total,
                     feesAmount,
                     currency,
-                    referenceId: `${enrollment.id}`,
+                    referenceId: `${enrollmentId}`,
                     squareLocationId,
-                    note: `enrollmentId:${enrollment.id}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
+                    note: `enrollmentId:${enrollmentId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
                 });
                 if (!result?.id) {
                     throw new CourseEnrollError(400, "Payment was not created");
@@ -127,7 +119,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
 
 
 
-        await tx.insert(transactions).values({
+        const [transaction] = await tx.insert(transactions).values({
             description,
             total,
             subTotal,
@@ -143,8 +135,15 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
             feeAmount: feesAmount,
             currency,
             metadata: gatewayMetadata,
-        });
-
+        }).returning();
+        const [enrollment] = await tx.insert(courseEnrollments).values({
+            id: enrollmentId,
+            transactionId: transaction?.id,
+            memberId: mid,
+            locationId: lid,
+            courseId,
+            enrolledAt: now,
+        }).returning();
         return enrollment;
     });
 }
