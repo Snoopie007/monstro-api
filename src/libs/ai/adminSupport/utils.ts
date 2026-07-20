@@ -13,16 +13,18 @@ export function compactMdx(content: string) {
     .slice(0, MAX_DOC_CHARS);
 }
 
+const AI_IDENTITY_PREFIX =
+  /^(?:#{1,6}\s*)?(?:(?:\*\*|__)\s*)?(?:monstro(?:'s)?(?:\s+(?:vendor\s+)?support)?\s+ai|ai(?:\s+support)?\s+assistant)\s*:(?:\s*(?:\*\*|__))?\s*/i;
+
+export function stripAiIdentityPrefix(content: string) {
+  return content.replace(AI_IDENTITY_PREFIX, "").trimStart();
+}
+
 export function messageText(message: AdminSupportCaseMessage) {
   const attachments = message.attachments;
   const names = attachments.map((item) => item.filename).join(", ");
 
-  const sender =
-    message.role === "user"
-      ? "Vendor"
-      : message.role === "ai"
-        ? "Monstro AI"
-        : "Monstro Support";
+  const sender = message.role === "user" ? "Vendor" : "Monstro Support";
 
   const attachmentText = names
     ? ` [attachments: ${names}]`
@@ -30,7 +32,8 @@ export function messageText(message: AdminSupportCaseMessage) {
       ? ` [${attachments.length} attachment(s)]`
       : "";
 
-  return `${sender}: ${(message.content || "(no text)").trim()}${attachmentText}`;
+  const content = (message.content || "(no text)").trim();
+  return `${sender}: ${message.role === "ai" ? stripAiIdentityPrefix(content) : content}${attachmentText}`;
 }
 
 export function requestsLiveSupport(message: string) {

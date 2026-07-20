@@ -174,7 +174,7 @@ describe("createAdminSupportAiReply", () => {
     };
     const sourcedReply =
       "Open Programs and update Calendar Color.\n\nSources:\n- Change program colors: https://monstro-x.com/support/docs/getting-started/change-program-colors";
-    generation = { kind: "reply", content: sourcedReply };
+    generation = { kind: "reply", content: `Monstro AI: ${sourcedReply}` };
     recallDocumentsMock.mockImplementationOnce(async () => [localDocument]);
 
     await createAdminSupportAiReply({ caseId: 7, triggerMessageId: 11 });

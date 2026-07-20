@@ -10,7 +10,7 @@ import {
   broadcastAdminSupportCase,
 } from "@/libs/broadcast/adminSupport";
 import { generate, promptFor, recallDocuments } from "./tools";
-import { requestsLiveSupport } from "./utils";
+import { requestsLiveSupport, stripAiIdentityPrefix } from "./utils";
 
 const LOCK_NAMESPACE = 481923;
 const MAX_HISTORY = 50;
@@ -77,7 +77,7 @@ export async function createAdminSupportAiReply({
     generation.kind === "escalate"
       ? ""
       : generation.kind === "reply" && generation.content
-        ? generation.content
+        ? stripAiIdentityPrefix(generation.content)
         : NO_DOCUMENTS_REPLY;
 
   if (generation.kind === "reply" && !content) return null;
