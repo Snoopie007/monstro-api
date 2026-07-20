@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { db } from "@/db/db";
-import type { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateGatewayFeeAmount } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import { MemberCourseEnrollmentError } from "./shared";
@@ -258,4 +258,3 @@ async function chargeCourse(input: {
 		throw new MemberCourseEnrollmentError(400, mapped.message, mapped.code);
 	}
 }
-
