@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { db } from "@/db/db";
-import type { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateGatewayFeeAmount } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import { MemberCourseEnrollmentError } from "./shared";
@@ -11,6 +11,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { SquareError } from "square";
 import Stripe from "stripe";
 
+type CourseEnrollmentTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 
 export type GatewayFactory = {
@@ -32,9 +33,9 @@ function hash24(value: string) {
 
 
 
-export async function courseEnrollmentTransaction<T>(database: typeof db, run: (tx: typeof db) => Promise<T>) {
+export async function courseEnrollmentTransaction<T>(database: typeof db, run: (tx: CourseEnrollmentTransaction) => Promise<T>) {
 	try {
-		return await database.transaction(run as never);
+		return await database.transaction(run);
 	} catch (error) {
 		if (
 			error !== null
@@ -51,7 +52,7 @@ export async function courseEnrollmentTransaction<T>(database: typeof db, run: (
 }
 
 export async function enrollMemberInCourseCore(input: {
-	tx: typeof db;
+	tx: CourseEnrollmentTransaction;
 	lid: string;
 	courseId: string;
 	memberId: string;
@@ -258,4 +259,3 @@ async function chargeCourse(input: {
 		throw new MemberCourseEnrollmentError(400, mapped.message, mapped.code);
 	}
 }
-
