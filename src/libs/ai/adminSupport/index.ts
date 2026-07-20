@@ -13,7 +13,7 @@ import { generate, promptFor, recallDocuments } from "./tools";
 import { requestsLiveSupport } from "./utils";
 
 const LOCK_NAMESPACE = 481923;
-const MAX_HISTORY = 20;
+const MAX_HISTORY = 50;
 const NO_DOCUMENTS_REPLY =
   "I couldn’t find an answer to that in our support documentation. You can ask to speak with a human support agent here.";
 
