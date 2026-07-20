@@ -6,6 +6,7 @@ import {
 	AuthRoutes, ProtectedRoutes, PublicRoutes,
 	XRoutes, webhooksRoutes
 } from "./src/routes";
+import { supportRoutes } from "./src/routes/support";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
 import { startOnlineChannel } from "./src/libs/broadcast";
 import { WebRoutes } from "./src/routes/web";
@@ -72,7 +73,7 @@ app.use(cors(CORS_CONFIG))
 		return "";
 	})
 
-	.group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes))
+	.group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes).use(supportRoutes))
 	.group("/x", (app) => app.use(XRoutes))
 	.group("/api/realtime", (app) =>
 		app.use(realtimeRoutes).use(realtimeHealthRoutes)
