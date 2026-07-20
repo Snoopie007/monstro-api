@@ -1,7 +1,7 @@
 import { canAccessLocation } from "@/utils/merchandise";
 import { Elysia } from "elysia";
 import { courseRoutes } from "./courses";
-import { courseEnrollmentRoutes } from "@/routes/courses/manualEnrollment";
+import { courseEnrollmentRoutes } from "./enrollments";
 import { courseLessonAttachmentRoutes } from "./attachments";
 import { courseLessonRoutes } from "./lessons";
 import type { XAuthContext } from "./shared";
