@@ -73,7 +73,6 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationPromos);
         app.use(locationSupport);
         app.use(locationMercs);
-        app.use(locationCourses);
         app.use(locationLeaderboard);
         app.use(locationPlans);
         app.use(locationEnrollRoutes);
