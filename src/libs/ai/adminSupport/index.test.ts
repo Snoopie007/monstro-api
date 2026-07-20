@@ -125,6 +125,7 @@ const { createAdminSupportAiReply } = await import("./index");
 
 describe("createAdminSupportAiReply", () => {
   beforeEach(() => {
+    supportCase.category = "Other";
     generation = { kind: "unavailable" };
     insertedRecords = [aiMessage];
     updatedRecord = updatedCase;
@@ -189,6 +190,7 @@ describe("createAdminSupportAiReply", () => {
       [],
       expect.any(String),
       [localDocument],
+      false,
     );
     expect(insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({
       content: sourcedReply,
@@ -196,23 +198,15 @@ describe("createAdminSupportAiReply", () => {
     }));
   });
 
-  test("searches GoHighLevel when local documents only have broad keyword matches", async () => {
-    const broadDocument = {
-      id: 26,
-      title: "Adding Promo Code",
-      slug: "adding-promo-code",
-      categoryName: "Merchandise",
-      mdxContent: "Create a promo code for merchandise.",
-      isFtsMatch: true,
-      isExactMatch: false,
-    };
+  test("uses GoHighLevel only for Marketing Suite cases", async () => {
+    supportCase.category = "Marketing Suite";
     const sourcedReply =
       "Use Zoho's SMTP settings.\n\nSources:\n- Zoho SMTP: https://help.gohighlevel.com/support/solutions/articles/48001173743";
     generation = { kind: "reply", content: sourcedReply };
-    recallDocumentsMock.mockImplementationOnce(async () => [broadDocument]);
 
     await createAdminSupportAiReply({ caseId: 7, triggerMessageId: 11 });
 
+    expect(recallDocumentsMock).not.toHaveBeenCalled();
     expect(promptForMock).toHaveBeenCalledWith(
       supportCase,
       [previousHumanRequest, agentReply],
@@ -222,7 +216,8 @@ describe("createAdminSupportAiReply", () => {
     expect(generateMock).toHaveBeenCalledWith(
       [],
       expect.any(String),
-      [broadDocument],
+      [],
+      true,
     );
     expect(insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({
       content: sourcedReply,

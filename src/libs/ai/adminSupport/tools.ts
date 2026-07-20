@@ -475,13 +475,16 @@ export async function generate(
   messages: BaseMessage[],
   modelName: string,
   documents: Doc[] = [],
+  useGoHighLevel = false,
 ): Promise<Generation> {
   const localMatches = documents.filter((document) => document.isExactMatch);
   const [local, goHighLevel] = await Promise.all([
     localMatches.length
       ? generateFromMonstro(messages, modelName, documents)
       : Promise.resolve<Generation>({ kind: "unavailable" }),
-    generateFromGoHighLevel(messages, modelName),
+    useGoHighLevel
+      ? generateFromGoHighLevel(messages, modelName)
+      : Promise.resolve<Generation>({ kind: "unavailable" }),
   ]);
 
   if (local.kind === "escalate" || goHighLevel.kind === "escalate") {

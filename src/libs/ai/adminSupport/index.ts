@@ -59,7 +59,9 @@ export async function createAdminSupportAiReply({
   const searchText = trigger.content.replace(/\s+/g, " ").trim().slice(0, 500);
 
   const directEscalation = requestsLiveSupport(trigger.content);
-  const documents = directEscalation ? [] : await recallDocuments(searchText);
+  const isMarketingSuite = supportCase.category === "Marketing Suite";
+  const documents =
+    directEscalation || isMarketingSuite ? [] : await recallDocuments(searchText);
   const localMatches = documents.filter((document) => document.isExactMatch);
   const generation = directEscalation
     ? { kind: "escalate" as const }
@@ -72,6 +74,7 @@ export async function createAdminSupportAiReply({
         ),
         Bun.env.SUPPORT_AI_MODEL || "gpt-5.5",
         documents,
+        isMarketingSuite,
       );
   const content =
     generation.kind === "escalate"
