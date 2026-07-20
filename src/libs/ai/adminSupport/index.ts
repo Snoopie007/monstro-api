@@ -20,9 +20,11 @@ const NO_DOCUMENTS_REPLY =
 export async function createAdminSupportAiReply({
   caseId,
   triggerMessageId,
+  supportOfflineMessage,
 }: {
   caseId: number;
   triggerMessageId: number;
+  supportOfflineMessage?: string;
 }) {
   const supportCase = await admindb.query.adminSupportCases.findFirst({
     where: (item, operators) => operators.eq(item.id, caseId),
@@ -58,21 +60,27 @@ export async function createAdminSupportAiReply({
 
   const directEscalation = requestsLiveSupport(trigger.content);
   const documents = directEscalation ? [] : await recallDocuments(searchText);
+  const localMatches = documents.filter((document) => document.isExactMatch);
   const generation = directEscalation
     ? { kind: "escalate" as const }
     : await generate(
-        promptFor(supportCase, history.slice(0, -1), documents, trigger),
+        promptFor(
+          supportCase,
+          history.slice(0, -1),
+          localMatches.length ? documents : [],
+          trigger,
+        ),
         Bun.env.SUPPORT_AI_MODEL || "gpt-5.5",
+        documents,
       );
   const content =
-    generation.kind === "reply"
-      ? documents.length
+    generation.kind === "escalate"
+      ? ""
+      : generation.kind === "reply" && generation.content
         ? generation.content
-        : NO_DOCUMENTS_REPLY
-      : "";
+        : NO_DOCUMENTS_REPLY;
 
   if (generation.kind === "reply" && !content) return null;
-
   const result = await admindb.transaction(async (tx) => {
     await tx.execute(
       sql`SELECT pg_advisory_xact_lock(${LOCK_NAMESPACE}, ${caseId})`,
@@ -127,6 +135,22 @@ export async function createAdminSupportAiReply({
           to: "escalated",
         })
         .returning();
+      const offlineContent = supportOfflineMessage?.trim();
+      const offlineMessage = offlineContent
+        ? (
+            await tx
+              .insert(adminSupportCaseMessages)
+              .values({
+                caseId,
+                agentId: null,
+                content: offlineContent,
+                attachments: [],
+                role: "agent",
+                type: "live chat",
+              })
+              .returning()
+          )[0]
+        : undefined;
 
       if (!updatedCase || !log) {
         throw new Error("Support escalation transaction did not return inserted records");
@@ -136,6 +160,7 @@ export async function createAdminSupportAiReply({
         kind: "escalated" as const,
         log,
         updatedCase,
+        offlineMessage,
         userId: current.userId,
       };
     }
@@ -194,6 +219,13 @@ export async function createAdminSupportAiReply({
   if (result.kind === "escalated") {
     broadcasts.push(
       broadcastAdminSupportCase(caseId, "case_log", { log: result.log }),
+      ...(result.offlineMessage
+        ? [
+            broadcastAdminSupportCase(caseId, "new_message", {
+              message: result.offlineMessage,
+            }),
+          ]
+        : []),
     );
   } else {
     broadcasts.push(

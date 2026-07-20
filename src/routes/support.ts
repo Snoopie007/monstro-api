@@ -27,20 +27,33 @@ export const supportRoutes = new Elysia({ prefix: "/support" }).post("/cases/:ca
     return { error: "Invalid case ID" };
   }
 
-  const context = { caseId, triggerMessageId: body.triggerMessageId };
-  console.info("[Admin Support AI] Trigger accepted", context);
+  const context = {
+    caseId,
+    triggerMessageId: body.triggerMessageId,
+    supportOfflineMessage: body.supportOfflineMessage,
+  };
+  console.info("[Admin Support AI] Trigger accepted", requestContext);
   set.status = 202;
 
   void createAdminSupportAiReply(context)
     .then((result) => {
       console.info("[Admin Support AI] Trigger finished", {
-        ...context,
+        ...requestContext,
         outcome: result?.kind ?? "no_reply",
       });
     })
     .catch((error) => {
-      console.error("[Admin Support AI] Unhandled trigger failure", { ...context, error });
+      console.error("[Admin Support AI] Unhandled trigger failure", {
+        ...requestContext,
+        error,
+      });
     });
 
   return { accepted: true };
-}, { params: t.Object({ caseId: t.String() }), body: t.Object({ triggerMessageId: t.Integer({ minimum: 1 }) }) });
+}, {
+  params: t.Object({ caseId: t.String() }),
+  body: t.Object({
+    triggerMessageId: t.Integer({ minimum: 1 }),
+    supportOfflineMessage: t.Optional(t.String({ minLength: 1, maxLength: 500 })),
+  }),
+});
