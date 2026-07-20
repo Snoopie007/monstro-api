@@ -71,6 +71,13 @@ import { vendorReferrals } from "./VendorReferrals";
 // Ecommerce tables
 import { orders, products, productImages, productVariants } from "./ecommerce";
 
+// Course tables
+import {
+	courseChapters, courseEnrollments,
+	courseLessonCompletions, courseLessons, courses,
+	courseLessonAttachments,
+} from "./courses";
+
 // ============================================================================
 // USER RELATIONS
 // ============================================================================
@@ -339,6 +346,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	rankProcesses: many(rankProcesses),
 	ranks: many(ranks),
 	locationEvents: many(locationEvents),
+	courses: many(courses),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -881,6 +889,7 @@ export const productVariantsRelations = relations(productVariants, ({ many, one 
 		references: [products.id],
 	}),
 }));
+
 
 export const ordersRelations = relations(orders, ({ many, one }) => ({
 	location: one(locations, {
