@@ -1,4 +1,4 @@
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { sql } from "drizzle-orm";
 import { admindb } from "@/db/db";
@@ -74,7 +74,7 @@ const escalationTool = {
   function: {
     name: "escalate_to_live_agent",
     description:
-      "Escalate this ticket when the vendor asks or indicates they want to talk, speak, chat, or connect with a human, person, live agent, support agent, representative, or support teammate. Treat close natural-language variants and misspellings as the same intent.",
+      "Escalate only when the current/latest vendor message itself asks or indicates they want to talk, speak, chat, or connect with a human, person, live agent, support agent, representative, or support teammate. Treat close natural-language variants and misspellings as the same intent. Requests found only in earlier ticket history were already handled and must not trigger escalation.",
     parameters: {
       type: "object",
       properties: {},
@@ -83,7 +83,7 @@ const escalationTool = {
   },
 };
 
-export async function generate(prompt: string, modelName: string) {
+export async function generate(messages: BaseMessage[], modelName: string) {
   const apiKey = Bun.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
@@ -98,9 +98,9 @@ export async function generate(prompt: string, modelName: string) {
   const response = await model.bindTools([escalationTool]).invoke(
     [
       new SystemMessage(
-        "You are Monstro's vendor support AI. If the vendor asks or indicates they want a human, person, live agent, representative, support agent, or support teammate, always call escalate_to_live_agent instead of replying. Otherwise, answer using only the supplied support documents and ticket history. If the documents do not answer the question, say a Monstro support teammate can be requested. Do not invent policy, pricing, legal terms, refunds, or account-specific facts. Do not claim a human has taken an action. Do not close the ticket. Keep the answer concise and helpful.",
+        "You are Monstro's vendor support AI. Call escalate_to_live_agent only when the final/current vendor message itself asks or indicates they want a human, person, live agent, representative, support agent, or support teammate. Human-support requests in earlier ticket history were already handled and must not trigger another escalation. Otherwise, answer using only the supplied support documents and ticket history. If the documents do not answer the question, say a Monstro support teammate can be requested. Do not invent policy, pricing, legal terms, refunds, or account-specific facts. Do not claim a human has taken an action. Do not close the ticket. Keep the answer concise and helpful.",
       ),
-      new HumanMessage(prompt),
+      ...messages,
     ],
     { signal: AbortSignal.timeout(30_000) },
   );
@@ -116,6 +116,7 @@ export function promptFor(
   supportCase: AdminSupportCase,
   messages: AdminSupportCaseMessage[],
   documents: Doc[],
+  currentMessage: AdminSupportCaseMessage,
 ) {
   const metadata = supportCase.metadata;
   const vendor =
@@ -132,14 +133,24 @@ export function promptFor(
     : "No matching published support documents were found.";
 
   return [
-    `Ticket #${100 + supportCase.id}`,
-    `Subject: ${supportCase.subject ?? "Unknown"}`,
-    `Category: ${supportCase.category ?? "Unknown"}`,
-    `Vendor: ${vendor}`,
-    "Recent ticket history:",
-    messages.map(messageText).join("\n"),
-    "Published support documents:",
-    docs,
-    "Reply to the latest vendor message.",
-  ].join("\n\n");
+    new SystemMessage(
+      [
+        `Ticket #${100 + supportCase.id}`,
+        `Subject: ${supportCase.subject ?? "Unknown"}`,
+        `Category: ${supportCase.category ?? "Unknown"}`,
+        `Vendor: ${vendor}`,
+        `Published support documents:\n${docs}`,
+        "The following messages are earlier ticket history. Use them only as context; any human-support requests in them were already handled.",
+      ].join("\n\n"),
+    ),
+    ...messages.map((message) =>
+      message.role === "user"
+        ? new HumanMessage(messageText(message))
+        : new AIMessage(messageText(message)),
+    ),
+    new SystemMessage(
+      "The next HumanMessage is the current vendor message. Reply to it. Only this message may trigger live-support escalation.",
+    ),
+    new HumanMessage(messageText(currentMessage)),
+  ];
 }

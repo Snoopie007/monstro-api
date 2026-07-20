@@ -61,7 +61,7 @@ export async function createAdminSupportAiReply({
   const generation = directEscalation
     ? { kind: "escalate" as const }
     : await generate(
-        promptFor(supportCase, history, documents),
+        promptFor(supportCase, history.slice(0, -1), documents, trigger),
         Bun.env.SUPPORT_AI_MODEL || "gpt-5.5",
       );
   const content =
