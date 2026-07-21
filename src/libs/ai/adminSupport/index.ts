@@ -64,7 +64,7 @@ export async function createAdminSupportAiReply({
     directEscalation || isMarketingSuite ? [] : await recallDocuments(searchText);
   const localMatches = documents.filter((document) => document.isExactMatch);
   const generation = directEscalation
-    ? { kind: "escalate" as const }
+    ? { kind: "escalate" as const, aiCostMicrousd: 0 }
     : await generate(
         promptFor(
           supportCase,
@@ -175,6 +175,7 @@ export async function createAdminSupportAiReply({
         agentId: null,
         content,
         attachments: [],
+        aiCostMicrousd: generation.aiCostMicrousd,
         role: "ai",
         type: "live chat",
       })

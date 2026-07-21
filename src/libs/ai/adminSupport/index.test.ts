@@ -62,17 +62,17 @@ const offlineMessage = {
 };
 
 type Generation =
-  | { kind: "reply"; content: string }
-  | { kind: "escalate" }
-  | { kind: "unavailable" };
+  | { kind: "reply"; content: string; aiCostMicrousd: number | null }
+  | { kind: "escalate"; aiCostMicrousd: number | null }
+  | { kind: "unavailable"; aiCostMicrousd: number | null };
 
-let generation: Generation = { kind: "unavailable" };
+let generation: Generation = { kind: "unavailable", aiCostMicrousd: 0 };
 let insertedRecords: Array<typeof aiMessage | typeof escalationLog | typeof offlineMessage> = [aiMessage];
 let updatedRecord: typeof updatedCase | typeof escalatedCase = updatedCase;
 
 const generateMock = mock(async () => generation);
 const promptForMock = mock(() => []);
-const recallDocumentsMock = mock(async () => []);
+const recallDocumentsMock = mock(async (): Promise<unknown[]> => []);
 const insertValuesMock = mock(() => ({
   returning: mock(async () => [insertedRecords.shift()!]),
 }));
@@ -114,7 +114,10 @@ mock.module("@/libs/broadcast/adminSupport", () => ({
   broadcastAdminSupport: broadcastAdminSupportMock,
   broadcastAdminSupportCase: broadcastAdminSupportCaseMock,
 }));
+// Load real cost helpers before mocking the generation entry points below.
+const actualTools = await import("./tools");
 mock.module("./tools", () => ({
+  ...actualTools,
   generate: generateMock,
   promptFor: promptForMock,
   recallDocuments: recallDocumentsMock,
@@ -126,7 +129,7 @@ const { createAdminSupportAiReply } = await import("./index");
 describe("createAdminSupportAiReply", () => {
   beforeEach(() => {
     supportCase.category = "Other";
-    generation = { kind: "unavailable" };
+    generation = { kind: "unavailable", aiCostMicrousd: 0 };
     insertedRecords = [aiMessage];
     updatedRecord = updatedCase;
     generateMock.mockClear();
@@ -140,6 +143,7 @@ describe("createAdminSupportAiReply", () => {
   });
 
   test("stores a deterministic handoff reply when recall finds no documents", async () => {
+    generation = { kind: "unavailable", aiCostMicrousd: 20_500 };
     await createAdminSupportAiReply({
       caseId: 7,
       triggerMessageId: 11,
@@ -159,6 +163,7 @@ describe("createAdminSupportAiReply", () => {
     expect(insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({
       content: "I couldn’t find an answer to that in our support documentation. You can ask to speak with a human support agent here.",
       role: "ai",
+      aiCostMicrousd: 20_500,
     }));
     expect(insertValuesMock).toHaveBeenCalledTimes(1);
   });
@@ -175,7 +180,7 @@ describe("createAdminSupportAiReply", () => {
     };
     const sourcedReply =
       "Open Programs and update Calendar Color.\n\nSources:\n- Change program colors: https://monstro-x.com/support/docs/getting-started/change-program-colors";
-    generation = { kind: "reply", content: `Monstro AI: ${sourcedReply}` };
+    generation = { kind: "reply", content: `Monstro AI: ${sourcedReply}`, aiCostMicrousd: 50_500 };
     recallDocumentsMock.mockImplementationOnce(async () => [localDocument]);
 
     await createAdminSupportAiReply({ caseId: 7, triggerMessageId: 11 });
@@ -195,6 +200,7 @@ describe("createAdminSupportAiReply", () => {
     expect(insertValuesMock).toHaveBeenCalledWith(expect.objectContaining({
       content: sourcedReply,
       role: "ai",
+      aiCostMicrousd: 50_500,
     }));
   });
 
@@ -202,7 +208,7 @@ describe("createAdminSupportAiReply", () => {
     supportCase.category = "Marketing Suite";
     const sourcedReply =
       "Use Zoho's SMTP settings.\n\nSources:\n- Zoho SMTP: https://help.gohighlevel.com/support/solutions/articles/48001173743";
-    generation = { kind: "reply", content: sourcedReply };
+    generation = { kind: "reply", content: sourcedReply, aiCostMicrousd: 0 };
 
     await createAdminSupportAiReply({ caseId: 7, triggerMessageId: 11 });
 
@@ -226,7 +232,7 @@ describe("createAdminSupportAiReply", () => {
   });
 
   test("executes the escalation tool result without inserting an AI message", async () => {
-    generation = { kind: "escalate" };
+    generation = { kind: "escalate", aiCostMicrousd: 0 };
     insertedRecords = [escalationLog];
     updatedRecord = escalatedCase;
 
@@ -255,7 +261,7 @@ describe("createAdminSupportAiReply", () => {
   });
 
   test("sends the offline notice only when an offline escalation succeeds", async () => {
-    generation = { kind: "escalate" };
+    generation = { kind: "escalate", aiCostMicrousd: 0 };
     insertedRecords = [escalationLog, offlineMessage];
     updatedRecord = escalatedCase;
 

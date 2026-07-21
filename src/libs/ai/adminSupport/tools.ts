@@ -4,6 +4,10 @@ import { sql } from "drizzle-orm";
 import { admindb } from "@/db/db";
 import type { AdminSupportCase, AdminSupportCaseMessage } from "@/db/admin";
 import { compactMdx, messageText } from "./utils";
+import {
+  calculateAiCostMicrousd,
+  calculateResponsesCostMicrousd,
+} from "./cost";
 
 export type Doc = {
   id: number;
@@ -20,11 +24,10 @@ type Source = {
   url: string;
 };
 
-type Generation =
-  | { kind: "escalate" }
-  | { kind: "reply"; content: string }
-  | { kind: "unavailable" };
-
+export type Generation =
+  | { kind: "escalate"; aiCostMicrousd: number | null }
+  | { kind: "reply"; content: string; aiCostMicrousd: number | null }
+  | { kind: "unavailable"; aiCostMicrousd: number | null };
 export async function recallDocuments(searchText: string) {
   const documents = await admindb.execute(sql`
     WITH queries AS (
@@ -198,7 +201,7 @@ async function generateFromMonstro(
 ): Promise<Generation> {
   try {
     const apiKey = Bun.env.OPENAI_API_KEY;
-    if (!apiKey) return { kind: "unavailable" };
+    if (!apiKey) return { kind: "unavailable", aiCostMicrousd: 0 };
 
     const model = new ChatOpenAI({
       model: modelName,
@@ -218,8 +221,12 @@ async function generateFromMonstro(
       { signal: AbortSignal.timeout(30_000) },
     );
 
+    const aiCostMicrousd = calculateAiCostMicrousd(
+      modelName,
+      (response as AIMessage).usage_metadata,
+    );
     if (response.tool_calls?.some((toolCall) => toolCall.name === "escalate_to_live_agent")) {
-      return { kind: "escalate" };
+      return { kind: "escalate", aiCostMicrousd: 0 };
     }
 
     const content = messageContentText(response.text);
@@ -227,9 +234,11 @@ async function generateFromMonstro(
       content,
       localSources(documents.filter((document) => document.isFtsMatch)),
     );
-    return body ? { kind: "reply", content: body } : { kind: "unavailable" };
+    return body
+      ? { kind: "reply", content: body, aiCostMicrousd: aiCostMicrousd ?? null }
+      : { kind: "unavailable", aiCostMicrousd: aiCostMicrousd ?? null };
   } catch {
-    return { kind: "unavailable" };
+    return { kind: "unavailable", aiCostMicrousd: 0 };
   }
 }
 
@@ -274,20 +283,24 @@ function citationFromValue(value: unknown): Citation | null {
   return { url, title, startIndex, endIndex };
 }
 
-function parseResponsesOutput(payload: unknown): Generation {
-  if (!payload || typeof payload !== "object") return { kind: "unavailable" };
+export function parseResponsesOutput(payload: unknown, modelName: string): Generation {
+  if (!payload || typeof payload !== "object") {
+    return { kind: "unavailable", aiCostMicrousd: null };
+  }
   const response = payload as Record<string, unknown>;
   const output = Array.isArray(response.output) ? response.output : [];
   const parts: TextPart[] = [];
   const citations: Citation[] = [];
   let escalated = false;
-
+  const visited = new Set<object>();
   const walk = (value: unknown, sourceList = false): void => {
     if (Array.isArray(value)) {
       value.forEach((item) => walk(item, sourceList));
       return;
     }
     if (!value || typeof value !== "object") return;
+    if (visited.has(value)) return;
+    visited.add(value);
     const record = value as Record<string, unknown>;
     if (
       (record.type === "function_call" || record.type === "tool_call") &&
@@ -365,8 +378,9 @@ function parseResponsesOutput(payload: unknown): Generation {
   if (!parts.length && typeof response.output_text === "string") {
     parts.push({ text: response.output_text, citations: [] });
   }
+  const aiCostMicrousd = calculateResponsesCostMicrousd(modelName, response);
 
-  if (escalated) return { kind: "escalate" };
+  if (escalated) return { kind: "escalate", aiCostMicrousd: 0 };
 
   const sourceByUrl = new Map<string, Source>();
   for (const citation of citations) {
@@ -396,7 +410,9 @@ function parseResponsesOutput(payload: unknown): Generation {
   }
 
   const sources = [...sourceByUrl.values()].slice(0, 3);
-  if (!sources.length || !parts.length) return { kind: "unavailable" };
+  if (!sources.length || !parts.length) {
+    return { kind: "unavailable", aiCostMicrousd: aiCostMicrousd ?? null };
+  }
 
   const text = parts
     .map((part) => {
@@ -421,7 +437,9 @@ function parseResponsesOutput(payload: unknown): Generation {
     .join("\n\n");
 
   const content = appendSources(text, sources);
-  return content ? { kind: "reply", content } : { kind: "unavailable" };
+  return content
+    ? { kind: "reply", content, aiCostMicrousd: aiCostMicrousd ?? null }
+    : { kind: "unavailable", aiCostMicrousd: aiCostMicrousd ?? null };
 }
 
 const RESPONSES_INSTRUCTIONS =
@@ -431,9 +449,10 @@ async function generateFromGoHighLevel(
   messages: BaseMessage[],
   modelName: string,
 ): Promise<Generation> {
+  let completed = false;
   try {
     const apiKey = Bun.env.OPENAI_API_KEY;
-    if (!apiKey) return { kind: "unavailable" };
+    if (!apiKey) return { kind: "unavailable", aiCostMicrousd: 0 };
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -463,11 +482,12 @@ async function generateFromGoHighLevel(
       }),
       signal: AbortSignal.timeout(10_000),
     });
+    completed = true;
 
-    if (!response.ok) return { kind: "unavailable" };
-    return parseResponsesOutput(await response.json());
+    if (!response.ok) return { kind: "unavailable", aiCostMicrousd: 0 };
+    return parseResponsesOutput(await response.json(), modelName);
   } catch {
-    return { kind: "unavailable" };
+    return { kind: "unavailable", aiCostMicrousd: completed ? null : 0 };
   }
 }
 
@@ -481,16 +501,22 @@ export async function generate(
   const [local, goHighLevel] = await Promise.all([
     localMatches.length
       ? generateFromMonstro(messages, modelName, documents)
-      : Promise.resolve<Generation>({ kind: "unavailable" }),
+      : Promise.resolve<Generation>({ kind: "unavailable", aiCostMicrousd: 0 }),
     useGoHighLevel
       ? generateFromGoHighLevel(messages, modelName)
-      : Promise.resolve<Generation>({ kind: "unavailable" }),
+      : Promise.resolve<Generation>({ kind: "unavailable", aiCostMicrousd: 0 }),
   ]);
 
   if (local.kind === "escalate" || goHighLevel.kind === "escalate") {
-    return { kind: "escalate" };
+    return { kind: "escalate", aiCostMicrousd: 0 };
   }
-  return local.kind === "reply" ? local : goHighLevel;
+  if (local.kind === "reply") return local;
+  if (goHighLevel.kind === "reply") return goHighLevel;
+  const aiCostMicrousd =
+    local.aiCostMicrousd === null || goHighLevel.aiCostMicrousd === null
+      ? null
+      : local.aiCostMicrousd + goHighLevel.aiCostMicrousd;
+  return { kind: "unavailable", aiCostMicrousd };
 }
 
 export function promptFor(

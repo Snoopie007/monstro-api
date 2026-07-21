@@ -23,7 +23,7 @@ export const adminSupportCases = pgTable("support_cases", {
 export const adminSupportCaseMessages = pgTable("support_case_messages", {
   id: serial("id").primaryKey(), agentId: text("agent_id"), emailMessageId: text("email_message_id"), type: adminMessageTypeEnum("type").notNull(),
   role: adminMessageUserRoleEnum("role").notNull(), caseId: integer("case_id").references(() => adminSupportCases.id).notNull(), content: text("content").notNull(),
-  attachments: jsonb("attachments").$type<AdminSupportMessageAttachment[]>().notNull().default([]), created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  attachments: jsonb("attachments").$type<AdminSupportMessageAttachment[]>().notNull().default([]), aiCostMicrousd: integer("ai_cost_microusd"), created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 export const adminSupportCaseLogs = pgTable("support_case_logs", {
   id: serial("id").primaryKey(), caseId: integer("case_id").references(() => adminSupportCases.id).notNull(), agentId: text("agent_id"),
