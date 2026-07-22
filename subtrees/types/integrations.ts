@@ -6,6 +6,7 @@ import type { Location } from "./location";
 export type IntegrationMetadata = {
 
     squareLocationId?: string;
+    publicClientKey?: string;
 }
 
 export type Integration = typeof integrations.$inferSelect & {
