@@ -5,7 +5,7 @@ import { webMercsRoutes } from "./merc";
 import { webLocationSchedulesRoutes } from "./schedules";
 import { webLocationStateRoutes } from "./LocationState";
 import { webPlansRoutes } from "./plans";
-import { webStripeGateway, webSquareGateway, webGatewaysRoutes } from "./gateways";
+import { webStripeGateway, webSquareGateway, webAuthorizeGateway, webGatewaysRoutes } from "./gateways";
 import { webDocRoutes } from "./doc";
 import { webContentRoutes } from "./content";
 import { webGHLRoutes } from "./ghl";
@@ -35,5 +35,6 @@ export const WebRoutes = new Elysia()
         app.use(webGatewaysRoutes)
         app.use(webStripeGateway)
         app.use(webSquareGateway)
+        app.use(webAuthorizeGateway)
         return app;
     });

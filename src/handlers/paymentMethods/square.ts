@@ -85,7 +85,7 @@ export async function addSquarePaymentMethod(input: {
     const { mid, lid, nonce } = input;
 
     const squareGateway = await db.query.integrations.findFirst({
-        where: (i, { eq: equals, and: andFn }) => andFn(
+        where: (i, { eq, and }) => and(
             eq(i.locationId, lid),
             eq(i.service, "square"),
         ),
@@ -100,7 +100,7 @@ export async function addSquarePaymentMethod(input: {
     }
 
     const ml = await db.query.memberLocations.findFirst({
-        where: (row, { eq: equals, and: andFn }) => andFn(
+        where: (row, { eq, and }) => and(
             eq(row.memberId, mid),
             eq(row.locationId, lid),
         ),
