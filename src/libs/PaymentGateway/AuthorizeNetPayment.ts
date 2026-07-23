@@ -133,7 +133,9 @@ export class AuthorizeNetPaymentGateway {
                     },
                 },
             },
-            validationMode: "liveMode",
+            validationMode: process.env.AUTHORIZE_NET_API_URL?.includes("apitest.authorize.net")
+                ? "testMode"
+                : "liveMode",
         });
         const id = response.customerPaymentProfileId;
         if (typeof id !== "string") throw new Error("Authorize.net did not return a payment profile ID");
