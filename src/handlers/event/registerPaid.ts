@@ -1,9 +1,7 @@
 import { db } from "@/db/db";
-import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { calculateChargeDetails, getCheckoutContext } from "@/utils";
+import { calculateChargeDetails, chargeWithGateway, getCheckoutContext, PaymentChargeError } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import { transactions } from "@subtrees/schemas";
-import type { PaymentType } from "@subtrees/types";
 import { generateUUID } from "@subtrees/utils/generateUUID";
 import { SquareError } from "square";
 import Stripe from "stripe";
@@ -58,68 +56,34 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     };
 
     try {
-        if (gateway.service === "stripe") {
-            const stripe = new StripePaymentGateway(gateway.accessToken);
-            const paymentResult = await stripe.createChargeWithoutLineItems(
-                gatewayCustomerId,
-                paymentMethodId,
-                {
-                    authorizeOnly: true,
-                    description: `Payment for event registration - ${registrationId}`,
-                    total,
-                    feesAmount,
-                    currency,
-                    metadata: {
-                        locationId: lid,
-                        memberId: mid,
-                        registrationId,
-                    },
-                });
-            paymentIntentId = paymentResult.id;
-        } else if (gateway.service === "square") {
-            if (paymentType !== "card") {
-                throw new EventRegistrationError(400, "Square only supports saved card payments here");
-            }
-            const squareLocationId = gateway.metadata?.squareLocationId;
-            if (!squareLocationId) {
-                throw new EventRegistrationError(400, "Square location ID not found");
-            }
-            const square = new SquarePaymentGateway(gateway.accessToken);
-            const payment = await square.createCharge(gatewayCustomerId, paymentMethodId, {
-                total,
-                feesAmount,
-                currency,
-                referenceId: registrationId,
-                squareLocationId,
-                note: `registrationId:${registrationId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`,
-            });
-
-            if (!payment?.id) {
-                throw new EventRegistrationError(400, "Payment was not created");
-            }
-
-            const status = (payment.status || "").toUpperCase();
-            if (status !== "COMPLETED") {
-                throw new EventRegistrationError(400, "Payment was not completed", "PAYMENT_INCOMPLETE");
-            }
-
-            paymentIntentId = payment.id;
-            gatewayMetadata = {
-                ...gatewayMetadata,
-                squarePaymentId: payment.id,
-                squarePaymentStatus: payment.status,
-            };
-        } else {
-            throw new EventRegistrationError(
-                400,
-                "No payment gateway configured for this location",
-                "NO_PAYMENT_GATEWAY",
-            );
-        }
+        const charge = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            paymentType,
+            total,
+            feesAmount,
+            currency,
+            description: `Payment for event registration - ${registrationId}`,
+            referenceId: registrationId,
+            note: `registrationId:${registrationId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`,
+            metadata: {
+                locationId: lid,
+                memberId: mid,
+                registrationId,
+            },
+        });
+        paymentIntentId = charge.paymentIntentId;
+        gatewayMetadata = {
+            ...gatewayMetadata,
+            ...charge.gatewayMetadata,
+        };
     } catch (error) {
-
         if (error instanceof EventRegistrationError) {
             throw error;
+        }
+        if (error instanceof PaymentChargeError) {
+            throw new EventRegistrationError(error.status, error.message, error.code);
         }
         const mapped = error instanceof Stripe.errors.StripeError
             ? handleStripeError({ error })

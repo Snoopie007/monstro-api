@@ -2,10 +2,10 @@ import { db } from "@/db/db";
 import type { Promo } from "@subtrees/types";
 import {
     calculateOrderTotals,
+    chargeWithGateway,
     getCheckoutContext,
 } from "@/utils";
 import { orders } from "@subtrees/schemas";
-import { StripePaymentGateway, SquarePaymentGateway } from "@/libs/PaymentGateway";
 
 export type MercCheckoutItem = {
     variantId: string;
@@ -107,51 +107,27 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             throw new Error("Failed to create order");
         }
 
-        if (gateway.service === "stripe") {
-            try {
-                const stripe = new StripePaymentGateway(gateway.accessToken);
-                await stripe.createChargeWithoutLineItems(
-                    gatewayCustomerId,
-                    paymentMethodId,
-                    {
-                        authorizeOnly: true,
-                        description: `Payment for order ${order.id}`,
-                        total,
-                        currency,
-                        feesAmount,
-                        metadata: {
-                            memberId: mid,
-                            locationId: lid,
-                            orderId: order.id,
-                        },
-                    });
-            } catch (error) {
-                console.error(error);
-                tx.rollback();
-                throw error;
-            }
-        }
-
-        if (gateway.service === "square") {
-            try {
-                const square = new SquarePaymentGateway(gateway.accessToken);
-                const squareLocationId = gateway.metadata?.squareLocationId;
-                if (!squareLocationId) {
-                    throw new Error("Square location ID not found");
-                }
-                await square.createCharge(gatewayCustomerId, paymentMethodId, {
-                    total,
-                    feesAmount,
-                    currency,
-                    referenceId: `${order.id}`,
-                    squareLocationId,
-                    note: `orderId:${order.id}|mid:${mid}|locationId:${lid}`,
-                });
-            } catch (error) {
-                console.error(error);
-                tx.rollback();
-                throw error;
-            }
+        try {
+            await chargeWithGateway({
+                gateway,
+                gatewayCustomerId,
+                paymentMethodId,
+                total,
+                feesAmount,
+                currency,
+                description: `Payment for order ${order.id}`,
+                referenceId: `${order.id}`,
+                note: `orderId:${order.id}|mid:${mid}|locationId:${lid}`,
+                metadata: {
+                    memberId: mid,
+                    locationId: lid,
+                    orderId: order.id,
+                },
+            });
+        } catch (error) {
+            console.error(error);
+            tx.rollback();
+            throw error;
         }
 
         return order;

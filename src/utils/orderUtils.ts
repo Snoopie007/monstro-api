@@ -59,6 +59,10 @@ export function calculateOrderTotals(
         }
     }
 
+    if (discount > 0) {
+        total -= discount;
+    }
+
     const processingFee = calculateGatewayFeeAmount(subtotal, 'card', false);
 
     if (passOnFees) {

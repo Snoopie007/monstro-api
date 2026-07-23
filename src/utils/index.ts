@@ -1,6 +1,7 @@
 export * from "./enrollUtils";
 export * from "./fetchEnrollContext";
 export * from "./getCheckoutContext";
+export * from "./checkoutUtil";
 export * from "./orderUtils";
 export * from "./userUtils";
 export * from "./interpolator";
