@@ -10,6 +10,7 @@ const mercCheckoutBody = t.Object({
         variantId: t.String(),
         quantity: t.Number(),
     })),
+    attemptId: t.String(),
 });
 
 export const webMercsRoutes = new Elysia({ prefix: "/mercs" })
@@ -41,7 +42,6 @@ export const webMercsRoutes = new Elysia({ prefix: "/mercs" })
         if (!session) {
             return status(401, { message: "Unauthorized" });
         }
-
         try {
             const order = await handleMercCheckout({
                 lid,
@@ -49,6 +49,7 @@ export const webMercsRoutes = new Elysia({ prefix: "/mercs" })
                 items: body.items,
                 paymentMethodId: body.paymentMethodId,
                 promoId: body.promoId,
+                attemptId: body.attemptId,
             });
             return status(200, order);
         } catch (error) {

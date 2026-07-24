@@ -1,14 +1,18 @@
 import { Elysia, t } from "elysia";
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { retryTransactionRoutes } from "./retry";
 import { db } from "@/db/db";
 import {
+    courseEnrollments,
+    eventRegistrations,
     memberInvoices,
     memberPackages,
+    orders,
     reservations,
     transactions,
 } from "@subtrees/schemas";
-import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+
 
 function getRefundPlanIds(txMeta: Record<string, unknown>, invoiceMemberPlanId: string | null) {
     const packageId =
@@ -44,6 +48,214 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
         if (!transaction) {
             return status(404, { error: "Transaction not found" });
         }
+        const txMeta = (transaction.metadata as Record<string, unknown> | null) || {};
+        if (txMeta.gatewayService === "authorize") {
+            if (transaction.refunded) {
+                return status(200, {
+                    success: true,
+                    refunded: true,
+                    transactionId: tid,
+                    refundId: typeof txMeta.authorizeRefundTransactionId === "string"
+                        ? txMeta.authorizeRefundTransactionId
+                        : null,
+                    amount: transaction.refundedAmount,
+                    message: "Authorize.net refund already processed",
+                });
+            }
+            if (amountType !== "full") {
+                return status(400, { error: "Authorize.net refunds only support full refunds" });
+            }
+            if (transaction.invoice) {
+                return status(409, { error: "Authorize.net refunds are limited to standalone Charge Item transactions" });
+            }
+            const [linkedOrder, linkedRegistration, linkedEnrollment] = await Promise.all([
+                db.query.orders.findFirst({ where: (order, { eq }) => eq(order.transactionId, tid), columns: { id: true } }),
+                db.query.eventRegistrations.findFirst({ where: (registration, { eq }) => eq(registration.transactionId, tid), columns: { id: true } }),
+                db.query.courseEnrollments.findFirst({ where: (enrollment, { eq }) => eq(enrollment.transactionId, tid), columns: { id: true } }),
+            ]);
+            if (linkedOrder || linkedRegistration || linkedEnrollment) {
+                return status(409, { error: "Authorize.net refunds are limited to standalone Charge Item transactions" });
+            }
+            if (transaction.type !== "inbound" || transaction.status !== "paid") {
+                return status(400, { error: "Only paid standalone transactions can be refunded" });
+            }
+
+            const integrationId = txMeta.authorizeIntegrationId;
+            if (typeof integrationId !== "string") {
+                return status(400, { error: "Authorize.net integration is missing" });
+            }
+            const integration = await db.query.integrations.findFirst({
+                where: (candidate, { and, eq }) => and(
+                    eq(candidate.id, integrationId),
+                    eq(candidate.locationId, lid),
+                    eq(candidate.service, "authorize"),
+                ),
+                columns: { apiKey: true, secretKey: true },
+            });
+            if (!integration?.apiKey || !integration.secretKey) {
+                return status(404, { error: "Authorize.net integration not found" });
+            }
+            const providerId = transaction.paymentIntentId
+                || (typeof txMeta.authorizeTransactionId === "string" ? txMeta.authorizeTransactionId : null);
+            if (!providerId) return status(400, { error: "No Authorize.net transaction ID found" });
+            const authorize = new AuthorizePaymentGateway(integration.apiKey, integration.secretKey);
+
+            if (txMeta.authorizeRefundState === "pending") {
+                let details;
+                try {
+                    details = await authorize.getTransactionDetails(providerId);
+                } catch (error) {
+                    if (error instanceof AuthorizeTransportError) {
+                        return status(503, { error: "Authorize.net refund status is unknown", code: "REFUND_UNCERTAIN" });
+                    }
+                    throw error;
+                }
+                if (
+                    details.transactionStatus !== "voided"
+                    && details.transactionStatus !== "refunded"
+                    && details.transactionStatus !== "refundPendingSettlement"
+                    && details.transactionStatus !== "refundSettledSuccessfully"
+                ) {
+                    return status(409, { error: "Authorize.net refund is still being resolved", code: "REFUND_PENDING" });
+                }
+                const operation = details.transactionStatus === "voided" ? "void" : "refund";
+                await db.update(transactions).set({
+                    refunded: true,
+                    refundedAmount: operation === "void" ? 0 : transaction.total,
+                    metadata: {
+                        ...txMeta,
+                        authorizeRefundState: "completed",
+                        authorizeRefundOperation: operation,
+                        authorizeRefundTransactionId: providerId,
+                        authorizeRefundStatus: details.transactionStatus,
+                    },
+                    updated: new Date(),
+                }).where(eq(transactions.id, tid));
+            } else {
+                let details;
+                try {
+                    details = await authorize.getTransactionDetails(providerId);
+                } catch (error) {
+                    if (error instanceof AuthorizeTransportError) {
+                        return status(503, { error: "Authorize.net refund status is unknown", code: "REFUND_UNCERTAIN" });
+                    }
+                    throw error;
+                }
+                const providerStatus = details.transactionStatus;
+                if (!providerStatus) throw new Error("Authorize.net transaction status is missing");
+
+                if (
+                    providerStatus === "voided"
+                    || providerStatus === "refunded"
+                    || providerStatus === "refundPendingSettlement"
+                    || providerStatus === "refundSettledSuccessfully"
+                ) {
+                    const operation = providerStatus === "voided" ? "void" : "refund";
+                    await db.update(transactions).set({
+                        refunded: true,
+                        refundedAmount: operation === "void" ? 0 : transaction.total,
+                        metadata: {
+                            ...txMeta,
+                            authorizeRefundState: "completed",
+                            authorizeRefundOperation: operation,
+                            authorizeRefundTransactionId: providerId,
+                            authorizeRefundStatus: providerStatus,
+                        },
+                        updated: new Date(),
+                    }).where(and(eq(transactions.id, tid), eq(transactions.refunded, false)));
+                } else {
+                    const operation = providerStatus === "capturedPendingSettlement" || providerStatus === "authorizedPendingCapture"
+                        ? "void"
+                        : providerStatus === "settledSuccessfully"
+                            ? "refund"
+                            : null;
+                    if (!operation) {
+                        throw new Error(`Authorize.net transaction cannot be refunded from status ${providerStatus}`);
+                    }
+                    const pendingMetadata = {
+                        ...txMeta,
+                        authorizeRefundState: "pending",
+                        authorizeRefundRequestedAt: new Date().toISOString(),
+                    };
+                    const [claim] = await db.update(transactions).set({
+                        metadata: pendingMetadata,
+                        updated: new Date(),
+                    }).where(and(
+                        eq(transactions.id, tid),
+                        eq(transactions.refunded, false),
+                        sql`coalesce(${transactions.metadata}->>'authorizeRefundState', '') <> 'pending'`,
+                    )).returning({ id: transactions.id });
+                    if (!claim) {
+                        const current = await db.query.transactions.findFirst({
+                            where: (candidate, { eq }) => eq(candidate.id, tid),
+                        });
+                        if (current?.refunded) {
+                            return status(200, {
+                                success: true,
+                                refunded: true,
+                                transactionId: tid,
+                                refundId: typeof current.metadata?.authorizeRefundTransactionId === "string"
+                                    ? current.metadata.authorizeRefundTransactionId
+                                    : null,
+                                amount: current.refundedAmount,
+                                message: "Authorize.net refund already processed",
+                            });
+                        }
+                        return status(409, { error: "Authorize.net refund is still being resolved", code: "REFUND_PENDING" });
+                    }
+
+                    try {
+                        const providerResult = operation === "void"
+                            ? await authorize.voidTransaction(providerId)
+                            : await authorize.refundTransaction(providerId, transaction.total);
+                        await db.update(transactions).set({
+                            refunded: true,
+                            refundedAmount: operation === "void" ? 0 : transaction.total,
+                            metadata: {
+                                ...pendingMetadata,
+                                authorizeRefundState: "completed",
+                                authorizeRefundOperation: operation,
+                                authorizeRefundTransactionId: providerResult.transId ?? providerId,
+                                authorizeRefundStatus: providerResult.transactionStatus ?? providerStatus,
+                            },
+                            updated: new Date(),
+                        }).where(and(eq(transactions.id, tid), eq(transactions.refunded, false)));
+                    } catch (error) {
+                        if (error instanceof AuthorizeTransportError) {
+                            return status(503, { error: "Authorize.net refund status is unknown", code: "REFUND_UNCERTAIN" });
+                        }
+                        await db.update(transactions).set({
+                            metadata: {
+                                ...pendingMetadata,
+                                authorizeRefundState: "failed",
+                                authorizeRefundError: error instanceof Error ? error.message : "Authorize.net refund failed",
+                            },
+                            updated: new Date(),
+                        }).where(eq(transactions.id, tid));
+                        throw error;
+                    }
+                }
+            }
+
+            const completed = await db.query.transactions.findFirst({
+                where: (candidate, { eq }) => eq(candidate.id, tid),
+            });
+            if (!completed?.refunded) {
+                return status(409, { error: "Authorize.net refund was not finalized", code: "REFUND_PENDING" });
+            }
+            return status(200, {
+                success: true,
+                refunded: true,
+                transactionId: tid,
+                refundId: typeof completed.metadata?.authorizeRefundTransactionId === "string"
+                    ? completed.metadata.authorizeRefundTransactionId
+                    : null,
+                amount: completed.refundedAmount,
+                message: completed.metadata?.authorizeRefundOperation === "void"
+                    ? "Authorize.net transaction voided successfully"
+                    : "Authorize.net refund processed successfully",
+            });
+        }
 
         if (transaction.refunded) {
             return status(400, { error: "Transaction already refunded" });
@@ -53,7 +265,6 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             return status(400, { error: "Only paid inbound transactions can be refunded" });
         }
 
-        const txMeta = (transaction.metadata as Record<string, unknown> | null) || {};
         const { packageId, subscriptionId } = getRefundPlanIds(
             txMeta,
             transaction.invoice?.memberPlanId || null
@@ -127,15 +338,15 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 					},
 				}).where(eq(transactions.id, tid));
 
-				if (transaction.invoiceId) {
+				if (transaction.invoice) {
 					const invoice = await tx.query.memberInvoices.findFirst({
-						where: (inv, { eq }) => eq(inv.id, transaction.invoiceId!),
+						where: eq(memberInvoices.id, transaction.invoice.id),
 					});
 					if (invoice) {
 						await tx.update(memberInvoices).set({
 							...(amountType === "full" ? { status: "void", paid: false } : {}),
 							updated: new Date(),
-						}).where(eq(memberInvoices.id, transaction.invoiceId!));
+						}).where(eq(memberInvoices.id, transaction.invoice.id));
 					}
 				}
 
@@ -222,9 +433,9 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                 },
             }).where(eq(transactions.id, tid));
 
-            if (transaction.invoiceId) {
+            if (transaction.invoice) {
                 const invoice = await tx.query.memberInvoices.findFirst({
-                    where: (inv, { eq }) => eq(inv.id, transaction.invoiceId!),
+                    where: eq(memberInvoices.id, transaction.invoice.id),
                 });
 
                 if (invoice) {
@@ -242,7 +453,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                                 transactionId: tid,
                             },
                         },
-                    }).where(eq(memberInvoices.id, transaction.invoiceId!));
+                    }).where(eq(memberInvoices.id, transaction.invoice.id));
                 }
             }
 
@@ -376,9 +587,9 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                 },
             }).where(eq(transactions.id, tid));
 
-            if (transaction.invoiceId) {
+            if (transaction.invoice) {
                 const invoice = await tx.query.memberInvoices.findFirst({
-                    where: (inv, { eq }) => eq(inv.id, transaction.invoiceId!),
+                    where: eq(memberInvoices.id, transaction.invoice.id),
                 });
 
                 if (invoice) {
@@ -398,7 +609,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                                 transactionId: tid,
                             },
                         },
-                    }).where(eq(memberInvoices.id, transaction.invoiceId!));
+                    }).where(eq(memberInvoices.id, transaction.invoice.id));
                 }
             }
 

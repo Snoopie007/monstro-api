@@ -1,3 +1,3 @@
 export * from "./StripePayment";
 export * from "./SquarePayment";
-export * from "./AuthorizeNetPayment";
+export * from "./AuthorizePayment";

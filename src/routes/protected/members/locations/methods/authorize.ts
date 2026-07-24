@@ -3,7 +3,6 @@ import {
     addAuthorizePaymentMethod,
     getAuthorizePaymentMethods,
 } from "@/handlers/paymentMethods";
-import { db } from "src/db/db";
 
 const NOT_FOUND_ERRORS = new Set([
     "Authorize.net integration not found",
@@ -41,22 +40,13 @@ export function AuthorizePaymentMethodsRoutes(app: Elysia) {
     app.post("/authorize", async ({ status, body, params }) => {
         const { mid, lid } = params;
 
-
         try {
-
-
-            const member = await db.query.members.findFirst({
-                where: (row, { eq }) => eq(row.id, mid),
-                columns: { id: true, firstName: true, lastName: true, email: true },
-            });
             const pm = await addAuthorizePaymentMethod({
                 mid,
                 lid,
-                name: `${member?.firstName} ${member?.lastName}`,
                 opaqueData: body.opaqueData,
                 address: body.address,
             });
-
             return status(200, pm);
         } catch (err) {
             console.log(err);

@@ -1,7 +1,8 @@
+import { strict as assert } from "node:assert";
 
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, memberSubscriptions, memberLocations, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberPackages, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 
@@ -40,74 +41,66 @@ export async function handleStripePlanCharge({
     feeAmount,
     stripeChargeId,
 }: HandleStripePlanChargeProps) {
-
-    const isPackage = memberPlanId?.startsWith("pkg_") ?? false;
     const now = new Date();
 
-    const [invoice] = await db.update(memberInvoices).set({
-        status: success ? "paid" : "unpaid",
-        paid: success,
-        receiptUrl,
-        updated: now,
-    }).where(eq(memberInvoices.id, invoiceId)).returning({
-        description: memberInvoices.description,
-        currency: memberInvoices.currency,
-        total: memberInvoices.total,
-        subTotal: memberInvoices.subTotal,
-        tax: memberInvoices.tax,
-    });
-
-
-    if (!invoice) {
-        throw new Error("Invoice not found");
-    }
-
-    const transactionValues = {
-        ...invoice,
-        invoiceId,
-        total: amount,
-        type: "inbound" as const,
-        status: success ? "paid" as const : "failed" as const,
-        failedReason: failedReason,
-        failedCode: failedCode,
-        locationId,
-        memberId,
-        paymentMethodId,
-        paymentIntentId,
-        paymentType,
-        chargeDate: now,
-        feeAmount: feeAmount,
-        metadata: {
-            gatewayService: "stripe",
-            stripeChargeId,
-            memberPlanId,
-        }
-    };
-
-    await db.insert(transactions).values(transactionValues).onConflictDoUpdate({
-        target: transactions.invoiceId,
-        set: transactionValues,
-    });
-
-    const existingSubscription = memberPlanId && !isPackage
-        ? await db.query.memberSubscriptions.findFirst({
-            where: (subscription, { eq }) => eq(subscription.id, memberPlanId),
-            columns: { status: true },
-        })
-        : null;
-    const canUpdateSubscriptionStatus = existingSubscription?.status !== "canceled";
-
     await db.transaction(async (tx) => {
+        const [invoice] = await tx.update(memberInvoices).set({
+            status: success ? "paid" : "unpaid",
+            paid: success,
+            receiptUrl,
+            updated: now,
+        }).where(eq(memberInvoices.id, invoiceId)).returning();
+        assert(invoice, "Invoice not found");
 
-        if (isPackage && success) {
-            await tx.update(memberPackages).set({
-                status: "active",
-            }).where(eq(memberPackages.id, memberPlanId));
-        } else if (memberPlanId && canUpdateSubscriptionStatus) {
-            await tx.update(memberSubscriptions).set({
-                gatewayPaymentId: paymentMethodId,
-                status: success ? "active" : "past_due",
-            }).where(eq(memberSubscriptions.id, memberPlanId));
+        const values = {
+            description: invoice.description,
+            currency: invoice.currency || "USD",
+            total: amount,
+            subTotal: invoice.subTotal,
+            tax: invoice.tax,
+            type: "inbound" as const,
+            status: success ? "paid" as const : "failed" as const,
+            failedReason,
+            failedCode,
+            locationId,
+            memberId,
+            paymentMethodId,
+            paymentIntentId,
+            paymentType,
+            chargeDate: now,
+            feeAmount,
+            metadata: {
+                gatewayService: "stripe" as const,
+                stripeChargeId,
+                memberPlanId,
+            },
+            updated: now,
+        };
+
+        if (invoice.transactionId) {
+            await tx.update(transactions).set(values).where(eq(transactions.id, invoice.transactionId));
+        } else {
+            const [transaction] = await tx.insert(transactions).values(values).returning({ id: transactions.id });
+            assert(transaction);
+            await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoiceId));
         }
+
+        if (memberPlanId.startsWith("pkg_")) {
+            if (success) {
+                await tx.update(memberPackages).set({ status: "active" }).where(eq(memberPackages.id, memberPlanId));
+            }
+            return;
+        }
+
+        const subscription = await tx.query.memberSubscriptions.findFirst({
+            where: eq(memberSubscriptions.id, memberPlanId),
+            columns: { status: true },
+        });
+        if (subscription?.status === "canceled") return;
+
+        await tx.update(memberSubscriptions).set({
+            gatewayPaymentId: paymentMethodId,
+            status: success ? "active" : "past_due",
+        }).where(eq(memberSubscriptions.id, memberPlanId));
     });
 }

@@ -1,15 +1,28 @@
+import { strict as assert } from "node:assert";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import {
-    AuthorizeNetPaymentGateway,
-    authorizeNetMerchantCustomerId,
-    type AuthorizeNetCustomerProfile,
+    AuthorizeApiError,
+    AuthorizePaymentGateway,
+    authorizeMerchantCustomerId,
+    type AuthorizeCustomerProfile,
 } from "@/libs/PaymentGateway";
-import { memberLocations } from "@subtrees/schemas";
+import { integrations, locationState, memberLocations } from "@subtrees/schemas";
 import type { PaymentMethod } from "@subtrees/types";
 
 async function getAuthorizeGateway(lid: string) {
+    const state = await db.query.locationState.findFirst({
+        where: eq(locationState.locationId, lid),
+        columns: { paymentGatewayId: true },
+    });
+    if (!state?.paymentGatewayId) throw new Error("Authorize.net integration not found");
+
     const integration = await db.query.integrations.findFirst({
-        where: (row, { and, eq }) => and(eq(row.locationId, lid), eq(row.service, "authorize-net")),
+        where: and(
+            eq(integrations.id, state.paymentGatewayId),
+            eq(integrations.locationId, lid),
+            eq(integrations.service, "authorize"),
+        ),
         columns: { apiKey: true, secretKey: true, metadata: true },
     });
     if (!integration?.apiKey || !integration.secretKey) {
@@ -17,52 +30,56 @@ async function getAuthorizeGateway(lid: string) {
     }
     return {
         integration,
-        gateway: new AuthorizeNetPaymentGateway(integration.apiKey, integration.secretKey),
+        gateway: new AuthorizePaymentGateway(integration.apiKey, integration.secretKey),
     };
 }
 
-function assertProfileOwner(profile: AuthorizeNetCustomerProfile, memberId: string, email: string) {
+function assertProfileOwner(profile: AuthorizeCustomerProfile, memberId: string, email: string) {
     const ownsProfile = profile.merchantCustomerId
-        ? profile.merchantCustomerId === authorizeNetMerchantCustomerId(memberId)
+        ? profile.merchantCustomerId === authorizeMerchantCustomerId(memberId)
         : profile.email?.toLowerCase() === email.toLowerCase();
     if (!ownsProfile) throw new Error("Authorize.net customer profile does not belong to member");
 }
 
-function mapPaymentMethods(profile: AuthorizeNetCustomerProfile): PaymentMethod[] {
-    return (profile.paymentProfiles ?? []).flatMap((paymentProfile) => {
-        const value = paymentProfile as Record<string, unknown>;
-        const id = value.customerPaymentProfileId;
-        if (typeof id !== "string") return [];
+function duplicateRecordId(error: unknown) {
+    return error instanceof AuthorizeApiError && error.code === "E00039"
+        ? error.message.match(/\bID (\d+)\b/i)?.[1]
+        : undefined;
+}
 
-        const payment = value.payment as Record<string, unknown> | undefined;
-        const card = payment?.creditCard as Record<string, unknown> | undefined;
-        const billTo = value.billTo as Record<string, unknown> | undefined;
-        const expiration = typeof card?.expirationDate === "string" ? /^(\d{4})-(\d{2})$/.exec(card.expirationDate) : null;
-        const cardNumber = typeof card?.cardNumber === "string" ? card.cardNumber : "";
-        const hasAddress = [billTo?.address, billTo?.city, billTo?.state, billTo?.zip, billTo?.country].some(Boolean);
+function mapPaymentMethods(profile: AuthorizeCustomerProfile): PaymentMethod[] {
+    return (profile.paymentProfiles ?? []).map((paymentProfile) => {
+        const id = paymentProfile.customerPaymentProfileId;
+        const card = paymentProfile.payment?.creditCard;
+        const last4 = card?.cardNumber?.match(/(\d{4})$/)?.[1];
+        const expiration = card?.expirationDate?.match(/^(\d{4})-(\d{2})$/);
+        assert(id, "Authorize.net payment profile ID is missing");
+        assert(card?.cardType, "Authorize.net card brand is missing");
+        assert(last4, "Authorize.net card number is missing");
 
-        return [{
+        const billTo = paymentProfile.billTo;
+        return {
             id,
-            source: "authorize-net",
+            source: "authorize",
             type: "card",
-            isDefault: id === profile.defaultPaymentProfile,
+            isDefault: paymentProfile.defaultPaymentProfile === true || id === profile.defaultPaymentProfile,
             card: {
-                brand: typeof card?.cardType === "string" ? card.cardType : "Card",
-                last4: cardNumber.match(/(\d{4})$/)?.[1] ?? null,
+                brand: card.cardType,
+                last4,
                 expMonth: expiration ? Number(expiration[2]) : null,
                 expYear: expiration ? Number(expiration[1]) : null,
             },
-            ...(hasAddress && {
+            ...(billTo && {
                 address: {
-                    line1: typeof billTo?.address === "string" ? billTo.address : "",
+                    line1: billTo.address ?? "",
                     line2: "",
-                    city: typeof billTo?.city === "string" ? billTo.city : "",
-                    state: typeof billTo?.state === "string" ? billTo.state : "",
-                    postalCode: typeof billTo?.zip === "string" ? billTo.zip : "",
-                    country: typeof billTo?.country === "string" ? billTo.country : "",
+                    city: billTo.city ?? "",
+                    state: billTo.state ?? "",
+                    postalCode: billTo.zip ?? "",
+                    country: billTo.country ?? "",
                 },
             }),
-        }];
+        };
     });
 }
 
@@ -70,25 +87,25 @@ export async function getAuthorizePaymentMethods(mid: string, lid: string): Prom
     const memberLocation = await db.query.memberLocations.findFirst({
         where: (row, { and, eq }) => and(eq(row.memberId, mid), eq(row.locationId, lid)),
         columns: { gatewayCustomerId: true },
+        with: { member: { columns: { email: true } } },
     });
     if (!memberLocation?.gatewayCustomerId || !/^\d+$/.test(memberLocation.gatewayCustomerId)) return [];
 
-    const member = await db.query.members.findFirst({
-        where: (row, { eq }) => eq(row.id, mid),
-        columns: { email: true },
-    });
-    if (!member) throw new Error("Member not found");
-
     const { gateway } = await getAuthorizeGateway(lid);
-    const profile = await gateway.getCustomerProfile(memberLocation.gatewayCustomerId);
-    assertProfileOwner(profile, mid, member.email);
-    return mapPaymentMethods(profile);
+    try {
+        const profile = await gateway.getCustomerProfile(memberLocation.gatewayCustomerId);
+        assertProfileOwner(profile, mid, memberLocation.member.email);
+        return mapPaymentMethods(profile);
+    } catch (error) {
+        if (error instanceof AuthorizeApiError && error.code === "E00040") return [];
+        throw error;
+    }
 }
 
 export async function getAuthorizeClientConfig(lid: string) {
     const { integration } = await getAuthorizeGateway(lid);
     const publicClientKey = integration.metadata?.publicClientKey;
-    const scriptUrl = process.env.AUTHORIZE_NET_SCRIPT_URL;
+    const scriptUrl = process.env.AUTHORIZE_SCRIPT_URL;
     if (typeof publicClientKey !== "string" || !publicClientKey || !scriptUrl) {
         throw new Error("Authorize.net client configuration not found");
     }
@@ -99,7 +116,6 @@ export async function addAuthorizePaymentMethod(input: {
     mid: string;
     lid: string;
     opaqueData: { dataDescriptor: string; dataValue: string };
-    name: string;
     address?: {
         line1?: string;
         line2?: string;
@@ -112,53 +128,76 @@ export async function addAuthorizePaymentMethod(input: {
     if (
         input.opaqueData.dataDescriptor !== "COMMON.ACCEPT.INAPP.PAYMENT" ||
         !input.opaqueData.dataValue ||
-        input.opaqueData.dataValue.length > 2048 ||
-        !input.name.trim()
+        input.opaqueData.dataValue.length > 2048
     ) {
         throw new Error("Invalid Authorize.net payment data");
     }
 
-    const [{ gateway }, memberLocation, member] = await Promise.all([
+    const [{ gateway }, memberLocation] = await Promise.all([
         getAuthorizeGateway(input.lid),
         db.query.memberLocations.findFirst({
             where: (row, { and, eq }) => and(eq(row.memberId, input.mid), eq(row.locationId, input.lid)),
             columns: { gatewayCustomerId: true },
-        }),
-        db.query.members.findFirst({
-            where: (row, { eq }) => eq(row.id, input.mid),
-            columns: { id: true, firstName: true, lastName: true, email: true },
+            with: {
+                member: {
+                    columns: { id: true, firstName: true, lastName: true, email: true },
+                },
+            },
         }),
     ]);
-    if (!member) throw new Error("Member not found");
+    assert(memberLocation, "Member location not found");
+    const member = memberLocation.member;
 
-    let customerProfileId = memberLocation?.gatewayCustomerId;
+    let customerProfileId = memberLocation.gatewayCustomerId;
     if (customerProfileId && /^\d+$/.test(customerProfileId)) {
-        const profile = await gateway.getCustomerProfile(customerProfileId);
-        assertProfileOwner(profile, member.id, member.email);
+        try {
+            const profile = await gateway.getCustomerProfile(customerProfileId);
+            assertProfileOwner(profile, member.id, member.email);
+        } catch (error) {
+            if (!(error instanceof AuthorizeApiError) || error.code !== "E00040") throw error;
+            customerProfileId = null;
+        }
     } else {
-        customerProfileId = await gateway.createCustomerProfile({
-            memberId: member.id,
-            firstName: member.firstName,
-            lastName: member.lastName,
-            email: member.email,
-        });
-        await db.insert(memberLocations).values({
-            memberId: input.mid,
-            locationId: input.lid,
-            gatewayCustomerId: customerProfileId,
-        }).onConflictDoUpdate({
-            target: [memberLocations.memberId, memberLocations.locationId],
-            set: { gatewayCustomerId: customerProfileId, updated: new Date() },
-        });
+        customerProfileId = null;
     }
 
-    const paymentProfileId = await gateway.createPaymentProfile({
-        customerProfileId,
-        dataDescriptor: input.opaqueData.dataDescriptor,
-        dataValue: input.opaqueData.dataValue,
-        name: input.name,
-        address: input.address,
-    });
+    if (!customerProfileId) {
+        try {
+            customerProfileId = await gateway.createCustomerProfile({
+                memberId: member.id,
+                firstName: member.firstName,
+                lastName: member.lastName,
+                email: member.email,
+            });
+        } catch (error) {
+            const recoveredCustomerProfileId = duplicateRecordId(error);
+            if (!recoveredCustomerProfileId) throw error;
+            customerProfileId = recoveredCustomerProfileId;
+            const profile = await gateway.getCustomerProfile(customerProfileId);
+            assertProfileOwner(profile, member.id, member.email);
+        }
+        await db.update(memberLocations)
+            .set({ gatewayCustomerId: customerProfileId, updated: new Date() })
+            .where(and(
+                eq(memberLocations.memberId, input.mid),
+                eq(memberLocations.locationId, input.lid),
+            ));
+    }
+
+    let paymentProfileId: string;
+    try {
+        paymentProfileId = await gateway.createPaymentProfile({
+            customerProfileId,
+            dataDescriptor: input.opaqueData.dataDescriptor,
+            dataValue: input.opaqueData.dataValue,
+            name: `${member.firstName} ${member.lastName ?? ""}`.trim(),
+            address: input.address,
+        });
+    } catch (error) {
+        const recoveredPaymentProfileId = duplicateRecordId(error);
+        if (!recoveredPaymentProfileId) throw error;
+        paymentProfileId = recoveredPaymentProfileId;
+    }
     const profile = await gateway.getCustomerProfile(customerProfileId);
     assertProfileOwner(profile, member.id, member.email);
     const paymentMethod = mapPaymentMethods(profile).find((method) => method.id === paymentProfileId);

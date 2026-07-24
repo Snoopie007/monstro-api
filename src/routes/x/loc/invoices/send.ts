@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils";
@@ -140,7 +141,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     const transactionValues = {
                         memberId: invoice.memberId,
                         locationId: lid,
-                        invoiceId: invoice.id,
                         description: invoice.description || `Invoice ${invoice.id}`,
                         type: "inbound" as const,
                         status: "paid" as const,
@@ -156,7 +156,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         failedReason: null,
                         metadata: {
                             ...invoiceMetadata,
-                            invoiceId: invoice.id,
                             gatewayService: "square" as const,
                             paymentMethodId: selectedPaymentMethodId,
                             squarePaymentId: payment?.id,
@@ -167,19 +166,19 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         updated: new Date(),
                     };
 
-                    const existingTransaction = await db.query.transactions.findFirst({
-                        where: (transaction, { eq }) => eq(transaction.invoiceId, invoice.id),
-                    });
-
-                    if (existingTransaction) {
-                        await db.update(transactions).set(transactionValues).where(eq(transactions.id, existingTransaction.id));
+                    let transactionId = invoice.transactionId;
+                    if (transactionId) {
+                        await db.update(transactions).set(transactionValues).where(eq(transactions.id, transactionId));
                     } else {
-                        await db.insert(transactions).values(transactionValues);
+                        const [transaction] = await db.insert(transactions).values(transactionValues).returning({ id: transactions.id });
+                        assert(transaction);
+                        transactionId = transaction.id;
                     }
 
                     await db.update(memberInvoices).set({
                         status: "paid",
                         paid: true,
+                        transactionId,
                         sentAt: new Date(),
                         metadata: {
                             ...invoiceMetadata,
@@ -206,7 +205,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     const transactionValues = {
                         memberId: invoice.memberId,
                         locationId: lid,
-                        invoiceId: invoice.id,
                         description: invoice.description || `Invoice ${invoice.id}`,
                         type: "inbound" as const,
                         status: "failed" as const,
@@ -222,7 +220,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         failedReason: failure.detail,
                         metadata: {
                             ...invoiceMetadata,
-                            invoiceId: invoice.id,
                             gatewayService: "square" as const,
                             squarePaymentId: failure.payment?.id,
                             chargeId: failure.payment?.id,
@@ -236,14 +233,12 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         updated: new Date(),
                     };
 
-                    const existingTransaction = await db.query.transactions.findFirst({
-                        where: (transaction, { eq }) => eq(transaction.invoiceId, invoice.id),
-                    });
-
-                    if (existingTransaction) {
-                        await db.update(transactions).set(transactionValues).where(eq(transactions.id, existingTransaction.id));
+                    if (invoice.transactionId) {
+                        await db.update(transactions).set(transactionValues).where(eq(transactions.id, invoice.transactionId));
                     } else {
-                        await db.insert(transactions).values(transactionValues);
+                        const [transaction] = await db.insert(transactions).values(transactionValues).returning({ id: transactions.id });
+                        assert(transaction);
+                        await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
                     }
 
                     return status(400, { error: failure.detail, code: failure.code });

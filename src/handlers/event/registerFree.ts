@@ -25,5 +25,6 @@ export async function handleFreeEventRegistration({
         mid,
         event,
         ticket,
+        status: "registered",
     }));
 }

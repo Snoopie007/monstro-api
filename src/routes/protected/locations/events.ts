@@ -105,7 +105,7 @@ export async function locationEventRoutes(app: Elysia) {
         });
         app.post('/register', async ({ params, body, status }) => {
             const { eventId, lid } = params;
-            const { mid, ticketId, paymentMethodId, paymentType } = body;
+            const { mid, ticketId, paymentMethodId, paymentType, attemptId } = body;
 
             try {
                 const registration = await handlePaidEventRegistration({
@@ -115,6 +115,7 @@ export async function locationEventRoutes(app: Elysia) {
                     ticketId,
                     paymentMethodId,
                     paymentType,
+                    attemptId,
                 });
                 return status(201, registration);
             } catch (error) {
@@ -129,6 +130,7 @@ export async function locationEventRoutes(app: Elysia) {
                     t.Literal("card"),
                     t.Literal("us_bank_account"),
                 ])),
+                attemptId: t.String(),
             }),
         });
         return app;

@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import type { PaymentType } from "@subtrees/types";
 import { orders, transactions } from "@subtrees/schemas";
@@ -14,8 +15,6 @@ interface HandleSquareOrderSuccessProps {
 }
 
 export async function handleSquareOrderSuccess({ orderId, paymentMethodId, paymentIntentId, paymentType, feeAmount, amount }: HandleSquareOrderSuccessProps) {
-    const now = new Date();
-    // Read the pre-update status and notification relations once; the returned order below is post-update.
     const previousOrder = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
         with: {
@@ -31,38 +30,37 @@ export async function handleSquareOrderSuccess({ orderId, paymentMethodId, payme
             },
         },
     });
+    assert(previousOrder, "Order not found");
 
+    const order = await db.transaction(async (tx) => {
+        const [transaction] = await tx.insert(transactions).values({
+            locationId: previousOrder.locationId,
+            memberId: previousOrder.memberId,
+            paymentMethodId,
+            paymentIntentId,
+            paymentType,
+            feeAmount,
+            total: amount,
+            type: "inbound",
+            status: "paid",
+            metadata: {
+                gatewayService: "square",
+            },
+        }).returning({ id: transactions.id });
+        assert(transaction);
 
-    const [order] = await db.update(orders).set({
-        status: "paid",
-        updated: now,
-    }).where(eq(orders.id, orderId)).returning();
-
-    if (!order) {
-        throw new Error("Order not found");
-    }
-
-    await db.insert(transactions).values({
-        orderId: order.id,
-        locationId: order.locationId,
-        memberId: order.memberId,
-        paymentMethodId,
-        paymentIntentId,
-        paymentType,
-        feeAmount,
-        total: amount,
-        type: "inbound" as const,
-        status: "paid" as const,
-        metadata: {
-            gatewayService: "square",
-        },
+        const [updatedOrder] = await tx.update(orders).set({
+            status: "paid",
+            transactionId: transaction.id,
+            updated: new Date(),
+        }).where(eq(orders.id, orderId)).returning();
+        assert(updatedOrder);
+        return updatedOrder;
     });
-    if (previousOrder) {
-        await queueOrderPaidNotifications({
-            order,
-            member: previousOrder.member,
-            location: previousOrder.location,
-        });
-    }
-    ;
+
+    await queueOrderPaidNotifications({
+        order,
+        member: previousOrder.member,
+        location: previousOrder.location,
+    });
 }

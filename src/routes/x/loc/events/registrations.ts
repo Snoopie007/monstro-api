@@ -44,7 +44,7 @@ export const eventRegistrationRoutes = new Elysia()
 		if (!eventLocationAccess.allowed) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
 		const { lid, eventId } = params as { lid: string; eventId: string };
-		const { memberId, ticketId, paymentMethodId, paymentType } = ctx.body;
+		const { memberId, ticketId, paymentMethodId, paymentType, attemptId } = ctx.body;
 
 		try {
 			const registration = await handlePaidEventRegistration({
@@ -54,6 +54,7 @@ export const eventRegistrationRoutes = new Elysia()
 				ticketId,
 				paymentMethodId,
 				paymentType,
+				attemptId,
 			});
 			return status(201, registration);
 		} catch (error) {
@@ -64,6 +65,7 @@ export const eventRegistrationRoutes = new Elysia()
 			...RegistrationBody.properties,
 			paymentMethodId: t.String(),
 			paymentType: t.Optional(t.Union([t.Literal("card"), t.Literal("us_bank_account")])),
+			attemptId: t.String(),
 		}),
 	})
 	.patch("/:eventId/registrations/:registrationId", async (ctx) => {

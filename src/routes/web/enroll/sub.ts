@@ -5,6 +5,7 @@ import { handleEnrollSubscription, mapEnrollSubError } from "@/handlers/enroll";
 const EnrollSubBody = t.Object({
     paymentMethodId: t.String(),
     priceId: t.String(),
+    attemptId: t.String(),
     promoId: t.Optional(t.Nullable(t.String())),
     paymentType: t.Union([
         t.Literal("card"),
@@ -32,6 +33,7 @@ export const webEnrollSubRoutes = new Elysia({ prefix: "/enroll" })
                 paymentMethodId: body.paymentMethodId,
                 paymentType: body.paymentType,
                 promoId: body.promoId,
+                attemptId: body.attemptId,
             });
             return status(200, result);
         } catch (error) {

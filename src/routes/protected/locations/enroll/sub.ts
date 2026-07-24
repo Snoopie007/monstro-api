@@ -9,6 +9,7 @@ const EnrollSubProps = {
         mid: t.String(),
         paymentMethodId: t.String(),
         priceId: t.String(),
+        attemptId: t.String(),
         promoId: t.Optional(t.Nullable(t.String())),
         paymentType: t.Union([
             t.Literal("card"),
@@ -31,6 +32,7 @@ export function subEnrollRoutes(app: Elysia) {
                     paymentMethodId,
                     paymentType,
                     promoId,
+                    attemptId: body.attemptId,
                 });
                 return status(200, result);
             } catch (error) {

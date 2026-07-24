@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { isFuture } from "date-fns";
@@ -83,10 +84,9 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                 }).returning();
 
                 if (invoice) {
-                    await db.insert(transactions).values({
+                    const [transaction] = await db.insert(transactions).values({
                         memberId: sub.memberId,
                         locationId: lid,
-                        invoiceId: invoice.id,
                         description: `${sub.pricing.name} - Recurring Payment`,
                         type: "inbound",
                         status: "failed",
@@ -95,7 +95,9 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                         subTotal: sub.pricing.price,
                         tax: 0,
                         currency: currency || "usd",
-                    });
+                    }).returning({ id: transactions.id });
+                    assert(transaction);
+                    await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
                 }
             }
         }

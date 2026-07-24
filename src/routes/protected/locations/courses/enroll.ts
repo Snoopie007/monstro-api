@@ -6,7 +6,7 @@ import { db } from "src/db/db";
 export function locationCoursesEnroll(app: Elysia) {
     return app.post("/courses/enroll", async ({ params, status, body }) => {
         const { lid } = params;
-        const { paymentMethodId, courseId, mid, paymentType } = body;
+        const { paymentMethodId, courseId, mid, paymentType, attemptId } = body;
 
         try {
             const course = await db.query.courses.findFirst({
@@ -28,8 +28,8 @@ export function locationCoursesEnroll(app: Elysia) {
                 });
                 return status(200, enrollment);
             } else {
-                if (!paymentMethodId || !paymentType) {
-                    throw new CourseEnrollError(400, "Payment method ID and payment type are required");
+                if (!paymentMethodId || !paymentType || !attemptId) {
+                    throw new CourseEnrollError(400, "Payment method ID, payment type, and attempt ID are required");
                 }
                 const enrollment = await handleCourseEnrollPaid({
                     lid,
@@ -39,6 +39,7 @@ export function locationCoursesEnroll(app: Elysia) {
                     paymentType,
                     courseTitle: course.title,
                     coursePrice: course.price,
+                    attemptId,
                 });
                 return status(200, enrollment);
             }
@@ -64,6 +65,7 @@ export function locationCoursesEnroll(app: Elysia) {
                 t.Literal("card"),
                 t.Literal("us_bank_account"),
             ])),
+            attemptId: t.Optional(t.String()),
         }),
     });
 }

@@ -9,11 +9,15 @@ const EnrollPkgProps = {
         paymentMethodId: t.String(),
         priceId: t.String(),
         mid: t.String(),
+        attemptId: t.String(),
         paymentType: t.Union([
             t.Literal("card"),
             t.Literal("us_bank_account"),
         ]),
         promoId: t.Optional(t.String()),
+        startDate: t.Optional(t.String()),
+        expireDate: t.Optional(t.String()),
+        totalClassLimit: t.Optional(t.Number({ minimum: 0 })),
     }),
 };
 
@@ -37,6 +41,10 @@ export function pkgEnrollRoutes(app: Elysia) {
                     paymentMethodId,
                     paymentType,
                     promoId,
+                    attemptId: body.attemptId,
+                    startDate: body.startDate,
+                    expireDate: body.expireDate,
+                    totalClassLimit: body.totalClassLimit,
                 });
                 return status(200, result);
             } catch (error) {

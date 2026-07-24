@@ -1,12 +1,17 @@
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import type { Promo } from "@subtrees/types";
 import {
     calculateOrderTotals,
     chargeWithGateway,
+    CheckoutPendingError,
     getCheckoutContext,
+    PaymentChargeError,
+    stableCheckoutTransactionId,
+    type ChargeWithGatewayResult,
 } from "@/utils";
 import { orders, transactions } from "@subtrees/schemas";
-import { generateUUID } from "@subtrees/utils/generateUUID";
+
 
 export type MercCheckoutItem = {
     variantId: string;
@@ -20,37 +25,33 @@ export type MercCheckoutInput = {
     paymentMethodId: string;
     promoId?: string | null;
     paymentType?: "card" | "us_bank_account";
+    attemptId: string;
 };
 
 export async function handleMercCheckout(input: MercCheckoutInput) {
-    const { lid, mid, items, paymentMethodId, promoId, paymentType = "card" } = input;
+    const { lid, mid, items, paymentMethodId, promoId, paymentType = "card", attemptId } = input;
+    if (!items.length) throw new Error("No items provided");
 
-    if (!items.length) {
-        throw new Error("No items provided");
+    const transactionId = stableCheckoutTransactionId("order", lid, mid, attemptId);
+    const existingTransaction = await db.query.transactions.findFirst({
+        where: (tx, { and, eq }) => and(eq(tx.id, transactionId), eq(tx.locationId, lid), eq(tx.memberId, mid)),
+    });
+    if (existingTransaction) {
+        const order = await db.query.orders.findFirst({ where: (candidate, { eq }) => eq(candidate.transactionId, transactionId) });
+        if (existingTransaction.status === "paid" && order) return order;
+        if (existingTransaction.status === "pending") throw new CheckoutPendingError(transactionId);
+        if (existingTransaction.status === "failed") {
+            throw new PaymentChargeError(existingTransaction.failedReason || "Payment was declined", existingTransaction.failedCode || "PAYMENT_FAILED");
+        }
+        throw new Error("Order payment is not complete");
     }
 
-    const {
-        gatewayCustomerId,
-        ml,
-        taxRates,
-        gateway,
-    } = await getCheckoutContext({ lid, mid });
-
-    const locationState = ml.location.locationState;
+    const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const variants = await db.query.productVariants.findMany({
         where: (v, { inArray }) => inArray(v.id, items.map((item) => item.variantId)),
-        columns: {
-            id: true,
-            name: true,
-            price: true,
-        },
+        columns: { id: true, name: true, price: true },
     });
-
-    if (variants.length !== items.length) {
-        throw new Error("Invalid items");
-    }
-
-    const taxRate = taxRates.find((r) => r.isDefault)?.percentage || 0;
+    if (variants.length !== items.length) throw new Error("Invalid items");
 
     let promoData: Pick<Promo, "redemptionCount" | "maxRedemptions" | "type" | "value"> | undefined;
     if (promoId) {
@@ -58,17 +59,9 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             where: (p, { eq, and, gt, isNull, or }) => and(
                 eq(p.id, promoId),
                 eq(p.isActive, true),
-                or(
-                    isNull(p.expiresAt),
-                    gt(p.expiresAt, new Date()),
-                ),
+                or(isNull(p.expiresAt), gt(p.expiresAt, new Date())),
             ),
-            columns: {
-                redemptionCount: true,
-                maxRedemptions: true,
-                type: true,
-                value: true,
-            },
+            columns: { redemptionCount: true, maxRedemptions: true, type: true, value: true },
         });
         if (promo) {
             promoData = {
@@ -80,105 +73,140 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         }
     }
 
-    const passOnFees = locationState.settings?.passOnFees || false;
-    const usagePercent = locationState.usagePercent || 0;
-
     const { total, feesAmount, tax, subtotal, processingFee, lineItems } = calculateOrderTotals(
         items,
         variants,
-        taxRate,
-        passOnFees,
-        usagePercent,
+        taxRates.find((r) => r.isDefault)?.percentage || 0,
+        locationState.settings?.passOnFees || false,
+        locationState.usagePercent || 0,
         promoData,
     );
     const currency = locationState.currency;
-
-    const orderId = generateUUID('ord_');
-    const transactionId = generateUUID('txn_');
-    const description = `Payment for order ${orderId}`;
-
-    let paymentIntentId: string;
-    let gatewayMetadata: Record<string, unknown> = {
+    const metadata: Record<string, unknown> = {
         gatewayService: gateway.service,
-        orderId,
-        transactionId,
+        ...(gateway.service === "authorize" ? { authorizeIntegrationId: gateway.integrationId } : {}),
+        checkoutKind: "order",
+        checkoutAttemptId: attemptId,
     };
 
-    try {
-        const charge = await chargeWithGateway({
-            gateway,
-            gatewayCustomerId,
-            paymentMethodId,
-            paymentType,
-            total,
-            feesAmount,
-            currency,
-            description,
-            referenceId: orderId,
-            note: `orderId:${orderId}|transactionId:${transactionId}|mid:${mid}|locationId:${lid}`,
-            metadata: {
-                memberId: mid,
-                locationId: lid,
-                orderId,
-                transactionId,
-            },
-        });
-        paymentIntentId = charge.paymentIntentId;
-        gatewayMetadata = {
-            ...gatewayMetadata,
-            ...charge.gatewayMetadata,
-        };
-    } catch (error) {
-        console.error(error);
-        throw error;
-    }
-
-    const now = new Date();
-
-    return db.transaction(async (tx) => {
-        const [transaction] = await tx.insert(transactions).values({
+    const order = await db.transaction(async (tx) => {
+        const [createdTransaction] = await tx.insert(transactions).values({
             id: transactionId,
-            description,
+            memberId: mid,
+            locationId: lid,
+            description: `Payment for order attempt ${attemptId}`,
+            type: "inbound",
+            paymentType,
+            paymentMethodId,
             total,
             subTotal: subtotal,
             tax,
-            type: "inbound",
-            status: "paid",
-            locationId: lid,
-            memberId: mid,
-            paymentMethodId,
-            paymentIntentId,
-            paymentType,
-            chargeDate: now,
             feeAmount: feesAmount,
             currency,
-            metadata: gatewayMetadata,
-        }).returning({ id: transactions.id });
+            status: "pending",
+            metadata,
+        }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+        if (!createdTransaction) throw new CheckoutPendingError(transactionId);
 
-        if (!transaction) {
-            throw new Error("Failed to create transaction");
-        }
-
-        const [order] = await tx.insert(orders).values({
-            id: orderId,
+        const [createdOrder] = await tx.insert(orders).values({
             memberId: mid,
             locationId: lid,
+            transactionId,
             trackingNumber: Math.floor(1000000000 + Math.random() * 9000000000),
-            status: "paid",
-            transactionId: transaction.id,
+            status: "pending",
             subtotal,
             tax,
             total,
             items: lineItems,
             processingFee,
-            gatewayPaymentId: paymentIntentId,
         }).returning();
-
-        if (!order) {
-            tx.rollback();
-            throw new Error("Failed to create order");
-        }
-
-        return order;
+        if (!createdOrder) throw new Error("Failed to create order");
+        return createdOrder;
     });
+
+    let charge: ChargeWithGatewayResult;
+    try {
+        charge = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            transactionId,
+            paymentType,
+            total,
+            feesAmount,
+            currency,
+            description: `Payment for order ${order.id}`,
+            referenceId: order.id,
+            note: `orderId:${order.id}|mid:${mid}|locationId:${lid}`,
+            metadata: { memberId: mid, locationId: lid, orderId: order.id, transactionId },
+        });
+    } catch (error) {
+        await db.transaction(async (tx) => {
+            await tx.update(transactions).set({
+                status: "failed",
+                failedReason: error instanceof Error ? error.message : "Payment failed",
+                failedCode: error instanceof PaymentChargeError ? error.code || "PAYMENT_FAILED" : "PAYMENT_FAILED",
+                updated: new Date(),
+            }).where(eq(transactions.id, transactionId));
+            await tx.update(orders).set({ status: "cancelled", updated: new Date() }).where(eq(orders.id, order.id));
+        });
+        throw error;
+    }
+
+    switch (charge.status) {
+        case "approved": {
+            const paidOrder = await db.transaction(async (tx) => {
+                const [updated] = await tx.update(transactions).set({
+                    status: "paid",
+                    paymentIntentId: charge.paymentIntentId,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    updated: new Date(),
+                }).where(and(eq(transactions.id, transactionId), eq(transactions.status, "pending"))).returning({ id: transactions.id });
+                if (!updated) {
+                    const current = await tx.query.orders.findFirst({
+                        where: eq(orders.transactionId, transactionId),
+                    });
+                    if (current?.status === "paid") return current;
+                    throw new CheckoutPendingError(transactionId, "Payment is being finalized; do not retry");
+                }
+                const [result] = await tx.update(orders).set({
+                    status: "paid",
+                    gatewayPaymentId: charge.paymentIntentId,
+                    updated: new Date(),
+                }).where(eq(orders.id, order.id)).returning();
+                if (!result) throw new Error("Failed to mark order paid");
+                return result;
+            });
+            return paidOrder;
+        }
+        case "failed":
+            await db.transaction(async (tx) => {
+                await tx.update(transactions).set({
+                    status: "failed",
+                    paymentIntentId: charge.paymentIntentId,
+                    failedReason: charge.failureReason,
+                    failedCode: charge.failureCode,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    updated: new Date(),
+                }).where(eq(transactions.id, transactionId));
+                await tx.update(orders).set({ status: "cancelled", updated: new Date() }).where(eq(orders.id, order.id));
+            });
+            throw new PaymentChargeError(charge.failureReason, charge.failureCode);
+        case "held":
+        case "uncertain":
+            await db.transaction(async (tx) => {
+                await tx.update(transactions).set({
+                    status: "pending",
+                    ...(charge.status === "held" && charge.paymentIntentId ? { paymentIntentId: charge.paymentIntentId } : {}),
+                    metadata: { ...metadata, ...charge.gatewayMetadata, ...(charge.status === "held" ? { authorizeHeld: true } : { paymentUncertain: true }) },
+                    updated: new Date(),
+                }).where(eq(transactions.id, transactionId));
+                await tx.update(orders).set({ status: "pending", updated: new Date() }).where(eq(orders.id, order.id));
+            });
+            throw new CheckoutPendingError(transactionId, charge.status === "held" ? "Payment is pending; do not retry" : "Payment status is unknown; do not retry");
+        default: {
+            const exhaustive: never = charge;
+            throw new Error(`Unknown payment result: ${exhaustive}`);
+        }
+    }
 }
