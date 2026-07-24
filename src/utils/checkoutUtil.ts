@@ -126,11 +126,12 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			total,
 			currency: currency as Currency,
 		});
-		if (!payment?.id) {
+		const paymentIntentId = typeof payment?.transId === "string" ? payment.transId : "";
+		if (!paymentIntentId || paymentIntentId === "0") {
 			throw new PaymentChargeError("Payment was not created");
 		}
 		return {
-			paymentIntentId: payment?.id as string,
+			paymentIntentId,
 			gatewayMetadata: {
 				gatewayService: gateway.service,
 			},

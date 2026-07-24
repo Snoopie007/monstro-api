@@ -80,8 +80,15 @@ export async function getCheckoutContext({
 		},
 	});
 
-	if (!gateway?.accessToken) {
+	if (!gateway) {
 		throw new CheckoutError(400, "Gateway not found");
+	}
+	if (gateway.service === "authorize") {
+		if (!gateway.apiKey || !gateway.secretKey) {
+			throw new CheckoutError(400, "Authorize.net gateway credentials not found");
+		}
+	} else if (!gateway.accessToken) {
+		throw new CheckoutError(400, "Gateway credentials not found");
 	}
 
 	return {
