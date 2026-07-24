@@ -248,6 +248,10 @@ export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
 		fields: [memberInvoices.locationId],
 		references: [locations.id],
 	}),
+	transaction: one(transactions, {
+		fields: [memberInvoices.transactionId],
+		references: [transactions.id],
+	}),
 }));
 
 export const memberRewardRelations = relations(memberRewards, ({ one }) => ({
@@ -858,13 +862,13 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		references: [locations.id],
 	}),
 	invoice: one(memberInvoices, {
-		fields: [transactions.invoiceId],
-		references: [memberInvoices.id],
+		fields: [transactions.id],
+		references: [memberInvoices.transactionId],
 	}),
 	order: one(orders, {
-		fields: [transactions.orderId],
-		references: [orders.id],
-	})
+		fields: [transactions.id],
+		references: [orders.transactionId],
+	}),
 }));
 
 export const productsRelations = relations(products, ({ many, one }) => ({
@@ -891,7 +895,7 @@ export const productVariantsRelations = relations(productVariants, ({ many, one 
 }));
 
 
-export const ordersRelations = relations(orders, ({ many, one }) => ({
+export const ordersRelations = relations(orders, ({ one }) => ({
 	location: one(locations, {
 		fields: [orders.locationId],
 		references: [locations.id],
@@ -899,7 +903,11 @@ export const ordersRelations = relations(orders, ({ many, one }) => ({
 	member: one(members, {
 		fields: [orders.memberId],
 		references: [members.id],
-	})
+	}),
+	transaction: one(transactions, {
+		fields: [orders.transactionId],
+		references: [transactions.id],
+	}),
 }));
 
 // ============================================================================
