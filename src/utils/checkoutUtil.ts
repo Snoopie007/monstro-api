@@ -35,6 +35,7 @@ export type ChargeWithGatewayResult = {
 	gatewayMetadata: Record<string, unknown>;
 };
 
+/** Charges a saved payment method via the location's gateway (Stripe, Square, or Authorize.net). */
 export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<ChargeWithGatewayResult> {
 	const {
 		gateway,
