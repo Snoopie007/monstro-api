@@ -861,14 +861,8 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		fields: [transactions.locationId],
 		references: [locations.id],
 	}),
-	invoice: one(memberInvoices, {
-		fields: [transactions.id],
-		references: [memberInvoices.transactionId],
-	}),
-	order: one(orders, {
-		fields: [transactions.id],
-		references: [orders.transactionId],
-	}),
+	invoice: one(memberInvoices),
+	order: one(orders),
 }));
 
 export const productsRelations = relations(products, ({ many, one }) => ({
