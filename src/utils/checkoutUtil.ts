@@ -1,4 +1,4 @@
-import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import { SquarePaymentGateway, StripePaymentGateway, AuthorizeNetPaymentGateway } from "@/libs/PaymentGateway";
 import type { CheckoutContext } from "./getCheckoutContext";
 import type { PaymentType } from "@subtrees/types";
 import type { Currency } from "square";
@@ -23,7 +23,7 @@ export type ChargeWithGatewayInput = {
 	feesAmount: number;
 	currency: string;
 	description: string;
-	referenceId: string;
+	referenceId?: string;
 	note?: string;
 	metadata?: Record<string, string>;
 	paymentType?: PaymentType;
@@ -112,6 +112,26 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				gatewayService: gateway.service,
 				squarePaymentId: payment.id,
 				squarePaymentStatus: payment.status,
+			},
+		};
+	}
+
+	if (gateway.service === "authorize") {
+		if (!gateway.apiKey || !gateway.secretKey) {
+			throw new PaymentChargeError("No payment gateway configured for this location", "NO_PAYMENT_GATEWAY");
+		}
+		const authorize = new AuthorizeNetPaymentGateway(gateway.apiKey, gateway.secretKey);
+		const payment = await authorize.createCharge(gatewayCustomerId, paymentMethodId, {
+			total,
+			currency: currency as Currency,
+		});
+		if (!payment?.id) {
+			throw new PaymentChargeError("Payment was not created");
+		}
+		return {
+			paymentIntentId: payment?.id as string,
+			gatewayMetadata: {
+				gatewayService: gateway.service,
 			},
 		};
 	}

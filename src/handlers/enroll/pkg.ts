@@ -1,13 +1,15 @@
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
-import { memberPackages, memberInvoices, memberContracts } from "@subtrees/schemas";
-import { StripePaymentGateway, SquarePaymentGateway } from "@/libs/PaymentGateway";
+import { memberPackages, memberInvoices, transactions } from "@subtrees/schemas";
 import {
     calculateChargeDetails,
+    chargeWithGateway,
+    CheckoutError,
+    createEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
     calculateThresholdDate,
-    fetchEnrollContext,
+    getCheckoutContext,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 
@@ -20,25 +22,23 @@ export type EnrollPkgInput = {
     promoId?: string | null;
 };
 
-export async function handleEnrollPackage(input: EnrollPkgInput) {
-    const {
-        lid,
-        mid,
-        priceId,
-        paymentMethodId,
-        paymentType,
-        promoId,
-    } = input;
+export async function handleEnrollPackage(props: EnrollPkgInput) {
+    const { lid, mid, priceId, paymentMethodId, paymentType, promoId } = props;
 
-    const {
-        pricing,
-        ml,
-        gateway,
-        taxRates,
-        locationState,
-        gatewayCustomerId,
-    } = await fetchEnrollContext({ lid, mid, priceId });
+    const [checkout, pricing] = await Promise.all([
+        getCheckoutContext({ lid, mid }),
+        db.query.memberPlanPricing.findFirst({
+            where: (row, { eq }) => eq(row.id, priceId),
+            with: { plan: true },
+        }),
+    ]);
 
+    if (!pricing?.plan) {
+        throw new CheckoutError(404, "Pricing not found");
+    }
+
+    const { ml, gateway, taxRates, gatewayCustomerId } = checkout;
+    const locationState = ml.location.locationState;
     const { settings, usagePercent, currency } = locationState;
     const discount = await fetchPromoDiscount(promoId ?? undefined, pricing);
     const taxRate = taxRates.find((r) => r.isDefault) || taxRates[0];
@@ -68,7 +68,37 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
     }
 
     let unsignedDocs: string[] = [];
+
+
+    let paymentIntentId: string | undefined;
+    try {
+        const note = `mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`;
+        const result = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            paymentType,
+            total: chargeDetails.total,
+            feesAmount: chargeDetails.feesAmount,
+            currency,
+            description,
+            note,
+            metadata: {
+                locationId: lid,
+                memberId: mid,
+            },
+        });
+        paymentIntentId = result.paymentIntentId;
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+
+
+
     await db.transaction(async (tx) => {
+
+
         const [p] = await tx.insert(memberPackages).values({
             locationId: lid,
             memberId: mid,
@@ -77,12 +107,32 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
             paymentType,
             startDate: today,
             expireDate: endDate,
-            status: "incomplete",
+            status: "active",
         }).returning({ id: memberPackages.id });
 
         if (!p) {
-            tx.rollback();
             throw new Error("Failed to create package");
+        }
+
+        const [transaction] = await tx.insert(transactions).values({
+            memberId: mid,
+            locationId: lid,
+            ...chargeDetails,
+            description,
+            type: "inbound",
+            status: "paid",
+            chargeDate: today,
+            paymentMethodId,
+            paymentIntentId,
+            paymentType,
+            metadata: {
+                memberPlanPricingId: pricing.id,
+            },
+        }).returning({ id: transactions.id });
+
+        if (!transaction) {
+            tx.rollback();
+            throw new Error("Failed to create transaction");
         }
 
         const [invoice] = await tx.insert(memberInvoices).values({
@@ -94,87 +144,28 @@ export async function handleEnrollPackage(input: EnrollPkgInput) {
                 price: chargeDetails.unitCost,
                 discount,
             }],
+
             memberId: mid,
             locationId: lid,
             memberPlanId: p.id,
             paymentType,
             currency,
-            dueDate: new Date(),
+            dueDate: today,
+            transactionId: transaction.id,
         }).returning({ id: memberInvoices.id });
 
         if (!invoice) {
             tx.rollback();
             throw new Error("Failed to create invoice");
         }
-
-        if (gateway.service === "stripe") {
-            try {
-                const stripe = new StripePaymentGateway(gateway.accessToken);
-                await stripe.createCharge(gatewayCustomerId, paymentMethodId, {
-                    ...chargeDetails,
-                    currency,
-                    description,
-                    productName,
-                    metadata: {
-                        memberPlanId: p.id,
-                        invoiceId: invoice.id,
-                        locationId: lid,
-                        memberId: mid,
-                    },
-                });
-            } catch (error) {
-                console.error(error);
-                throw error;
-            }
-        }
-
-        if (gateway.service === "square") {
-            try {
-                const square = new SquarePaymentGateway(gateway.accessToken);
-                const squareLocationId = gateway.metadata?.squareLocationId;
-                if (!squareLocationId) {
-                    throw new Error("Square location ID not found");
-                }
-                await square.createCharge(gatewayCustomerId, paymentMethodId, {
-                    total: chargeDetails.total,
-                    feesAmount: chargeDetails.feesAmount,
-                    currency,
-                    note: `${productName}|${description}|invId:${invoice.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`,
-                    referenceId: `${invoice.id}`,
-                    squareLocationId,
-                });
-            } catch (error) {
-                console.error(error);
-                throw error;
-            }
-        }
-        if (pricing.plan.contractId) {
-            const [c] = await tx.insert(memberContracts).values({
-                memberId: mid,
-                templateId: pricing.plan.contractId,
-                locationId: lid,
-                memberPlanId: p.id,
-            }).returning({
-                id: memberContracts.id,
-            });
-            if (c) {
-                unsignedDocs.push(c.id);
-            }
-        }
-
-        if (locationState.waiverId && !ml.signedWaiverId) {
-            const [w] = await tx.insert(memberContracts).values({
-                memberId: mid,
-                templateId: locationState.waiverId,
-                locationId: lid,
-                memberPlanId: p.id,
-            }).returning({
-                id: memberContracts.id,
-            });
-            if (w) {
-                unsignedDocs.push(w.id);
-            }
-        }
+        unsignedDocs = await createEnrollUnsignedDocs(tx, {
+            mid,
+            lid,
+            memberPlanId: p.id,
+            contractId: pricing.plan.contractId,
+            waiverId: locationState.waiverId,
+            signedWaiverId: ml.signedWaiverId,
+        });
     });
 
     triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((a) => {

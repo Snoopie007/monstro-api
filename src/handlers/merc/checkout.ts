@@ -5,7 +5,8 @@ import {
     chargeWithGateway,
     getCheckoutContext,
 } from "@/utils";
-import { orders } from "@subtrees/schemas";
+import { orders, transactions } from "@subtrees/schemas";
+import { generateUUID } from "@subtrees/utils/generateUUID";
 
 export type MercCheckoutItem = {
     variantId: string;
@@ -18,10 +19,11 @@ export type MercCheckoutInput = {
     items: MercCheckoutItem[];
     paymentMethodId: string;
     promoId?: string | null;
+    paymentType?: "card" | "us_bank_account";
 };
 
 export async function handleMercCheckout(input: MercCheckoutInput) {
-    const { lid, mid, items, paymentMethodId, promoId } = input;
+    const { lid, mid, items, paymentMethodId, promoId, paymentType = "card" } = input;
 
     if (!items.length) {
         throw new Error("No items provided");
@@ -29,11 +31,12 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
 
     const {
         gatewayCustomerId,
-        locationState,
+        ml,
         taxRates,
         gateway,
     } = await getCheckoutContext({ lid, mid });
 
+    const locationState = ml.location.locationState;
     const variants = await db.query.productVariants.findMany({
         where: (v, { inArray }) => inArray(v.id, items.map((item) => item.variantId)),
         columns: {
@@ -90,44 +93,90 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
     );
     const currency = locationState.currency;
 
+    const orderId = generateUUID('ord_');
+    const transactionId = generateUUID('txn_');
+    const description = `Payment for order ${orderId}`;
+
+    let paymentIntentId: string;
+    let gatewayMetadata: Record<string, unknown> = {
+        gatewayService: gateway.service,
+        orderId,
+        transactionId,
+    };
+
+    try {
+        const charge = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            paymentType,
+            total,
+            feesAmount,
+            currency,
+            description,
+            referenceId: orderId,
+            note: `orderId:${orderId}|transactionId:${transactionId}|mid:${mid}|locationId:${lid}`,
+            metadata: {
+                memberId: mid,
+                locationId: lid,
+                orderId,
+                transactionId,
+            },
+        });
+        paymentIntentId = charge.paymentIntentId;
+        gatewayMetadata = {
+            ...gatewayMetadata,
+            ...charge.gatewayMetadata,
+        };
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
+
+    const now = new Date();
+
     return db.transaction(async (tx) => {
+        const [transaction] = await tx.insert(transactions).values({
+            id: transactionId,
+            description,
+            total,
+            subTotal: subtotal,
+            tax,
+            type: "inbound",
+            status: "paid",
+            locationId: lid,
+            memberId: mid,
+            paymentMethodId,
+            paymentIntentId,
+            paymentType,
+            chargeDate: now,
+            feeAmount: feesAmount,
+            currency,
+            metadata: gatewayMetadata,
+        }).returning({ id: transactions.id });
+
+        if (!transaction) {
+            throw new Error("Failed to create transaction");
+        }
+
         const [order] = await tx.insert(orders).values({
+            id: orderId,
             memberId: mid,
             locationId: lid,
             trackingNumber: Math.floor(1000000000 + Math.random() * 9000000000),
-            status: "pending",
+            status: "paid",
+            transactionId: transaction.id,
             subtotal,
             tax,
             total,
             items: lineItems,
             processingFee,
+            gatewayPaymentId: paymentIntentId,
         }).returning();
 
         if (!order) {
-            throw new Error("Failed to create order");
-        }
-
-        try {
-            await chargeWithGateway({
-                gateway,
-                gatewayCustomerId,
-                paymentMethodId,
-                total,
-                feesAmount,
-                currency,
-                description: `Payment for order ${order.id}`,
-                referenceId: `${order.id}`,
-                note: `orderId:${order.id}|mid:${mid}|locationId:${lid}`,
-                metadata: {
-                    memberId: mid,
-                    locationId: lid,
-                    orderId: order.id,
-                },
-            });
-        } catch (error) {
-            console.error(error);
             tx.rollback();
-            throw error;
+            throw new Error("Failed to create order");
         }
 
         return order;

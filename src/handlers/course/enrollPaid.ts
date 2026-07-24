@@ -23,11 +23,12 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
 
     const {
         gatewayCustomerId,
-        locationState,
+        ml,
         taxRates,
         gateway,
     } = await getCheckoutContext({ lid, mid });
 
+    const locationState = ml.location.locationState;
     const taxRate = taxRates.find((r) => r.isDefault)?.percentage || 0;
     const passOnFees = locationState.settings?.passOnFees || false;
     const usagePercent = locationState.usagePercent || 0;
@@ -55,6 +56,8 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
         };
 
         try {
+            const note = `enrollmentId:${enrollmentId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`;
+
             const charge = await chargeWithGateway({
                 gateway,
                 gatewayCustomerId,
@@ -65,7 +68,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                 currency,
                 description,
                 referenceId: enrollmentId,
-                note: `enrollmentId:${enrollmentId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
+                note,
                 metadata: {
                     memberId: mid,
                     locationId: lid,

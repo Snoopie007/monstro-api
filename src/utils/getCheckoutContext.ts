@@ -24,18 +24,22 @@ export async function getCheckoutContext({
 		),
 		columns: {
 			gatewayCustomerId: true,
+			signedWaiverId: true,
 		},
 		with: {
+
+			member: {
+				columns: {
+					id: true,
+					userId: true,
+					email: true,
+					firstName: true,
+					lastName: true,
+				},
+			},
 			location: {
 				with: {
-					locationState: {
-						columns: {
-							currency: true,
-							paymentGatewayId: true,
-							settings: true,
-							usagePercent: true,
-						},
-					},
+					locationState: true,
 					taxRates: {
 						columns: {
 							percentage: true,
@@ -71,6 +75,8 @@ export async function getCheckoutContext({
 			accessToken: true,
 			service: true,
 			metadata: true,
+			apiKey: true,
+			secretKey: true,
 		},
 	});
 
@@ -78,13 +84,11 @@ export async function getCheckoutContext({
 		throw new CheckoutError(400, "Gateway not found");
 	}
 
-	const { accessToken, accountId, service, metadata } = gateway;
-
 	return {
+		ml: memberLocation,
 		gatewayCustomerId,
-		locationState,
 		taxRates,
-		gateway: { accessToken, accountId, service, metadata },
+		gateway,
 	};
 }
 

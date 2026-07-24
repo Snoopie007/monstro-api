@@ -1,12 +1,12 @@
 import Stripe from "stripe";
 import { SquareError } from "square";
-import { EnrollContextError, handleSquareError, handleStripeError } from "@/utils";
+import { CheckoutError, handleSquareError, handleStripeError } from "@/utils";
 
 type StatusFn = (code: number, body: { error: string }) => unknown;
 
 export function mapEnrollSubError(status: StatusFn, error: unknown) {
     console.error(error);
-    if (error instanceof EnrollContextError) {
+    if (error instanceof CheckoutError) {
         return status(error.status, { error: error.message });
     }
     if (error instanceof Stripe.errors.StripeError) {
@@ -26,7 +26,7 @@ export function mapEnrollSubError(status: StatusFn, error: unknown) {
 
 export function mapEnrollPkgError(status: StatusFn, error: unknown) {
     console.error(error);
-    if (error instanceof EnrollContextError) {
+    if (error instanceof CheckoutError) {
         return status(error.status, { error: error.message });
     }
     if (error instanceof SquareError) {

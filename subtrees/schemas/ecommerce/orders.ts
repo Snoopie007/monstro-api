@@ -7,6 +7,7 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 
@@ -14,6 +15,7 @@ import type { OrderLineItem } from "../../types/order";
 import type { Address } from "../../types/other";
 import { members } from "../members";
 import { locations } from "../locations";
+import { transactions } from "../transactions";
 
 export const orders = pgTable("orders", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -30,6 +32,7 @@ export const orders = pgTable("orders", {
 	processingFee: integer("processing_fee").notNull().default(0),
 	shippingAddress: jsonb("shipping_address").$type<Address>(),
 	billingAddress: jsonb("billing_address").$type<Address>(),
+	transactionId: text("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 },
@@ -37,10 +40,12 @@ export const orders = pgTable("orders", {
 		index("orders_member_idx").on(t.memberId),
 		index("orders_status_idx").on(t.status),
 		index("orders_tracking_number_idx").on(t.trackingNumber),
+		uniqueIndex("orders_transaction_id_uq")
+			.on(t.transactionId)
+			.where(sql`${t.transactionId} is not null`),
 		check(
 			"orders_status_check",
 			sql`${t.status} in ('pending','paid','shipped','delivered','cancelled','refunded')`,
 		),
 	],
 );
-

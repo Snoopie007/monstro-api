@@ -13,7 +13,7 @@ export interface SquareChargeError extends Error {
 
 export type SquareChargeOptions = ChargeOptions & {
     squareLocationId: string;
-    referenceId: string;
+    referenceId?: string;
     note?: string;
 };
 

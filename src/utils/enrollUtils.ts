@@ -1,10 +1,60 @@
 import type { PaymentType, ChargeDetails } from "@subtrees/types";
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
+import { db } from "@/db/db";
+import { memberContracts } from "@subtrees/schemas";
 
 const GATEWAY_BILLING_FEE = 0.7;
 const GATEWAY_FEE_PERCENT = 2.9;
 const GATEWAY_FEE_AMOUNT = 30;
 const GATEWAY_BANK_FEE = 0.8;
+
+type EnrollTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Creates plan contract and location waiver rows for an enrollment; returns IDs still needing a signature. */
+export async function createEnrollUnsignedDocs(
+	tx: EnrollTx,
+	input: {
+		mid: string;
+		lid: string;
+		memberPlanId: string;
+		contractId?: string | null;
+		waiverId?: string | null;
+		signedWaiverId?: string | null;
+	},
+): Promise<string[]> {
+	const { mid, lid, memberPlanId, contractId, waiverId, signedWaiverId } = input;
+	const unsignedDocs: string[] = [];
+
+	if (contractId) {
+		const [c] = await tx.insert(memberContracts).values({
+			memberId: mid,
+			templateId: contractId,
+			locationId: lid,
+			memberPlanId,
+		}).returning({
+			id: memberContracts.id,
+		});
+		if (c) {
+			unsignedDocs.push(c.id);
+		}
+	}
+
+	if (waiverId && !signedWaiverId) {
+		const [w] = await tx.insert(memberContracts).values({
+			memberId: mid,
+			templateId: waiverId,
+			locationId: lid,
+			memberPlanId,
+		}).returning({
+			id: memberContracts.id,
+		});
+		if (w) {
+			unsignedDocs.push(w.id);
+		}
+	}
+
+	return unsignedDocs;
+}
 
 export function calculateGatewayFeeAmount(
 	amount: number,
@@ -55,7 +105,6 @@ export function calculateChargeDetails(
 	const tax = Math.floor((price * (taxRate || 0)) / 100);
 
 	let total = price + tax;
-	// const monstroFee = Math.floor((price * usagePercent) / 100);
 
 	let feesAmount = 0;
 	if (usagePercent > 0) {
@@ -66,7 +115,6 @@ export function calculateChargeDetails(
 		paymentType,
 		isRecurring || false,
 	);
-
 
 	if (passOnFees) {
 		const fees = feesAmount + gatewayFee;
@@ -82,7 +130,6 @@ export function calculateChargeDetails(
 		feesAmount: feesAmount,
 	};
 }
-
 
 export interface ThresholdDateParams {
 	startDate: Date;
@@ -108,5 +155,3 @@ export function calculateThresholdDate({
 			return startDate;
 	}
 }
-
-

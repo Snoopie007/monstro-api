@@ -25,11 +25,12 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
 
     const {
         gatewayCustomerId,
-        locationState,
+        ml,
         taxRates,
         gateway,
     } = await getCheckoutContext({ lid, mid });
 
+    const locationState = ml.location.locationState;
     const taxRate = taxRates.find((r) => r.isDefault)?.percentage || 0;
     const { currency } = locationState;
     const description = `${event.name} - ${ticket.name}`;
@@ -56,6 +57,8 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     };
 
     try {
+        const note = `registrationId:${registrationId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`;
+
         const charge = await chargeWithGateway({
             gateway,
             gatewayCustomerId,
@@ -66,7 +69,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
             currency,
             description: `Payment for event registration - ${registrationId}`,
             referenceId: registrationId,
-            note: `registrationId:${registrationId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`,
+            note,
             metadata: {
                 locationId: lid,
                 memberId: mid,
