@@ -40,21 +40,24 @@ export function AuthorizePaymentMethodsRoutes(app: Elysia) {
     })
     app.post("/authorize", async ({ status, body, params }) => {
         const { mid, lid } = params;
+        const { opaqueData, address, name } = body;
 
-
+        let nameOnCard = name;
         try {
+            if (!nameOnCard) {
+                const member = await db.query.members.findFirst({
+                    where: (row, { eq }) => eq(row.id, mid),
+                    columns: { id: true, firstName: true, lastName: true, email: true },
+                });
+                nameOnCard = `${member?.firstName} ${member?.lastName}`;
+            }
 
-
-            const member = await db.query.members.findFirst({
-                where: (row, { eq }) => eq(row.id, mid),
-                columns: { id: true, firstName: true, lastName: true, email: true },
-            });
             const pm = await addAuthorizePaymentMethod({
                 mid,
                 lid,
-                name: `${member?.firstName} ${member?.lastName}`,
-                opaqueData: body.opaqueData,
-                address: body.address,
+                name: nameOnCard,
+                opaqueData,
+                address,
             });
 
             return status(200, pm);
@@ -80,6 +83,7 @@ export function AuthorizePaymentMethodsRoutes(app: Elysia) {
                 dataDescriptor: t.String(),
                 dataValue: t.String(),
             }),
+            name: t.Optional(t.String()),
             address: t.Optional(t.Object({
                 line1: t.String(),
                 line2: t.Optional(t.String()),
