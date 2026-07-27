@@ -15,6 +15,16 @@ export type TransactionMetadata = {
   subscriptionId?: string;
   packageId?: string;
   chargeId?: string;
+  authorizeTransactionId?: string;
+  authorizeIntegrationId?: string;
+  authorizeCustomerProfileId?: string;
+  authorizePaymentProfileId?: string;
+  authorizeResponseCode?: string;
+  authorizeAttemptId?: string;
+  authorizeHeld?: boolean;
+  authorizeResponseMessage?: string;
+  authorizeAvsResultCode?: string;
+  authorizeCavvResultCode?: string;
 } & Record<string, unknown>;
 
 
