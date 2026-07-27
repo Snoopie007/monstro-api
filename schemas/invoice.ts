@@ -1,10 +1,11 @@
 import { sql } from "drizzle-orm";
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import type { Currency } from "../types/currency";
 import type { InvoiceItem } from "../types/invoices";
 import { InvoiceStatusEnum, PaymentTypeEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { members } from "./members";
+import { transactions } from "./transactions";
 
 export const memberInvoices = pgTable('member_invoices', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
@@ -28,7 +29,12 @@ export const memberInvoices = pgTable('member_invoices', {
     status: InvoiceStatusEnum('status').notNull().default('draft'),
     paymentType: PaymentTypeEnum('payment_type').notNull().default('cash'),
     invoiceType: text('invoice_type').notNull().default('one-off'),
+    transactionId: text('transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-})
+}, (t) => [
+    uniqueIndex('member_invoices_transaction_id_uq')
+        .on(t.transactionId)
+        .where(sql`${t.transactionId} is not null`),
+]);
