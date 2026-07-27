@@ -81,12 +81,12 @@ export function AuthorizePaymentMethodsRoutes(app: Elysia) {
                 dataValue: t.String(),
             }),
             address: t.Optional(t.Object({
-                line1: t.Optional(t.String()),
+                line1: t.String(),
                 line2: t.Optional(t.String()),
-                city: t.Optional(t.String()),
-                state: t.Optional(t.String()),
-                postalCode: t.Optional(t.String()),
-                country: t.Optional(t.String()),
+                city: t.String(),
+                state: t.String(),
+                postalCode: t.String(),
+                country: t.String(),
             })),
         }),
     });

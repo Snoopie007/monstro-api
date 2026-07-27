@@ -44,6 +44,7 @@ export function publicLocationPaymentGateway(app: Elysia) {
                 service: gateway.service,
                 accountId: gateway.accountId,
                 squareLocationId: gateway.metadata?.squareLocationId,
+                authorizeNetPublicKey: gateway.metadata?.publicClientKey,
             }
 
             return status(200, data);

@@ -62,6 +62,9 @@ export async function getSquarePaymentMethods(mid: string, lid: string): Promise
     });
 
     if (squareGateway?.expires && squareGateway.expires < Date.now()) {
+
+        // TODO: Refresh the integration
+
         console.error("Square integration expired");
     }
 

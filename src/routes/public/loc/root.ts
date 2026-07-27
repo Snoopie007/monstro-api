@@ -1,6 +1,9 @@
 import { Elysia, t } from "elysia";
 import { publicLocationPaymentGateway } from "./PaymentGateway";
 import { db } from "@/db/db";
+
+
+
 export const publicLocationRoutes = new Elysia({ prefix: "/loc" })
     .group('/:lid', (app) => {
 

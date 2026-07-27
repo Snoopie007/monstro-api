@@ -5,11 +5,11 @@ import {
     type AuthorizeNetCustomerProfile,
 } from "@/libs/PaymentGateway";
 import { memberLocations } from "@subtrees/schemas";
-import type { PaymentMethod } from "@subtrees/types";
+import type { Address, PaymentMethod } from "@subtrees/types";
 
 async function getAuthorizeGateway(lid: string) {
     const integration = await db.query.integrations.findFirst({
-        where: (row, { and, eq }) => and(eq(row.locationId, lid), eq(row.service, "authorize-net")),
+        where: (row, { and, eq }) => and(eq(row.locationId, lid), eq(row.service, "authorize")),
         columns: { apiKey: true, secretKey: true, metadata: true },
     });
     if (!integration?.apiKey || !integration.secretKey) {
@@ -95,43 +95,42 @@ export async function getAuthorizeClientConfig(lid: string) {
     return { apiLoginId: integration.apiKey, publicClientKey, scriptUrl };
 }
 
-export async function addAuthorizePaymentMethod(input: {
+
+type AddAuthorizePaymentMethodParams = {
     mid: string;
     lid: string;
     opaqueData: { dataDescriptor: string; dataValue: string };
     name: string;
-    address?: {
-        line1?: string;
-        line2?: string;
-        city?: string;
-        state?: string;
-        postalCode?: string;
-        country?: string;
-    };
-}): Promise<PaymentMethod> {
-    if (
-        input.opaqueData.dataDescriptor !== "COMMON.ACCEPT.INAPP.PAYMENT" ||
-        !input.opaqueData.dataValue ||
-        input.opaqueData.dataValue.length > 2048 ||
-        !input.name.trim()
+    address?: Address;
+}
+
+export async function addAuthorizePaymentMethod(params: AddAuthorizePaymentMethodParams): Promise<PaymentMethod> {
+    const { mid, lid, opaqueData, name, address } = params;
+    if (opaqueData.dataDescriptor !== "COMMON.ACCEPT.INAPP.PAYMENT" ||
+        !opaqueData.dataValue || opaqueData.dataValue.length > 2048 ||
+        !name.trim()
     ) {
         throw new Error("Invalid Authorize.net payment data");
     }
 
-    const [{ gateway }, memberLocation, member] = await Promise.all([
-        getAuthorizeGateway(input.lid),
+    const [{ gateway }, memberLocation] = await Promise.all([
+        getAuthorizeGateway(lid),
         db.query.memberLocations.findFirst({
-            where: (row, { and, eq }) => and(eq(row.memberId, input.mid), eq(row.locationId, input.lid)),
+            where: (ml, { and, eq }) => and(eq(ml.memberId, mid), eq(ml.locationId, lid)),
             columns: { gatewayCustomerId: true },
-        }),
-        db.query.members.findFirst({
-            where: (row, { eq }) => eq(row.id, input.mid),
-            columns: { id: true, firstName: true, lastName: true, email: true },
+            with: {
+                member: {
+                    columns: { id: true, firstName: true, lastName: true, email: true },
+                },
+            },
         }),
     ]);
-    if (!member) throw new Error("Member not found");
 
-    let customerProfileId = memberLocation?.gatewayCustomerId;
+    if (!memberLocation) throw new Error("Member location not found");
+    const { member, gatewayCustomerId } = memberLocation;
+
+
+    let customerProfileId = gatewayCustomerId;
     if (customerProfileId && /^\d+$/.test(customerProfileId)) {
         const profile = await gateway.getCustomerProfile(customerProfileId);
         assertProfileOwner(profile, member.id, member.email);
@@ -143,8 +142,8 @@ export async function addAuthorizePaymentMethod(input: {
             email: member.email,
         });
         await db.insert(memberLocations).values({
-            memberId: input.mid,
-            locationId: input.lid,
+            memberId: mid,
+            locationId: lid,
             gatewayCustomerId: customerProfileId,
         }).onConflictDoUpdate({
             target: [memberLocations.memberId, memberLocations.locationId],
@@ -154,10 +153,10 @@ export async function addAuthorizePaymentMethod(input: {
 
     const paymentProfileId = await gateway.createPaymentProfile({
         customerProfileId,
-        dataDescriptor: input.opaqueData.dataDescriptor,
-        dataValue: input.opaqueData.dataValue,
-        name: input.name,
-        address: input.address,
+        dataDescriptor: opaqueData.dataDescriptor,
+        dataValue: opaqueData.dataValue,
+        name: name,
+        address: address,
     });
     const profile = await gateway.getCustomerProfile(customerProfileId);
     assertProfileOwner(profile, member.id, member.email);
