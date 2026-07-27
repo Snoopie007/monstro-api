@@ -4,7 +4,7 @@ import type { Address } from "./other"
 
 export type PaymentMethod = {
     id: string
-    source: 'stripe' | 'square'
+    source: 'stripe' | 'square' | 'authorizenet'
     type: PaymentType
     address?: Address
     card?: CardPaymentMethod
