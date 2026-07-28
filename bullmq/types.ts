@@ -122,7 +122,6 @@ export const RetrySubPaymentSchema = z.object({
     attempts: z.number(),
     subId: z.string(),
     lid: z.string(),
-    paymentIntentId: z.string(),
 })
 
 export const RetryWalletSchema = z.object({

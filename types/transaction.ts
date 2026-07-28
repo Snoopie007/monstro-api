@@ -27,6 +27,13 @@ export type TransactionMetadata = {
   authorizeCavvResultCode?: string;
 } & Record<string, unknown>;
 
+export type TransactionActivity = {
+  reason: string;
+  at: string;
+  paymentType?: PaymentType;
+  brand?: string;
+  last4?: string;
+};
 
 export type Transaction = typeof transactions.$inferSelect & {
   type: TransactionType;
@@ -34,6 +41,7 @@ export type Transaction = typeof transactions.$inferSelect & {
   member?: Member;
   status: TransactionStatus;
   metadata?: TransactionMetadata;
+  activities?: TransactionActivity[];
   invoice?: MemberInvoice;
 };
 export type NewTransaction = typeof transactions.$inferInsert;
