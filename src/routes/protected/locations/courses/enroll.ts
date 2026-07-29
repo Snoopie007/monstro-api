@@ -1,5 +1,6 @@
 import type { Elysia } from "elysia";
 import { t } from "elysia";
+import { randomUUID } from "node:crypto";
 import { handleCourseEnrollPaid, handleCourseEnrollFree, CourseEnrollError } from "@/handlers/course";
 import { db } from "src/db/db";
 
@@ -28,8 +29,8 @@ export function locationCoursesEnroll(app: Elysia) {
                 });
                 return status(200, enrollment);
             } else {
-                if (!paymentMethodId || !paymentType || !attemptId) {
-                    throw new CourseEnrollError(400, "Payment method ID, payment type, and attempt ID are required");
+                if (!paymentMethodId || !paymentType) {
+                    throw new CourseEnrollError(400, "Payment method ID and payment type are required");
                 }
                 const enrollment = await handleCourseEnrollPaid({
                     lid,
@@ -39,7 +40,7 @@ export function locationCoursesEnroll(app: Elysia) {
                     paymentType,
                     courseTitle: course.title,
                     coursePrice: course.price,
-                    attemptId,
+                    attemptId: attemptId ?? randomUUID(),
                 });
                 return status(200, enrollment);
             }

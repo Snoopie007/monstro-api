@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { randomUUID } from "node:crypto";
 import { handleEnrollPackage, mapEnrollPkgError } from "@/handlers/enroll";
 
 const EnrollPkgProps = {
@@ -9,7 +10,8 @@ const EnrollPkgProps = {
         paymentMethodId: t.String(),
         priceId: t.String(),
         mid: t.String(),
-        attemptId: t.String(),
+        attemptId: t.Optional(t.String()),
+        memberPlanId: t.Optional(t.String()),
         paymentType: t.Union([
             t.Literal("card"),
             t.Literal("us_bank_account"),
@@ -41,7 +43,7 @@ export function pkgEnrollRoutes(app: Elysia) {
                     paymentMethodId,
                     paymentType,
                     promoId,
-                    attemptId: body.attemptId,
+                    attemptId: body.attemptId ?? randomUUID(),
                     startDate: body.startDate,
                     expireDate: body.expireDate,
                     totalClassLimit: body.totalClassLimit,

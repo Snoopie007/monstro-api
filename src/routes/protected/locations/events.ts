@@ -5,6 +5,7 @@ import {
     mapEventRegistrationError,
 } from "@/handlers/event";
 import { Elysia, t } from "elysia";
+import { randomUUID } from "node:crypto";
 
 const EventRegisterParams = t.Object({
     lid: t.String(),
@@ -14,6 +15,10 @@ const EventRegisterParams = t.Object({
 const EventRegisterBody = t.Object({
     mid: t.String(),
     ticketId: t.String(),
+    type: t.Optional(t.Union([
+        t.Literal("fixed"),
+        t.Literal("free"),
+    ])),
 });
 
 
@@ -115,7 +120,7 @@ export async function locationEventRoutes(app: Elysia) {
                     ticketId,
                     paymentMethodId,
                     paymentType,
-                    attemptId,
+                    attemptId: attemptId ?? randomUUID(),
                 });
                 return status(201, registration);
             } catch (error) {
@@ -130,7 +135,7 @@ export async function locationEventRoutes(app: Elysia) {
                     t.Literal("card"),
                     t.Literal("us_bank_account"),
                 ])),
-                attemptId: t.String(),
+                attemptId: t.Optional(t.String()),
             }),
         });
         return app;

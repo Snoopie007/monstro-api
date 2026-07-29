@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { randomUUID } from "node:crypto";
 import { handleEnrollSubscription, mapEnrollSubError } from "@/handlers/enroll";
 
 const EnrollSubProps = {
@@ -9,7 +10,8 @@ const EnrollSubProps = {
         mid: t.String(),
         paymentMethodId: t.String(),
         priceId: t.String(),
-        attemptId: t.String(),
+        attemptId: t.Optional(t.String()),
+        memberPlanId: t.Optional(t.String()),
         promoId: t.Optional(t.Nullable(t.String())),
         startDate: t.Optional(t.String()),
         endDate: t.Optional(t.String()),
@@ -36,7 +38,7 @@ export function subEnrollRoutes(app: Elysia) {
                     paymentMethodId,
                     paymentType,
                     promoId,
-                    attemptId: body.attemptId,
+                    attemptId: body.attemptId ?? randomUUID(),
                     startDate: body.startDate,
                     endDate: body.endDate,
                     trialDays: body.trialDays,

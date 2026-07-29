@@ -1,5 +1,6 @@
 import type { Elysia } from "elysia";
 import { t } from "elysia";
+import { randomUUID } from "node:crypto";
 import { handleMercCheckout, mapMercCheckoutError } from "@/handlers/merc";
 
 export function locationMercsCheckout(app: Elysia) {
@@ -14,7 +15,7 @@ export function locationMercsCheckout(app: Elysia) {
                 items,
                 paymentMethodId,
                 promoId,
-                attemptId,
+                attemptId: attemptId ?? randomUUID(),
             });
             return status(200, order);
         } catch (error) {
@@ -31,7 +32,7 @@ export function locationMercsCheckout(app: Elysia) {
                 quantity: t.Number(),
             })),
             promoId: t.Optional(t.Nullable(t.String())),
-            attemptId: t.String(),
+            attemptId: t.Optional(t.String()),
             paymentMethodId: t.String(),
         }),
     });
