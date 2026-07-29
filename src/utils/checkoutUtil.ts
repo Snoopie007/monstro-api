@@ -27,7 +27,6 @@ export type ChargeWithGatewayInput = {
 	note?: string;
 	metadata?: Record<string, string>;
 	paymentType?: PaymentType;
-	authorizeOnly?: boolean;
 };
 
 export type ChargeWithGatewayResult = {
@@ -49,7 +48,6 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		note,
 		metadata,
 		paymentType = "card",
-		authorizeOnly = true,
 	} = input;
 
 	if (gateway.service === "stripe") {
@@ -61,7 +59,6 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			gatewayCustomerId,
 			paymentMethodId,
 			{
-				authorizeOnly,
 				description,
 				total,
 				currency: currency as Currency,

@@ -147,10 +147,6 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             chargeDate: today,
             paymentMethodId,
             paymentType,
-            metadata: {
-                locationId: lid,
-                memberId: mid,
-            },
         }).returning({ id: transactions.id });
         if (!transaction) {
             tx.rollback();
