@@ -48,6 +48,7 @@ export type Transaction = typeof transactions.$inferSelect & {
   member?: Member;
   status: TransactionStatus;
   metadata?: TransactionMetadata;
+  activities?: TransactionActivity[];
   invoice?: MemberInvoice;
 };
 export type NewTransaction = typeof transactions.$inferInsert;
