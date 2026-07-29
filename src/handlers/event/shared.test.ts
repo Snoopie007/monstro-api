@@ -3,6 +3,7 @@ import { expect, mock, test } from "bun:test";
 mock.module("@/db/db", () => ({ db: {} }));
 
 const {
+    cancelEventRegistration,
     cancelPendingEventRegistration,
     createEventRegistration,
 } = await import("./shared");
@@ -74,4 +75,103 @@ test("cancels a pending reservation and restores its ticket", async () => {
 
     expect(updates[0]).toEqual(expect.objectContaining({ status: "cancelled" }));
     expect(updates).toHaveLength(2);
+});
+
+test("cancels a registered attendee and restores its ticket once", async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const tx = {
+        execute: mock(async () => undefined),
+        query: {
+            eventRegistrations: {
+                findFirst: mock(async () => ({
+                    id: "registration-1",
+                    eventId: "event-1",
+                    ticketId: "ticket-1",
+                    locationId: "location-1",
+                    status: "registered",
+                })),
+            },
+        },
+        update: mock(() => ({
+            set: mock((values: Record<string, unknown>) => {
+                updates.push(values);
+                return {
+                    where: mock(() => ({
+                        returning: mock(async () => [{
+                            id: "registration-1",
+                            ticketId: "ticket-1",
+                            status: "cancelled",
+                        }]),
+                    })),
+                };
+            }),
+        })),
+    };
+
+    const registration = await cancelEventRegistration(tx as never, {
+        lid: "location-1",
+        eventId: "event-1",
+        registrationId: "registration-1",
+    });
+
+    expect(registration).toEqual(expect.objectContaining({ status: "cancelled" }));
+    expect(updates[0]).toEqual(expect.objectContaining({ status: "cancelled" }));
+    expect(updates).toHaveLength(2);
+});
+
+test("does not restore inventory again for an already cancelled registration", async () => {
+    const update = mock();
+    const tx = {
+        execute: mock(async () => undefined),
+        query: {
+            eventRegistrations: {
+                findFirst: mock(async () => ({
+                    id: "registration-1",
+                    eventId: "event-1",
+                    ticketId: "ticket-1",
+                    locationId: "location-1",
+                    status: "cancelled",
+                })),
+            },
+        },
+        update,
+    };
+
+    const registration = await cancelEventRegistration(tx as never, {
+        lid: "location-1",
+        eventId: "event-1",
+        registrationId: "registration-1",
+    });
+
+    expect(registration).toEqual(expect.objectContaining({ status: "cancelled" }));
+    expect(update).not.toHaveBeenCalled();
+});
+
+test("rejects cancellation while payment is pending", async () => {
+    const update = mock();
+    const tx = {
+        execute: mock(async () => undefined),
+        query: {
+            eventRegistrations: {
+                findFirst: mock(async () => ({
+                    id: "registration-1",
+                    eventId: "event-1",
+                    ticketId: "ticket-1",
+                    locationId: "location-1",
+                    status: "pending",
+                })),
+            },
+        },
+        update,
+    };
+
+    await expect(cancelEventRegistration(tx as never, {
+        lid: "location-1",
+        eventId: "event-1",
+        registrationId: "registration-1",
+    })).rejects.toMatchObject({
+        status: 409,
+        code: "PAYMENT_PENDING",
+    });
+    expect(update).not.toHaveBeenCalled();
 });

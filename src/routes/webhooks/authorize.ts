@@ -67,7 +67,7 @@ export function verifyAuthorizeWebhookSignature(rawBody: string, header: string 
     const signature = header?.trim().replace(/^sha512=/i, "");
     const key = signatureKey?.trim();
     if (!signature || !key || !/^[0-9a-f]{128}$/i.test(key) || !/^[0-9a-f]{128}$/i.test(signature)) return false;
-    const expected = createHmac("sha512", Buffer.from(key, "hex")).update(rawBody, "utf8").digest();
+    const expected = createHmac("sha512", key).update(rawBody, "utf8").digest();
     const received = Buffer.from(signature, "hex");
     return received.length === expected.length && timingSafeEqual(received, expected);
 }
@@ -280,6 +280,10 @@ async function fulfillPlanCheckout(
     const cancelAt = typeof metadata.subscriptionCancelAt === "string"
         ? dateFromMetadata(metadata.subscriptionCancelAt, now)
         : undefined;
+    const trialEnd = typeof metadata.subscriptionTrialEnd === "string"
+        ? dateFromMetadata(metadata.subscriptionTrialEnd, now)
+        : undefined;
+    const allowProration = metadata.subscriptionAllowProration === true;
     const [subscription] = await tx.insert(memberSubscriptions).values({
         startDate,
         currentPeriodStart: startDate,
@@ -287,6 +291,7 @@ async function fulfillPlanCheckout(
         locationId: transaction.locationId,
         memberId: transaction.memberId,
         cancelAt,
+        trialEnd,
         classCredits: typeof metadata.classCredits === "number" ? metadata.classCredits : 0,
         status: "active",
         paymentType: transaction.paymentType,
@@ -294,6 +299,7 @@ async function fulfillPlanCheckout(
         metadata: {
             gatewayIntegrationId: metadata.authorizeIntegrationId,
             gatewayCustomerId,
+            allowProration,
         },
         memberPlanPricingId: pricing.id,
     }).returning();

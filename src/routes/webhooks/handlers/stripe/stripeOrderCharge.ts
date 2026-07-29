@@ -55,7 +55,7 @@ export async function handleStripeOrderCharge({
             locationId,
             memberId,
             paymentMethodId,
-            paymentIntentId,
+            paymentIntentId: paymentIntentId || undefined,
             paymentType,
             feeAmount,
             total: amount,
@@ -65,7 +65,7 @@ export async function handleStripeOrderCharge({
             failedCode,
             metadata: {
                 gatewayService: "stripe",
-                stripeChargeId,
+                stripeChargeId: stripeChargeId || undefined,
             },
         }).returning({ id: transactions.id });
         assert(transaction);

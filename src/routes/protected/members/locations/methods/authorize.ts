@@ -45,6 +45,7 @@ export function AuthorizePaymentMethodsRoutes(app: Elysia) {
                 mid,
                 lid,
                 opaqueData: body.opaqueData,
+                name: body.name,
                 address: body.address,
             });
             return status(200, pm);
@@ -70,13 +71,14 @@ export function AuthorizePaymentMethodsRoutes(app: Elysia) {
                 dataDescriptor: t.String(),
                 dataValue: t.String(),
             }),
+            name: t.Optional(t.String()),
             address: t.Optional(t.Object({
-                line1: t.Optional(t.String()),
+                line1: t.String(),
                 line2: t.Optional(t.String()),
-                city: t.Optional(t.String()),
-                state: t.Optional(t.String()),
-                postalCode: t.Optional(t.String()),
-                country: t.Optional(t.String()),
+                city: t.String(),
+                state: t.String(),
+                postalCode: t.String(),
+                country: t.String(),
             })),
         }),
     });

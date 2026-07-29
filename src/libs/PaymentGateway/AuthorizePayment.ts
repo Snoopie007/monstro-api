@@ -42,9 +42,16 @@ export type AuthorizeTransactionDetails = {
     settleAmount?: number | string;
     avsResultCode?: string;
     cavvResultCode?: string;
-    order?: { description?: string };
+    order?: { invoiceNumber?: string; description?: string };
     errors?: { error?: Array<{ errorCode?: string; errorText?: string }> };
     messages?: { message?: Array<{ description?: string }> };
+    payment?: {
+        creditCard?: {
+            cardNumber?: string;
+            expirationDate?: string;
+            cardType?: string;
+        };
+    };
     profile?: {
         customerProfileId?: string;
         customerPaymentProfileId?: string;
@@ -235,6 +242,7 @@ export class AuthorizePaymentGateway {
             total: number;
             currency: string;
             idempotencyKey: string;
+            referenceId: string;
             orderDescription: string;
         },
     ): Promise<AuthorizeChargeResult> {
@@ -243,15 +251,18 @@ export class AuthorizePaymentGateway {
         }
 
         const response = await this.request("createTransactionRequest", {
-            refId: createHash("sha256").update(options.idempotencyKey).digest("hex").slice(0, 20),
+            refId: options.referenceId,
             transactionRequest: {
                 transactionType: "authCaptureTransaction",
                 amount: (options.total / 100).toFixed(2),
                 currencyCode: options.currency,
-                order: { description: options.orderDescription },
                 profile: {
                     customerProfileId,
                     paymentProfile: { paymentProfileId },
+                },
+                order: {
+                    invoiceNumber: options.referenceId,
+                    description: options.orderDescription,
                 },
                 transactionSettings: {
                     setting: [{ settingName: "duplicateWindow", settingValue: "600" }],
@@ -278,7 +289,6 @@ export class AuthorizePaymentGateway {
                 ? firstMessage.description
                 : undefined;
         const base = {
-            transactionId,
             responseCode,
             responseMessage,
             avsResultCode: typeof transaction?.avsResultCode === "string" ? transaction.avsResultCode : undefined,
@@ -290,15 +300,22 @@ export class AuthorizePaymentGateway {
             return { ...base, status: "approved", transactionId, responseCode: "1" };
         }
         if (responseCode === "4") {
-            return { ...base, status: "held", responseCode: "4" };
-        }
-        if (responseCode === "2" || responseCode === "3") {
             return {
                 ...base,
+                ...(transactionId ? { transactionId } : {}),
+                status: "held",
+                responseCode: "4",
+            };
+        }
+        if (responseCode === "2" || responseCode === "3") {
+            const failureCode = String(firstError?.errorCode ?? transaction?.responseReasonCode ?? responseCode);
+            return {
+                ...base,
+                ...(failureCode !== "11" && transactionId ? { transactionId } : {}),
                 status: "failed",
                 responseCode,
                 responseMessage: responseMessage ?? "Authorize.net declined the transaction",
-                failureCode: String(firstError?.errorCode ?? transaction?.responseReasonCode ?? responseCode),
+                failureCode,
             };
         }
         throw new AuthorizeTransportError(`Authorize.net returned unknown response code: ${responseCode || "missing"}`);
@@ -317,12 +334,25 @@ export class AuthorizePaymentGateway {
         return this.followOnTransaction("voidTransaction", transactionId);
     }
 
-    async refundTransaction(transactionId: string, total: number): Promise<AuthorizeTransactionDetails> {
+    async refundTransaction(
+        transactionId: string,
+        total: number,
+        cardLast4: string,
+    ): Promise<AuthorizeTransactionDetails> {
         if (!Number.isSafeInteger(total) || total < 1) {
             throw new Error("Refund total must be a positive integer in cents");
         }
+        if (!/^\d{4}$/.test(cardLast4)) {
+            throw new Error("Refund card last four is required");
+        }
         return this.followOnTransaction("refundTransaction", transactionId, {
             amount: (total / 100).toFixed(2),
+            payment: {
+                creditCard: {
+                    cardNumber: cardLast4,
+                    expirationDate: "XXXX",
+                },
+            },
         });
     }
 
@@ -334,8 +364,8 @@ export class AuthorizePaymentGateway {
         const response = await this.request("createTransactionRequest", {
             transactionRequest: {
                 transactionType,
-                refTransId: transactionId,
                 ...extra,
+                refTransId: transactionId,
             },
         });
         const transaction = response.transactionResponse;
@@ -345,9 +375,12 @@ export class AuthorizePaymentGateway {
         const responseCode = String((transaction as Record<string, unknown>).responseCode ?? "");
         if (responseCode !== "1") {
             const errors = (transaction as Record<string, unknown>).errors as Record<string, unknown> | undefined;
-            const first = Array.isArray(errors?.error)
-                ? errors.error[0] as Record<string, unknown> | undefined
-                : undefined;
+            const errorValue = errors?.error;
+            const first = Array.isArray(errorValue)
+                ? errorValue[0] as Record<string, unknown> | undefined
+                : errorValue && typeof errorValue === "object"
+                    ? errorValue as Record<string, unknown>
+                    : undefined;
             throw new AuthorizeApiError(
                 typeof first?.errorCode === "string" ? first.errorCode : responseCode || "AUTHORIZE_FOLLOW_ON_FAILED",
                 typeof first?.errorText === "string" ? first.errorText : "Authorize.net follow-on transaction failed",

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chargeWithGateway } from "./checkoutUtil";
+import { authorizeReferenceIdForTransaction, chargeWithGateway } from "./checkoutUtil";
 
 const originalFetch = globalThis.fetch;
 const originalApiUrl = process.env.AUTHORIZE_API_URL;
@@ -18,10 +18,10 @@ afterEach(() => {
 });
 
 describe("chargeWithGateway Authorize.net", () => {
-    test("returns approved metadata and durable order description", async () => {
+    test("returns approved metadata and preserves the business description", async () => {
         process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
         let body: Record<string, any> | undefined;
-        globalThis.fetch = Object.assign(async (_input: URL | RequestInfo, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
             body = JSON.parse(String(init?.body));
             return new Response(JSON.stringify({
                 transactionResponse: {
@@ -39,10 +39,11 @@ describe("chargeWithGateway Authorize.net", () => {
             gatewayCustomerId: "customer-1",
             paymentMethodId: "card-1",
             transactionId: "00000000-0000-4000-8000-000000000001",
+            authorizeReferenceId: "0123456789abcdef0123",
             total: 1250,
             feesAmount: 0,
             currency: "USD",
-            description: "ignored by Authorize correlation",
+            description: "Course enrollment",
             referenceId: "ignored",
             note: "test charge",
             metadata: {},
@@ -59,12 +60,15 @@ describe("chargeWithGateway Authorize.net", () => {
             authorizeCavvResultCode: "2",
         }));
         expect(body?.createTransactionRequest?.transactionRequest?.order?.description)
-            .toBe("monstro:00000000-0000-4000-8000-000000000001");
+            .toBe("Course enrollment");
+        expect(body?.createTransactionRequest?.refId).toBe("0123456789abcdef0123");
+        expect(body?.createTransactionRequest?.transactionRequest?.order?.invoiceNumber)
+            .toBe("0123456789abcdef0123");
         expect(body?.createTransactionRequest?.transactionRequest?.transactionType)
             .toBe("authCaptureTransaction");
     });
 
-    test("distinguishes declined and held responses", async () => {
+    test("treats declined and held responses as failures", async () => {
         process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
         let responseCode = "2";
         globalThis.fetch = Object.assign(async () => new Response(JSON.stringify({
@@ -81,6 +85,7 @@ describe("chargeWithGateway Authorize.net", () => {
             gatewayCustomerId: "customer-1",
             paymentMethodId: "card-1",
             transactionId: "00000000-0000-4000-8000-000000000002",
+            authorizeReferenceId: "abcdef0123456789abcd",
             total: 1250,
             feesAmount: 0,
             currency: "USD",
@@ -95,6 +100,50 @@ describe("chargeWithGateway Authorize.net", () => {
 
         responseCode = "4";
         const held = await chargeWithGateway(input);
-        expect(held).toMatchObject({ status: "held", paymentIntentId: "provider-2" });
+        expect(held).toMatchObject({
+            status: "failed",
+            paymentIntentId: "provider-2",
+            failureCode: "4",
+        });
     });
+
+    test("keeps duplicate responses detached from the prior provider transaction", async () => {
+        process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
+        globalThis.fetch = Object.assign(async () => new Response(JSON.stringify({
+            transactionResponse: {
+                responseCode: "3",
+                responseReasonCode: "11",
+                transId: "provider-original",
+                errors: { error: [{ errorText: "A duplicate transaction has been submitted." }] },
+            },
+            messages: { resultCode: "Ok" },
+        })), { preconnect: originalFetch.preconnect });
+
+        const result = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId: "customer-1",
+            paymentMethodId: "card-1",
+            transactionId: "00000000-0000-4000-8000-000000000003",
+            authorizeReferenceId: "fedcba9876543210fedc",
+            total: 100,
+            feesAmount: 0,
+            currency: "USD",
+            description: "course",
+            referenceId: "reference",
+            note: "test charge",
+            metadata: {},
+            paymentType: "card",
+        });
+
+        expect(result).toMatchObject({ status: "failed", failureCode: "11" });
+        expect(result).not.toHaveProperty("paymentIntentId");
+        expect(result.gatewayMetadata).not.toHaveProperty("authorizeTransactionId");
+    });
+});
+
+test("creates stable distinct Authorize.net references from local transactions", () => {
+    const first = authorizeReferenceIdForTransaction("txn-1");
+    expect(first).toMatch(/^[a-f0-9]{20}$/);
+    expect(authorizeReferenceIdForTransaction("txn-1")).toBe(first);
+    expect(authorizeReferenceIdForTransaction("txn-2")).not.toBe(first);
 });

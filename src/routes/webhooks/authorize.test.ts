@@ -113,7 +113,7 @@ const event = {
 
 function request(payload: unknown = event, validSignature = true) {
     const body = JSON.stringify(payload);
-    const signature = createHmac("sha512", Buffer.from(signatureKey, "hex")).update(body).digest("hex");
+    const signature = createHmac("sha512", signatureKey).update(body).digest("hex");
     return new Request("http://localhost/authorize", {
         method: "POST",
         headers: {
@@ -156,7 +156,7 @@ describe("Authorize.net webhook", () => {
     });
     test("verifies the raw request HMAC", () => {
         const body = JSON.stringify(event);
-        const signature = createHmac("sha512", Buffer.from(signatureKey, "hex")).update(body).digest("hex");
+        const signature = createHmac("sha512", signatureKey).update(body).digest("hex");
         expect(verifyAuthorizeWebhookSignature(body, `sha512=${signature}`, signatureKey)).toBe(true);
         expect(verifyAuthorizeWebhookSignature(`${body} `, `sha512=${signature}`, signatureKey)).toBe(false);
     });
@@ -290,6 +290,9 @@ describe("Authorize.net webhook", () => {
             memberPlanPricingId: "pricing-1",
             subscriptionStartAt: "2030-01-01T00:00:00.000Z",
             subscriptionCurrentPeriodEnd: "2030-02-01T00:00:00.000Z",
+            subscriptionCancelAt: "2030-04-01T00:00:00.000Z",
+            subscriptionTrialEnd: "2030-01-08T00:00:00.000Z",
+            subscriptionAllowProration: true,
             classCredits: 4,
         };
         const subscriptionResponse = await authorizeWebhookRoutes(new Elysia()).handle(request());
@@ -297,6 +300,11 @@ describe("Authorize.net webhook", () => {
         expect(subscriptionResponse.status).toBe(200);
         expect(inserts).toContainEqual(expect.objectContaining({
             gatewayPaymentId: "payment-profile-1",
+            startDate: new Date("2030-01-01T00:00:00.000Z"),
+            currentPeriodEnd: new Date("2030-02-01T00:00:00.000Z"),
+            cancelAt: new Date("2030-04-01T00:00:00.000Z"),
+            trialEnd: new Date("2030-01-08T00:00:00.000Z"),
+            metadata: expect.objectContaining({ allowProration: true }),
         }));
     });
 

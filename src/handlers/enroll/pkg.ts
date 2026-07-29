@@ -1,8 +1,8 @@
-import { and, eq } from "drizzle-orm";
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
 import { memberPackages, memberInvoices, transactions } from "@subtrees/schemas";
 import {
+    authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
     CheckoutError,
@@ -11,7 +11,6 @@ import {
     fetchPromoDiscount,
     calculateThresholdDate,
     getCheckoutContext,
-    PaymentChargeError,
     stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
@@ -33,6 +32,7 @@ export type EnrollPkgInput = {
 export async function handleEnrollPackage(props: EnrollPkgInput) {
     const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit } = props;
     const transactionId = stableCheckoutTransactionId("package", lid, mid, attemptId);
+    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
     const existing = await db.query.transactions.findFirst({
         where: (row, { and, eq }) => and(eq(row.id, transactionId), eq(row.locationId, lid), eq(row.memberId, mid)),
     });
@@ -85,7 +85,10 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             : undefined;
     if (endDate && Number.isNaN(endDate.getTime())) throw new CheckoutError(400, "Invalid package expiration date");
     const metadata: Record<string, unknown> = {
-        ...(gateway.service === "authorize" ? { authorizeIntegrationId: gateway.integrationId } : {}),
+        ...(gateway.service === "authorize" ? {
+            authorizeIntegrationId: gateway.integrationId,
+            authorizeReferenceId,
+        } : {}),
         gatewayService: gateway.service,
         checkoutKind: "package",
         checkoutAttemptId: attemptId,
@@ -97,60 +100,53 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         ...(endDate ? { packageExpireAt: endDate.toISOString() } : {}),
     };
 
-    const [created] = await db.insert(transactions).values({
-        id: transactionId,
-        memberId: mid,
-        locationId: lid,
-        ...chargeDetails,
-        description,
-        type: "inbound",
-        status: "pending",
+    const charge: ChargeWithGatewayResult = await chargeWithGateway({
+        gateway,
+        gatewayCustomerId,
         paymentMethodId,
+        transactionId,
+        authorizeReferenceId,
         paymentType,
+        total: chargeDetails.total,
+        feesAmount: chargeDetails.feesAmount,
         currency,
-        metadata,
-    }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
-    if (!created) throw new CheckoutError(202, "Payment is pending; do not retry");
-
-    let charge: ChargeWithGatewayResult;
-    try {
-        charge = await chargeWithGateway({
-            gateway,
-            gatewayCustomerId,
-            paymentMethodId,
-            transactionId,
-            paymentType,
-            total: chargeDetails.total,
-            feesAmount: chargeDetails.feesAmount,
-            currency,
-            description,
-            referenceId: transactionId,
-            note: `transactionId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
-            metadata: { locationId: lid, memberId: mid, transactionId },
-        });
-    } catch (error) {
-        await db.update(transactions).set({
-            status: "failed",
-            failedReason: error instanceof Error ? error.message : "Payment failed",
-            failedCode: error instanceof PaymentChargeError ? error.code || "PAYMENT_FAILED" : "PAYMENT_FAILED",
-            updated: new Date(),
-        }).where(eq(transactions.id, transactionId));
-        if (error instanceof PaymentChargeError) throw new CheckoutError(400, error.message);
-        throw error;
-    }
+        description,
+        referenceId: transactionId,
+        note: `transactionId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
+        metadata: { locationId: lid, memberId: mid, transactionId },
+    });
 
     switch (charge.status) {
         case "approved": {
+            const now = new Date();
             let unsignedDocs: string[] = [];
             await db.transaction(async (tx) => {
-                const [updated] = await tx.update(transactions).set({
+                const [created] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    memberId: mid,
+                    locationId: lid,
+                    total: chargeDetails.total,
+                    subTotal: chargeDetails.subTotal,
+                    tax: chargeDetails.tax,
+                    feeAmount: chargeDetails.feesAmount,
+                    description,
+                    type: "inbound",
                     status: "paid",
-                    chargeDate: new Date(),
+                    paymentMethodId,
+                    paymentType,
+                    currency,
+                    chargeDate: now,
                     paymentIntentId: charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
-                    updated: new Date(),
-                }).where(and(eq(transactions.id, transactionId), eq(transactions.status, "pending"))).returning({ id: transactions.id });
-                if (!updated) throw new CheckoutError(202, "Payment is being finalized; do not retry");
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: "Payment succeeded",
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                if (!created) throw new CheckoutError(202, "Payment is being finalized; do not retry");
 
                 const [pkg] = await tx.insert(memberPackages).values({
                     locationId: lid,
@@ -200,31 +196,39 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             }).catch((error) => console.error("Error triggering purchase:", error));
             return { ok: true, unsignedDocs };
         }
-        case "failed":
-            await db.update(transactions).set({
+        case "failed": {
+            const now = new Date();
+            await db.insert(transactions).values({
+                id: transactionId,
+                memberId: mid,
+                locationId: lid,
+                total: chargeDetails.total,
+                subTotal: chargeDetails.subTotal,
+                tax: chargeDetails.tax,
+                feeAmount: chargeDetails.feesAmount,
+                description,
+                type: "inbound",
                 status: "failed",
+                paymentMethodId,
+                paymentType,
+                currency,
+                chargeDate: now,
                 paymentIntentId: charge.paymentIntentId,
                 failedReason: charge.failureReason,
                 failedCode: charge.failureCode,
                 metadata: { ...metadata, ...charge.gatewayMetadata },
-                updated: new Date(),
-            }).where(eq(transactions.id, transactionId));
+                activities: [{
+                    at: now.toISOString(),
+                    reason: `Payment failed: ${charge.failureReason}`,
+                    paymentType: charge.paymentType ?? paymentType,
+                    brand: charge.brand,
+                    last4: charge.last4,
+                }],
+            }).onConflictDoNothing({ target: transactions.id });
             throw new CheckoutError(400, charge.failureReason);
-        case "held":
+        }
         case "uncertain":
-            await db.update(transactions).set({
-                status: "pending",
-                ...(charge.status === "held" && charge.paymentIntentId ? { paymentIntentId: charge.paymentIntentId } : {}),
-                metadata: {
-                    ...metadata,
-                    ...charge.gatewayMetadata,
-                    ...(charge.status === "held" ? { authorizeHeld: true } : { paymentUncertain: true }),
-                },
-                updated: new Date(),
-            }).where(eq(transactions.id, transactionId));
-            throw new CheckoutError(202, charge.status === "held"
-                ? "Payment is pending; do not retry"
-                : "Payment status is unknown; do not retry");
+            throw new CheckoutError(202, "Payment status is unknown; do not retry");
         default: {
             const exhaustive: never = charge;
             throw new Error(`Unknown payment result: ${exhaustive}`);

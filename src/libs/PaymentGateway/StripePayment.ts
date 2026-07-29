@@ -234,6 +234,7 @@ export class StripePaymentGateway {
             return_url: `${BASE_MONSTRO_X_URL}/account/location/${metadata?.lid}/purchase/confirm`,
             description: description || `Payment for order ${metadata?.orderId}`,
             metadata: metadata || undefined,
+            expand: ["payment_method"],
         }
         const requestOptions = stripePaymentIntentRequestOptions(idempotencyKey);
         return requestOptions

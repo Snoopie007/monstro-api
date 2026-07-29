@@ -11,6 +11,10 @@ const EnrollSubProps = {
         priceId: t.String(),
         attemptId: t.String(),
         promoId: t.Optional(t.Nullable(t.String())),
+        startDate: t.Optional(t.String()),
+        endDate: t.Optional(t.String()),
+        trialDays: t.Optional(t.Number({ minimum: 0 })),
+        allowProration: t.Optional(t.Boolean()),
         paymentType: t.Union([
             t.Literal("card"),
             t.Literal("us_bank_account"),
@@ -33,6 +37,10 @@ export function subEnrollRoutes(app: Elysia) {
                     paymentType,
                     promoId,
                     attemptId: body.attemptId,
+                    startDate: body.startDate,
+                    endDate: body.endDate,
+                    trialDays: body.trialDays,
+                    allowProration: body.allowProration,
                 });
                 return status(200, result);
             } catch (error) {

@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import {
+    authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
     getCheckoutContext,
@@ -8,14 +8,12 @@ import {
     stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
-import { eventRegistrations, transactions } from "@subtrees/schemas";
+import { transactions } from "@subtrees/schemas";
 import { generateUUID } from "@subtrees/utils/generateUUID";
 import { SquareError } from "square";
 import Stripe from "stripe";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import {
-    cancelPendingEventRegistration,
-    completePendingEventRegistration,
     createEventRegistration,
     EventRegistrationError,
     loadEventRegistrationContext,
@@ -31,6 +29,7 @@ type HandlePaidEventRegistrationProps = LoadEventContextParams & {
 export async function handlePaidEventRegistration(props: HandlePaidEventRegistrationProps) {
     const { lid, mid, paymentMethodId, paymentType = "card", attemptId } = props;
     const transactionId = stableCheckoutTransactionId("event", lid, mid, attemptId);
+    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
     const existing = await db.query.transactions.findFirst({
         where: (tx, { and, eq }) => and(eq(tx.id, transactionId), eq(tx.locationId, lid), eq(tx.memberId, mid)),
     });
@@ -61,46 +60,19 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
         isRecurring: false,
     });
     const description = `${event.name} - ${ticket.name}`;
+    const registrationId = generateUUID("erg_");
     const metadata: Record<string, unknown> = {
-        ...(gateway.service === "authorize" ? { authorizeIntegrationId: gateway.integrationId } : {}),
+        ...(gateway.service === "authorize" ? {
+            authorizeIntegrationId: gateway.integrationId,
+            authorizeReferenceId,
+        } : {}),
         gatewayService: gateway.service,
         checkoutKind: "event",
         checkoutAttemptId: attemptId,
         eventId: event.id,
         ticketId: ticket.id,
+        registrationId,
     };
-
-    const created = await db.transaction(async (tx) => {
-        const [pendingTransaction] = await tx.insert(transactions).values({
-            id: transactionId,
-            description,
-            total,
-            subTotal,
-            tax,
-            type: "inbound",
-            status: "pending",
-            locationId: lid,
-            memberId: mid,
-            paymentMethodId,
-            paymentType,
-            feeAmount: feesAmount,
-            currency,
-            metadata,
-        }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
-        if (!pendingTransaction) return false;
-
-        await createEventRegistration(tx, {
-            lid,
-            mid,
-            event,
-            ticket,
-            transactionId,
-            registrationId: generateUUID("erg_"),
-            status: "pending",
-        });
-        return true;
-    });
-    if (!created) throw new EventRegistrationError(202, "Payment is pending; do not retry", "PAYMENT_PENDING");
 
     let charge: ChargeWithGatewayResult;
     try {
@@ -109,27 +81,21 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
             gatewayCustomerId,
             paymentMethodId,
             transactionId,
+            authorizeReferenceId,
             paymentType,
             total,
             feesAmount,
             currency,
-            description: `Payment for event registration - ${transactionId}`,
+            description: `Payment for event registration - ${registrationId}`,
             referenceId: transactionId,
-            note: `registrationId:${transactionId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}`,
-            metadata: { locationId: lid, memberId: mid, transactionId },
+            note: `registrationId:${registrationId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}`,
+            metadata: { locationId: lid, memberId: mid, registrationId, transactionId },
         });
     } catch (error) {
-        await db.transaction(async (tx) => {
-            await tx.update(transactions).set({
-                status: "failed",
-                failedReason: error instanceof Error ? error.message : "Payment failed",
-                failedCode: error instanceof PaymentChargeError ? error.code || "PAYMENT_FAILED" : "PAYMENT_FAILED",
-                updated: new Date(),
-            }).where(eq(transactions.id, transactionId));
-            await cancelPendingEventRegistration(tx, transactionId);
-        });
         if (error instanceof EventRegistrationError) throw error;
-        if (error instanceof PaymentChargeError) throw new EventRegistrationError(400, error.message, error.code);
+        if (error instanceof PaymentChargeError) {
+            throw new EventRegistrationError(error.status, error.message, error.code);
+        }
         const mapped = error instanceof Stripe.errors.StripeError
             ? handleStripeError({ error })
             : error instanceof SquareError
@@ -140,43 +106,84 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
 
     switch (charge.status) {
         case "approved": {
+            const now = new Date();
             return db.transaction(async (tx) => {
-                const registration = await completePendingEventRegistration(tx, transactionId)
-                    ?? await tx.query.eventRegistrations.findFirst({
-                        where: eq(eventRegistrations.transactionId, transactionId),
-                    });
-                if (!registration) throw new EventRegistrationError(500, "Reserved event registration is missing");
-                await tx.update(transactions).set({
+                const [transaction] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    description,
+                    total,
+                    subTotal,
+                    tax,
+                    type: "inbound",
                     status: "paid",
+                    locationId: lid,
+                    memberId: mid,
+                    paymentMethodId,
+                    paymentType,
+                    chargeDate: now,
+                    feeAmount: feesAmount,
+                    currency,
                     paymentIntentId: charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
-                    updated: new Date(),
-                }).where(and(eq(transactions.id, transactionId), eq(transactions.status, "pending")));
-                return registration;
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: "Payment succeeded",
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                if (!transaction) {
+                    const existingRegistration = await tx.query.eventRegistrations.findFirst({
+                        where: (candidate, { eq }) => eq(candidate.transactionId, transactionId),
+                    });
+                    if (existingRegistration) return existingRegistration;
+                    throw new EventRegistrationError(202, "Payment is being finalized; do not retry", "FULFILLMENT_PENDING");
+                }
+                return createEventRegistration(tx, {
+                    lid,
+                    mid,
+                    event,
+                    ticket,
+                    transactionId,
+                    registrationId,
+                    status: "registered",
+                });
             });
         }
-        case "failed":
-            await db.transaction(async (tx) => {
-                await tx.update(transactions).set({
-                    status: "failed",
-                    paymentIntentId: charge.paymentIntentId,
-                    failedReason: charge.failureReason,
-                    failedCode: charge.failureCode,
-                    metadata: { ...metadata, ...charge.gatewayMetadata },
-                    updated: new Date(),
-                }).where(eq(transactions.id, transactionId));
-                await cancelPendingEventRegistration(tx, transactionId);
-            });
+        case "failed": {
+            const now = new Date();
+            await db.insert(transactions).values({
+                id: transactionId,
+                description,
+                total,
+                subTotal,
+                tax,
+                type: "inbound",
+                status: "failed",
+                locationId: lid,
+                memberId: mid,
+                paymentMethodId,
+                paymentType,
+                chargeDate: now,
+                feeAmount: feesAmount,
+                currency,
+                paymentIntentId: charge.paymentIntentId,
+                failedReason: charge.failureReason,
+                failedCode: charge.failureCode,
+                metadata: { ...metadata, ...charge.gatewayMetadata },
+                activities: [{
+                    at: now.toISOString(),
+                    reason: `Payment failed: ${charge.failureReason}`,
+                    paymentType: charge.paymentType ?? paymentType,
+                    brand: charge.brand,
+                    last4: charge.last4,
+                }],
+            }).onConflictDoNothing({ target: transactions.id });
             throw new EventRegistrationError(400, charge.failureReason, charge.failureCode);
-        case "held":
+        }
         case "uncertain":
-            await db.update(transactions).set({
-                status: "pending",
-                ...(charge.status === "held" && charge.paymentIntentId ? { paymentIntentId: charge.paymentIntentId } : {}),
-                metadata: { ...metadata, ...charge.gatewayMetadata, ...(charge.status === "held" ? { authorizeHeld: true } : { paymentUncertain: true }) },
-                updated: new Date(),
-            }).where(eq(transactions.id, transactionId));
-            throw new EventRegistrationError(202, charge.status === "held" ? "Payment is pending; do not retry" : "Payment status is unknown; do not retry", charge.status === "held" ? "PAYMENT_PENDING" : "PAYMENT_UNCERTAIN");
+            throw new EventRegistrationError(202, "Payment status is unknown; do not retry", "PAYMENT_UNCERTAIN");
         default: {
             const exhaustive: never = charge;
             throw new Error(`Unknown payment result: ${exhaustive}`);

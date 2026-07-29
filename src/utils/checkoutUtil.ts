@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import type { CheckoutContext } from "./getCheckoutContext";
 import type { PaymentType } from "@subtrees/types";
-import type { Currency } from "square";
+import type { Currency, Payment } from "square";
+import type Stripe from "stripe";
 
 export class PaymentChargeError extends Error {
 	readonly status: 400;
@@ -29,11 +30,16 @@ export function stableCheckoutTransactionId(kind: "course" | "order" | "event" |
 	return `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-${digest.slice(16, 20)}-${digest.slice(20)}`;
 }
 
+export function authorizeReferenceIdForTransaction(transactionId: string) {
+	return createHash("sha256").update(transactionId).digest("hex").slice(0, 20);
+}
+
 export type ChargeWithGatewayInput = {
 	gateway: CheckoutContext["gateway"];
 	gatewayCustomerId: string;
 	paymentMethodId: string;
 	transactionId: string;
+	authorizeReferenceId: string;
 	total: number;
 	feesAmount: number;
 	currency: string;
@@ -45,14 +51,10 @@ export type ChargeWithGatewayInput = {
 };
 
 export type ChargeWithGatewayResult =
-	| {
+	PaymentMethodDisplay & (
+	{
 		status: "approved";
 		paymentIntentId: string;
-		gatewayMetadata: Record<string, unknown>;
-	}
-	| {
-		status: "held";
-		paymentIntentId?: string;
 		gatewayMetadata: Record<string, unknown>;
 	}
 	| {
@@ -66,7 +68,44 @@ export type ChargeWithGatewayResult =
 		status: "uncertain";
 		message: string;
 		gatewayMetadata: Record<string, unknown>;
+	});
+
+type PaymentMethodDisplay = {
+	brand?: string;
+	last4?: string;
+	paymentType?: PaymentType;
+};
+
+function displayFromStripePaymentMethod(
+	pm: Stripe.PaymentMethod | string | null | undefined,
+): PaymentMethodDisplay {
+	if (!pm || typeof pm === "string") return {};
+	if (pm.type === "card" && pm.card) {
+		return {
+			paymentType: "card",
+			brand: pm.card.brand ?? undefined,
+			last4: pm.card.last4 ?? undefined,
+		};
+	}
+	if (pm.type === "us_bank_account" && pm.us_bank_account) {
+		return {
+			paymentType: "us_bank_account",
+			brand: pm.us_bank_account.bank_name ?? undefined,
+			last4: pm.us_bank_account.last4 ?? undefined,
+		};
+	}
+	return {};
+}
+
+function displayFromSquarePayment(payment: Payment | undefined | null): PaymentMethodDisplay {
+	const card = payment?.cardDetails?.card;
+	if (!card) return {};
+	return {
+		paymentType: "card",
+		brand: card.cardBrand ? String(card.cardBrand).toLowerCase() : undefined,
+		last4: card.last4 ? String(card.last4) : undefined,
 	};
+}
 
 export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<ChargeWithGatewayResult> {
 	const {
@@ -74,6 +113,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		gatewayCustomerId,
 		paymentMethodId,
 		transactionId,
+		authorizeReferenceId,
 		total,
 		feesAmount,
 		currency,
@@ -94,7 +134,8 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				total,
 				currency,
 				idempotencyKey: transactionId,
-				orderDescription: `monstro:${transactionId}`,
+				referenceId: authorizeReferenceId,
+				orderDescription: description,
 			});
 			const gatewayMetadata = {
 				gatewayService: "authorize",
@@ -106,11 +147,19 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			};
 			switch (charge.status) {
 				case "approved":
-					return { status: "approved", paymentIntentId: charge.transactionId, gatewayMetadata };
+					return {
+						status: "approved",
+						paymentIntentId: charge.transactionId,
+						paymentType: "card",
+						gatewayMetadata,
+					};
 				case "held":
 					return {
-						status: "held",
+						status: "failed",
 						...(charge.transactionId ? { paymentIntentId: charge.transactionId } : {}),
+						failureReason: charge.responseMessage ?? "Authorize.net held the transaction for review",
+						failureCode: "4",
+						paymentType: "card",
 						gatewayMetadata,
 					};
 				case "failed":
@@ -119,6 +168,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 						...(charge.transactionId ? { paymentIntentId: charge.transactionId } : {}),
 						failureReason: charge.responseMessage,
 						failureCode: charge.failureCode,
+						paymentType: "card",
 						gatewayMetadata,
 					};
 				default: {
@@ -149,14 +199,17 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				currency: currency as Currency,
 				feesAmount,
 				metadata,
+				idempotencyKey: transactionId,
 			},
 		);
+		const display = displayFromStripePaymentMethod(paymentResult.payment_method);
 		return {
 			status: "approved",
 			paymentIntentId: paymentResult.id,
 			gatewayMetadata: {
 				gatewayService: gateway.service,
 			},
+			...display,
 		};
 	}
 
@@ -176,6 +229,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			referenceId,
 			squareLocationId,
 			note,
+			idempotencyKey: transactionId,
 		});
 
 		if (!payment?.id) {
@@ -187,6 +241,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			throw new PaymentChargeError("Payment was not completed", "PAYMENT_INCOMPLETE");
 		}
 
+		const display = displayFromSquarePayment(payment);
 		return {
 			status: "approved",
 			paymentIntentId: payment.id,
@@ -195,6 +250,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				squarePaymentId: payment.id,
 				squarePaymentStatus: payment.status,
 			},
+			...display,
 		};
 	}
 	const exhaustive: never = gateway;

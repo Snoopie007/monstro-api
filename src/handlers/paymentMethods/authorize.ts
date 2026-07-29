@@ -8,7 +8,7 @@ import {
     type AuthorizeCustomerProfile,
 } from "@/libs/PaymentGateway";
 import { integrations, locationState, memberLocations } from "@subtrees/schemas";
-import type { PaymentMethod } from "@subtrees/types";
+import type { Address, PaymentMethod } from "@subtrees/types";
 
 async function getAuthorizeGateway(lid: string) {
     const state = await db.query.locationState.findFirst({
@@ -116,14 +116,8 @@ export async function addAuthorizePaymentMethod(input: {
     mid: string;
     lid: string;
     opaqueData: { dataDescriptor: string; dataValue: string };
-    address?: {
-        line1?: string;
-        line2?: string;
-        city?: string;
-        state?: string;
-        postalCode?: string;
-        country?: string;
-    };
+    name?: string;
+    address?: Address;
 }): Promise<PaymentMethod> {
     if (
         input.opaqueData.dataDescriptor !== "COMMON.ACCEPT.INAPP.PAYMENT" ||
@@ -147,6 +141,7 @@ export async function addAuthorizePaymentMethod(input: {
     ]);
     assert(memberLocation, "Member location not found");
     const member = memberLocation.member;
+    const name = input.name?.trim() || `${member.firstName} ${member.lastName ?? ""}`.trim();
 
     let customerProfileId = memberLocation.gatewayCustomerId;
     if (customerProfileId && /^\d+$/.test(customerProfileId)) {
@@ -190,7 +185,7 @@ export async function addAuthorizePaymentMethod(input: {
             customerProfileId,
             dataDescriptor: input.opaqueData.dataDescriptor,
             dataValue: input.opaqueData.dataValue,
-            name: `${member.firstName} ${member.lastName ?? ""}`.trim(),
+            name,
             address: input.address,
         });
     } catch (error) {

@@ -36,6 +36,12 @@ export type LoadEventContextParams = {
     ticketId: string;
 };
 
+type CancelEventRegistrationInput = {
+    lid: string;
+    eventId: string;
+    registrationId: string;
+};
+
 export async function loadEventRegistrationContext({
     lid,
     mid,
@@ -163,6 +169,45 @@ export async function completePendingEventRegistration(tx: RegistrationTx, trans
         eq(eventRegistrations.status, "pending"),
     )).returning({ id: eventRegistrations.id });
     return registration;
+}
+
+export async function cancelEventRegistration(
+    tx: RegistrationTx,
+    { lid, eventId, registrationId }: CancelEventRegistrationInput,
+) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${eventId}))`);
+    const registration = await tx.query.eventRegistrations.findFirst({
+        where: and(
+            eq(eventRegistrations.id, registrationId),
+            eq(eventRegistrations.eventId, eventId),
+            eq(eventRegistrations.locationId, lid),
+        ),
+    });
+    if (!registration) return;
+    if (registration.status === "cancelled") return registration;
+    if (registration.status === "pending") {
+        throw new EventRegistrationError(409, "Payment is still being processed", "PAYMENT_PENDING");
+    }
+    if (registration.status !== "registered") {
+        throw new EventRegistrationError(409, "Only registered attendees can be cancelled");
+    }
+
+    const [cancelled] = await tx.update(eventRegistrations).set({
+        status: "cancelled",
+        cancelledAt: new Date(),
+        updated: new Date(),
+    }).where(and(
+        eq(eventRegistrations.id, registration.id),
+        eq(eventRegistrations.status, "registered"),
+    )).returning();
+    if (!cancelled) {
+        throw new EventRegistrationError(409, "Registration could not be cancelled");
+    }
+
+    await tx.update(eventTickets).set({
+        quantity: sql`case when ${eventTickets.quantity} is null then null else ${eventTickets.quantity} + 1 end`,
+    }).where(eq(eventTickets.id, cancelled.ticketId));
+    return cancelled;
 }
 
 export async function cancelPendingEventRegistration(tx: RegistrationTx, transactionId: string) {

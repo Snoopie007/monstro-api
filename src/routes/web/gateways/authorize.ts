@@ -53,6 +53,7 @@ export const webAuthorizeGateway = new Elysia()
                 mid,
                 lid,
                 opaqueData: body.opaqueData,
+                name: body.name,
                 address: body.address,
             });
 
@@ -75,13 +76,14 @@ export const webAuthorizeGateway = new Elysia()
                 dataDescriptor: t.String(),
                 dataValue: t.String(),
             }),
+            name: t.String(),
             address: t.Optional(t.Object({
-                line1: t.Optional(t.String()),
+                line1: t.String(),
                 line2: t.Optional(t.String()),
-                city: t.Optional(t.String()),
-                state: t.Optional(t.String()),
-                postalCode: t.Optional(t.String()),
-                country: t.Optional(t.String()),
+                city: t.String(),
+                state: t.String(),
+                postalCode: t.String(),
+                country: t.String(),
             })),
         }),
     });

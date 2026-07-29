@@ -1,11 +1,10 @@
 import { db } from "@/db/db";
 import {
+	cancelEventRegistration,
 	handleFreeEventRegistration,
 	handlePaidEventRegistration,
 	mapEventRegistrationError,
 } from "@/handlers/event";
-import { eventRegistrations } from "@subtrees/schemas";
-import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 
 type EventAccessContext = {
@@ -73,11 +72,10 @@ export const eventRegistrationRoutes = new Elysia()
 		if (!eventLocationAccess.allowed) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
 		const { lid, eventId, registrationId } = params as { lid: string; eventId: string; registrationId: string };
-		const [registration] = await db
-			.update(eventRegistrations)
-			.set({ status: "cancelled", cancelledAt: new Date(), updated: new Date() })
-			.where(and(eq(eventRegistrations.id, registrationId), eq(eventRegistrations.eventId, eventId), eq(eventRegistrations.locationId, lid)))
-			.returning();
-
-		return registration || status(404, { error: "Not found" });
+		try {
+			const registration = await db.transaction(tx => cancelEventRegistration(tx, { lid, eventId, registrationId }));
+			return registration || status(404, { error: "Not found" });
+		} catch (error) {
+			return mapEventRegistrationError(status, error);
+		}
 	});

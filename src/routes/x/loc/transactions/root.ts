@@ -205,9 +205,18 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                     }
 
                     try {
+                        const authorizeCardNumber = details.payment?.creditCard?.cardNumber;
+                        const authorizeCardLast4 = authorizeCardNumber?.match(/\d{4}$/)?.[0];
+                        if (operation === "refund" && !authorizeCardLast4) {
+                            throw new Error("Authorize.net refund card details are unavailable");
+                        }
                         const providerResult = operation === "void"
                             ? await authorize.voidTransaction(providerId)
-                            : await authorize.refundTransaction(providerId, transaction.total);
+                            : await authorize.refundTransaction(
+                                providerId,
+                                transaction.total,
+                                authorizeCardLast4!,
+                            );
                         await db.update(transactions).set({
                             refunded: true,
                             refundedAmount: operation === "void" ? 0 : transaction.total,
@@ -306,7 +315,10 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 				if (typeof amount !== "number" || amount <= 0) {
 					return status(400, { error: "Valid amount is required for partial refunds" });
 				}
-				refundAmount = Math.min(amount, transaction.total);
+				if (amount > transaction.total) {
+					return status(400, { error: "Refund amount cannot exceed transaction total" });
+				}
+				refundAmount = amount;
 			}
 
 			const square = new SquarePaymentGateway(squareIntegration.accessToken);

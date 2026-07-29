@@ -1,10 +1,9 @@
-import { and, eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import {
+    authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
     getCheckoutContext,
-    PaymentChargeError,
     stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
@@ -35,6 +34,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
         attemptId,
     } = params;
     const transactionId = stableCheckoutTransactionId("course", lid, mid, attemptId);
+    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
 
     const existing = await db.query.transactions.findFirst({
         where: (tx, { and, eq }) => and(eq(tx.id, transactionId), eq(tx.locationId, lid), eq(tx.memberId, mid)),
@@ -76,77 +76,62 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
     const currency = locationState.currency;
     const description = `Payment for course enrollment ${courseTitle}`;
     const metadata: Record<string, unknown> = {
-        ...(gateway.service === "authorize" ? { authorizeIntegrationId: gateway.integrationId } : {}),
+        ...(gateway.service === "authorize" ? {
+            authorizeIntegrationId: gateway.integrationId,
+            authorizeReferenceId,
+        } : {}),
         gatewayService: gateway.service,
         checkoutKind: "course",
         checkoutAttemptId: attemptId,
         courseId,
     };
 
-    const [created] = await db.insert(transactions).values({
-        id: transactionId,
-        description,
-        total,
-        subTotal,
-        tax,
-        type: "inbound",
-        status: "pending",
-        locationId: lid,
-        memberId: mid,
+    const charge: ChargeWithGatewayResult = await chargeWithGateway({
+        gateway,
+        gatewayCustomerId,
         paymentMethodId,
+        transactionId,
+        authorizeReferenceId,
         paymentType,
-        feeAmount: feesAmount,
+        total,
+        feesAmount,
         currency,
-        metadata,
-    }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
-    if (!created) {
-        const raced = await db.query.transactions.findFirst({ where: (tx, { eq }) => eq(tx.id, transactionId) });
-        if (!raced) throw new CourseEnrollError(500, "Unable to create transaction");
-        if (raced.status === "paid") {
-            const enrollment = await db.query.courseEnrollments.findFirst({
-                where: (enrollment, { eq }) => eq(enrollment.transactionId, raced.id),
-            });
-            if (enrollment) return enrollment;
-        }
-        throw new CourseEnrollError(202, "Payment is pending; do not retry", "PAYMENT_PENDING");
-    }
-
-    let charge: ChargeWithGatewayResult;
-    try {
-        charge = await chargeWithGateway({
-            gateway,
-            gatewayCustomerId,
-            paymentMethodId,
-            transactionId,
-            paymentType,
-            total,
-            feesAmount,
-            currency,
-            description,
-            referenceId: transactionId,
-            note: `enrollmentId:${transactionId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
-            metadata: { memberId: mid, locationId: lid, transactionId },
-        });
-    } catch (error) {
-        await db.update(transactions).set({
-            status: "failed",
-            failedReason: error instanceof Error ? error.message : "Payment failed",
-            failedCode: error instanceof PaymentChargeError ? error.code || "PAYMENT_FAILED" : "PAYMENT_FAILED",
-            updated: new Date(),
-        }).where(eq(transactions.id, transactionId));
-        throw error;
-    }
+        description,
+        referenceId: transactionId,
+        note: `enrollmentId:${transactionId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
+        metadata: { memberId: mid, locationId: lid, transactionId },
+    });
 
     switch (charge.status) {
         case "approved": {
+            const now = new Date();
             const result = await db.transaction(async (tx) => {
-                const [updated] = await tx.update(transactions).set({
+                const [created] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    description,
+                    total,
+                    subTotal,
+                    tax,
+                    type: "inbound",
                     status: "paid",
+                    locationId: lid,
+                    memberId: mid,
+                    paymentMethodId,
+                    paymentType,
+                    feeAmount: feesAmount,
+                    currency,
+                    chargeDate: now,
                     paymentIntentId: charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
-                    updated: new Date(),
-                }).where(and(eq(transactions.id, transactionId), eq(transactions.status, "pending"))).returning();
-                if (!updated) {
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: "Payment succeeded",
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                if (!created) {
                     const current = await tx.query.courseEnrollments.findFirst({
                         where: (enrollment, { eq }) => eq(enrollment.transactionId, transactionId),
                     });
@@ -171,30 +156,38 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
             });
             return result;
         }
-        case "failed":
-            await db.update(transactions).set({
+        case "failed": {
+            const now = new Date();
+            await db.insert(transactions).values({
+                id: transactionId,
+                description,
+                total,
+                subTotal,
+                tax,
+                type: "inbound",
                 status: "failed",
+                locationId: lid,
+                memberId: mid,
+                paymentMethodId,
+                paymentType,
+                feeAmount: feesAmount,
+                currency,
+                chargeDate: now,
                 paymentIntentId: charge.paymentIntentId,
                 failedReason: charge.failureReason,
                 failedCode: charge.failureCode,
                 metadata: { ...metadata, ...charge.gatewayMetadata },
-                updated: new Date(),
-            }).where(eq(transactions.id, transactionId));
+                activities: [{
+                    at: now.toISOString(),
+                    reason: `Payment failed: ${charge.failureReason}`,
+                    paymentType: charge.paymentType ?? paymentType,
+                    brand: charge.brand,
+                    last4: charge.last4,
+                }],
+            }).onConflictDoNothing({ target: transactions.id });
             throw new CourseEnrollError(400, charge.failureReason, charge.failureCode);
-        case "held":
-            await db.update(transactions).set({
-                status: "pending",
-                paymentIntentId: charge.paymentIntentId,
-                metadata: { ...metadata, ...charge.gatewayMetadata, authorizeHeld: true },
-                updated: new Date(),
-            }).where(eq(transactions.id, transactionId));
-            throw new CourseEnrollError(202, "Payment is pending; do not retry", "PAYMENT_PENDING");
+        }
         case "uncertain":
-            await db.update(transactions).set({
-                status: "pending",
-                metadata: { ...metadata, ...charge.gatewayMetadata, paymentUncertain: true },
-                updated: new Date(),
-            }).where(eq(transactions.id, transactionId));
             throw new CourseEnrollError(202, "Payment status is unknown; do not retry", "PAYMENT_UNCERTAIN");
         default: {
             const exhaustive: never = charge;

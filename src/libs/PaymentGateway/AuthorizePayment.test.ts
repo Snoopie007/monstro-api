@@ -13,7 +13,7 @@ describe("AuthorizePaymentGateway", () => {
         process.env.AUTHORIZE_API_URL = "https://apitest.authorize.net/xml/v1/request.api";
         let requestUrl = "";
         let requestBody: Record<string, Record<string, unknown>> = {};
-        globalThis.fetch = Object.assign(async (input: URL | RequestInfo, init?: RequestInit) => {
+        globalThis.fetch = Object.assign(async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
             requestUrl = String(input);
             requestBody = JSON.parse(String(init?.body));
             return new Response(JSON.stringify({
@@ -44,7 +44,7 @@ describe("AuthorizePaymentGateway", () => {
     test("charges a saved customer profile in cents", async () => {
         process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
         let requestBody: Record<string, Record<string, unknown>> = {};
-        globalThis.fetch = Object.assign(async (_input: URL | RequestInfo, init?: RequestInit) => {
+        globalThis.fetch = Object.assign(async (_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
             requestBody = JSON.parse(String(init?.body));
             return new Response(JSON.stringify({
                 transactionResponse: { responseCode: "1", transId: "80057516014" },
@@ -57,11 +57,12 @@ describe("AuthorizePaymentGateway", () => {
             total: 100,
             currency: "USD",
             idempotencyKey: "checkout-attempt-1",
+            referenceId: "0123456789abcdef0123",
             orderDescription: "monstro:checkout-attempt-1",
         });
 
         const request = requestBody.createTransactionRequest;
-        expect(request?.refId).toMatch(/^[a-f0-9]{20}$/);
+        expect(request?.refId).toBe("0123456789abcdef0123");
         expect(request?.transactionRequest).toEqual(expect.objectContaining({
             transactionType: "authCaptureTransaction",
             amount: "1.00",
@@ -70,16 +71,55 @@ describe("AuthorizePaymentGateway", () => {
                 customerProfileId: "12345",
                 paymentProfile: { paymentProfileId: "1001" },
             },
+            order: {
+                invoiceNumber: "0123456789abcdef0123",
+                description: "monstro:checkout-attempt-1",
+            },
             processingOptions: { isStoredCredentials: true },
         }));
+        expect(Object.keys(request?.transactionRequest as Record<string, unknown>)).toEqual([
+            "transactionType",
+            "amount",
+            "currencyCode",
+            "profile",
+            "order",
+            "transactionSettings",
+            "processingOptions",
+        ]);
         expect(result?.transactionId).toBe("80057516014");
+    });
+
+    test("does not return the original provider ID for a duplicate transaction", async () => {
+        process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
+        globalThis.fetch = Object.assign(async () => new Response(JSON.stringify({
+            transactionResponse: {
+                responseCode: "3",
+                responseReasonCode: "11",
+                transId: "80057516014",
+                errors: { error: [{ errorText: "A duplicate transaction has been submitted." }] },
+            },
+            messages: { resultCode: "Ok" },
+        })), { preconnect: originalFetch.preconnect });
+
+        const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+        const result = await gateway.createCharge("12345", "1001", {
+            total: 100,
+            currency: "USD",
+            idempotencyKey: "checkout-attempt-2",
+            referenceId: "abcdef0123456789abcd",
+            orderDescription: "monstro:checkout-attempt-2",
+        });
+
+        expect(result).toMatchObject({ status: "failed", failureCode: "11" });
+        expect(result).not.toHaveProperty("transactionId");
     });
 });
 
 test("inspects and follows provider transaction state", async () => {
     process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
     const operations: string[] = [];
-    globalThis.fetch = Object.assign(async (_input: URL | RequestInfo, init?: RequestInit) => {
+    let followOnKeys: string[] = [];
+    globalThis.fetch = Object.assign(async (_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
         const body = JSON.parse(String(init?.body));
         if (body.getTransactionDetailsRequest) {
             operations.push("details");
@@ -88,7 +128,9 @@ test("inspects and follows provider transaction state", async () => {
                 messages: { resultCode: "Ok" },
             }));
         }
-        operations.push(body.createTransactionRequest.transactionRequest.transactionType);
+        const transactionRequest = body.createTransactionRequest.transactionRequest;
+        operations.push(transactionRequest.transactionType);
+        followOnKeys = Object.keys(transactionRequest);
         return new Response(JSON.stringify({
             transactionResponse: {
                 responseCode: "1",
@@ -102,7 +144,28 @@ test("inspects and follows provider transaction state", async () => {
     const gateway = new AuthorizePaymentGateway("login", "transaction-key");
     const details = await gateway.getTransactionDetails("provider-1");
     expect(details.transactionStatus).toBe("settledSuccessfully");
-    const refund = await gateway.refundTransaction("provider-1", 100);
+    const refund = await gateway.refundTransaction("provider-1", 100, "0015");
     expect(refund.transId).toBe("provider-refund");
     expect(operations).toEqual(["details", "refundTransaction"]);
+    expect(followOnKeys).toEqual(["transactionType", "amount", "payment", "refTransId"]);
+});
+
+test("surfaces a singleton follow-on provider error", async () => {
+    process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
+    globalThis.fetch = Object.assign(async () => new Response(JSON.stringify({
+        transactionResponse: {
+            responseCode: "3",
+            errors: {
+                error: {
+                    errorCode: "54",
+                    errorText: "The referenced transaction does not meet the criteria for issuing a credit.",
+                },
+            },
+        },
+        messages: { resultCode: "Ok" },
+    })), { preconnect: originalFetch.preconnect });
+
+    const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+    expect(gateway.refundTransaction("provider-1", 100, "0015"))
+        .rejects.toThrow("does not meet the criteria");
 });
