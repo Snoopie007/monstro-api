@@ -3,6 +3,7 @@ import { memberInvoices, memberSubscriptions, memberPackages, transactions } fro
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import type { PaymentType } from "@subtrees/types";
+import type { Currency } from "@subtrees/types/currency";
 
 
 interface HandleSquarePlanSuccessProps {
@@ -40,7 +41,7 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
 
         const values = {
             description: invoice.description,
-            currency: invoice.currency || "USD",
+            currency: (invoice.currency || "USD") as Currency,
             locationId: invoice.locationId,
             memberId: invoice.memberId,
             total: amount,

@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 
 import type { PaymentType } from "@subtrees/types";
+import type { Currency } from "@subtrees/types/currency";
 import { db } from "@/db/db";
 import { memberInvoices, memberPackages, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
@@ -54,7 +55,7 @@ export async function handleStripePlanCharge({
 
         const values = {
             description: invoice.description,
-            currency: invoice.currency || "USD",
+            currency: (invoice.currency || "USD") as Currency,
             total: amount,
             subTotal: invoice.subTotal,
             tax: invoice.tax,

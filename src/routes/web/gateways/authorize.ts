@@ -27,9 +27,10 @@ export const webAuthorizeGateway = new Elysia()
         if (!session) {
             return status(401, { error: "Unauthorized" });
         }
+        const mid = session.user.memberId;
 
         try {
-            const paymentMethods = await getAuthorizePaymentMethods(session.user.memberId, lid);
+            const paymentMethods = await getAuthorizePaymentMethods(mid, lid);
             return status(200, paymentMethods);
         } catch (err) {
             console.log(err);
@@ -46,15 +47,17 @@ export const webAuthorizeGateway = new Elysia()
         if (!session) {
             return status(401, { error: "Unauthorized" });
         }
-
         const mid = session.user.memberId;
+        const { opaqueData, name, address } = body;
+
+
         try {
             const pm = await addAuthorizePaymentMethod({
                 mid,
                 lid,
-                opaqueData: body.opaqueData,
-                name: body.name,
-                address: body.address,
+                opaqueData,
+                name,
+                address,
             });
 
             return status(200, pm);

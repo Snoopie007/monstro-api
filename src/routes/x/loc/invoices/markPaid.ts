@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
 import { getCurrency } from "@/utils";
+import type { Currency } from "@subtrees/types/currency";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/mark-paid", async ({ params, body, status }) => {
@@ -116,7 +117,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     total: invoice.total,
                     subTotal: invoice.subTotal,
                     tax: invoice.tax,
-                    currency: invoice.currency || "usd",
+                    currency: (invoice.currency || "USD") as Currency,
                     chargeDate: paidDate ? new Date(paidDate) : new Date(),
                     metadata: paymentMetadata,
                 }).returning({ id: transactions.id });
@@ -175,7 +176,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 subTotal: sub.pricing.price,
                                 total: sub.pricing.price,
                                 tax: 0,
-                                currency: currency || "usd",
+                                currency: (currency || "USD") as Currency,
                                 status: "draft",
                                 dueDate: new Date(nextEnd),
                                 paymentType: "cash",
@@ -202,7 +203,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 total: sub.pricing.price,
                                 subTotal: sub.pricing.price,
                                 tax: 0,
-                                currency: currency || "usd",
+                                currency: (currency || "USD") as Currency,
                             }).returning({ id: transactions.id });
                             assert(transaction);
                             await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, nextInvoice.id));
