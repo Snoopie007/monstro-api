@@ -43,7 +43,6 @@ export async function handleSquareOrderSuccess({ orderId, paymentMethodId, payme
     }
 
     await db.insert(transactions).values({
-        orderId: order.id,
         locationId: order.locationId,
         memberId: order.memberId,
         paymentMethodId,

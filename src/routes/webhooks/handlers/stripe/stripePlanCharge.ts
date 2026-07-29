@@ -84,10 +84,10 @@ export async function handleStripePlanCharge({
         }
     };
 
-    await db.insert(transactions).values(transactionValues).onConflictDoUpdate({
-        target: transactions.invoiceId,
-        set: transactionValues,
-    });
+    // await db.insert(transactions).values(transactionValues).onConflictDoUpdate({
+    //     target: transactions.invoiceId,
+    //     set: transactionValues,
+    // });
 
     const existingSubscription = memberPlanId && !isPackage
         ? await db.query.memberSubscriptions.findFirst({

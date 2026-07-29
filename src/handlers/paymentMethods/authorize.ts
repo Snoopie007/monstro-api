@@ -43,7 +43,7 @@ function mapPaymentMethods(profile: AuthorizeNetCustomerProfile): PaymentMethod[
 
         return [{
             id,
-            source: "authorize-net",
+            source: "authorize",
             type: "card",
             isDefault: id === profile.defaultPaymentProfile,
             card: {

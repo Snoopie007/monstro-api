@@ -60,18 +60,16 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
         chargeDate: now,
         feeAmount,
         metadata: {
-            gatewayService: "square" as const,
             squarePaymentId,
             squarePaymentStatus,
-            memberPlanId,
         },
         updated: now,
     };
 
-    await db.insert(transactions).values(values).onConflictDoUpdate({
-        target: transactions.invoiceId,
-        set: values,
-    });
+    // await db.insert(transactions).values(values).onConflictDoUpdate({
+    //     target: transactions.invoiceId,
+    //     set: values,
+    // });
 
     if (memberPlanId) {
         const isPackage = memberPlanId.startsWith("pkg_");

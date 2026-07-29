@@ -28,7 +28,6 @@ export async function handleSquareOrderFail({ orderId, paymentMethodId, paymentI
     }
 
     await db.insert(transactions).values({
-        orderId: order.id,
         paymentMethodId,
         paymentIntentId,
         locationId: order.locationId,

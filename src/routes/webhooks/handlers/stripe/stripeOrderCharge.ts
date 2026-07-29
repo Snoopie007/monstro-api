@@ -62,7 +62,6 @@ export async function handleStripeOrderCharge({
     }
 
     await db.insert(transactions).values({
-        orderId: order.id,
         locationId,
         memberId,
         paymentMethodId,

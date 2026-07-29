@@ -70,10 +70,10 @@ export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
         updated: now,
     };
 
-    await db.insert(transactions).values(values).onConflictDoUpdate({
-        target: transactions.invoiceId,
-        set: values,
-    });
+    // await db.insert(transactions).values(values).onConflictDoUpdate({
+    //     target: transactions.invoiceId,
+    //     set: values,
+    // });
 
     if (memberPlanId) {
         const isPackage = memberPlanId.startsWith("pkg_");
