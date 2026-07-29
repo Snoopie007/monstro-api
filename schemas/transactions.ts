@@ -33,7 +33,7 @@ export const transactions = pgTable("transactions", {
 	chargeDate: timestamp("charge_date", { withTimezone: true }).notNull().defaultNow(),
 	currency: text("currency").$type<Currency>().notNull().default("USD"),
 	metadata: jsonb("metadata").$type<TransactionMetadata>().notNull().default(sql`'{}'::jsonb`),
-	activities: jsonb("activities").array().$type<TransactionActivity[]>().notNull().default(sql`'[]'::jsonb`),
+	activities: jsonb("activities").$type<TransactionActivity[]>().notNull().default(sql`'[]'::jsonb`),
 	refunded: boolean("refunded").notNull().default(false),
 	refundedAmount: integer("refunded_amount").notNull().default(0),
 	tax: integer("total_tax").notNull().default(0),
