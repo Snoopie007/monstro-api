@@ -1,10 +1,8 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway } from "@/libs/PaymentGateway/SquarePayment";
-import { memberLocations } from "@subtrees/schemas";
+import { integrations, memberLocations } from "@subtrees/schemas";
 import type { PaymentMethod } from "@subtrees/types";
 import { eq } from "drizzle-orm";
-import { getSquareErrorMessage } from "./errors";
-
 
 interface SquareCardPaymentMethod {
     id?: string;
@@ -32,6 +30,45 @@ function mapSquareCard(pm: SquareCardPaymentMethod | undefined): PaymentMethod |
     };
 }
 
+async function getSquareAccessToken(lid: string): Promise<string> {
+    const squareGateway = await db.query.integrations.findFirst({
+        where: (i, { eq, and }) => and(
+            eq(i.locationId, lid),
+            eq(i.service, "square"),
+        ),
+        columns: {
+            id: true,
+            accountId: true,
+            accessToken: true,
+            refreshToken: true,
+            expires: true,
+        },
+    });
+
+    if (!squareGateway?.accountId || !squareGateway.accessToken) {
+        throw new Error("Square integration not found");
+    }
+
+    const isExpired = squareGateway.expires != null && squareGateway.expires < Date.now();
+    if (!isExpired) {
+        return squareGateway.accessToken;
+    }
+
+    if (!squareGateway.refreshToken) {
+        throw new Error("Square integration expired");
+    }
+
+    const refreshed = await SquarePaymentGateway.refreshAccessToken(squareGateway.refreshToken);
+    await db.update(integrations).set({
+        accessToken: refreshed.accessToken,
+        refreshToken: refreshed.refreshToken,
+        expires: refreshed.expiresAt,
+        updated: new Date(),
+    }).where(eq(integrations.id, squareGateway.id));
+
+    return refreshed.accessToken;
+}
+
 export async function getSquarePaymentMethods(mid: string, lid: string): Promise<PaymentMethod[]> {
     const ml = await db.query.memberLocations.findFirst({
         where: (memberLocation, { eq, and }) => and(
@@ -48,31 +85,8 @@ export async function getSquarePaymentMethods(mid: string, lid: string): Promise
         return [];
     }
 
-    const squareGateway = await db.query.integrations.findFirst({
-        where: (i, { eq, and }) => and(
-            eq(i.locationId, lid),
-            eq(i.service, "square"),
-        ),
-        columns: {
-            accountId: true,
-            accessToken: true,
-            metadata: true,
-            expires: true,
-        },
-    });
-
-    if (squareGateway?.expires && squareGateway.expires < Date.now()) {
-
-        // TODO: Refresh the integration
-
-        console.error("Square integration expired");
-    }
-
-    if (!squareGateway?.accountId || !squareGateway.accessToken) {
-        throw new Error("Square integration not found");
-    }
-
-    const square = new SquarePaymentGateway(squareGateway.accessToken);
+    const accessToken = await getSquareAccessToken(lid);
+    const square = new SquarePaymentGateway(accessToken);
     const pms = await square.getCards(ml.gatewayCustomerId);
 
     return pms
@@ -87,20 +101,7 @@ export async function addSquarePaymentMethod(input: {
 }): Promise<PaymentMethod> {
     const { mid, lid, nonce } = input;
 
-    const squareGateway = await db.query.integrations.findFirst({
-        where: (i, { eq, and }) => and(
-            eq(i.locationId, lid),
-            eq(i.service, "square"),
-        ),
-        columns: {
-            accountId: true,
-            accessToken: true,
-        },
-    });
-
-    if (!squareGateway?.accountId || !squareGateway.accessToken) {
-        throw new Error("Square integration not found");
-    }
+    const accessToken = await getSquareAccessToken(lid);
 
     const ml = await db.query.memberLocations.findFirst({
         where: (row, { eq, and }) => and(
@@ -113,7 +114,7 @@ export async function addSquarePaymentMethod(input: {
     });
 
 
-    const square = new SquarePaymentGateway(squareGateway.accessToken);
+    const square = new SquarePaymentGateway(accessToken);
     const member = await db.query.members.findFirst({
         where: (row, { eq }) => eq(row.id, mid),
         columns: {

@@ -21,6 +21,21 @@ export function squarePaymentIdempotencyKey(idempotencyKey: string | undefined, 
     return idempotencyKey || generateIdempotencyKey();
 }
 
+export type SquareRefreshedToken = {
+    accessToken: string;
+    refreshToken: string;
+    /** Access token expiry as unix ms (for `integrations.expires`). */
+    expiresAt: number;
+    merchantId?: string;
+};
+
+function createSquareOAuthClient() {
+    return new SquareClient({
+        environment: isProd ? SquareEnvironment.Production : SquareEnvironment.Sandbox,
+        version: SQUARE_API_VERSION,
+    });
+}
+
 export class SquarePaymentGateway {
     private _client: SquareClient;
     constructor(accessToken: string) {
@@ -30,6 +45,38 @@ export class SquarePaymentGateway {
             token: accessToken,
             version: SQUARE_API_VERSION,
         });
+    }
+
+    /** Exchange a seller refresh token for a new access token via Square OAuth. */
+    static async refreshAccessToken(refreshToken: string): Promise<SquareRefreshedToken> {
+        const clientId = process.env.SQUARE_APPLICATION_ID;
+        const clientSecret = process.env.SQUARE_APPLICATION_SECRET;
+        if (!clientId || !clientSecret) {
+            throw new Error("Square application credentials not configured");
+        }
+
+        const client = createSquareOAuthClient();
+        const response = await client.oAuth.obtainToken({
+            clientId,
+            clientSecret,
+            grantType: "refresh_token",
+            refreshToken,
+        });
+
+        if (!response.accessToken) {
+            throw new Error("Failed to refresh Square access token");
+        }
+
+        const expiresAt = response.expiresAt
+            ? Date.parse(response.expiresAt)
+            : Date.now() + 30 * 24 * 60 * 60 * 1000;
+
+        return {
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken ?? refreshToken,
+            expiresAt,
+            merchantId: response.merchantId,
+        };
     }
 
     private generateIdempotencyKey() {

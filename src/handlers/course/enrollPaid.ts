@@ -74,9 +74,6 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
         throw error;
     }
     return db.transaction(async (tx) => {
-
-
-
         const [transaction] = await tx.insert(transactions).values({
             description,
             total,
