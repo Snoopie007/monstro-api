@@ -10,7 +10,7 @@ import { locations } from "./locations";
 import { sql } from "drizzle-orm";
 import { members } from "./members";
 import { TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionMetadata } from "../types";
+import type { TransactionActivity, TransactionMetadata } from "../types";
 import type { InvoiceItem } from "../types/invoices";
 
 const paymentTypeValues = ["cash", "card", "us_bank_account", "paypal", "apple_pay", "google_pay"] as const;
@@ -36,6 +36,7 @@ export const transactions = pgTable("transactions", {
 	chargeDate: timestamp("charge_date", { withTimezone: true }).defaultNow(),
 	currency: text("currency").notNull().default("USD"),
 	metadata: jsonb("metadata").$type<TransactionMetadata>().notNull().default(sql`'{}'::jsonb`),
+	activities: jsonb("activities").$type<TransactionActivity[]>().notNull().default(sql`'[]'::jsonb`),
 	refunded: boolean("refunded").notNull().default(false),
 	refundedAmount: integer("refunded_amount").notNull().default(0),
 	tax: integer("total_tax").notNull().default(0),
