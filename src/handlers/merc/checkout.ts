@@ -4,6 +4,7 @@ import {
     calculateOrderTotals,
     chargeWithGateway,
     getCheckoutContext,
+    type ChargeWithGatewayResult,
 } from "@/utils";
 import { orders, transactions } from "@subtrees/schemas";
 import { generateUUID } from "@subtrees/utils/generateUUID";
@@ -97,15 +98,9 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
     const transactionId = generateUUID('txn_');
     const description = `Payment for order ${orderId}`;
 
-    let paymentIntentId: string;
-    let gatewayMetadata: Record<string, unknown> = {
-        gatewayService: gateway.service,
-        orderId,
-        transactionId,
-    };
-
+    let chargeResult: ChargeWithGatewayResult | undefined;
     try {
-        const charge = await chargeWithGateway({
+        chargeResult = await chargeWithGateway({
             gateway,
             gatewayCustomerId,
             paymentMethodId,
@@ -115,26 +110,22 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             currency,
             description,
             referenceId: orderId,
-            note: `orderId:${orderId}|transactionId:${transactionId}|mid:${mid}|locationId:${lid}`,
+            note: `orderId:${orderId}|mid:${mid}|lid:${lid}`,
             metadata: {
                 memberId: mid,
                 locationId: lid,
                 orderId,
-                transactionId,
             },
         });
-        paymentIntentId = charge.paymentIntentId;
-        gatewayMetadata = {
-            ...gatewayMetadata,
-            ...charge.gatewayMetadata,
-        };
     } catch (error) {
         console.error(error);
         throw error;
     }
 
     const now = new Date();
-
+    if (!chargeResult) {
+        throw new Error("Failed to charge");
+    }
     return db.transaction(async (tx) => {
         const [transaction] = await tx.insert(transactions).values({
             id: transactionId,
@@ -147,12 +138,21 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             locationId: lid,
             memberId: mid,
             paymentMethodId,
-            paymentIntentId,
+            paymentIntentId: chargeResult?.paymentIntentId,
             paymentType,
             chargeDate: now,
             feeAmount: feesAmount,
+            activities: [{
+                at: now.toISOString(),
+                reason: "Payment succeeded",
+                paymentType,
+                brand: chargeResult.brand,
+                last4: chargeResult.last4,
+            }],
             currency,
-            metadata: gatewayMetadata,
+            metadata: {
+                orderId,
+            },
         }).returning({ id: transactions.id });
 
         if (!transaction) {
@@ -171,7 +171,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             total,
             items: lineItems,
             processingFee,
-            gatewayPaymentId: paymentIntentId,
+            gatewayPaymentId: chargeResult.paymentIntentId,
         }).returning();
 
         if (!order) {

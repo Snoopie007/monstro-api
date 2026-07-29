@@ -118,7 +118,7 @@ export const CheckMissedClassSchema = z.object({
 
 // retry payment jobs
 export const RetrySubPaymentSchema = z.object({
-    paymentIntentId: z.string(),
+    invoiceId: z.string(),
     attempts: z.number(),
     subId: z.string(),
     lid: z.string(),

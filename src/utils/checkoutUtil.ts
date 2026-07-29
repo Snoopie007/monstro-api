@@ -1,7 +1,8 @@
 import { SquarePaymentGateway, StripePaymentGateway, AuthorizeNetPaymentGateway } from "@/libs/PaymentGateway";
 import type { CheckoutContext } from "./getCheckoutContext";
 import type { PaymentType } from "@subtrees/types";
-import type { Currency } from "square";
+import type { Currency, Payment } from "square";
+import type Stripe from "stripe";
 
 export class PaymentChargeError extends Error {
 	readonly status: 400;
@@ -32,7 +33,60 @@ export type ChargeWithGatewayInput = {
 export type ChargeWithGatewayResult = {
 	paymentIntentId: string;
 	gatewayMetadata: Record<string, unknown>;
+	brand?: string;
+	last4?: string;
+	paymentType?: PaymentType;
 };
+
+type PaymentMethodDisplay = {
+	brand?: string;
+	last4?: string;
+	paymentType?: PaymentType;
+};
+
+function displayFromStripePaymentMethod(
+	pm: Stripe.PaymentMethod | string | null | undefined,
+): PaymentMethodDisplay {
+	if (!pm || typeof pm === "string") return {};
+	if (pm.type === "card" && pm.card) {
+		return {
+			paymentType: "card",
+			brand: pm.card.brand ?? undefined,
+			last4: pm.card.last4 ?? undefined,
+		};
+	}
+	if (pm.type === "us_bank_account" && pm.us_bank_account) {
+		return {
+			paymentType: "us_bank_account",
+			brand: pm.us_bank_account.bank_name ?? undefined,
+			last4: pm.us_bank_account.last4 ?? undefined,
+		};
+	}
+	return {};
+}
+
+function displayFromSquarePayment(payment: Payment | undefined | null): PaymentMethodDisplay {
+	const card = payment?.cardDetails?.card;
+	if (!card) return {};
+	return {
+		paymentType: "card",
+		brand: card.cardBrand ? String(card.cardBrand).toLowerCase() : undefined,
+		last4: card.last4 ? String(card.last4) : undefined,
+	};
+}
+
+function displayFromAuthorizeTransaction(transaction: Record<string, unknown> | undefined): PaymentMethodDisplay {
+	if (!transaction) return {};
+	const accountType = typeof transaction.accountType === "string" ? transaction.accountType : undefined;
+	const accountNumber = typeof transaction.accountNumber === "string" ? transaction.accountNumber : undefined;
+	const last4 = accountNumber ? accountNumber.replace(/\D/g, "").slice(-4) || undefined : undefined;
+	const isEcheck = accountType?.toLowerCase() === "echeck";
+	return {
+		paymentType: isEcheck ? "us_bank_account" : "card",
+		brand: accountType,
+		last4,
+	};
+}
 
 /** Charges a saved payment method via the location's gateway (Stripe, Square, or Authorize.net). */
 export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<ChargeWithGatewayResult> {
@@ -66,11 +120,13 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				metadata,
 			},
 		);
+		const display = displayFromStripePaymentMethod(paymentResult.payment_method);
 		return {
 			paymentIntentId: paymentResult.id,
 			gatewayMetadata: {
 				gatewayService: gateway.service,
 			},
+			...display,
 		};
 	}
 
@@ -104,6 +160,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			throw new PaymentChargeError("Payment was not completed", "PAYMENT_INCOMPLETE");
 		}
 
+		const display = displayFromSquarePayment(payment);
 		return {
 			paymentIntentId: payment.id,
 			gatewayMetadata: {
@@ -111,6 +168,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				squarePaymentId: payment.id,
 				squarePaymentStatus: payment.status,
 			},
+			...display,
 		};
 	}
 
@@ -127,11 +185,13 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		if (!paymentIntentId || paymentIntentId === "0") {
 			throw new PaymentChargeError("Payment was not created");
 		}
+		const display = displayFromAuthorizeTransaction(payment);
 		return {
 			paymentIntentId,
 			gatewayMetadata: {
 				gatewayService: gateway.service,
 			},
+			...display,
 		};
 	}
 

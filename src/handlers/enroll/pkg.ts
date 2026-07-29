@@ -10,6 +10,7 @@ import {
     fetchPromoDiscount,
     calculateThresholdDate,
     getCheckoutContext,
+    type ChargeWithGatewayResult,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 
@@ -67,13 +68,11 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         });
     }
 
-    let unsignedDocs: string[] = [];
 
-
-    let paymentIntentId: string | undefined;
+    let chargeResult: ChargeWithGatewayResult | undefined;
     try {
         const note = `mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`;
-        const result = await chargeWithGateway({
+        chargeResult = await chargeWithGateway({
             gateway,
             gatewayCustomerId,
             paymentMethodId,
@@ -88,12 +87,16 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 memberId: mid,
             },
         });
-        paymentIntentId = result.paymentIntentId;
     } catch (error) {
         console.error(error);
         throw error;
     }
 
+    if (!chargeResult) {
+        throw new Error("Failed to charge");
+    }
+
+    let unsignedDocs: string[] = [];
 
 
     await db.transaction(async (tx) => {
@@ -123,7 +126,14 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             status: "paid",
             chargeDate: today,
             paymentMethodId,
-            paymentIntentId,
+            paymentIntentId: chargeResult.paymentIntentId,
+            activities: [{
+                at: today.toISOString(),
+                reason: "Payment succeeded",
+                paymentType,
+                brand: chargeResult.brand,
+                last4: chargeResult.last4,
+            }],
             paymentType,
             metadata: {
                 memberPlanPricingId: pricing.id,

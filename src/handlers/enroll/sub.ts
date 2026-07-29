@@ -8,6 +8,7 @@ import {
     triggerPurchase,
     fetchPromoDiscount,
     getCheckoutContext,
+    type ChargeWithGatewayResult,
 } from "@/utils";
 import {
     scheduleCronBasedRenewal,
@@ -17,6 +18,7 @@ import type { SubscriptionJobData } from "@subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { db } from "@/db/db";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import type { TransactionActivity } from "@subtrees/types";
 
 export type EnrollSubProps = {
     lid: string;
@@ -91,11 +93,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
     const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
 
 
+    let chargeResult: ChargeWithGatewayResult | undefined;
+
     try {
 
         const note = `mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`;
 
-        await chargeWithGateway({
+        chargeResult = await chargeWithGateway({
             gateway,
             gatewayCustomerId,
             paymentMethodId,
@@ -116,7 +120,9 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
     }
 
     let unsignedDocs: string[] = [];
-
+    if (!chargeResult) {
+        throw new Error("Failed to charge");
+    }
 
     const sub = await db.transaction(async (tx) => {
         const [s] = await tx.insert(memberSubscriptions).values({
@@ -147,6 +153,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             chargeDate: today,
             paymentMethodId,
             paymentType,
+            activities: [{
+                at: today.toISOString(),
+                reason: "Payment succeeded",
+                paymentType,
+                brand: chargeResult.brand,
+                last4: chargeResult.last4,
+            }],
         }).returning({ id: transactions.id });
         if (!transaction) {
             tx.rollback();

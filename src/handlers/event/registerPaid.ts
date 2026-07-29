@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { calculateChargeDetails, chargeWithGateway, getCheckoutContext, PaymentChargeError } from "@/utils";
+import { calculateChargeDetails, chargeWithGateway, getCheckoutContext, PaymentChargeError, type ChargeWithGatewayResult } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 import { transactions } from "@subtrees/schemas";
 import { generateUUID } from "@subtrees/utils/generateUUID";
@@ -55,11 +55,11 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
         ticketId: ticket.id,
         registrationId,
     };
-
+    let chargeResult: ChargeWithGatewayResult | undefined;
     try {
-        const note = `registrationId:${registrationId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`;
+        const note = `ticketId:${ticket.id}|mid:${mid}|lid:${lid}|pmid:${paymentMethodId}`;
 
-        const charge = await chargeWithGateway({
+        chargeResult = await chargeWithGateway({
             gateway,
             gatewayCustomerId,
             paymentMethodId,
@@ -76,11 +76,6 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
                 registrationId,
             },
         });
-        paymentIntentId = charge.paymentIntentId;
-        gatewayMetadata = {
-            ...gatewayMetadata,
-            ...charge.gatewayMetadata,
-        };
     } catch (error) {
         if (error instanceof EventRegistrationError) {
             throw error;
@@ -97,7 +92,9 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     }
 
     const now = new Date();
-
+    if (!chargeResult) {
+        throw new Error("Failed to charge");
+    }
     return db.transaction(async (tx) => {
         const [transaction] = await tx.insert(transactions).values({
             description,
@@ -109,12 +106,21 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
             locationId: lid,
             memberId: mid,
             paymentMethodId,
-            paymentIntentId,
+            paymentIntentId: chargeResult.paymentIntentId,
             paymentType,
             chargeDate: now,
             feeAmount: feesAmount,
             currency,
-            metadata: gatewayMetadata,
+            activities: [{
+                at: now.toISOString(),
+                reason: "Payment succeeded",
+                paymentType,
+                brand: chargeResult.brand,
+                last4: chargeResult.last4,
+            }],
+            metadata: {
+                registrationId,
+            },
         }).returning({ id: transactions.id });
 
         if (!transaction) {

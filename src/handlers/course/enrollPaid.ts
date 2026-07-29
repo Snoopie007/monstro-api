@@ -3,6 +3,7 @@ import {
     calculateChargeDetails,
     chargeWithGateway,
     getCheckoutContext,
+    type ChargeWithGatewayResult,
 } from "@/utils";
 import { courseEnrollments, transactions } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
@@ -44,47 +45,37 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
     const currency = locationState.currency;
     const now = new Date();
 
+    const enrollmentId = generateUUID("cen_");
+    const description = `Payment for course enrollment ${courseTitle}`;
+    let chargeResult: ChargeWithGatewayResult | undefined;
+    try {
+        const note = `mid:${mid}|lid:${lid}|courseId:${courseId}`;
+
+        chargeResult = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            paymentType,
+            total,
+            feesAmount,
+            currency,
+            description,
+            referenceId: enrollmentId,
+            note,
+            metadata: {
+                memberId: mid,
+                locationId: lid,
+                enrollmentId,
+            },
+        });
+
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
     return db.transaction(async (tx) => {
-        const enrollmentId = generateUUID("cen_");
-        const description = `Payment for course enrollment ${courseTitle}`;
 
-        let paymentIntentId: string | null = null;
-        let gatewayMetadata: Record<string, unknown> = {
-            gatewayService: gateway.service,
-            enrollmentId,
-            courseId,
-        };
 
-        try {
-            const note = `enrollmentId:${enrollmentId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`;
-
-            const charge = await chargeWithGateway({
-                gateway,
-                gatewayCustomerId,
-                paymentMethodId,
-                paymentType,
-                total,
-                feesAmount,
-                currency,
-                description,
-                referenceId: enrollmentId,
-                note,
-                metadata: {
-                    memberId: mid,
-                    locationId: lid,
-                    enrollmentId,
-                },
-            });
-            paymentIntentId = charge.paymentIntentId;
-            gatewayMetadata = {
-                ...gatewayMetadata,
-                ...charge.gatewayMetadata,
-            };
-        } catch (error) {
-            console.error(error);
-            tx.rollback();
-            throw error;
-        }
 
         const [transaction] = await tx.insert(transactions).values({
             description,
@@ -93,7 +84,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
             tax,
             type: "inbound",
             status: "paid",
-            paymentIntentId,
+            paymentIntentId: chargeResult?.paymentIntentId,
             locationId: lid,
             memberId: mid,
             paymentMethodId,
@@ -101,7 +92,16 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
             chargeDate: now,
             feeAmount: feesAmount,
             currency,
-            metadata: gatewayMetadata,
+            activities: [{
+                at: now.toISOString(),
+                reason: "Payment succeeded",
+                paymentType,
+                brand: chargeResult.brand,
+                last4: chargeResult.last4,
+            }],
+            metadata: {
+                enrollmentId,
+            },
         }).returning();
 
         const [enrollment] = await tx.insert(courseEnrollments).values({
