@@ -62,20 +62,22 @@ export const SubscriptionJobSchema = z.object({
     location: LocationSchema,
     taxRate: z.coerce.number(),
     pricing: PricingSchema,
-    discount: DiscountSchema.optional()
-})
+    discount: DiscountSchema.optional(),
+});
+
 
 export const RecursiveSubscriptionJobSchema = SubscriptionJobSchema.extend({
-    recurrenceCount: z.number()
-})
+    recurrenceCount: z.number(),
+});
 
 export const CashSubscriptionJobSchema = SubscriptionJobSchema.extend({
     vendorId: z.string(),
-})
+});
 
-export const RecursiveCashSubscriptionJobSchema = RecursiveSubscriptionJobSchema.extend({
+export const RecursiveCashSubscriptionJobSchema = SubscriptionJobSchema.extend({
     vendorId: z.string(),
-})
+    recurrenceCount: z.number(),
+});
 export const RRClassSchema = z.object({
     plan: z.object({
         id: z.string(),
