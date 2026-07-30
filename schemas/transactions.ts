@@ -5,7 +5,6 @@ import {
 	pgTable,
 	jsonb,
 	boolean,
-	uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { sql } from "drizzle-orm";
@@ -13,10 +12,12 @@ import { members } from "./members";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
 import type { TransactionActivity, TransactionMetadata } from "../types";
 import type { Currency } from "../types/currency";
+import type { InvoiceItem } from "../types/invoices";
 
 export const transactions = pgTable("transactions", {
-	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+	id: text("id").primaryKey().notNull().default(sql`uuid_base62('txn_')`),
 	description: text("description"),
+	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
 	feeAmount: integer("fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
