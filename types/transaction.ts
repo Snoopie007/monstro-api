@@ -15,8 +15,32 @@ export type TransactionMetadata = {
   subscriptionId?: string;
   packageId?: string;
   chargeId?: string;
+  stripeChargeId?: string;
+  squarePaymentId?: string;
+  squareRefundId?: string;
+  authorizeTransactionId?: string;
+  authorizeIntegrationId?: string;
+  authorizeCustomerProfileId?: string;
+  authorizePaymentProfileId?: string;
+  authorizeResponseCode?: string;
+  authorizeAttemptId?: string;
+  authorizeHeld?: boolean;
+  authorizeReferenceId?: string;
+  authorizeProviderStatus?: string;
+  authorizeRefundTransactionIds?: string[];
+  authorizeVoidTransactionId?: string;
+  authorizeResponseMessage?: string;
+  authorizeAvsResultCode?: string;
+  authorizeCavvResultCode?: string;
 } & Record<string, unknown>;
 
+export type TransactionActivity = {
+  reason: string;
+  at: string;
+  paymentType?: PaymentType;
+  brand?: string;
+  last4?: string;
+};
 
 export type Transaction = typeof transactions.$inferSelect & {
   type: TransactionType;
@@ -24,6 +48,7 @@ export type Transaction = typeof transactions.$inferSelect & {
   member?: Member;
   status: TransactionStatus;
   metadata?: TransactionMetadata;
+  activities?: TransactionActivity[];
   invoice?: MemberInvoice;
 };
 export type NewTransaction = typeof transactions.$inferInsert;

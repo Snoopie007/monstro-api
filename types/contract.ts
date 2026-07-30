@@ -13,4 +13,5 @@ export type MemberContract = typeof memberContracts.$inferSelect & {
     contractTemplate?: Contract;
     location?: Location;
     pricing?: MemberPlanPricing;
+    mdx?: string;
 }

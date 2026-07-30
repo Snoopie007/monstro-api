@@ -25,9 +25,9 @@ export const eventRegistrations = pgTable("event_registrations", {
 	index("event_registrations_member_location_idx").on(t.memberId, t.locationId),
 	uniqueIndex("event_registrations_event_member_active_uq")
 		.on(t.eventId, t.memberId)
-		.where(sql`${t.status} in ('registered', 'attended')`),
+		.where(sql`${t.status} in ('pending', 'registered', 'attended')`),
 	check(
 		"event_registrations_status_check",
-		sql`${t.status} in ('registered', 'cancelled', 'attended')`,
+		sql`${t.status} in ('pending', 'registered', 'cancelled', 'attended')`,
 	),
 ]);

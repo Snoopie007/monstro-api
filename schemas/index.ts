@@ -3,6 +3,7 @@ export * from "./achievements";
 export * from "./attendances";
 export * from "./chat";
 export * from "./contracts";
+export * from "./courses";
 export * from "./DatabaseEnums";
 export * from "./ecommerce";
 export * from "./event";
@@ -42,3 +43,4 @@ export * from "./verifications";
 export * from "./relations";
 export * from "./wallets";
 export * from "./WebsiteContents";
+

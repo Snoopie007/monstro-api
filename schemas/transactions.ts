@@ -5,23 +5,19 @@ import {
 	pgTable,
 	jsonb,
 	boolean,
-	uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { sql } from "drizzle-orm";
 import { members } from "./members";
-import { memberInvoices } from "./invoice";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionMetadata } from "../types";
-// import type { InvoiceItem } from "../types/invoices";
+import type { TransactionActivity, TransactionMetadata } from "../types";
 import type { Currency } from "../types/currency";
-import { orders } from "./ecommerce";
+import type { InvoiceItem } from "../types/invoices";
 
 export const transactions = pgTable("transactions", {
-	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+	id: text("id").primaryKey().notNull().default(sql`uuid_base62('txn_')`),
 	description: text("description"),
-	// items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
-	orderId: text("order_id").references(() => orders.id),
+	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
 	feeAmount: integer("fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
@@ -35,10 +31,10 @@ export const transactions = pgTable("transactions", {
 	status: TransactionStatusEnum("status").notNull().default("failed"),
 	memberId: text("member_id").references(() => members.id, { onDelete: "cascade" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	invoiceId: text("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
 	chargeDate: timestamp("charge_date", { withTimezone: true }).notNull().defaultNow(),
 	currency: text("currency").$type<Currency>().notNull().default("USD"),
 	metadata: jsonb("metadata").$type<TransactionMetadata>().notNull().default(sql`'{}'::jsonb`),
+	activities: jsonb("activities").$type<TransactionActivity[]>().notNull().default(sql`'[]'::jsonb`),
 	refunded: boolean("refunded").notNull().default(false),
 	refundedAmount: integer("refunded_amount").notNull().default(0),
 	tax: integer("total_tax").notNull().default(0),

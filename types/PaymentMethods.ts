@@ -1,9 +1,10 @@
 
 import type { PaymentType } from "./DatabaseEnums"
 import type { Address } from "./other"
+
 export type PaymentMethod = {
     id: string
-    source: 'stripe' | 'square'
+    source: 'stripe' | 'square' | 'authorize'
     type: PaymentType
     address?: Address
     card?: CardPaymentMethod
@@ -16,8 +17,8 @@ export type PaymentMethod = {
 export type CardPaymentMethod = {
     brand: string
     last4: string | null
-    expMonth: number
-    expYear: number
+    expMonth: number | null
+    expYear: number | null
 }
 
 export type UsBankAccountPaymentMethod = {
