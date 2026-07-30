@@ -1,29 +1,18 @@
-import {
-  boolean,
-  foreignKey,
-  pgTable,
-  timestamp,
-  text,
-  integer,
-  jsonb,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
-import { locations } from "./locations";
 import { sql } from "drizzle-orm";
-import { members } from "./members";
-import { InvoiceStatusEnum } from "./DatabaseEnums";
+import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import type { Currency } from "../types/currency";
 import type { InvoiceItem } from "../types/invoices";
+import { InvoiceStatusEnum, PaymentTypeEnum } from "./DatabaseEnums";
+import { locations } from "./locations";
+import { members } from "./members";
 import { transactions } from "./transactions";
-
-const paymentTypeValues = ["cash", "card", "us_bank_account", "paypal", "apple_pay", "google_pay"] as const;
 
 export const memberInvoices = pgTable('member_invoices', {
     id: text('id').primaryKey().notNull().default(sql`uuid_base62('inv_')`),
     metadata: jsonb('metadata').$type<Record<string, any>>().default(sql`'{}'::jsonb`),
-    currency: text('currency').default('USD'),
+    currency: text('currency').$type<Currency>().notNull().default('USD'),
     memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
     locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
-    transactionId: text('transaction_id'),
     memberPlanId: text('member_plan_id'),
     description: text('description'),
     items: jsonb('items').array().$type<InvoiceItem[]>().default(sql`'{}'::jsonb[]`),
@@ -38,18 +27,14 @@ export const memberInvoices = pgTable('member_invoices', {
     invoicePdf: text('invoice_pdf'),
     receiptUrl: text('receipt_url'),
     status: InvoiceStatusEnum('status').notNull().default('draft'),
-    paymentType: text('payment_type', { enum: paymentTypeValues }).notNull().default('cash'),
+    paymentType: PaymentTypeEnum('payment_type').notNull().default('cash'),
     invoiceType: text('invoice_type').notNull().default('one-off'),
+    transactionId: text('transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [
-    foreignKey({
-      name: 'member_invoices_transaction_id_fkey',
-      columns: [t.transactionId],
-      foreignColumns: [transactions.id],
-    }).onDelete('set null'),
     uniqueIndex('member_invoices_transaction_id_uq')
-      .on(t.transactionId)
-      .where(sql`${t.transactionId} is not null`),
+        .on(t.transactionId)
+        .where(sql`${t.transactionId} is not null`),
 ]);
