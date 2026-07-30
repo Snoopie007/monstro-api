@@ -1,12 +1,13 @@
 import type { Elysia } from "elysia";
 import { t } from "elysia";
+import { randomUUID } from "node:crypto";
 import { handleCourseEnrollPaid, handleCourseEnrollFree, CourseEnrollError } from "@/handlers/course";
 import { db } from "src/db/db";
 
 export function locationCoursesEnroll(app: Elysia) {
     return app.post("/courses/enroll", async ({ params, status, body }) => {
         const { lid } = params;
-        const { paymentMethodId, courseId, mid, paymentType } = body;
+        const { paymentMethodId, courseId, mid, paymentType, attemptId } = body;
 
         try {
             const course = await db.query.courses.findFirst({
@@ -39,6 +40,7 @@ export function locationCoursesEnroll(app: Elysia) {
                     paymentType,
                     courseTitle: course.title,
                     coursePrice: course.price,
+                    attemptId: attemptId ?? randomUUID(),
                 });
                 return status(200, enrollment);
             }
@@ -64,6 +66,7 @@ export function locationCoursesEnroll(app: Elysia) {
                 t.Literal("card"),
                 t.Literal("us_bank_account"),
             ])),
+            attemptId: t.Optional(t.String()),
         }),
     });
 }

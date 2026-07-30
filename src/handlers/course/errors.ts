@@ -1,15 +1,15 @@
 import Stripe from "stripe";
 import { SquareError } from "square";
-import { CheckoutError } from "@/utils";
+import { CheckoutError, PaymentChargeError } from "@/utils";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
 
 type StatusFn = (code: number, body: Record<string, string> | string) => unknown;
 
 export class CourseEnrollError extends Error {
-    readonly status: 400 | 404 | 409 | 500;
+    readonly status: 202 | 400 | 404 | 409 | 500;
     readonly code?: string;
 
-    constructor(status: 400 | 404 | 409 | 500, message: string, code?: string) {
+    constructor(status: 202 | 400 | 404 | 409 | 500, message: string, code?: string) {
         super(message);
         this.name = "CourseEnrollPaidError";
         this.status = status;
@@ -27,6 +27,12 @@ export function mapCourseEnrollPaidError(status: StatusFn, error: unknown) {
     }
     if (error instanceof CheckoutError) {
         return status(error.status, { error: error.message });
+    }
+    if (error instanceof PaymentChargeError) {
+        return status(error.status, {
+            error: error.message,
+            ...(error.code ? { code: error.code } : {}),
+        });
     }
     if (error instanceof Stripe.errors.StripeError) {
         const { message } = handleStripeError({ error });

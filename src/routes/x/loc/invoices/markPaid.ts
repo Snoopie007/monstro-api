@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { chargeWallet } from "@/libs/wallet";
 import type Elysia from "elysia";
@@ -6,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
 import { getCurrency } from "@/utils";
+import type { Currency } from "@subtrees/types/currency";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/mark-paid", async ({ params, body, status }) => {
@@ -81,29 +83,21 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         }
 
         await db.transaction(async (tx) => {
-            const existingTransaction = await tx.query.transactions.findFirst({
-                where: (tr, { and, eq }) => and(
-                    eq(tr.invoiceId, iid),
-                    eq(tr.status, PENDING_TRANSACTION_STATUS)
-                ),
-                columns: {
-                    metadata: true,
-                },
-            });
-
-            await tx.update(memberInvoices).set({
-                status: "paid",
-                paid: true,
-                updated: new Date(),
-            }).where(eq(memberInvoices.id, iid));
+            const existingTransaction = invoice.transactionId
+                ? await tx.query.transactions.findFirst({
+                    where: eq(transactions.id, invoice.transactionId),
+                })
+                : undefined;
+            if (invoice.transactionId) assert(existingTransaction);
 
             const paymentMetadata = {
-                ...((existingTransaction?.metadata as Record<string, unknown> | null) || {}),
+                ...(existingTransaction?.metadata ?? {}),
                 notes: notes || "",
                 markedPaidAt: new Date().toISOString(),
                 ...(walletChargeMetadata || {}),
             };
 
+            let transactionId = invoice.transactionId;
             if (existingTransaction) {
                 await tx.update(transactions).set({
                     status: "paid",
@@ -111,12 +105,11 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     chargeDate: paidDate ? new Date(paidDate) : new Date(),
                     metadata: paymentMetadata,
                     updated: new Date(),
-                }).where(and(eq(transactions.invoiceId, iid), eq(transactions.status, PENDING_TRANSACTION_STATUS)));
+                }).where(eq(transactions.id, existingTransaction.id));
             } else {
-                await tx.insert(transactions).values({
+                const [transaction] = await tx.insert(transactions).values({
                     memberId: invoice.memberId,
                     locationId: lid,
-                    invoiceId: iid,
                     description: invoice.description || "Invoice payment",
                     type: "inbound",
                     status: "paid",
@@ -124,12 +117,20 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     total: invoice.total,
                     subTotal: invoice.subTotal,
                     tax: invoice.tax,
-                    currency: invoice.currency || "usd",
+                    currency: (invoice.currency || "USD") as Currency,
                     chargeDate: paidDate ? new Date(paidDate) : new Date(),
                     metadata: paymentMetadata,
-                });
+                }).returning({ id: transactions.id });
+                assert(transaction);
+                transactionId = transaction.id;
             }
 
+            await tx.update(memberInvoices).set({
+                status: "paid",
+                paid: true,
+                transactionId,
+                updated: new Date(),
+            }).where(eq(memberInvoices.id, iid));
             if (invoice.memberPlanId) {
                 const sub = await tx.query.memberSubscriptions.findFirst({
                     where: (s, { eq }) => eq(s.id, invoice.memberPlanId!),
@@ -175,7 +176,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 subTotal: sub.pricing.price,
                                 total: sub.pricing.price,
                                 tax: 0,
-                                currency: currency || "usd",
+                                currency: (currency || "USD") as Currency,
                                 status: "draft",
                                 dueDate: new Date(nextEnd),
                                 paymentType: "cash",
@@ -192,10 +193,9 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 return;
                             }
 
-                            await tx.insert(transactions).values({
+                            const [transaction] = await tx.insert(transactions).values({
                                 memberId: sub.memberId,
                                 locationId: sub.locationId,
-                                invoiceId: nextInvoice.id,
                                 description: `${sub.pricing.name} - Recurring Payment`,
                                 type: "inbound",
                                 status: PENDING_TRANSACTION_STATUS,
@@ -203,8 +203,10 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 total: sub.pricing.price,
                                 subTotal: sub.pricing.price,
                                 tax: 0,
-                                currency: currency || "usd",
-                            });
+                                currency: (currency || "USD") as Currency,
+                            }).returning({ id: transactions.id });
+                            assert(transaction);
+                            await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, nextInvoice.id));
                         }
                     }
                 }
