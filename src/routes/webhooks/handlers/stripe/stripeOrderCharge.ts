@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import type { PaymentType } from "@subtrees/types";
 import { orders, transactions } from "@subtrees/schemas";
@@ -30,11 +31,8 @@ export async function handleStripeOrderCharge({
     paymentMethodId,
     paymentIntentId,
     feeAmount,
-    stripeChargeId, }:
-    HandleStripeOrderChargeProps
-) {
-    const now = new Date();
-    // Read the pre-update status and notification relations once; the returned order below is post-update.
+    stripeChargeId,
+}: HandleStripeOrderChargeProps) {
     const previousOrder = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
         with: {
@@ -50,41 +48,42 @@ export async function handleStripeOrderCharge({
             },
         },
     });
+    assert(previousOrder, "Order not found");
 
+    const order = await db.transaction(async (tx) => {
+        const [transaction] = await tx.insert(transactions).values({
+            locationId,
+            memberId,
+            paymentMethodId,
+            paymentIntentId: paymentIntentId || undefined,
+            paymentType,
+            feeAmount,
+            total: amount,
+            type: "inbound",
+            status: success ? "paid" : "failed",
+            failedReason,
+            failedCode,
+            metadata: {
+                gatewayService: "stripe",
+                stripeChargeId: stripeChargeId || undefined,
+            },
+        }).returning({ id: transactions.id });
+        assert(transaction);
 
-    const [order] = await db.update(orders).set({
-        status: success ? "paid" : "unpaid",
-        updated: now,
-    }).where(eq(orders.id, orderId)).returning();
-
-    if (!order) {
-        throw new Error("Order not found");
-    }
-
-    await db.insert(transactions).values({
-        orderId: order.id,
-        locationId,
-        memberId,
-        paymentMethodId,
-        paymentIntentId,
-        paymentType,
-        feeAmount,
-        total: amount,
-        type: "inbound" as const,
-        status: success ? "paid" as const : "failed" as const,
-        failedReason: failedReason,
-        failedCode: failedCode,
-        metadata: {
-            gatewayService: "stripe",
-            stripeChargeId,
-        },
+        const [updatedOrder] = await tx.update(orders).set({
+            status: success ? "paid" : "unpaid",
+            transactionId: transaction.id,
+            updated: new Date(),
+        }).where(eq(orders.id, orderId)).returning();
+        assert(updatedOrder);
+        return updatedOrder;
     });
-    if (success && previousOrder) {
-        await queueOrderPaidNotifications({
-            order,
-            member: previousOrder.member,
-            location: previousOrder.location,
-        });
-    }
-    ;
+
+    if (!success) return;
+
+    await queueOrderPaidNotifications({
+        order,
+        member: previousOrder.member,
+        location: previousOrder.location,
+    });
 }

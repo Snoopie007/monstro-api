@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
@@ -118,10 +119,9 @@ export async function createInvoiceRoutes(app: Elysia) {
             }
 
             if (sub.paymentType === "cash") {
-                await db.insert(transactions).values({
+                const [transaction] = await db.insert(transactions).values({
                     memberId,
                     locationId: lid,
-                    invoiceId: invoice.id,
                     description: description || `${sub.pricing.plan?.name || "Subscription"} payment`,
                     type: "inbound",
                     status: PENDING_TRANSACTION_STATUS,
@@ -134,7 +134,10 @@ export async function createInvoiceRoutes(app: Elysia) {
                         intendedPaymentType: sub.paymentType,
                         collectionMethod,
                     },
-                });
+                }).returning({ id: transactions.id });
+                assert(transaction);
+                await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
+                invoice.transactionId = transaction.id;
             }
 
             return status(201, { invoice });
@@ -202,10 +205,9 @@ export async function createInvoiceRoutes(app: Elysia) {
         const intendedPaymentType = paymentType || "card";
         if (intendedPaymentType === "cash") {
             try {
-                await db.insert(transactions).values({
+                const [transaction] = await db.insert(transactions).values({
                     memberId,
                     locationId: lid,
-                    invoiceId: invoice.id,
                     description: description || `Invoice payment`,
                     type: "inbound",
                     status: PENDING_TRANSACTION_STATUS,
@@ -218,7 +220,10 @@ export async function createInvoiceRoutes(app: Elysia) {
                         intendedPaymentType,
                         collectionMethod,
                     },
-                });
+                }).returning({ id: transactions.id });
+                assert(transaction);
+                await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
+                invoice.transactionId = transaction.id;
             } catch (error) {
                 console.error("[x/invoices:create] Transaction insert threw", {
                     locationId: lid,

@@ -249,7 +249,7 @@ export function migrateSubRoutes(app: Elysia) {
                 } else if (gateway.service === "square") {
                     try {
                         const square = new SquarePaymentGateway(gateway.accessToken);
-                        const squareLocationId = gateway.metadata?.squareLocationId;
+                        const squareLocationId = typeof gateway.metadata?.squareLocationId === "string" ? gateway.metadata.squareLocationId : "";
                         if (!squareLocationId) {
                             throw new Error("Square location ID not found");
                         }

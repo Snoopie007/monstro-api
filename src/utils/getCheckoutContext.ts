@@ -1,14 +1,20 @@
 import { db } from "@/db/db";
+import type { IntegrationMetadata } from "@subtrees/types";
 
 export class CheckoutError extends Error {
-	readonly status: 404 | 400;
+	readonly status: 202 | 400 | 404 | 500;
 
-	constructor(status: 404 | 400, message: string) {
+	constructor(status: 202 | 400 | 404 | 500, message: string) {
 		super(message);
 		this.name = "CheckoutError";
 		this.status = status;
 	}
 }
+type CheckoutGateway =
+	| { service: "stripe"; integrationId: string; accessToken: string; accountId: string; metadata: IntegrationMetadata }
+	| { service: "square"; integrationId: string; accessToken: string; accountId: string; metadata: IntegrationMetadata }
+	| { service: "authorize"; integrationId: string; apiKey: string; secretKey: string; accountId: string; metadata: IntegrationMetadata };
+
 
 export async function getCheckoutContext({
 	lid,
@@ -63,40 +69,57 @@ export async function getCheckoutContext({
 
 	const { locationState, taxRates } = location;
 	const { paymentGatewayId } = locationState;
-
 	if (!paymentGatewayId) {
 		throw new CheckoutError(400, "No payment gateway set");
 	}
-
 	const gateway = await db.query.integrations.findFirst({
 		where: (g, { eq }) => eq(g.id, paymentGatewayId),
 		columns: {
+			id: true,
 			accountId: true,
+			apiKey: true,
+			secretKey: true,
 			accessToken: true,
 			service: true,
 			metadata: true,
-			apiKey: true,
-			secretKey: true,
 		},
 	});
 
 	if (!gateway) {
 		throw new CheckoutError(400, "Gateway not found");
 	}
-	if (gateway.service === "authorize") {
+
+	const { accountId, service, metadata } = gateway;
+	if (service === "authorize") {
 		if (!gateway.apiKey || !gateway.secretKey) {
 			throw new CheckoutError(400, "Authorize.net gateway credentials not found");
 		}
-	} else if (!gateway.accessToken) {
-		throw new CheckoutError(400, "Gateway credentials not found");
+		const authorizeGateway: CheckoutGateway = {
+			service,
+			integrationId: gateway.id,
+			apiKey: gateway.apiKey,
+			secretKey: gateway.secretKey,
+			accountId,
+			metadata: (metadata ?? {}) as IntegrationMetadata,
+		};
+		return { ml: memberLocation, gatewayCustomerId, locationState, taxRates, gateway: authorizeGateway };
 	}
 
-	return {
-		ml: memberLocation,
-		gatewayCustomerId,
-		taxRates,
-		gateway,
-	};
+	if (service === "stripe" || service === "square") {
+		if (!gateway.accessToken) {
+			throw new CheckoutError(400, "Gateway credentials not found");
+		}
+		const cardGateway: CheckoutGateway = {
+			service,
+			accessToken: gateway.accessToken,
+			integrationId: gateway.id,
+			accountId,
+			metadata: (metadata ?? {}) as IntegrationMetadata,
+		};
+		return { ml: memberLocation, gatewayCustomerId, locationState, taxRates, gateway: cardGateway };
+	}
+
+	throw new CheckoutError(400, "Unsupported payment gateway");
 }
 
 export type CheckoutContext = Awaited<ReturnType<typeof getCheckoutContext>>;

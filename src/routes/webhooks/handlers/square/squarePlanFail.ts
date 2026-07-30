@@ -1,7 +1,9 @@
-import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@subtrees/schemas";
+import { strict as assert } from "node:assert";
+import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import type { PaymentType } from "@subtrees/types";
+import type { Currency } from "@subtrees/types/currency";
 
 
 interface HandleSquarePlanFailProps {
@@ -17,72 +19,67 @@ interface HandleSquarePlanFailProps {
 }
 
 export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
-    const { invoiceId, paymentType, paymentMethodId,
-        feeAmount, squarePaymentId, squarePaymentStatus, amount, failedReason, failedCode } = props;
-
-    const now = new Date();
-    const [invoice] = await db.update(memberInvoices).set({
-        status: "unpaid",
-        paid: false,
-        updated: now,
-    }).where(eq(memberInvoices.id, invoiceId)).returning({
-        description: memberInvoices.description,
-        currency: memberInvoices.currency,
-        locationId: memberInvoices.locationId,
-        memberId: memberInvoices.memberId,
-        memberPlanId: memberInvoices.memberPlanId,
-        total: memberInvoices.total,
-        subTotal: memberInvoices.subTotal,
-        tax: memberInvoices.tax,
-    });
-
-    if (!invoice) {
-        throw new Error("Invoice not found");
-    }
-
-
-    const memberPlanId = invoice.memberPlanId;
-    const memberId = invoice.memberId;
-    const locationId = invoice.locationId;
-    if (!memberId || !locationId) {
-        throw new Error("Invalid invoice");
-    }
-
-
-    const values = {
-        ...invoice,
+    const {
         invoiceId,
-        total: amount,
-        type: "inbound" as const,
-        status: "failed" as const,
-        paymentMethodId: paymentMethodId ?? null,
         paymentType,
-        chargeDate: now,
+        paymentMethodId,
         feeAmount,
+        squarePaymentId,
+        squarePaymentStatus,
+        amount,
         failedReason,
         failedCode,
-        metadata: {
-            gatewayService: "square" as const,
-            squarePaymentId,
-            squarePaymentStatus,
-            memberPlanId,
-        },
-        updated: now,
-    };
+    } = props;
+    const now = new Date();
 
-    await db.insert(transactions).values(values).onConflictDoUpdate({
-        target: transactions.invoiceId,
-        set: values,
-    });
+    await db.transaction(async (tx) => {
+        const [invoice] = await tx.update(memberInvoices).set({
+            status: "unpaid",
+            paid: false,
+            updated: now,
+        }).where(eq(memberInvoices.id, invoiceId)).returning();
+        assert(invoice, "Invoice not found");
 
-    if (memberPlanId) {
-        const isPackage = memberPlanId.startsWith("pkg_");
-        if (!isPackage) {
-            await db.update(memberSubscriptions).set({
+        const values = {
+            description: invoice.description,
+            currency: (invoice.currency || "USD") as Currency,
+            locationId: invoice.locationId,
+            memberId: invoice.memberId,
+            total: amount,
+            subTotal: invoice.subTotal,
+            tax: invoice.tax,
+            type: "inbound" as const,
+            status: "failed" as const,
+            paymentMethodId: paymentMethodId ?? null,
+            paymentType,
+            chargeDate: now,
+            feeAmount,
+            failedReason,
+            failedCode,
+            metadata: {
+                gatewayService: "square" as const,
+                squarePaymentId,
+                squarePaymentStatus,
+                memberPlanId: invoice.memberPlanId,
+            },
+            updated: now,
+        };
+
+        if (invoice.transactionId) {
+            await tx.update(transactions).set(values).where(eq(transactions.id, invoice.transactionId));
+        } else {
+            const [transaction] = await tx.insert(transactions).values(values).returning({ id: transactions.id });
+            assert(transaction);
+            await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoiceId));
+        }
+
+        if (invoice.memberPlanId?.startsWith("pkg_") === false) {
+            await tx.update(memberSubscriptions).set({
                 gatewayPaymentId: paymentMethodId,
                 status: "past_due",
-            }).where(eq(memberSubscriptions.id, memberPlanId));
+            }).where(eq(memberSubscriptions.id, invoice.memberPlanId));
         }
-    }
+    });
+
     console.log("[SQUARE WEBHOOK] Payment failed for invoice", invoiceId);
 }

@@ -9,6 +9,7 @@ export const integrations = pgTable("integrations", {
     service: text("service").notNull(),
     apiKey: text("api_key"),
     secretKey: text("secret_key"),
+    webhookSignatureKey: text("webhook_signature_key"),
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     accountId: text("account_id").notNull(),

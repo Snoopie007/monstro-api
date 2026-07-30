@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails, getCurrency } from "@/utils";
@@ -395,7 +396,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     const txValues = {
                         memberId: sub.memberId,
                         locationId: lid,
-                        invoiceId: invoice.id,
                         description: chargeDescription,
                         type: "inbound" as const,
                         status: "paid" as const,
@@ -408,7 +408,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         currency: currency || "usd",
                         feeAmount: chargeDetails.feesAmount,
                         metadata: {
-                            invoiceId: invoice.id,
                             memberPlanId: sub.id,
                             memberSubscriptionId: sub.id,
                             gatewayService,
@@ -420,17 +419,9 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         updated: new Date(),
                     };
 
-                    const [existingTransaction] = await tx
-                        .select({ id: transactions.id })
-                        .from(transactions)
-                        .where(eq(transactions.invoiceId, invoice.id))
-                        .limit(1);
-
-                    if (existingTransaction) {
-                        await tx.update(transactions).set(txValues).where(eq(transactions.id, existingTransaction.id));
-                    } else {
-                        await tx.insert(transactions).values(txValues);
-                    }
+                    const [transaction] = await tx.insert(transactions).values(txValues).returning({ id: transactions.id });
+                    assert(transaction);
+                    await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
 
                     await tx.update(memberLocations).set({
                         status: "active",

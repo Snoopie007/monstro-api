@@ -1,13 +1,25 @@
 import Stripe from "stripe";
 import { SquareError } from "square";
-import { CheckoutError, handleSquareError, handleStripeError } from "@/utils";
-
-type StatusFn = (code: number, body: { error: string } | string) => unknown;
+import { CheckoutError, CheckoutPendingError, PaymentChargeError, handleSquareError, handleStripeError } from "@/utils";
+type StatusFn = (code: number, body: Record<string, unknown> | string) => unknown;
 
 export function mapMercCheckoutError(status: StatusFn, error: unknown) {
     console.error(error);
+    if (error instanceof CheckoutPendingError) {
+        return status(error.status, {
+            error: error.message,
+            code: "PAYMENT_PENDING",
+            transactionId: error.transactionId,
+        });
+    }
     if (error instanceof CheckoutError) {
         return status(error.status, { error: error.message });
+    }
+    if (error instanceof PaymentChargeError) {
+        return status(error.status, {
+            error: error.message,
+            ...(error.code ? { code: error.code } : {}),
+        });
     }
     if (error instanceof Stripe.errors.StripeError) {
         const { message } = handleStripeError({ error });

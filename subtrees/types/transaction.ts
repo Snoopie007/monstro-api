@@ -15,6 +15,9 @@ export type TransactionMetadata = {
   subscriptionId?: string;
   packageId?: string;
   chargeId?: string;
+  stripeChargeId?: string;
+  squarePaymentId?: string;
+  squareRefundId?: string;
   authorizeTransactionId?: string;
   authorizeIntegrationId?: string;
   authorizeCustomerProfileId?: string;
@@ -22,6 +25,10 @@ export type TransactionMetadata = {
   authorizeResponseCode?: string;
   authorizeAttemptId?: string;
   authorizeHeld?: boolean;
+  authorizeReferenceId?: string;
+  authorizeProviderStatus?: string;
+  authorizeRefundTransactionIds?: string[];
+  authorizeVoidTransactionId?: string;
   authorizeResponseMessage?: string;
   authorizeAvsResultCode?: string;
   authorizeCavvResultCode?: string;
