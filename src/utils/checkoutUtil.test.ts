@@ -6,8 +6,7 @@ const originalApiUrl = process.env.AUTHORIZE_API_URL;
 const gateway = {
     service: "authorize" as const,
     integrationId: "integration-1",
-    apiKey: "login",
-    secretKey: "key",
+    authentication: { name: "login", transactionKey: "key" },
     accountId: "account",
     metadata: {},
 };

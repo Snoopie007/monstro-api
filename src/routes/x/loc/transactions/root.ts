@@ -11,7 +11,13 @@ import {
     reservations,
     transactions,
 } from "@subtrees/schemas";
-import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import {
+    AuthorizePaymentGateway,
+    AuthorizeTransportError,
+    SquarePaymentGateway,
+    StripePaymentGateway,
+} from "@/libs/PaymentGateway";
+import { authorizeAuthenticationFromIntegration } from "@/libs/PaymentGateway/AuthorizeAuthentication";
 
 
 function getRefundPlanIds(txMeta: Record<string, unknown>, invoiceMemberPlanId: string | null) {
@@ -90,15 +96,24 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                     eq(candidate.locationId, lid),
                     eq(candidate.service, "authorize"),
                 ),
-                columns: { apiKey: true, secretKey: true },
-            });
-            if (!integration?.apiKey || !integration.secretKey) {
-                return status(404, { error: "Authorize.net integration not found" });
-            }
+				columns: {
+					id: true,
+					apiKey: true,
+					secretKey: true,
+					accessToken: true,
+					refreshToken: true,
+					expires: true,
+					metadata: true,
+				},
+			});
+			if (!integration) {
+				return status(404, { error: "Authorize.net integration not found" });
+			}
             const providerId = transaction.paymentIntentId
                 || (typeof txMeta.authorizeTransactionId === "string" ? txMeta.authorizeTransactionId : null);
             if (!providerId) return status(400, { error: "No Authorize.net transaction ID found" });
-            const authorize = new AuthorizePaymentGateway(integration.apiKey, integration.secretKey);
+			const authentication = await authorizeAuthenticationFromIntegration(integration);
+			const authorize = new AuthorizePaymentGateway(authentication);
 
             if (txMeta.authorizeRefundState === "pending") {
                 let details;

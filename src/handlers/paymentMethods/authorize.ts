@@ -7,6 +7,7 @@ import {
     authorizeMerchantCustomerId,
     type AuthorizeCustomerProfile,
 } from "@/libs/PaymentGateway";
+import { authorizeAuthenticationFromIntegration } from "@/libs/PaymentGateway/AuthorizeAuthentication";
 import { integrations, locationState, memberLocations } from "@subtrees/schemas";
 import type { Address, PaymentMethod } from "@subtrees/types";
 
@@ -23,14 +24,23 @@ async function getAuthorizeGateway(lid: string) {
             eq(integrations.locationId, lid),
             eq(integrations.service, "authorize"),
         ),
-        columns: { apiKey: true, secretKey: true, metadata: true },
+        columns: {
+            id: true,
+            apiKey: true,
+            secretKey: true,
+            accessToken: true,
+            refreshToken: true,
+            expires: true,
+            metadata: true,
+        },
     });
-    if (!integration?.apiKey || !integration.secretKey) {
+    if (!integration) {
         throw new Error("Authorize.net integration not found");
     }
+    const authentication = await authorizeAuthenticationFromIntegration(integration);
     return {
         integration,
-        gateway: new AuthorizePaymentGateway(integration.apiKey, integration.secretKey),
+        gateway: new AuthorizePaymentGateway(authentication),
     };
 }
 
@@ -106,7 +116,7 @@ export async function getAuthorizeClientConfig(lid: string) {
     const { integration } = await getAuthorizeGateway(lid);
     const publicClientKey = integration.metadata?.publicClientKey;
     const scriptUrl = process.env.AUTHORIZE_SCRIPT_URL;
-    if (typeof publicClientKey !== "string" || !publicClientKey || !scriptUrl) {
+    if (!integration.apiKey || typeof publicClientKey !== "string" || !publicClientKey || !scriptUrl) {
         throw new Error("Authorize.net client configuration not found");
     }
     return { apiLoginId: integration.apiKey, publicClientKey, scriptUrl };

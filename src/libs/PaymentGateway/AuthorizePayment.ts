@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { AuthorizeMerchantAuthentication } from "@subtrees/types";
 
 export type AuthorizePaymentProfile = {
     customerPaymentProfileId?: string;
@@ -103,10 +104,7 @@ export function authorizeMerchantCustomerId(memberId: string) {
 }
 
 export class AuthorizePaymentGateway {
-    constructor(
-        private readonly apiLoginId: string,
-        private readonly transactionKey: string,
-    ) {}
+    constructor(private readonly merchantAuthentication: AuthorizeMerchantAuthentication) {}
 
     private async request(operation: string, payload: Record<string, unknown>) {
         const url = process.env.AUTHORIZE_API_URL;
@@ -119,7 +117,7 @@ export class AuthorizePaymentGateway {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     [operation]: {
-                        merchantAuthentication: { name: this.apiLoginId, transactionKey: this.transactionKey },
+                        merchantAuthentication: this.merchantAuthentication,
                         ...payload,
                     },
                 }),

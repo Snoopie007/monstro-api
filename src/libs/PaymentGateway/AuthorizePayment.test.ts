@@ -22,7 +22,7 @@ describe("AuthorizePaymentGateway", () => {
             }));
         }, { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
         await gateway.createPaymentProfile({
             customerProfileId: "12345",
             dataDescriptor: "COMMON.ACCEPT.INAPP.PAYMENT",
@@ -41,6 +41,29 @@ describe("AuthorizePaymentGateway", () => {
         expect(JSON.stringify(requestBody)).not.toContain("cardNumber");
     });
 
+    test("authenticates requests with only an OAuth access token", async () => {
+        process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
+        let requestBody: Record<string, Record<string, unknown>> = {};
+        globalThis.fetch = Object.assign(async (_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+            requestBody = JSON.parse(String(init?.body));
+            return new Response(JSON.stringify({
+                profile: { customerProfileId: "12345" },
+                messages: { resultCode: "Ok", message: [{ code: "I00001", text: "Successful." }] },
+            }));
+        }, { preconnect: originalFetch.preconnect });
+
+        const gateway = new AuthorizePaymentGateway({ accessToken: "oauth-access-token" });
+        await gateway.getCustomerProfile("12345");
+
+        const request = requestBody.getCustomerProfileRequest;
+        expect(request?.merchantAuthentication).toEqual({ accessToken: "oauth-access-token" });
+        expect(Object.keys(request ?? {})).toEqual([
+            "merchantAuthentication",
+            "customerProfileId",
+            "unmaskExpirationDate",
+        ]);
+    });
+
     test("charges a saved customer profile in cents", async () => {
         process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
         let requestBody: Record<string, Record<string, unknown>> = {};
@@ -52,7 +75,7 @@ describe("AuthorizePaymentGateway", () => {
             }));
         }, { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
         const result = await gateway.createCharge("12345", "1001", {
             total: 100,
             currency: "USD",
@@ -101,7 +124,7 @@ describe("AuthorizePaymentGateway", () => {
             messages: { resultCode: "Ok" },
         })), { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
         const result = await gateway.createCharge("12345", "1001", {
             total: 100,
             currency: "USD",
@@ -141,7 +164,7 @@ test("inspects and follows provider transaction state", async () => {
         }));
     }, { preconnect: originalFetch.preconnect });
 
-    const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+    const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
     const details = await gateway.getTransactionDetails("provider-1");
     expect(details.transactionStatus).toBe("settledSuccessfully");
     const refund = await gateway.refundTransaction("provider-1", 100, "0015");
@@ -165,7 +188,7 @@ test("surfaces a singleton follow-on provider error", async () => {
         messages: { resultCode: "Ok" },
     })), { preconnect: originalFetch.preconnect });
 
-    const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+    const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
     expect(gateway.refundTransaction("provider-1", 100, "0015"))
         .rejects.toThrow("does not meet the criteria");
 });

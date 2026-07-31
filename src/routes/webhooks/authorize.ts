@@ -8,7 +8,11 @@ import {
     createEventRegistration,
 } from "@/handlers/event/shared";
 import { db } from "@/db/db";
-import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
+import {
+    AuthorizePaymentGateway,
+    type AuthorizeTransactionDetails,
+} from "@/libs/PaymentGateway";
+import { authorizeAuthenticationFromIntegration } from "@/libs/PaymentGateway/AuthorizeAuthentication";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
@@ -24,6 +28,7 @@ import {
     transactions,
 } from "@subtrees/schemas";
 import type { SubscriptionJobData } from "@subtrees/bullmq";
+import type { Integration } from "@subtrees/types";
 
 const PAYMENT_EVENTS = new Set([
     "net.authorize.payment.authorization.created",
@@ -47,14 +52,11 @@ type AuthorizeWebhookEvent = {
     };
 };
 
-type AuthorizeIntegration = {
-    id: string;
-    locationId: string;
-    accountId: string;
-    apiKey: string | null;
-    secretKey: string | null;
-    webhookSignatureKey: string | null;
-};
+type AuthorizeIntegration = Pick<
+    Integration,
+    "id" | "locationId" | "accountId" | "apiKey" | "secretKey" | "webhookSignatureKey" |
+    "accessToken" | "refreshToken" | "expires" | "metadata"
+>;
 
 type Renewal = {
     startDate: Date;
@@ -130,6 +132,10 @@ async function integrationForEvent(event: AuthorizeWebhookEvent, transaction?: t
                 apiKey: true,
                 secretKey: true,
                 webhookSignatureKey: true,
+                accessToken: true,
+                refreshToken: true,
+                expires: true,
+                metadata: true,
             },
         }) as Promise<AuthorizeIntegration | undefined>;
     }
@@ -148,6 +154,10 @@ async function integrationForEvent(event: AuthorizeWebhookEvent, transaction?: t
             apiKey: true,
             secretKey: true,
             webhookSignatureKey: true,
+            accessToken: true,
+            refreshToken: true,
+            expires: true,
+            metadata: true,
         },
     }) as Promise<AuthorizeIntegration | undefined>;
 }
@@ -398,7 +408,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
             ),
         });
         const integration = await integrationForEvent(event, direct);
-        if (!integration?.apiKey || !integration.secretKey) {
+        if (!integration) {
             return status(401, { error: "Authorize.net webhook merchant is unknown" });
         }
         if (!verifyAuthorizeWebhookSignature(
@@ -409,7 +419,14 @@ export function authorizeWebhookRoutes(app: Elysia) {
             return status(401, { error: "Invalid Authorize.net webhook signature" });
         }
 
-        const authorize = new AuthorizePaymentGateway(integration.apiKey, integration.secretKey);
+        let authentication;
+        try {
+            authentication = await authorizeAuthenticationFromIntegration(integration);
+        } catch (error) {
+            console.error("Unable to authenticate Authorize.net webhook reconciliation", error);
+            return status(503, { error: "Authorize.net integration is unavailable" });
+        }
+        const authorize = new AuthorizePaymentGateway(authentication);
         let details: AuthorizeTransactionDetails;
         try {
             details = await authorize.getTransactionDetails(providerTransactionId);

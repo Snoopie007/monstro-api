@@ -2,6 +2,7 @@ export * from "./account";
 export * from "./achievement";
 export * from "./attendance";
 export * from "./assistant";
+export * from "./authorize";
 export * from "./chat";
 export * from "./contract";
 export * from "./course";

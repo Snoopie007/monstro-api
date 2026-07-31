@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, primaryKey, text, timestamp, pgTable, unique, jsonb, uuid } from "drizzle-orm/pg-core";
+import { bigint, primaryKey, text, timestamp, pgTable, unique, jsonb, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import type { IntegrationMetadata } from "../types/integrations";
 
@@ -13,7 +13,7 @@ export const integrations = pgTable("integrations", {
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     accountId: text("account_id").notNull(),
-    expires: integer("expires_at"),
+    expires: bigint("expires_at", { mode: "number" }),
     metadata: jsonb("metadata").$type<IntegrationMetadata>().notNull().default({}),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),

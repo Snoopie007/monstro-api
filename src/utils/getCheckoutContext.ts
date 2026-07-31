@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
-import type { IntegrationMetadata } from "@subtrees/types";
+import { authorizeAuthenticationFromIntegration } from "@/libs/PaymentGateway/AuthorizeAuthentication";
+import type { AuthorizeMerchantAuthentication, IntegrationMetadata } from "@subtrees/types";
 
 export class CheckoutError extends Error {
 	readonly status: 202 | 400 | 404 | 500;
@@ -13,7 +14,7 @@ export class CheckoutError extends Error {
 type CheckoutGateway =
 	| { service: "stripe"; integrationId: string; accessToken: string; accountId: string; metadata: IntegrationMetadata }
 	| { service: "square"; integrationId: string; accessToken: string; accountId: string; metadata: IntegrationMetadata }
-	| { service: "authorize"; integrationId: string; apiKey: string; secretKey: string; accountId: string; metadata: IntegrationMetadata };
+	| { service: "authorize"; integrationId: string; authentication: AuthorizeMerchantAuthentication; accountId: string; metadata: IntegrationMetadata };
 
 
 export async function getCheckoutContext({
@@ -80,6 +81,8 @@ export async function getCheckoutContext({
 			apiKey: true,
 			secretKey: true,
 			accessToken: true,
+			refreshToken: true,
+			expires: true,
 			service: true,
 			metadata: true,
 		},
@@ -91,14 +94,11 @@ export async function getCheckoutContext({
 
 	const { accountId, service, metadata } = gateway;
 	if (service === "authorize") {
-		if (!gateway.apiKey || !gateway.secretKey) {
-			throw new CheckoutError(400, "Authorize.net gateway credentials not found");
-		}
+		const authentication = await authorizeAuthenticationFromIntegration(gateway);
 		const authorizeGateway: CheckoutGateway = {
 			service,
 			integrationId: gateway.id,
-			apiKey: gateway.apiKey,
-			secretKey: gateway.secretKey,
+			authentication,
 			accountId,
 			metadata: (metadata ?? {}) as IntegrationMetadata,
 		};
