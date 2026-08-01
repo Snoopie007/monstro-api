@@ -208,7 +208,7 @@ async function generateFromMonstro(
       apiKey,
       maxRetries: 0,
       useResponsesApi: true,
-      // This LangChain version does not yet recognize gpt-5.5 as a reasoning model.
+      // This LangChain version predates gpt-5.6-luna model metadata.
       modelKwargs: { reasoning: { effort: "medium" } },
     });
     const response = await model.bindTools([escalationTool]).invoke(

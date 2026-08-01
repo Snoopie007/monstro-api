@@ -26,21 +26,25 @@ function response(extraOutput: unknown[] = []) {
 }
 
 describe("admin support AI cost", () => {
-  test("prices installed LangChain Responses usage", () => {
-    expect(calculateAiCostMicrousd("gpt-5.5", usage)).toBe(20_500);
+  test("prices Luna Responses usage", () => {
+    expect(calculateAiCostMicrousd("gpt-5.6-luna", usage)).toBe(4_100);
     expect(
-      calculateAiCostMicrousd("gpt-5.5", {
+      calculateAiCostMicrousd("gpt-5.6-luna", {
         input_tokens: 2_000,
         input_token_details: { cache_read: 1_000 },
         output_tokens: 500,
       }),
-    ).toBe(20_500);
+    ).toBe(4_100);
+  });
+
+  test("keeps pricing configured model overrides", () => {
+    expect(calculateAiCostMicrousd("gpt-5.5", usage)).toBe(20_500);
   });
 
   test("adds completed search fees and ignores other actions", () => {
     expect(
       calculateResponsesCostMicrousd(
-        "gpt-5.5",
+        "gpt-5.6-luna",
         response([
           {
             type: "web_search_call",
@@ -54,7 +58,7 @@ describe("admin support AI cost", () => {
           },
         ]),
       ),
-    ).toBe(50_500);
+    ).toBe(34_100);
   });
 
   test("does not price incomplete or unknown usage", () => {
@@ -66,7 +70,7 @@ describe("admin support AI cost", () => {
     ).toBe(0);
     expect(calculateResponsesCostMicrousd("gpt-5.4", response())).toBeNull();
     expect(
-      calculateResponsesCostMicrousd("gpt-5.5", { status: "completed" }),
+      calculateResponsesCostMicrousd("gpt-5.6-luna", { status: "completed" }),
     ).toBeNull();
   });
 });

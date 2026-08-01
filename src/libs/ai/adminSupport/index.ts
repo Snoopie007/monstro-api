@@ -11,6 +11,7 @@ import {
 } from "@/libs/broadcast/adminSupport";
 import { generate, promptFor, recallDocuments } from "./tools";
 import { requestsLiveSupport, stripAiIdentityPrefix } from "./utils";
+import { DEFAULT_OPENAI_MODEL } from "@/libs/ai/models";
 
 const LOCK_NAMESPACE = 481923;
 const MAX_HISTORY = 50;
@@ -72,7 +73,7 @@ export async function createAdminSupportAiReply({
           localMatches.length ? documents : [],
           trigger,
         ),
-        Bun.env.SUPPORT_AI_MODEL || "gpt-5.5",
+        Bun.env.SUPPORT_AI_MODEL || DEFAULT_OPENAI_MODEL,
         documents,
         isMarketingSuite,
       );

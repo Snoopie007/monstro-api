@@ -8,6 +8,7 @@ import type {
 	SupportMessage
 } from 'subtrees/types';
 import { HumanMessage, ToolMessage, AIMessage, BaseMessage, SystemMessage, AIMessageChunk } from "@langchain/core/messages";
+import { DEFAULT_OPENAI_MODEL, getOpenAIModelKwargs } from "./models";
 
 
 
@@ -56,6 +57,7 @@ export const MODEL_PRICES: ModelPricing = {
 
 	// GPT-5 Series
 	"gpt-5.2": { prompt: 0.00175, completion: 0.014 },
+	"gpt-5.6-luna": { prompt: 0.001, completion: 0.006 },
 
 	// Omni Models (o-series)
 	"o3": { prompt: 0.01, completion: 0.04 },
@@ -81,6 +83,19 @@ function calculateAICost(usage: { promptTokens: number, completionTokens: number
 	return cost;
 }
 
+function getModelName(model: BotModel) {
+	switch (model) {
+		case 'gpt':
+			return process.env.SUPPORT_BOT_MODEL || DEFAULT_OPENAI_MODEL;
+		case 'anthropic':
+			return "claude-3-5-sonnet-20240620";
+		case 'gemini':
+			return "gemini-2.0-flash";
+		default:
+			throw new Error('Invalid model type');
+	}
+}
+
 function getModel(model: BotModel, handleLLMEnd: (output: any) => void) {
 	const baseURL = {
 		gpt: 'https://oai.helicone.ai/v1',
@@ -96,9 +111,11 @@ function getModel(model: BotModel, handleLLMEnd: (output: any) => void) {
 
 	switch (model) {
 		case 'gpt':
+			const modelName = getModelName(model);
 			return new ChatOpenAI({
 				apiKey: process.env.OPENAI_API_KEY,
-				modelName: 'gpt-4o-mini',
+				modelName,
+				modelKwargs: getOpenAIModelKwargs(modelName, "chat"),
 				maxRetries: 3,
 				callbacks: [{
 					handleLLMEnd: handleLLMEnd
@@ -108,7 +125,7 @@ function getModel(model: BotModel, handleLLMEnd: (output: any) => void) {
 
 		case 'anthropic':
 			return new ChatAnthropic({
-				model: "claude-3-5-sonnet-20240620",
+				model: getModelName(model),
 				temperature: 0,
 				maxRetries: 3,
 				callbacks: [{
@@ -119,7 +136,7 @@ function getModel(model: BotModel, handleLLMEnd: (output: any) => void) {
 
 		case 'gemini':
 			return new ChatGoogleGenerativeAI({
-				model: "gemini-2.0-flash",
+				model: getModelName(model),
 				temperature: 0,
 				maxRetries: 3,
 				callbacks: [{
@@ -198,6 +215,7 @@ function chunkedStream(message: string) {
 export {
 	calculateAICost,
 	getModel,
+	getModelName,
 	chunkedStream,
 	formatHistory
 }
