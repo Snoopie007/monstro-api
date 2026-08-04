@@ -4,10 +4,13 @@ import { chargeWallet } from "@/libs/wallet";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, eq } from "drizzle-orm";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptionAddons, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
 import { getCurrency } from "@/utils";
+import type { InvoiceItem } from "@subtrees/types";
 import type { Currency } from "@subtrees/types/currency";
+import { enqueueSubscriptionAddonJob } from "@/queues";
+import { getSubscriptionAddonOverview } from "../addonsBundles/subscriptionAddons";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/mark-paid", async ({ params, body, status }) => {
@@ -27,6 +30,16 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
             return status(400, { error: "Invoice must be sent before marking as paid" });
         }
 
+        if (invoice.memberSubscriptionAddonId) {
+            const purchase = await db.query.memberSubscriptionAddons.findFirst({
+                where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId),
+                columns: { status: true },
+            });
+            if (purchase && ["canceled", "expired"].includes(purchase.status)) {
+                return status(409, { error: "Canceled or expired add-on invoices cannot be marked paid" });
+            }
+        }
+
         let walletChargeMetadata: Record<string, unknown> | null = null;
         const location = await db.query.locations.findFirst({
             where: (l, { eq }) => eq(l.id, lid),
@@ -40,48 +53,68 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
             return status(404, { error: "Location not found" });
         }
 
-        if (invoice.memberPlanId) {
-            const sub = await db.query.memberSubscriptions.findFirst({
+        const subscriptionInvoiceContext = invoice.memberPlanId
+            ? await db.query.memberSubscriptions.findFirst({
                 where: (s, { eq }) => eq(s.id, invoice.memberPlanId!),
                 with: {
                     pricing: true,
                 },
-            });
-
-            if (sub?.paymentType === "cash") {
-
-                if (!location?.vendorId) {
-                    return status(422, {
-                        error: "Location vendor is required to process cash renewal",
-                        code: "MISSING_VENDOR",
-                    });
-                }
-
-                const walletFee = Math.floor(invoice.total * 0.007);
-                if (walletFee > 0) {
-                    const charged = await chargeWallet({
-                        lid,
-                        vendorId: location.vendorId,
-                        amount: walletFee,
-                        description: `Membership renewal for ${sub.pricing?.name || "subscription"}`,
-                    });
-
-                    if (!charged) {
-                        return status(402, {
-                            error: "Insufficient wallet balance to process cash renewal",
-                            code: "WALLET_CHARGE_FAILED",
-                        });
-                    }
-                }
-
-                walletChargeMetadata = {
-                    walletFee,
-                    walletChargeSource: "cash_subscription_mark_paid",
-                    walletChargedAt: new Date().toISOString(),
-                };
+            })
+            : null;
+        const nextSubscriptionPeriod = subscriptionInvoiceContext?.pricing
+            ? {
+                start: new Date(subscriptionInvoiceContext.currentPeriodEnd),
+                end: addInterval(
+                    new Date(subscriptionInvoiceContext.currentPeriodEnd),
+                    subscriptionInvoiceContext.pricing.interval || "month",
+                    subscriptionInvoiceContext.pricing.intervalThreshold || 1,
+                ),
             }
+            : null;
+        const nextSubscriptionOverview = subscriptionInvoiceContext?.paymentType === "cash" && nextSubscriptionPeriod
+            ? await getSubscriptionAddonOverview(
+                lid,
+                subscriptionInvoiceContext.id,
+                nextSubscriptionPeriod.start,
+                nextSubscriptionPeriod.end,
+            )
+            : null;
+
+        if (subscriptionInvoiceContext?.paymentType === "cash") {
+            const sub = subscriptionInvoiceContext;
+
+            if (!location?.vendorId) {
+                return status(422, {
+                    error: "Location vendor is required to process cash renewal",
+                    code: "MISSING_VENDOR",
+                });
+            }
+
+            const walletFee = Math.floor(invoice.total * 0.007);
+            if (walletFee > 0) {
+                const charged = await chargeWallet({
+                    lid,
+                    vendorId: location.vendorId,
+                    amount: walletFee,
+                    description: `Membership renewal for ${sub.pricing?.name || "subscription"}`,
+                });
+
+                if (!charged) {
+                    return status(402, {
+                        error: "Insufficient wallet balance to process cash renewal",
+                        code: "WALLET_CHARGE_FAILED",
+                    });
+                }
+            }
+
+            walletChargeMetadata = {
+                walletFee,
+                walletChargeSource: "cash_subscription_mark_paid",
+                walletChargedAt: new Date().toISOString(),
+            };
         }
 
+        const addonRenewal: { value: { purchaseId: string; runAt: Date } | null } = { value: null };
         await db.transaction(async (tx) => {
             const existingTransaction = invoice.transactionId
                 ? await tx.query.transactions.findFirst({
@@ -131,6 +164,26 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 transactionId,
                 updated: new Date(),
             }).where(eq(memberInvoices.id, iid));
+            if (invoice.memberSubscriptionAddonId) {
+                const purchase = await tx.query.memberSubscriptionAddons.findFirst({
+                    where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId),
+                    with: { addon: true },
+                });
+                if (purchase) {
+                    const periodStart = invoice.forPeriodStart ?? new Date();
+                    const periodEnd = purchase.addon.billingType === "recurring"
+                        ? addInterval(periodStart, purchase.addon.interval || "month", purchase.addon.intervalThreshold || 1)
+                        : null;
+                    await tx.update(memberSubscriptionAddons).set({
+                        status: "active",
+                        paidPeriodStartsAt: periodStart,
+                        paidPeriodEndsAt: periodEnd,
+                        nextBillAt: periodEnd,
+                        updated: new Date(),
+                    }).where(eq(memberSubscriptionAddons.id, purchase.id));
+                    if (periodEnd) addonRenewal.value = { purchaseId: purchase.id, runAt: periodEnd };
+                }
+            }
             if (invoice.memberPlanId) {
                 const sub = await tx.query.memberSubscriptions.findFirst({
                     where: (s, { eq }) => eq(s.id, invoice.memberPlanId!),
@@ -160,21 +213,25 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                         });
                         const currency = getCurrency(location.country);
                         if (!existingDraft) {
-                            const lineItems = [{
-                                name: `${sub.pricing.name}`,
-                                description: "Subscription renewal",
+                            const invoicePricing = nextSubscriptionOverview?.effectivePricing ?? sub.pricing;
+                            const lineItems: InvoiceItem[] = [{
+                                name: invoicePricing.name,
                                 quantity: 1,
-                                price: sub.pricing.price,
+                                price: invoicePricing.price,
                                 discount: 0,
+                                billingSource: { type: "subscription", memberSubscriptionId: sub.id },
+                                pricingSource: nextSubscriptionOverview?.pricingSource ?? { type: "base" },
+                                basePlanPricingId: sub.pricing.id,
+                                effectivePlanPricingId: invoicePricing.id,
                             }];
                             const [nextInvoice] = await tx.insert(memberInvoices).values({
                                 memberId: sub.memberId,
                                 locationId: sub.locationId,
                                 memberPlanId: sub.id,
-                                description: `${sub.pricing.name} - Billing Period`,
+                                description: `${invoicePricing.name} - Billing Period`,
                                 items: lineItems,
-                                subTotal: sub.pricing.price,
-                                total: sub.pricing.price,
+                                subTotal: invoicePricing.price,
+                                total: invoicePricing.price,
                                 tax: 0,
                                 currency: (currency || "USD") as Currency,
                                 status: "draft",
@@ -196,12 +253,12 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                             const [transaction] = await tx.insert(transactions).values({
                                 memberId: sub.memberId,
                                 locationId: sub.locationId,
-                                description: `${sub.pricing.name} - Recurring Payment`,
+                                description: `${invoicePricing.name} - Recurring Payment`,
                                 type: "inbound",
                                 status: PENDING_TRANSACTION_STATUS,
                                 paymentType: "cash",
-                                total: sub.pricing.price,
-                                subTotal: sub.pricing.price,
+                                total: invoicePricing.price,
+                                subTotal: invoicePricing.price,
                                 tax: 0,
                                 currency: (currency || "USD") as Currency,
                             }).returning({ id: transactions.id });
@@ -212,6 +269,14 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 }
             }
         });
+
+        if (addonRenewal.value) {
+            try {
+                await enqueueSubscriptionAddonJob("renew", addonRenewal.value.purchaseId, addonRenewal.value.runAt);
+            } catch (error) {
+                console.error("Add-on was paid but its renewal job could not be scheduled", error);
+            }
+        }
 
         return status(200, {
             success: true,

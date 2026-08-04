@@ -1,5 +1,6 @@
 import { canAccessLocation } from "@/utils/merchandise";
-import { Elysia, type Context } from "elysia";
+import { enqueueSubscriptionAddonJob } from "@/queues";
+import { Elysia, t, type Context } from "elysia";
 import {
 	archiveAddon,
 	archiveBundle,
@@ -19,6 +20,13 @@ import {
 	validateAddonEditorInput,
 	validateBundleEditorInput,
 } from "./input";
+import {
+	cancelSubscriptionAddon,
+	getSubscriptionAddonOverview,
+	getSubscriptionAddonPurchase,
+	getSubscriptionAddonRenewal,
+	purchaseSubscriptionAddon,
+} from "./subscriptionAddons";
 
 type XAuthContext = Context & { vendorId?: string; staffId?: string };
 type CatalogAccessContext = { addonBundleLocationAccess: { allowed: boolean } };
@@ -83,6 +91,52 @@ export const xAddonsBundles = new Elysia({ prefix: "/addons-bundles" })
 		const addon = await archiveAddon(lid, addonId);
 		if (!addon) return status(404, { error: "Add-on not found" });
 		return status(200, { addon });
+	})
+	.get("/subscriptions/:subscriptionId/addons", async (ctx) => {
+		const { params, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;
+		if (!addonBundleLocationAccess.allowed) return forbidden(status);
+		const { lid, subscriptionId } = params as { lid: string; subscriptionId: string };
+		const subscriptionAddons = await getSubscriptionAddonOverview(lid, subscriptionId);
+		if (!subscriptionAddons) return status(404, { error: "Subscription not found" });
+		return status(200, { subscriptionAddons });
+	})
+	.post("/subscriptions/:subscriptionId/addons", async (ctx) => {
+		const { params, body, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;
+		if (!addonBundleLocationAccess.allowed) return forbidden(status);
+		const { lid, subscriptionId } = params as { lid: string; subscriptionId: string };
+		const { addonId } = body as { addonId: string };
+		const result = await purchaseSubscriptionAddon(lid, subscriptionId, addonId);
+		if (result.status === "subscription-not-found") return status(404, { error: "Subscription not found" });
+		if (result.status === "subscription-inactive") {
+			return status(409, { error: "Add-ons can only be added to an active subscription" });
+		}
+		if (result.status === "addon-not-found") return status(404, { error: "Add-on not found" });
+		if (result.status === "pricing-conflict") {
+			return status(409, { error: "This subscription already has a different add-on price" });
+		}
+
+		await enqueueSubscriptionAddonJob("activate", result.purchaseId);
+		const purchase = await getSubscriptionAddonPurchase(lid, subscriptionId, result.purchaseId);
+		if (!purchase) throw new Error("Subscription add-on purchase was not found after creation");
+		return status(result.status === "created" ? 202 : 200, { purchase });
+	}, { body: t.Object({ addonId: t.String({ minLength: 1 }) }) })
+	.post("/subscription-addons/:purchaseId/cancel", async (ctx) => {
+		const { params, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;
+		if (!addonBundleLocationAccess.allowed) return forbidden(status);
+		const { lid, purchaseId } = params as { lid: string; purchaseId: string };
+		const result = await cancelSubscriptionAddon(lid, purchaseId);
+		if (result.status === "not-found") return status(404, { error: "Subscription add-on not found" });
+		if (result.runAt) await enqueueSubscriptionAddonJob("cancel", purchaseId, result.runAt);
+		return status(200, { canceled: true, cancelAt: result.runAt?.toISOString() ?? null });
+	})
+	.post("/subscription-addons/:purchaseId/schedule-renewal", async (ctx) => {
+		const { params, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;
+		if (!addonBundleLocationAccess.allowed) return forbidden(status);
+		const { lid, purchaseId } = params as { lid: string; purchaseId: string };
+		const renewal = await getSubscriptionAddonRenewal(lid, purchaseId);
+		if (!renewal) return status(404, { error: "Subscription add-on not found" });
+		if (renewal.runAt) await enqueueSubscriptionAddonJob("renew", purchaseId, renewal.runAt);
+		return status(200, { scheduled: Boolean(renewal.runAt), runAt: renewal.runAt?.toISOString() ?? null });
 	})
 	.get("/bundles", async (ctx) => {
 		const { params, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;

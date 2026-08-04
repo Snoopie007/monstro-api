@@ -135,6 +135,9 @@ export const memberSubscriptionAddons = pgTable("member_subscription_addons", {
   updated: timestamp("updated_at", { withTimezone: true }),
 }, (table) => [
   index("member_subscription_addons_subscription_status_idx").on(table.memberSubscriptionId, table.status),
+  uniqueIndex("member_subscription_addons_open_unique")
+    .on(table.memberSubscriptionId, table.addonId)
+    .where(sql`${table.status} in ('pending', 'active', 'past_due')`),
   index("member_subscription_addons_next_bill_idx").on(table.nextBillAt),
   index("member_subscription_addons_bundle_purchase_idx").on(table.bundlePurchaseId),
   index("member_subscription_addons_bundle_component_idx").on(table.bundleComponentId),

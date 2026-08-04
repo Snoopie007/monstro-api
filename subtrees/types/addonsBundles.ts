@@ -75,6 +75,55 @@ export type BundleCatalogResponse = { bundles: BundleCatalogItem[] };
 export type BundleDetailResponse = { bundle: BundleCatalogItem };
 export type AddonBundleOptionsResponse = { options: AddonBundleCatalogOptions };
 
+export type SubscriptionAddonPricing = Pick<
+  AddonBundlePlanPricingOption,
+  "id" | "memberPlanId" | "name" | "planName" | "price" | "interval" | "intervalThreshold"
+>;
+
+export type SubscriptionAddonPriceEffect = {
+  sourcePricing: SubscriptionAddonPricing;
+  replacementPricing: SubscriptionAddonPricing;
+};
+
+export type SubscriptionAddonPurchaseItem = Omit<
+  MemberSubscriptionAddon,
+  "startsAt" | "paidPeriodStartsAt" | "paidPeriodEndsAt" | "nextBillAt" | "cancelAt" | "canceledAt" | "endedAt" | "created" | "updated"
+> & {
+  startsAt: string;
+  paidPeriodStartsAt: string | null;
+  paidPeriodEndsAt: string | null;
+  nextBillAt: string | null;
+  cancelAt: string | null;
+  canceledAt: string | null;
+  endedAt: string | null;
+  created: string;
+  updated: string | null;
+  addon: Pick<Addon, "id" | "name" | "description" | "amount" | "currency" | "billingType" | "interval" | "intervalThreshold" | "classAccessOverride">;
+  priceEffect: SubscriptionAddonPriceEffect | null;
+  effective: boolean;
+};
+
+export type AvailableSubscriptionAddon = Pick<
+  Addon,
+  "id" | "name" | "description" | "amount" | "currency" | "billingType" | "interval" | "intervalThreshold" | "classAccessOverride"
+> & {
+  priceEffect: SubscriptionAddonPriceEffect | null;
+  unavailableReason: string | null;
+};
+
+export type SubscriptionAddonOverview = {
+  basePricing: SubscriptionAddonPricing;
+  effectivePricing: SubscriptionAddonPricing;
+  pricingSource: { type: "base" } | { type: "addon"; memberSubscriptionAddonId: string };
+  unlimitedClassAccess: boolean;
+  purchases: SubscriptionAddonPurchaseItem[];
+  availableAddons: AvailableSubscriptionAddon[];
+};
+
+export type SubscriptionAddonOverviewResponse = { subscriptionAddons: SubscriptionAddonOverview };
+export type SubscriptionAddonPurchaseResponse = { purchase: SubscriptionAddonPurchaseItem };
+export type PurchaseSubscriptionAddonInput = { addonId: string };
+
 type AddonEditorBaseInput = Pick<Addon, "name" | "description" | "amount" | "currency" | "classAccessOverride"> & {
   planPriceOverrides: Array<Pick<AddonPlanPriceOverride, "sourcePlanPricingId" | "replacementPlanPricingId">>;
 };

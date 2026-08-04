@@ -11,7 +11,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { differenceInMilliseconds } from "date-fns";
 import { toZonedTime } from 'date-fns-tz';
-import { checkSubClassCredits, getSessionState, scheduleClassReminderJobs } from "./utils";
+import { checkSubClassCredits, getSessionState, hasUnlimitedSubscriptionAddon, scheduleClassReminderJobs } from "./utils";
 import { chargeWallet } from "@/libs/wallet";
 import { triggerFirstBooking } from "@/utils/triggers";
 import { broadcastAchievement } from "@/libs/broadcast";
@@ -51,6 +51,7 @@ export async function locationReservations(app: Elysia) {
                 let sub = undefined;
                 let classLimitReached = false;
                 let memberId = undefined;
+                let hasUnlimitedAccess = false;
                 if (isPackage) {
                     pkg = await db.query.memberPackages.findFirst({
                         where: (mp, { eq, and }) => and(
@@ -88,7 +89,8 @@ export async function locationReservations(app: Elysia) {
                         },
                     });
 
-                    if (plan.classLimitInterval === 'term' && sub?.classCredits === 0) {
+                    hasUnlimitedAccess = sub ? await hasUnlimitedSubscriptionAddon(sub.id) : false;
+                    if (!hasUnlimitedAccess && plan.classLimitInterval === 'term' && sub?.classCredits === 0) {
                         return status(200, { success: false, message: "No credits available for your plan." });
                     }
 
@@ -181,6 +183,9 @@ export async function locationReservations(app: Elysia) {
                     return status(200, { success: false, message: error });
                 }
 
+                const subscriptionCreditConsumed = Boolean(
+                    sub && !hasUnlimitedAccess && plan.classLimitInterval === 'term'
+                );
                 const reservation = await db.transaction(async (tx) => {
                     // Explicitly cast to Reservation[] (or whatever Drizzle returns)
                     const inserted = await tx.insert(reservations).values({
@@ -191,6 +196,7 @@ export async function locationReservations(app: Elysia) {
                         startOn: utcStartTime,
                         endOn: utcEndTime,
                         programId: programId,
+                        subscriptionCreditConsumed: isPackage ? null : subscriptionCreditConsumed,
                         ...(isPackage ? {
                             memberPackageId: memberPlanId,
                         } : {
@@ -212,7 +218,7 @@ export async function locationReservations(app: Elysia) {
                     }
                     if (sub) {
 
-                        if (plan.classLimitInterval === 'term') {
+                        if (subscriptionCreditConsumed) {
                             await tx.update(memberSubscriptions).set({
                                 classCredits: Math.max((sub.classCredits || 0) - 1, 0)
                             }).where(eq(memberSubscriptions.id, memberPlanId));
@@ -319,7 +325,12 @@ export async function locationReservations(app: Elysia) {
                         if (pricing.plan && pricing.plan.classLimitInterval) {
                             const limit = pricing.plan.totalClassLimit;
 
-                            if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
+                            if (
+                                pricing.plan.classLimitInterval === 'term'
+                                && limit
+                                && limit > 0
+                                && (reservation.subscriptionCreditConsumed ?? true)
+                            ) {
                                 // Make sure not to exceed the original classCredits limit
                                 await tx.execute(sql` UPDATE ${memberSubscriptions}
                                     SET class_credits = 
@@ -353,8 +364,6 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-
-
 
 
 

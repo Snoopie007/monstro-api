@@ -37,8 +37,9 @@ export const reservations = pgTable("reservations", {
 	staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),
 	status: ReservationStatusEnum("status").notNull().default("confirmed"),
 	cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-	cancelledReason: text("cancelled_reason"),
-	isMakeUpClass: boolean("is_make_up_class").notNull().default(false),
+  cancelledReason: text("cancelled_reason"),
+  subscriptionCreditConsumed: boolean("subscription_credit_consumed"),
+  isMakeUpClass: boolean("is_make_up_class").notNull().default(false),
 	originalReservationId: text("original_reservation_id"),
 
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

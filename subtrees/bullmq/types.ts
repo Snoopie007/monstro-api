@@ -133,6 +133,9 @@ export const RetryWalletSchema = z.object({
     walletId: z.string(),
     lid: z.string(),
 })
+export const SubscriptionAddonJobSchema = z.object({
+    memberSubscriptionAddonId: z.string().min(1),
+});
 export const RankAttendanceJobSchema = z.object({
     mid: z.string(),
     lid: z.string(),
@@ -141,6 +144,7 @@ export const RankAttendanceJobSchema = z.object({
 });
 
 export type RankAttendanceJobData = z.infer<typeof RankAttendanceJobSchema>;
+export type SubscriptionAddonJobData = z.infer<typeof SubscriptionAddonJobSchema>;
 
 export type RetrySubPaymentData = z.infer<typeof RetrySubPaymentSchema>;
 export type RetryWalletData = z.infer<typeof RetryWalletSchema>;

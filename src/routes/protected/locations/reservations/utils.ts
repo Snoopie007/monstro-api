@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { reservations } from "@subtrees/schemas";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { addons, memberSubscriptionAddons, reservations } from "@subtrees/schemas";
+import { and, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { startOfWeek, endOfWeek, subDays, addMinutes, differenceInMilliseconds, addWeeks } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { classQueue } from "@/queues";
@@ -15,6 +15,7 @@ type CheckSubClassCreditsProps = {
 
 export async function checkSubClassCredits(props: CheckSubClassCreditsProps): Promise<boolean> {
     const { sid, mid, classLimitInterval, totalClassLimit } = props;
+    if (await hasUnlimitedSubscriptionAddon(sid)) return false;
     if (!classLimitInterval || !totalClassLimit || !mid) {
         return false;
     }
@@ -35,6 +36,23 @@ export async function checkSubClassCredits(props: CheckSubClassCreditsProps): Pr
         return false;
     }
     return false;
+}
+
+export async function hasUnlimitedSubscriptionAddon(subscriptionId: string, at = new Date()) {
+    const [purchase] = await db.select({ id: memberSubscriptionAddons.id })
+        .from(memberSubscriptionAddons)
+        .innerJoin(addons, eq(addons.id, memberSubscriptionAddons.addonId))
+        .where(and(
+            eq(memberSubscriptionAddons.memberSubscriptionId, subscriptionId),
+            eq(memberSubscriptionAddons.status, "active"),
+            lte(memberSubscriptionAddons.startsAt, at),
+            lte(memberSubscriptionAddons.paidPeriodStartsAt, at),
+            or(isNull(memberSubscriptionAddons.paidPeriodEndsAt), gte(memberSubscriptionAddons.paidPeriodEndsAt, at)),
+            eq(addons.classAccessOverride, "unlimited"),
+        ))
+        .limit(1);
+
+    return Boolean(purchase);
 }
 
 

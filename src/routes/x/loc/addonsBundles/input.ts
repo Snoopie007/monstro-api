@@ -80,6 +80,13 @@ export function validateAddonEditorInput(
       return "A price change must stay within the same subscription plan";
     }
 
+    if (
+      sourcePricing.interval !== replacementPricing.interval
+      || sourcePricing.intervalThreshold !== replacementPricing.intervalThreshold
+    ) {
+      return "An add-on can change the subscription price, but not its billing schedule";
+    }
+
     if (sourcePricingIds.has(mapping.sourcePlanPricingId)) {
       return "Each regular subscription price can only be changed once";
     }
