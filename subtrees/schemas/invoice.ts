@@ -1,11 +1,12 @@
 import { sql } from "drizzle-orm";
-import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { Currency } from "../types/currency";
 import type { InvoiceItem } from "../types/invoices";
 import { InvoiceStatusEnum, PaymentTypeEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { members } from "./members";
 import { transactions } from "./transactions";
+import { memberSubscriptionAddons } from "./addonsBundles";
 
 export const memberInvoices = pgTable('member_invoices', {
     id: text('id').primaryKey().notNull().default(sql`uuid_base62('inv_')`),
@@ -14,6 +15,7 @@ export const memberInvoices = pgTable('member_invoices', {
     memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
     locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
     memberPlanId: text('member_plan_id'),
+    memberSubscriptionAddonId: text('member_subscription_addon_id').references(() => memberSubscriptionAddons.id, { onDelete: 'set null' }),
     description: text('description'),
     items: jsonb('items').array().$type<InvoiceItem[]>().default(sql`'{}'::jsonb[]`),
     paid: boolean('paid').notNull().default(false),
@@ -37,4 +39,5 @@ export const memberInvoices = pgTable('member_invoices', {
     uniqueIndex('member_invoices_transaction_id_uq')
         .on(t.transactionId)
         .where(sql`${t.transactionId} is not null`),
+    index('member_invoices_subscription_addon_idx').on(t.memberSubscriptionAddonId),
 ]);

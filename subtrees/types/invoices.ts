@@ -9,7 +9,7 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     memberSubscription?: MemberSubscription;
 }
 
-export type InvoiceItem = {
+type InvoiceItemBase = {
     name: string;
     quantity: number;
     price: number;
@@ -17,5 +17,37 @@ export type InvoiceItem = {
     discount?: number;
     tax?: number;
 }
+
+type SubscriptionPricingSource =
+    | { type: "base" }
+    | { type: "addon"; memberSubscriptionAddonId: string }
+    | { type: "bundle"; bundlePurchaseId: string; bundleComponentId: string };
+
+type AddonChargePricingSource =
+    | { type: "addon"; addonId: string }
+    | { type: "bundle"; bundlePurchaseId: string; bundleComponentId: string };
+
+type UnattributedInvoiceItem = InvoiceItemBase & {
+    billingSource?: never;
+    pricingSource?: never;
+    basePlanPricingId?: never;
+    effectivePlanPricingId?: never;
+};
+
+type SubscriptionInvoiceItem = InvoiceItemBase & {
+    billingSource: { type: "subscription"; memberSubscriptionId: string };
+    pricingSource: SubscriptionPricingSource;
+    basePlanPricingId: string;
+    effectivePlanPricingId: string;
+};
+
+type SubscriptionAddonInvoiceItem = InvoiceItemBase & {
+    billingSource: { type: "subscription_addon"; memberSubscriptionAddonId: string };
+    pricingSource: AddonChargePricingSource;
+    basePlanPricingId?: never;
+    effectivePlanPricingId?: never;
+};
+
+export type InvoiceItem = UnattributedInvoiceItem | SubscriptionInvoiceItem | SubscriptionAddonInvoiceItem;
 
 export type NewInvoice = typeof memberInvoices.$inferInsert;
