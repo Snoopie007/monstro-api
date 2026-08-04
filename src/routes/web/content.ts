@@ -4,6 +4,39 @@ import { db } from "@/db/db";
 import { and, eq, sql } from "drizzle-orm";
 import { websiteContents } from "@subtrees/schemas";
 
+const SUMMARY_WORD_LIMIT = 30;
+
+/** Strip MDX/markdown noise to plain text for list excerpts. */
+function mdxToPlainText(mdx: string): string {
+    return mdx
+        .replace(/```[\s\S]*?```/g, " ")
+        .replace(/`[^`]*`/g, " ")
+        .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+        .replace(/\[[^\]]*]\([^)]*\)/g, " ")
+        .replace(/<\/?[^>]+>/g, " ")
+        .replace(/^#{1,6}\s+/gm, "")
+        .replace(/[*_~>#-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+/** First sentence if present; otherwise first 30 words. */
+function createPostSummary(mdx: string): string {
+    const text = mdxToPlainText(mdx);
+    if (!text) return "";
+
+    const sentenceMatch = text.match(/^(.+?[.!?])(?:\s|$)/);
+    if (sentenceMatch?.[1]) {
+        const sentence = sentenceMatch[1].trim();
+        const words = sentence.split(/\s+/);
+        if (words.length <= SUMMARY_WORD_LIMIT) return sentence;
+        return `${words.slice(0, SUMMARY_WORD_LIMIT).join(" ")}…`;
+    }
+
+    const words = text.split(/\s+/);
+    if (words.length <= SUMMARY_WORD_LIMIT) return text;
+    return `${words.slice(0, SUMMARY_WORD_LIMIT).join(" ")}…`;
+}
 
 export const webContentRoutes = new Elysia({ prefix: "/content" })
     .use(WebAuthMiddleware)
@@ -42,7 +75,10 @@ export const webContentRoutes = new Elysia({ prefix: "/content" })
 
                 return status(200, {
                     total,
-                    posts,
+                    posts: posts.map((post) => ({
+                        ...post,
+                        summary: createPostSummary(post.mdx),
+                    })),
                 });
             } catch (error) {
                 console.error(error);
