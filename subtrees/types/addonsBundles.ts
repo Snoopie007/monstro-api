@@ -69,11 +69,11 @@ export type AddonBundleCatalogOptions = {
   addons: Array<Pick<AddonCatalogItem, "id" | "name" | "amount" | "currency" | "billingType" | "interval" | "intervalThreshold">>;
 };
 
-export type AddonCatalogResponse = { addons: AddonCatalogItem[]; mock: boolean };
-export type AddonDetailResponse = { addon: AddonCatalogItem; mock: boolean };
-export type BundleCatalogResponse = { bundles: BundleCatalogItem[]; mock: boolean };
-export type BundleDetailResponse = { bundle: BundleCatalogItem; mock: boolean };
-export type AddonBundleOptionsResponse = { options: AddonBundleCatalogOptions; mock: boolean };
+export type AddonCatalogResponse = { addons: AddonCatalogItem[] };
+export type AddonDetailResponse = { addon: AddonCatalogItem };
+export type BundleCatalogResponse = { bundles: BundleCatalogItem[] };
+export type BundleDetailResponse = { bundle: BundleCatalogItem };
+export type AddonBundleOptionsResponse = { options: AddonBundleCatalogOptions };
 
 type AddonEditorBaseInput = Pick<Addon, "name" | "description" | "amount" | "currency" | "classAccessOverride"> & {
   planPriceOverrides: Array<Pick<AddonPlanPriceOverride, "sourcePlanPricingId" | "replacementPlanPricingId">>;
