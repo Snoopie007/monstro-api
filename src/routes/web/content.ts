@@ -73,12 +73,17 @@ export const webContentRoutes = new Elysia({ prefix: "/content" })
 
                 const total = countRows[0]?.total ?? 0;
 
+
                 return status(200, {
                     total,
-                    posts: posts.map((post) => ({
-                        ...post,
-                        summary: createPostSummary(post.mdx),
-                    })),
+                    posts: posts.map((post) => {
+                        const { mdx, ...rest } = post;
+                        const summary = createPostSummary(mdx);
+                        return {
+                            ...rest,
+                            summary,
+                        }
+                    }),
                 });
             } catch (error) {
                 console.error(error);
