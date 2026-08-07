@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { and, eq, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
 
 import {
@@ -13,9 +13,11 @@ import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/sub
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
     courseEnrollments,
+    contractTemplates,
     eventRegistrations,
     eventTickets,
     locationEvents,
+    memberContracts,
     memberInvoices,
     memberLocations,
     memberPackages,
@@ -218,7 +220,60 @@ async function fulfillPlanCheckout(
             },
         }),
     ]);
-    if (!pricing?.plan || !memberLocation) throw new Error("Authorize.net plan checkout artifact is missing");
+    if (
+        !pricing?.plan ||
+        pricing.plan.locationId !== transaction.locationId ||
+        !memberLocation
+    ) {
+        throw new Error("Authorize.net plan checkout artifact is missing");
+    }
+    if (
+        (metadata.checkoutKind === "package" && pricing.plan.type !== "one-time") ||
+        (metadata.checkoutKind === "subscription" && pricing.plan.type !== "recurring")
+    ) {
+        throw new Error("Authorize.net plan checkout type does not match pricing plan");
+    }
+    if (metadata.checkoutKind !== "package" && metadata.checkoutKind !== "subscription") {
+        throw new Error("Authorize.net plan checkout kind is invalid");
+    }
+    const waiverId = memberLocation.location.locationState.waiverId;
+    if (memberLocation.signedWaiverId) {
+        if (!waiverId) {
+            throw new Error("Authorize.net signed waiver is not valid for this location");
+        }
+        const signedWaiver = await tx.query.memberContracts.findFirst({
+            where: (memberContract, { eq, and, isNotNull }) => and(
+                eq(memberContract.id, memberLocation.signedWaiverId!),
+                eq(memberContract.memberId, transaction.memberId!),
+                eq(memberContract.locationId, transaction.locationId),
+                eq(memberContract.templateId, waiverId),
+                isNotNull(memberContract.signedOn),
+            ),
+            with: {
+                contractTemplate: {
+                    columns: {
+                        locationId: true,
+                    },
+                },
+            },
+        });
+        if (!signedWaiver || signedWaiver.contractTemplate?.locationId !== transaction.locationId) {
+            throw new Error("Authorize.net signed waiver is not valid for this location");
+        }
+    }
+    const contractId = pricing.plan.contractId;
+    if (contractId) {
+        const contractTemplate = await tx.query.contractTemplates.findFirst({
+            where: (template, { eq, and }) => and(
+                eq(template.id, contractId),
+                eq(template.locationId, transaction.locationId),
+            ),
+            columns: { id: true },
+        });
+        if (!contractTemplate) {
+            throw new Error("Authorize.net plan contract is not valid for this location");
+        }
+    }
 
     const now = new Date();
     const discount = typeof metadata.discount === "number" ? metadata.discount : 0;
@@ -262,8 +317,8 @@ async function fulfillPlanCheckout(
             mid: transaction.memberId,
             lid: transaction.locationId,
             memberPlanId: memberPackage.id,
-            contractId: pricing.plan.contractId,
-            waiverId: memberLocation.location.locationState.waiverId,
+            contractId,
+            waiverId,
             signedWaiverId: memberLocation.signedWaiverId,
         });
         return undefined;
@@ -314,8 +369,8 @@ async function fulfillPlanCheckout(
         mid: transaction.memberId,
         lid: transaction.locationId,
         memberPlanId: subscription.id,
-        contractId: pricing.plan.contractId,
-        waiverId: memberLocation.location.locationState.waiverId,
+        contractId,
+        waiverId,
         signedWaiverId: memberLocation.signedWaiverId,
     });
 

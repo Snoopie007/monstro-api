@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { memberLocations, memberPackages, memberPasses } from "@subtrees/schemas";
 import { calculateThresholdDate } from "@/utils";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 const LocationPassProps = {
     params: t.Object({
@@ -23,7 +23,10 @@ export function locationPass(app: Elysia) {
 
             try {
                 const pass = await db.query.memberPasses.findFirst({
-                    where: (memberPasses, { eq }) => eq(memberPasses.id, passId),
+                    where: (memberPasses, { eq, and }) => and(
+                        eq(memberPasses.id, passId),
+                        eq(memberPasses.locationId, lid),
+                    ),
                 });
                 if (!pass) {
                     return status(404, {
@@ -43,7 +46,11 @@ export function locationPass(app: Elysia) {
                 }
                 // Typo fix: reference to memberPlans in query - import if necessary
                 const plan = await db.query.memberPlans.findFirst({
-                    where: (memberPlans, { eq }) => eq(memberPlans.id, pass.planId),
+                    where: (memberPlans, { eq, and }) => and(
+                        eq(memberPlans.id, pass.planId),
+                        eq(memberPlans.locationId, lid),
+                        eq(memberPlans.archived, false),
+                    ),
                     columns: {
                         id: true,
                         totalClassLimit: true,
@@ -71,6 +78,7 @@ export function locationPass(app: Elysia) {
                 const existingPass = await db.query.memberPackages.findFirst({
                     where: (memberPackages, { eq, and }) => and(
                         eq(memberPackages.memberId, memberId),
+                        eq(memberPackages.locationId, lid),
                         eq(memberPackages.memberPlanPricingId, pricing.id),
                     ),
                 });

@@ -24,6 +24,7 @@ export * from "./rank";
 export * from "./reservations";
 export * from "./rewards";
 export * from "./sessions";
+export * from "./sites";
 export * from "./staffs";
 export * from "./SupportAssistants";
 export * from "./SupportBotEnums";

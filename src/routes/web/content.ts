@@ -4,6 +4,48 @@ import { db } from "@/db/db";
 import { and, eq, sql } from "drizzle-orm";
 import { websiteContents } from "@subtrees/schemas";
 
+const DEFAULT_PAGE_SIZE = 10;
+
+export async function getPublishedBlogPosts(
+    locationId: string,
+    requestedPage = 1,
+    requestedLimit = DEFAULT_PAGE_SIZE,
+) {
+    const page = Math.max(1, Math.trunc(requestedPage));
+    const limit = Math.min(100, Math.max(1, Math.trunc(requestedLimit)));
+    const publishedPostsWhere = and(
+        eq(websiteContents.locationId, locationId),
+        eq(websiteContents.type, "post"),
+        eq(websiteContents.status, "published"),
+    );
+    const [countRows, posts] = await Promise.all([
+        db.select({ total: sql<number>`count(*)::int` })
+            .from(websiteContents)
+            .where(publishedPostsWhere),
+        db.query.websiteContents.findMany({
+            where: (content, { eq, and }) => and(
+                eq(content.locationId, locationId),
+                eq(content.type, "post"),
+                eq(content.status, "published"),
+            ),
+            orderBy: (content, { desc }) => desc(content.publishedAt),
+            limit,
+            offset: (page - 1) * limit,
+        }),
+    ]);
+    return { posts, total: countRows[0]?.total ?? 0 };
+}
+
+export function getPublishedBlogPost(locationId: string, slug: string) {
+    return db.query.websiteContents.findFirst({
+        where: (content, { and, eq }) => and(
+            eq(content.locationId, locationId),
+            eq(content.slug, slug),
+            eq(content.type, "post"),
+            eq(content.status, "published"),
+        ),
+    });
+}
 
 export const webContentRoutes = new Elysia({ prefix: "/content" })
     .use(WebAuthMiddleware)
@@ -13,37 +55,9 @@ export const webContentRoutes = new Elysia({ prefix: "/content" })
                 return status(401, { message: "No Location ID provided" });
             }
             const { limit, page } = query;
-            const pageSize = limit || 100;
-            const pageNumber = page ?? 1;
+            const pageSize = limit || DEFAULT_PAGE_SIZE;
             try {
-                const publishedPostsWhere = and(
-                    eq(websiteContents.locationId, lid),
-                    eq(websiteContents.type, "post"),
-                    eq(websiteContents.status, "published"),
-                );
-
-                const [countRows, posts] = await Promise.all([
-                    db.select({ total: sql<number>`count(*)::int` })
-                        .from(websiteContents)
-                        .where(publishedPostsWhere),
-                    db.query.websiteContents.findMany({
-                        where: (content, { eq, and }) => and(
-                            eq(content.locationId, lid),
-                            eq(content.type, "post"),
-                            eq(content.status, "published"),
-                        ),
-                        orderBy: (content, { desc }) => desc(content.created),
-                        limit: pageSize,
-                        offset: (pageNumber - 1) * pageSize,
-                    }),
-                ]);
-
-                const total = countRows[0]?.total ?? 0;
-
-                return status(200, {
-                    total,
-                    posts,
-                });
+                return status(200, await getPublishedBlogPosts(lid, page, pageSize));
             } catch (error) {
                 console.error(error);
                 return status(500, { error: "Failed to fetch posts" });
@@ -62,9 +76,8 @@ export const webContentRoutes = new Elysia({ prefix: "/content" })
                 if (!lid) {
                     return status(401, { message: "No Location ID provided" });
                 }
-                const post = await db.query.websiteContents.findFirst({
-                    where: (content, { eq }) => eq(content.slug, slug),
-                });
+                const post = await getPublishedBlogPost(lid, slug);
+                if (!post) return status(404, { message: "Post not found" });
                 return status(200, post);
             } catch (error) {
                 console.error(error);

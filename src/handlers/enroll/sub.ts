@@ -7,6 +7,7 @@ import {
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
+    recoverEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
     getCheckoutContext,
@@ -20,7 +21,7 @@ import {
 import type { SubscriptionJobData } from "@subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberContracts, memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 
 export type EnrollSubProps = {
     lid: string;
@@ -63,7 +64,74 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             where: (row, { eq }) => eq(row.transactionId, transactionId),
         });
         if (!invoice) throw new CheckoutError(202, "Payment is paid and subscription is being finalized");
-        return { ok: true, unsignedDocs: [] as string[] };
+        if (!invoice.memberPlanId) {
+            throw new CheckoutError(202, "Payment is paid and subscription is being finalized");
+        }
+
+        const [checkout, pricing] = await Promise.all([
+            getCheckoutContext({ lid, mid }),
+            db.query.memberPlanPricing.findFirst({
+                where: (row, { eq }) => eq(row.id, priceId),
+                with: { plan: true },
+            }),
+        ]);
+        if (
+            !pricing?.plan ||
+            pricing.plan.locationId !== lid ||
+            pricing.plan.archived ||
+            pricing.plan.type !== "recurring"
+        ) {
+            throw new CheckoutError(404, "Pricing not found");
+        }
+        const waiverId = checkout.ml.location.locationState.waiverId;
+        let recoverWaiverId = waiverId;
+        if (checkout.ml.signedWaiverId && waiverId) {
+            const signedWaiver = await db.query.memberContracts.findFirst({
+                where: (memberContract, { eq, and, isNotNull }) => and(
+                    eq(memberContract.id, checkout.ml.signedWaiverId!),
+                    eq(memberContract.memberId, mid),
+                    eq(memberContract.locationId, lid),
+                    eq(memberContract.templateId, waiverId),
+                    isNotNull(memberContract.signedOn),
+                ),
+                with: {
+                    contractTemplate: {
+                        columns: { locationId: true },
+                    },
+                },
+            });
+            if (signedWaiver?.contractTemplate?.locationId === lid) {
+                recoverWaiverId = null;
+            }
+        }
+        const templateIds = [
+            pricing.plan.contractId,
+            checkout.ml.location.locationState.waiverId,
+        ].filter((id): id is string => Boolean(id));
+        if (templateIds.length > 0) {
+            const templates = await Promise.all(templateIds.map((templateId) =>
+                db.query.contractTemplates.findFirst({
+                    where: (template, { eq, and }) => and(
+                        eq(template.id, templateId),
+                        eq(template.locationId, lid),
+                    ),
+                    columns: { id: true },
+                }),
+            ));
+            if (templates.some((template) => !template)) {
+                throw new CheckoutError(404, "Contract not found");
+            }
+        }
+        return {
+            ok: true,
+            unsignedDocs: await recoverEnrollUnsignedDocs({
+                mid,
+                lid,
+                memberPlanId: invoice.memberPlanId,
+                contractId: pricing.plan.contractId,
+                waiverId: recoverWaiverId,
+            }),
+        };
     }
 
     const [checkout, pricing] = await Promise.all([
@@ -73,14 +141,64 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             with: { plan: true },
         }),
     ]);
-    if (!pricing?.plan) throw new CheckoutError(404, "Pricing not found");
+    if (
+        !pricing?.plan ||
+        pricing.plan.locationId !== lid ||
+        pricing.plan.archived ||
+        pricing.plan.type !== "recurring"
+    ) {
+        throw new CheckoutError(404, "Pricing not found");
+    }
     if (!pricing.interval || !pricing.intervalThreshold) {
         throw new CheckoutError(400, "Invalid pricing for subscription plan.");
     }
 
     const { ml, gateway, taxRates, gatewayCustomerId } = checkout;
     const locationState = ml.location.locationState;
+    const contractId = pricing.plan.contractId;
+    const waiverId = locationState.waiverId;
+    const templateIds = [contractId, waiverId].filter((id): id is string => Boolean(id));
+    if (templateIds.length > 0) {
+        const templates = await Promise.all(templateIds.map((templateId) =>
+            db.query.contractTemplates.findFirst({
+                where: (template, { eq, and }) => and(
+                    eq(template.id, templateId),
+                    eq(template.locationId, lid),
+                ),
+                columns: { id: true },
+            }),
+        ));
+        if (templates.some((template) => !template)) {
+            throw new CheckoutError(404, "Contract not found");
+        }
+    }
+
     const { usagePercent, settings, currency } = locationState;
+    const signedWaiverId = ml.signedWaiverId;
+    if (signedWaiverId) {
+        if (!waiverId) {
+            throw new CheckoutError(404, "Contract not found");
+        }
+        const signedWaiver = await db.query.memberContracts.findFirst({
+            where: (memberContract, { eq, and, isNotNull }) => and(
+                eq(memberContract.id, signedWaiverId),
+                eq(memberContract.memberId, mid),
+                eq(memberContract.locationId, lid),
+                eq(memberContract.templateId, waiverId),
+                isNotNull(memberContract.signedOn),
+            ),
+            with: {
+                contractTemplate: {
+                    columns: {
+                        locationId: true,
+                    },
+                },
+            },
+        });
+        if (!signedWaiver || signedWaiver.contractTemplate?.locationId !== lid) {
+            throw new CheckoutError(404, "Contract not found");
+        }
+    }
     const today = new Date();
     const subscriptionStart = startDate ? new Date(startDate) : today;
     if (Number.isNaN(subscriptionStart.getTime())) {
@@ -110,7 +228,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         ? pricing.plan.totalClassLimit || 0
         : 0;
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
-    const discount = await fetchPromoDiscount(promoId ?? undefined, pricing);
+    const discount = await fetchPromoDiscount(promoId ?? undefined, pricing, lid);
     const noGrowthPlan = [1, 2].includes(locationState.planId);
     const chargeDetails = calculateChargeDetails({
         amount: pricing.downpayment || pricing.price,
@@ -239,9 +357,9 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     mid,
                     lid,
                     memberPlanId: result.id,
-                    contractId: pricing.plan.contractId,
-                    waiverId: locationState.waiverId,
-                    signedWaiverId: ml.signedWaiverId,
+                    contractId,
+                    waiverId,
+                    signedWaiverId,
                 });
                 return result;
             });

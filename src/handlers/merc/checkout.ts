@@ -74,6 +74,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         const promo = await db.query.promos.findFirst({
             where: (p, { eq, and, gt, isNull, or }) => and(
                 eq(p.id, promoId),
+                eq(p.locationId, lid),
                 eq(p.isActive, true),
                 or(isNull(p.expiresAt), gt(p.expiresAt, new Date())),
             ),

@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
 import type { MemberPlanPricing } from "@subtrees/types";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { memberContracts } from "@subtrees/schemas";
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
@@ -19,6 +19,9 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
 
         const { user } = session;
         const mid = user?.memberId;
+        if (!mid) {
+            return status(401, { message: "No member provided" });
+        }
 
         try {
             const unsignedDocs = await db.query.memberContracts.findMany({
@@ -28,11 +31,42 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                     isNull(m.signedOn),
                 ),
                 with: {
-                    contractTemplate: true,
+                    contractTemplate: {
+                        with: {
+                            location: {
+                                columns: {
+                                    id: true,
+                                },
+                            },
+                        },
+                    },
+                    pricing: {
+                        with: {
+                            plan: {
+                                columns: {
+                                    locationId: true,
+                                },
+                            },
+                        },
+                    },
                 },
             });
 
-            return status(200, unsignedDocs);
+            const scopedUnsignedDocs = unsignedDocs.flatMap((doc) => {
+                if (
+                    doc.contractTemplate?.location?.id !== lid ||
+                    (doc.pricing && doc.pricing.plan?.locationId !== lid)
+                ) {
+                    return [];
+                }
+
+                const { contractTemplate, pricing: _pricing, ...rest } = doc;
+                if (!contractTemplate) return [];
+                const { location: _location, ...publicContractTemplate } = contractTemplate;
+                return [{ ...rest, contractTemplate: publicContractTemplate }];
+            });
+
+            return status(200, scopedUnsignedDocs);
 
         } catch (error) {
             console.error(error);
@@ -49,11 +83,23 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
         if (!session) {
             return status(401, { message: "No session provided" });
         }
+        const mid = session.user?.memberId;
+        if (!mid) {
+            return status(401, { message: "No member provided" });
+        }
         try {
             const doc = await db.query.memberContracts.findFirst({
-                where: (m, { eq }) => eq(m.id, docId),
+                where: (m, { eq, and }) => and(
+                    eq(m.id, docId),
+                    eq(m.memberId, mid),
+                    eq(m.locationId, lid),
+                ),
                 with: {
-                    contractTemplate: true,
+                    contractTemplate: {
+                        with: {
+                            location: true,
+                        },
+                    },
                     member: true,
                     location: true,
                     pricing: {
@@ -64,10 +110,18 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                 },
             });
 
-            const mdx = renderContractContent(doc?.contractTemplate?.content, {
-                location: doc?.location,
-                member: doc?.member,
-                pricing: doc?.pricing,
+            if (
+                !doc ||
+                doc.contractTemplate?.location?.id !== lid ||
+                (doc.pricing && doc.pricing.plan?.locationId !== lid)
+            ) {
+                return status(404, { error: "Contract not found" });
+            }
+
+            const mdx = renderContractContent(doc.contractTemplate.content, {
+                location: doc.location,
+                member: doc.member,
+                pricing: doc.pricing,
             });
             return status(200, { mdx });
         } catch (error) {
@@ -90,8 +144,10 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
         }
         const { user } = session;
         const mid = user?.memberId;
+        if (!mid) {
+            return status(401, { message: "No member provided" });
+        }
         try {
-
             const member = await db.query.members.findFirst({
                 where: (m, { eq }) => eq(m.id, mid),
             });
@@ -99,11 +155,43 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                 return status(404, { message: "Member not found" });
             }
 
+            const doc = await db.query.memberContracts.findFirst({
+                where: (mc, { eq, and }) => and(
+                    eq(mc.id, docId),
+                    eq(mc.memberId, mid),
+                    eq(mc.locationId, lid),
+                ),
+                with: {
+                    contractTemplate: {
+                        with: {
+                            location: true,
+                        },
+                    },
+                    pricing: {
+                        with: {
+                            plan: true,
+                        },
+                    },
+                },
+            });
+            if (!doc) {
+                return status(404, { message: "Contract not found" });
+            }
+            if (!doc.contractTemplate || doc.contractTemplate.location?.id !== lid) {
+                return status(404, { message: "Template not found" });
+            }
+            if (doc.pricing && doc.pricing.plan?.locationId !== lid) {
+                return status(404, { message: "Pricing not found" });
+            }
+
             const [mc] = await db.update(memberContracts).set({
                 signature: body.signature,
                 signedOn: new Date(),
-            }).where(eq(memberContracts.id, docId)).returning()
-
+            }).where(and(
+                eq(memberContracts.id, docId),
+                eq(memberContracts.memberId, mid),
+                eq(memberContracts.locationId, lid),
+            )).returning();
 
             if (!mc) {
                 return status(404, { message: "Contract not found" });
@@ -118,14 +206,16 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                         plan: true,
                     },
                 });
-                if (p) {
+                if (p?.plan?.locationId === lid) {
                     pricing = p;
                 }
             }
 
             const template = await db.query.contractTemplates.findFirst({
-                where: (ct, { eq }) => eq(ct.id, mc.templateId),
-
+                where: (ct, { eq, and }) => and(
+                    eq(ct.id, mc.templateId),
+                    eq(ct.locationId, lid),
+                ),
                 with: {
                     location: true,
                 },

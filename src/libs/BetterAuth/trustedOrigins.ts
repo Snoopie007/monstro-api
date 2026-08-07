@@ -1,6 +1,10 @@
 import { db } from "@/db/db";
-import { locations } from "@subtrees/schemas";
-import { isNotNull } from "drizzle-orm";
+import {
+    locations,
+    websiteSiteDomains,
+    websiteSites,
+} from "@subtrees/schemas";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 const NEGATIVE_CACHE_TTL_MS = 2 * 60 * 1000;
 const MAX_CACHE_AGE_MS = 15 * 60 * 1000;
@@ -43,16 +47,30 @@ function toOrigin(website: string | null): string | null {
 }
 
 async function loadOriginsFromDb(): Promise<string[]> {
+    const [legacyRows, siteRows] = await Promise.all([
+        db
+            .select({ website: locations.website })
+            .from(locations)
+            .where(isNotNull(locations.website)),
+        db
+            .select({ hostname: websiteSiteDomains.hostname })
+            .from(websiteSiteDomains)
+            .innerJoin(websiteSites, eq(websiteSiteDomains.siteId, websiteSites.id))
+            .where(and(
+                eq(websiteSiteDomains.status, "verified"),
+                isNotNull(websiteSiteDomains.verifiedAt),
+                eq(websiteSites.status, "active"),
+            )),
+    ]);
 
-    //Need to be udpated.
-    const rows = await db
-        .select({ website: locations.website })
-        .from(locations)
-        .where(isNotNull(locations.website));
-
-    return rows
+    const legacyOrigins = legacyRows
         .map((row) => toOrigin(row.website))
         .filter((origin): origin is string => origin !== null);
+    const siteOrigins = siteRows
+        .map((row) => toOrigin(`https://${row.hostname}`))
+        .filter((origin): origin is string => origin !== null);
+
+    return [...new Set([...legacyOrigins, ...siteOrigins])];
 }
 
 async function refreshOrigins(staticOrigins: string[]): Promise<string[]> {
