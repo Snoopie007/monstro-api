@@ -12,6 +12,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		bundles,
 		locations,
 		memberInvoices,
+		memberLocations,
 		memberPlanPricing,
 		memberPlans,
 		memberSubscriptionAddons,
@@ -37,6 +38,11 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		getSubscriptionAddonOverview,
 		purchaseSubscriptionAddon,
 	} = await import("./subscriptionAddons");
+	const {
+		activateBundlePurchase,
+		cancelBundlePurchase,
+		purchaseBundle,
+	} = await import("./bundlePurchases");
 
 	const suffix = crypto.randomUUID().replaceAll("-", "");
 	const createdUserIds: string[] = [];
@@ -44,6 +50,10 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 	const createdAddonIds: string[] = [];
 	let memberSubscriptionId: string | undefined;
 	let purchaseId: string | undefined;
+	let runtimeBundlePurchaseId: string | undefined;
+	let multiBundlePurchaseId: string | undefined;
+	let activationConflictBundlePurchaseId: string | undefined;
+	const runtimeSubscriptionIds: string[] = [];
 	const createdInvoiceIds: string[] = [];
 
 	try {
@@ -153,7 +163,13 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			description: null,
 			components: [
 				{ type: "subscription", memberPlanPricingId: regularPrice.id, priceOverride: 32000, required: true },
-				{ type: "addon", addonId: addon.id, priceOverride: null, required: true },
+				{
+					type: "addon",
+					addonId: addon.id,
+					targetMemberPlanPricingId: regularPrice.id,
+					priceOverride: null,
+					required: true,
+				},
 			],
 		};
 		const createdBundle = await createBundle(primaryLocation.id, bundleInput);
@@ -187,6 +203,111 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			email: `catalog-member-${suffix}@example.test`,
 		}).returning({ id: members.id });
 		if (!member) throw new Error("Test member was not created");
+		await db.insert(memberLocations).values({
+			memberId: member.id,
+			locationId: primaryLocation.id,
+			status: "active",
+		});
+
+		const runtimePurchase = await purchaseBundle(primaryLocation.id, member.id, {
+			bundleId: createdBundle.id,
+			paymentType: "cash",
+			selectedOptionalComponentIds: [],
+		});
+		expect(runtimePurchase.status).toBe("created");
+		if (runtimePurchase.status !== "created") throw new Error(runtimePurchase.error);
+		runtimeBundlePurchaseId = runtimePurchase.value.purchase.id;
+		runtimeSubscriptionIds.push(...runtimePurchase.value.subscriptionIds);
+		expect(runtimePurchase.value.subscriptionIds).toHaveLength(1);
+		expect(runtimePurchase.value.addonPurchaseIds).toHaveLength(1);
+		await db.update(memberSubscriptions).set({ status: "active" })
+			.where(inArray(memberSubscriptions.id, runtimePurchase.value.subscriptionIds));
+		const bundlePeriodStart = new Date();
+		const bundlePeriodEnd = new Date(bundlePeriodStart);
+		bundlePeriodEnd.setUTCFullYear(bundlePeriodEnd.getUTCFullYear() + 1);
+		await db.update(memberSubscriptionAddons).set({
+			status: "active",
+			paidPeriodStartsAt: bundlePeriodStart,
+			paidPeriodEndsAt: bundlePeriodEnd,
+			nextBillAt: bundlePeriodEnd,
+		}).where(inArray(memberSubscriptionAddons.id, runtimePurchase.value.addonPurchaseIds));
+		expect((await activateBundlePurchase(primaryLocation.id, runtimePurchase.value.purchase.id)).status).toBe("ready");
+		const bundledOverview = await getSubscriptionAddonOverview(
+			primaryLocation.id,
+			runtimePurchase.value.subscriptionIds[0]!,
+		);
+		expect(bundledOverview?.pricingSource.type).toBe("bundle");
+		expect(bundledOverview?.effectivePricing.price).toBe(32000);
+		expect((await cancelBundlePurchase(
+			primaryLocation.id,
+			runtimePurchase.value.purchase.id,
+			"Integration test",
+		)).status).toBe("canceled");
+		const [survivingSubscription] = await db.select({ status: memberSubscriptions.status })
+			.from(memberSubscriptions)
+			.where(eq(memberSubscriptions.id, runtimePurchase.value.subscriptionIds[0]!));
+		expect(survivingSubscription?.status).toBe("active");
+		const fallbackOverview = await getSubscriptionAddonOverview(
+			primaryLocation.id,
+			runtimePurchase.value.subscriptionIds[0]!,
+		);
+		expect(fallbackOverview?.pricingSource.type).toBe("base");
+		expect(fallbackOverview?.effectivePricing.price).toBe(50000);
+
+		const [privatePlan] = await db.insert(memberPlans).values({
+			name: "Private training",
+			description: "",
+			type: "recurring",
+			locationId: primaryLocation.id,
+		}).returning({ id: memberPlans.id });
+		if (!privatePlan) throw new Error("Second bundle plan was not created");
+		const [privatePrice] = await db.insert(memberPlanPricing).values({
+			memberPlanId: privatePlan.id,
+			name: "Monthly",
+			price: 90000,
+			interval: "month",
+			intervalThreshold: 1,
+		}).returning({ id: memberPlanPricing.id });
+		if (!privatePrice) throw new Error("Second bundle price was not created");
+		const multiBundle = await createBundle(primaryLocation.id, {
+			name: "Multiple subscription bundle",
+			description: null,
+			components: [
+				{ type: "subscription", memberPlanPricingId: regularPrice.id, priceOverride: null, required: true },
+				{ type: "subscription", memberPlanPricingId: privatePrice.id, priceOverride: 85000, required: true },
+				{
+					type: "addon",
+					addonId: addon.id,
+					targetMemberPlanPricingId: privatePrice.id,
+					priceOverride: null,
+					required: true,
+				},
+			],
+		});
+		createdBundleIds.push(multiBundle.id);
+		expect(multiBundle.components[2]?.targetMemberPlanPricingId).toBe(privatePrice.id);
+
+		const multiPurchase = await purchaseBundle(primaryLocation.id, member.id, {
+			bundleId: multiBundle.id,
+			paymentType: "cash",
+			selectedOptionalComponentIds: [],
+		});
+		expect(multiPurchase.status).toBe("created");
+		if (multiPurchase.status !== "created") throw new Error(multiPurchase.error);
+		multiBundlePurchaseId = multiPurchase.value.purchase.id;
+		runtimeSubscriptionIds.push(...multiPurchase.value.subscriptionIds);
+		expect(multiPurchase.value.subscriptionIds).toHaveLength(2);
+		const [targetedAddon] = await db.select({
+			memberSubscriptionId: memberSubscriptionAddons.memberSubscriptionId,
+		}).from(memberSubscriptionAddons)
+			.where(eq(memberSubscriptionAddons.id, multiPurchase.value.addonPurchaseIds[0]!));
+		const [targetedSubscription] = targetedAddon
+			? await db.select({ memberPlanPricingId: memberSubscriptions.memberPlanPricingId })
+				.from(memberSubscriptions)
+				.where(eq(memberSubscriptions.id, targetedAddon.memberSubscriptionId))
+			: [];
+		expect(targetedSubscription?.memberPlanPricingId).toBe(privatePrice.id);
+		expect((await cancelBundlePurchase(primaryLocation.id, multiPurchase.value.purchase.id)).status).toBe("canceled");
 
 		const periodStart = new Date();
 		const periodEnd = new Date(periodStart);
@@ -264,11 +385,125 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		});
 		createdAddonIds.push(conflictingAddon.id);
 		expect((await purchaseSubscriptionAddon(primaryLocation.id, subscription.id, conflictingAddon.id)).status).toBe("pricing-conflict");
+
+		const purchaseConflictBundle = await createBundle(primaryLocation.id, {
+			name: "Conflicting add-on prices",
+			description: null,
+			components: [
+				{ type: "subscription", memberPlanPricingId: regularPrice.id, priceOverride: null, required: true },
+				{
+					type: "addon",
+					addonId: addon.id,
+					targetMemberPlanPricingId: regularPrice.id,
+					priceOverride: null,
+					required: true,
+				},
+				{
+					type: "addon",
+					addonId: conflictingAddon.id,
+					targetMemberPlanPricingId: regularPrice.id,
+					priceOverride: null,
+					required: true,
+				},
+			],
+		});
+		createdBundleIds.push(purchaseConflictBundle.id);
+		const rejectedBundlePurchase = await purchaseBundle(primaryLocation.id, member.id, {
+			bundleId: purchaseConflictBundle.id,
+			paymentType: "cash",
+			selectedOptionalComponentIds: [],
+		});
+		expect(rejectedBundlePurchase.status).toBe("pricing-conflict");
+		expect(await db.select({ id: bundlePurchases.id }).from(bundlePurchases)
+			.where(eq(bundlePurchases.bundleId, purchaseConflictBundle.id))).toEqual([]);
+
+		const lateMappedAddon = await createAddon(primaryLocation.id, {
+			...addonInput,
+			name: "Late mapped price",
+			planPriceOverrides: [],
+		});
+		createdAddonIds.push(lateMappedAddon.id);
+		const activationConflictBundle = await createBundle(primaryLocation.id, {
+			name: "Activation price conflict",
+			description: null,
+			components: [
+				{ type: "subscription", memberPlanPricingId: regularPrice.id, priceOverride: null, required: true },
+				{
+					type: "addon",
+					addonId: addon.id,
+					targetMemberPlanPricingId: regularPrice.id,
+					priceOverride: null,
+					required: true,
+				},
+				{
+					type: "addon",
+					addonId: lateMappedAddon.id,
+					targetMemberPlanPricingId: regularPrice.id,
+					priceOverride: null,
+					required: true,
+				},
+			],
+		});
+		createdBundleIds.push(activationConflictBundle.id);
+		const activationConflictPurchase = await purchaseBundle(primaryLocation.id, member.id, {
+			bundleId: activationConflictBundle.id,
+			paymentType: "cash",
+			selectedOptionalComponentIds: [],
+		});
+		expect(activationConflictPurchase.status).toBe("created");
+		if (activationConflictPurchase.status !== "created") throw new Error(activationConflictPurchase.error);
+		activationConflictBundlePurchaseId = activationConflictPurchase.value.purchase.id;
+		runtimeSubscriptionIds.push(...activationConflictPurchase.value.subscriptionIds);
+		await db.update(memberSubscriptions).set({ status: "active" })
+			.where(inArray(memberSubscriptions.id, activationConflictPurchase.value.subscriptionIds));
+		await db.insert(addonPlanPriceOverrides).values({
+			addonId: lateMappedAddon.id,
+			sourcePlanPricingId: regularPrice.id,
+			replacementPlanPricingId: otherMemberPrice.id,
+		});
+		expect((await activateBundlePurchase(
+			primaryLocation.id,
+			activationConflictPurchase.value.purchase.id,
+		)).status).toBe("pricing-conflict");
+		const blockedActivationResponse = await authorizedApp.handle(new Request(
+			`http://localhost/x/loc/${primaryLocation.id}/addons-bundles/bundle-purchases/${activationConflictPurchase.value.purchase.id}/activate`,
+			{ method: "POST" },
+		));
+		expect(blockedActivationResponse.status).toBe(409);
+		expect(await blockedActivationResponse.json()).toEqual({
+			error: "Bundled add-ons would apply conflicting subscription prices",
+		});
+		const [blockedBundlePurchase] = await db.select({ status: bundlePurchases.status })
+			.from(bundlePurchases)
+			.where(eq(bundlePurchases.id, activationConflictPurchase.value.purchase.id));
+		expect(blockedBundlePurchase?.status).toBe("pending");
+		const blockedAddonPurchases = await db.select({ status: memberSubscriptionAddons.status })
+			.from(memberSubscriptionAddons)
+			.where(eq(memberSubscriptionAddons.bundlePurchaseId, activationConflictPurchase.value.purchase.id));
+		expect(blockedAddonPurchases.map((purchase) => purchase.status)).toEqual(["pending", "pending"]);
+		const renewalAt = new Date(Date.now() + 86_400_000);
+		const [renewalCandidate] = await db.select({ id: memberSubscriptionAddons.id })
+			.from(memberSubscriptionAddons)
+			.where(eq(memberSubscriptionAddons.bundlePurchaseId, activationConflictPurchase.value.purchase.id))
+			.limit(1);
+		if (!renewalCandidate) throw new Error("Pricing-conflict renewal candidate was not found");
+		await db.update(memberSubscriptionAddons).set({ status: "active", nextBillAt: renewalAt })
+			.where(eq(memberSubscriptionAddons.id, renewalCandidate.id));
+		const blockedRenewalResponse = await authorizedApp.handle(new Request(
+			`http://localhost/x/loc/${primaryLocation.id}/addons-bundles/subscription-addons/${renewalCandidate.id}/schedule-renewal`,
+			{ method: "POST" },
+		));
+		expect(blockedRenewalResponse.status).toBe(409);
+		expect(await blockedRenewalResponse.json()).toEqual({
+			error: "Bundled add-ons would apply conflicting subscription prices",
+		});
+
 		const cancellation = await cancelSubscriptionAddon(primaryLocation.id, subscriptionAddonPurchase.id);
 		expect(cancellation.status).toBe("canceled");
 		expect(cancellation.runAt?.toISOString()).toBe(periodEnd.toISOString());
 		await archiveAddon(primaryLocation.id, accessOnlyAddon.id);
 		await archiveAddon(primaryLocation.id, conflictingAddon.id);
+		await archiveAddon(primaryLocation.id, lateMappedAddon.id);
 		await expect((async () => {
 			await db.update(addons).set({ amount: 1 }).where(eq(addons.id, addon.id));
 		})()).rejects.toThrow();
@@ -314,6 +549,14 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		expect((await getCatalogOptions(primaryLocation.id)).addons).toEqual([]);
 	} finally {
 		if (createdInvoiceIds.length > 0) await db.delete(memberInvoices).where(inArray(memberInvoices.id, createdInvoiceIds));
+		if (runtimeSubscriptionIds.length > 0) {
+			await db.delete(memberSubscriptions).where(inArray(memberSubscriptions.id, runtimeSubscriptionIds));
+		}
+		if (runtimeBundlePurchaseId) await db.delete(bundlePurchases).where(eq(bundlePurchases.id, runtimeBundlePurchaseId));
+		if (multiBundlePurchaseId) await db.delete(bundlePurchases).where(eq(bundlePurchases.id, multiBundlePurchaseId));
+		if (activationConflictBundlePurchaseId) {
+			await db.delete(bundlePurchases).where(eq(bundlePurchases.id, activationConflictBundlePurchaseId));
+		}
 		if (purchaseId) await db.delete(bundlePurchases).where(eq(bundlePurchases.id, purchaseId));
 		if (memberSubscriptionId) await db.delete(memberSubscriptions).where(eq(memberSubscriptions.id, memberSubscriptionId));
 		if (createdBundleIds.length > 0) await db.delete(bundles).where(inArray(bundles.id, createdBundleIds));

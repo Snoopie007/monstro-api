@@ -11,6 +11,8 @@ import type { InvoiceItem } from "@subtrees/types";
 import type { Currency } from "@subtrees/types/currency";
 import { enqueueSubscriptionAddonJob } from "@/queues";
 import { getSubscriptionAddonOverview } from "../addonsBundles/subscriptionAddons";
+import { hasConflictingSubscriptionAddonPricing } from "../addonsBundles/subscriptionAddonPricing";
+import { activateBundlePurchase } from "../addonsBundles/bundlePurchases";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/mark-paid", async ({ params, body, status }) => {
@@ -33,10 +35,17 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         if (invoice.memberSubscriptionAddonId) {
             const purchase = await db.query.memberSubscriptionAddons.findFirst({
                 where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId),
-                columns: { status: true },
+                columns: { status: true, memberSubscriptionId: true },
             });
             if (purchase && ["canceled", "expired"].includes(purchase.status)) {
                 return status(409, { error: "Canceled or expired add-on invoices cannot be marked paid" });
+            }
+            if (purchase && await hasConflictingSubscriptionAddonPricing(
+                purchase.memberSubscriptionId,
+                [],
+                invoice.forPeriodStart ?? new Date(),
+            )) {
+                return status(409, { error: "This add-on would apply a conflicting subscription price" });
             }
         }
 
@@ -115,6 +124,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         }
 
         const addonRenewal: { value: { purchaseId: string; runAt: Date } | null } = { value: null };
+        const bundlePurchase: { value: string | null } = { value: null };
         await db.transaction(async (tx) => {
             const existingTransaction = invoice.transactionId
                 ? await tx.query.transactions.findFirst({
@@ -170,6 +180,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     with: { addon: true },
                 });
                 if (purchase) {
+                    bundlePurchase.value = purchase.bundlePurchaseId;
                     const periodStart = invoice.forPeriodStart ?? new Date();
                     const periodEnd = purchase.addon.billingType === "recurring"
                         ? addInterval(periodStart, purchase.addon.interval || "month", purchase.addon.intervalThreshold || 1)
@@ -275,6 +286,19 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 await enqueueSubscriptionAddonJob("renew", addonRenewal.value.purchaseId, addonRenewal.value.runAt);
             } catch (error) {
                 console.error("Add-on was paid but its renewal job could not be scheduled", error);
+            }
+        }
+
+        if (bundlePurchase.value) {
+            try {
+                const activation = await activateBundlePurchase(lid, bundlePurchase.value);
+                if (activation.status === "ready") {
+                    await Promise.all(activation.addonPurchaseIds.map((purchaseId) =>
+                        enqueueSubscriptionAddonJob("activate", purchaseId)
+                    ));
+                }
+            } catch (error) {
+                console.error("Add-on was paid but its bundle could not be reconciled", error);
             }
         }
 

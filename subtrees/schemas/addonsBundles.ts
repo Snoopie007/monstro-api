@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -83,6 +84,10 @@ export const bundleComponents = pgTable("bundle_components", {
   bundleId: text("bundle_id").notNull().references(() => bundles.id, { onDelete: "cascade" }),
   memberPlanPricingId: text("member_plan_pricing_id").references(() => memberPlanPricing.id, { onDelete: "restrict" }),
   addonId: text("addon_id").references(() => addons.id, { onDelete: "restrict" }),
+  targetSubscriptionComponentId: text("target_subscription_component_id").references(
+    (): AnyPgColumn => bundleComponents.id,
+    { onDelete: "restrict" },
+  ),
   priceOverride: integer("price_override"),
   required: boolean("required").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
@@ -97,6 +102,11 @@ export const bundleComponents = pgTable("bundle_components", {
     .on(table.bundleId, table.addonId)
     .where(sql`${table.addonId} is not null`),
   check("bundle_components_exactly_one_product", sql`num_nonnulls(${table.memberPlanPricingId}, ${table.addonId}) = 1`),
+  check("bundle_components_target_matches_product", sql`
+    (${table.memberPlanPricingId} is not null and ${table.targetSubscriptionComponentId} is null)
+    or
+    (${table.addonId} is not null and ${table.targetSubscriptionComponentId} is not null)
+  `),
   check("bundle_components_price_override_nonnegative", sql`${table.priceOverride} is null or ${table.priceOverride} >= 0`),
   check("bundle_components_sort_order_nonnegative", sql`${table.sortOrder} >= 0`),
 ]);

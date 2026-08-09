@@ -752,6 +752,14 @@ export const bundleComponentsRelations = relations(bundleComponents, ({ many, on
 		fields: [bundleComponents.addonId],
 		references: [addons.id],
 	}),
+	targetSubscriptionComponent: one(bundleComponents, {
+		fields: [bundleComponents.targetSubscriptionComponentId],
+		references: [bundleComponents.id],
+		relationName: "bundleAddonTargetSubscription",
+	}),
+	targetedAddonComponents: many(bundleComponents, {
+		relationName: "bundleAddonTargetSubscription",
+	}),
 	subscriptions: many(memberSubscriptions),
 	addonPurchases: many(memberSubscriptionAddons),
 }));

@@ -3,6 +3,11 @@ import { strict as assert } from "node:assert";
 import type { PaymentType } from "@subtrees/types";
 import type { Currency } from "@subtrees/types/currency";
 import { db } from "@/db/db";
+import { enqueueSubscriptionAddonJob } from "@/queues";
+import {
+    activateBundlePurchase,
+    cancelBundlePurchase,
+} from "@/routes/x/loc/addonsBundles/bundlePurchases";
 import { memberInvoices, memberPackages, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 
@@ -43,6 +48,7 @@ export async function handleStripePlanCharge({
     stripeChargeId,
 }: HandleStripePlanChargeProps) {
     const now = new Date();
+    let bundlePurchaseId: string | null = null;
 
     await db.transaction(async (tx) => {
         const [invoice] = await tx.update(memberInvoices).set({
@@ -95,13 +101,30 @@ export async function handleStripePlanCharge({
 
         const subscription = await tx.query.memberSubscriptions.findFirst({
             where: eq(memberSubscriptions.id, memberPlanId),
-            columns: { status: true },
+            columns: { status: true, bundlePurchaseId: true },
         });
         if (subscription?.status === "canceled") return;
+        bundlePurchaseId = subscription?.bundlePurchaseId ?? null;
 
         await tx.update(memberSubscriptions).set({
             gatewayPaymentId: paymentMethodId,
             status: success ? "active" : "past_due",
         }).where(eq(memberSubscriptions.id, memberPlanId));
     });
+
+    if (!bundlePurchaseId) return;
+    if (!success) {
+        await cancelBundlePurchase(locationId, bundlePurchaseId, "Bundled subscription payment failed");
+        return;
+    }
+
+    const activation = await activateBundlePurchase(locationId, bundlePurchaseId);
+    if (activation.status === "pricing-conflict") {
+        console.error(`Bundle purchase ${bundlePurchaseId} has conflicting add-on subscription prices`);
+        return;
+    }
+    if (activation.status !== "ready") return;
+    await Promise.all(activation.addonPurchaseIds.map((purchaseId) =>
+        enqueueSubscriptionAddonJob("activate", purchaseId)
+    ));
 }

@@ -51,6 +51,7 @@ export const bundleEditorBody = t.Object({
       ...bundleComponentBodyFields,
       type: t.Literal("addon"),
       addonId: t.String({ minLength: 1 }),
+      targetMemberPlanPricingId: t.String({ minLength: 1 }),
     }),
   ]), { minItems: 1 }),
 });
@@ -109,6 +110,9 @@ export function validateBundleEditorInput(
   const planPricingIds = new Set(options.planPricings.map((pricing) => pricing.id));
   const addonIds = new Set(options.addons.map((addon) => addon.id));
   const productKeys = new Set<string>();
+  const selectedSubscriptionPricingIds = new Set(input.components.flatMap((component) =>
+    component.type === "subscription" ? [component.memberPlanPricingId] : []
+  ));
 
   for (const component of input.components) {
     const productId = component.type === "subscription" ? component.memberPlanPricingId : component.addonId;
@@ -123,6 +127,13 @@ export function validateBundleEditorInput(
 
     if (component.type === "addon" && !addonIds.has(component.addonId)) {
       return "Every add-on in a bundle must be available at this location";
+    }
+
+    if (
+      component.type === "addon"
+      && !selectedSubscriptionPricingIds.has(component.targetMemberPlanPricingId)
+    ) {
+      return "Every add-on in a bundle must be attached to one of its subscriptions";
     }
   }
 

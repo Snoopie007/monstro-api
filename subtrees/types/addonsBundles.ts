@@ -57,6 +57,7 @@ export type BundleCatalogItem = Omit<BundleDetail, "created" | "updated" | "comp
     created: string;
     updated: string | null;
     displayName: string;
+    targetMemberPlanPricingId: string | null;
   }>;
 };
 
@@ -114,15 +115,51 @@ export type AvailableSubscriptionAddon = Pick<
 export type SubscriptionAddonOverview = {
   basePricing: SubscriptionAddonPricing;
   effectivePricing: SubscriptionAddonPricing;
-  pricingSource: { type: "base" } | { type: "addon"; memberSubscriptionAddonId: string };
+  pricingSource:
+    | { type: "base" }
+    | { type: "addon"; memberSubscriptionAddonId: string }
+    | { type: "bundle"; bundlePurchaseId: string; bundleComponentId: string };
   unlimitedClassAccess: boolean;
   purchases: SubscriptionAddonPurchaseItem[];
   availableAddons: AvailableSubscriptionAddon[];
+  bundlePurchase: SubscriptionBundleSummary | null;
 };
 
 export type SubscriptionAddonOverviewResponse = { subscriptionAddons: SubscriptionAddonOverview };
 export type SubscriptionAddonPurchaseResponse = { purchase: SubscriptionAddonPurchaseItem };
 export type PurchaseSubscriptionAddonInput = { addonId: string };
+
+export type SubscriptionBundleSummary = {
+  id: string;
+  bundleId: string;
+  bundleName: string;
+  status: BundlePurchase["status"];
+  startsAt: string;
+  endedAt: string | null;
+  components: Array<{
+    id: string;
+    type: "subscription" | "addon";
+    name: string;
+    priceOverride: number | null;
+    required: boolean;
+    memberSubscriptionId: string | null;
+    memberSubscriptionAddonId: string | null;
+  }>;
+};
+
+export type PurchaseBundleInput = {
+  bundleId: string;
+  paymentType: "cash" | "card" | "us_bank_account";
+  paymentMethodId?: string;
+  startDate?: string;
+  selectedOptionalComponentIds: string[];
+};
+
+export type BundlePurchaseResponse = {
+  purchase: SubscriptionBundleSummary;
+  subscriptionIds: string[];
+  addonPurchaseIds: string[];
+};
 
 type AddonEditorBaseInput = Pick<Addon, "name" | "description" | "amount" | "currency" | "classAccessOverride"> & {
   planPriceOverrides: Array<Pick<AddonPlanPriceOverride, "sourcePlanPricingId" | "replacementPlanPricingId">>;
@@ -151,6 +188,7 @@ export type BundleComponentInput =
   | BundleComponentBaseInput & {
     type: "addon";
     addonId: NonNullable<BundleComponent["addonId"]>;
+    targetMemberPlanPricingId: string;
   };
 
 export type BundleEditorInput = Pick<Bundle, "name" | "description"> & {

@@ -20,6 +20,7 @@ import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
+import { resolveInitialSubscriptionPricing } from "./effectivePricing";
 
 type GatewayService = "stripe" | "square";
 type SubscriptionPaymentMethod = { id: string; type: "card" | "us_bank_account" };
@@ -237,8 +238,12 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         }
 
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
-        const planName = `${sub.pricing.plan?.name || "Plan"}/${sub.pricing.name}`;
-        const billedAmount = sub.pricing.downpayment || sub.pricing.price;
+        const pricingResolution = await resolveInitialSubscriptionPricing(sub.id);
+        const { pricing, basePricing, pricingSource } = pricingResolution;
+        const planName = `${sub.pricing.plan?.name || "Plan"}/${pricing.name}`;
+        const billedAmount = pricingSource.type === "bundle"
+            ? pricing.price
+            : sub.pricing.downpayment || pricing.price;
         const locationState = sub.location?.locationState;
         const isGrowthPlan = locationState?.planId === 3;
         const chargeDetails = calculateChargeDetails({
@@ -257,6 +262,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             quantity: 1,
             price: billedAmount,
             discount: discountAmount,
+            billingSource: { type: "subscription" as const, memberSubscriptionId: sub.id },
+            pricingSource,
+            basePlanPricingId: basePricing.id,
+            effectivePlanPricingId: pricing.id,
         }];
 
         const [invoice] = await db.insert(memberInvoices).values({
@@ -265,7 +274,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             memberPlanId: sub.id,
             description: sub.pricing.downpayment
                 ? `Downpayment for ${planName}`
-                : `${sub.pricing.name} - Billing Period`,
+                : `${pricing.name} - Billing Period`,
             items: lineItems,
             subTotal: chargeDetails.subTotal,
             total: chargeDetails.total,

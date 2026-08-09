@@ -1,6 +1,5 @@
 import { db } from "@/db/db";
 import {
-  addonPlanPriceOverrides,
   addons,
   memberInvoices,
   memberPlanPricing,
@@ -15,9 +14,13 @@ import type {
   SubscriptionAddonPricing,
   SubscriptionAddonPurchaseItem,
 } from "@subtrees/types";
-import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
-
-const OPEN_PURCHASE_STATUSES = ["pending", "active", "past_due"] as const;
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { getSubscriptionBundleSummary } from "./bundlePurchases";
+import {
+  hasConflictingAddonPriceOverrides,
+  loadActiveAddonPriceOverrides,
+  OPEN_ADDON_PURCHASE_STATUSES,
+} from "./subscriptionAddonPricing";
 
 type SubscriptionContext = {
   id: string;
@@ -97,16 +100,7 @@ async function loadPriceEffects(
 ) {
   if (addonIds.length === 0) return new Map<string, SubscriptionAddonPriceEffect>();
 
-  const mappings = await db.select({
-    addonId: addonPlanPriceOverrides.addonId,
-    replacementPlanPricingId: addonPlanPriceOverrides.replacementPlanPricingId,
-  }).from(addonPlanPriceOverrides).where(and(
-    inArray(addonPlanPriceOverrides.addonId, addonIds),
-    eq(addonPlanPriceOverrides.sourcePlanPricingId, basePricing.id),
-    eq(addonPlanPriceOverrides.archived, false),
-    or(isNull(addonPlanPriceOverrides.startsAt), lte(addonPlanPriceOverrides.startsAt, at)),
-    or(isNull(addonPlanPriceOverrides.endsAt), gt(addonPlanPriceOverrides.endsAt, at)),
-  ));
+  const mappings = await loadActiveAddonPriceOverrides(basePricing.id, addonIds, at);
   if (mappings.length === 0) return new Map<string, SubscriptionAddonPriceEffect>();
 
   const replacementIds = Array.from(new Set(mappings.map((mapping) => mapping.replacementPlanPricingId)));
@@ -172,9 +166,10 @@ export async function getSubscriptionAddonOverview(
   const subscription = await loadSubscriptionContext(locationId, subscriptionId);
   if (!subscription) return null;
 
-  const [purchaseRows, addonRows] = await Promise.all([
+  const [purchaseRows, addonRows, bundlePurchase] = await Promise.all([
     loadPurchaseRows(subscriptionId),
     db.select().from(addons).where(and(eq(addons.locationId, locationId), eq(addons.archived, false))).orderBy(asc(addons.name)),
+    getSubscriptionBundleSummary(locationId, subscriptionId),
   ]);
   const allAddonIds = Array.from(new Set([
     ...purchaseRows.map((purchase) => purchase.addonId),
@@ -191,8 +186,13 @@ export async function getSubscriptionAddonOverview(
     throw new Error(`Subscription ${subscriptionId} has conflicting active add-on prices`);
   }
   const pricingPurchase = effectivePricePurchases[0];
+  const bundlePricingComponent = bundlePurchase?.status === "active"
+    ? bundlePurchase.components.find((component) =>
+      component.memberSubscriptionId === subscriptionId && component.priceOverride !== null
+    )
+    : null;
   const openAddonIds = new Set(purchases
-    .filter((purchase) => OPEN_PURCHASE_STATUSES.includes(purchase.status as typeof OPEN_PURCHASE_STATUSES[number]))
+    .filter((purchase) => OPEN_ADDON_PURCHASE_STATUSES.includes(purchase.status as typeof OPEN_ADDON_PURCHASE_STATUSES[number]))
     .map((purchase) => purchase.addonId));
   const currentReplacementId = pricingPurchase?.priceEffect?.replacementPricing.id;
 
@@ -228,13 +228,22 @@ export async function getSubscriptionAddonOverview(
 
   return {
     basePricing: subscription.basePricing,
-    effectivePricing: pricingPurchase?.priceEffect?.replacementPricing ?? subscription.basePricing,
-    pricingSource: pricingPurchase
-      ? { type: "addon", memberSubscriptionAddonId: pricingPurchase.id }
-      : { type: "base" },
+    effectivePricing: bundlePricingComponent
+      ? { ...subscription.basePricing, price: bundlePricingComponent.priceOverride! }
+      : pricingPurchase?.priceEffect?.replacementPricing ?? subscription.basePricing,
+    pricingSource: bundlePricingComponent
+      ? {
+        type: "bundle",
+        bundlePurchaseId: bundlePurchase!.id,
+        bundleComponentId: bundlePricingComponent.id,
+      }
+      : pricingPurchase
+        ? { type: "addon", memberSubscriptionAddonId: pricingPurchase.id }
+        : { type: "base" },
     unlimitedClassAccess: purchases.some((purchase) => purchase.effective && purchase.addon.classAccessOverride === "unlimited"),
     purchases,
     availableAddons,
+    bundlePurchase,
   };
 }
 
@@ -262,26 +271,19 @@ export async function purchaseSubscriptionAddon(locationId: string, subscription
     const openPurchases = await tx.query.memberSubscriptionAddons.findMany({
       where: and(
         eq(memberSubscriptionAddons.memberSubscriptionId, subscriptionId),
-        inArray(memberSubscriptionAddons.status, [...OPEN_PURCHASE_STATUSES]),
+        inArray(memberSubscriptionAddons.status, [...OPEN_ADDON_PURCHASE_STATUSES]),
       ),
       columns: { id: true, addonId: true, status: true },
     });
     const duplicate = openPurchases.find((purchase) => purchase.addonId === addonId);
     if (duplicate) return { status: "already-purchased" as const, purchaseId: duplicate.id };
 
-    const priceEffects = await loadPriceEffects(
-      subscription.basePricing,
+    const hasPricingConflict = await hasConflictingAddonPriceOverrides(
+      subscription.basePricing.id,
       [...openPurchases.map((purchase) => purchase.addonId), addonId],
       new Date(),
     );
-    const openReplacementIds = new Set(openPurchases
-      .flatMap((purchase) => priceEffects.get(purchase.addonId)?.replacementPricing.id ?? []));
-    const candidateReplacementId = priceEffects.get(addonId)?.replacementPricing.id;
-    if (
-      candidateReplacementId
-      && openReplacementIds.size > 0
-      && !openReplacementIds.has(candidateReplacementId)
-    ) {
+    if (hasPricingConflict) {
       return { status: "pricing-conflict" as const };
     }
 
@@ -308,9 +310,24 @@ export async function cancelSubscriptionAddon(locationId: string, purchaseId: st
     `);
     const purchase = await tx.query.memberSubscriptionAddons.findFirst({
       where: eq(memberSubscriptionAddons.id, purchaseId),
-      with: { subscription: { columns: { locationId: true } } },
+      with: {
+        subscription: { columns: { locationId: true } },
+        bundlePurchase: { columns: { id: true, status: true } },
+        bundleComponent: { columns: { required: true } },
+      },
     });
     if (!purchase || purchase.subscription?.locationId !== locationId) return { status: "not-found" as const };
+    if (
+      purchase.bundlePurchaseId
+      && purchase.bundleComponent?.required
+      && purchase.bundlePurchase
+      && ["pending", "active"].includes(purchase.bundlePurchase.status)
+    ) {
+      return {
+        status: "bundle-cancel-required" as const,
+        bundlePurchaseId: purchase.bundlePurchaseId,
+      };
+    }
     if (["canceled", "expired"].includes(purchase.status)) {
       return { status: "unchanged" as const, runAt: null };
     }
@@ -355,11 +372,11 @@ export async function getSubscriptionAddonPurchase(locationId: string, subscript
 export async function getSubscriptionAddonRenewal(locationId: string, purchaseId: string) {
   const purchase = await db.query.memberSubscriptionAddons.findFirst({
     where: eq(memberSubscriptionAddons.id, purchaseId),
-    columns: { id: true, status: true, nextBillAt: true },
+    columns: { id: true, status: true, nextBillAt: true, bundlePurchaseId: true },
     with: { subscription: { columns: { locationId: true } } },
   });
   if (!purchase || purchase.subscription?.locationId !== locationId) return null;
   return purchase.status === "active" && purchase.nextBillAt
-    ? { purchaseId: purchase.id, runAt: purchase.nextBillAt }
-    : { purchaseId: purchase.id, runAt: null };
+    ? { purchaseId: purchase.id, runAt: purchase.nextBillAt, bundlePurchaseId: purchase.bundlePurchaseId }
+    : { purchaseId: purchase.id, runAt: null, bundlePurchaseId: purchase.bundlePurchaseId };
 }

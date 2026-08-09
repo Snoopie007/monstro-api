@@ -15,6 +15,11 @@ import {
 	updateBundle,
 } from "./catalog";
 import {
+	activateBundlePurchase,
+	cancelBundlePurchase,
+	purchaseBundle,
+} from "./bundlePurchases";
+import {
 	addonEditorBody,
 	bundleEditorBody,
 	validateAddonEditorInput,
@@ -126,6 +131,15 @@ export const xAddonsBundles = new Elysia({ prefix: "/addons-bundles" })
 		const { lid, purchaseId } = params as { lid: string; purchaseId: string };
 		const result = await cancelSubscriptionAddon(lid, purchaseId);
 		if (result.status === "not-found") return status(404, { error: "Subscription add-on not found" });
+		if (result.status === "bundle-cancel-required") {
+			const bundleResult = await cancelBundlePurchase(
+				lid,
+				result.bundlePurchaseId,
+				"Required bundled add-on was canceled",
+			);
+			if (bundleResult.status === "not-found") return status(404, { error: "Bundle purchase not found" });
+			return status(200, { canceled: true, bundleCanceled: true, cancelAt: null });
+		}
 		if (result.runAt) await enqueueSubscriptionAddonJob("cancel", purchaseId, result.runAt);
 		return status(200, { canceled: true, cancelAt: result.runAt?.toISOString() ?? null });
 	})
@@ -135,6 +149,17 @@ export const xAddonsBundles = new Elysia({ prefix: "/addons-bundles" })
 		const { lid, purchaseId } = params as { lid: string; purchaseId: string };
 		const renewal = await getSubscriptionAddonRenewal(lid, purchaseId);
 		if (!renewal) return status(404, { error: "Subscription add-on not found" });
+		if (renewal.bundlePurchaseId) {
+			const bundleActivation = await activateBundlePurchase(lid, renewal.bundlePurchaseId);
+			if (bundleActivation.status === "pricing-conflict") {
+				return status(409, { error: "Bundled add-ons would apply conflicting subscription prices" });
+			}
+			if (bundleActivation.status === "ready") {
+				await Promise.all(bundleActivation.addonPurchaseIds.map((addonPurchaseId) =>
+					enqueueSubscriptionAddonJob("activate", addonPurchaseId)
+				));
+			}
+		}
 		if (renewal.runAt) await enqueueSubscriptionAddonJob("renew", purchaseId, renewal.runAt);
 		return status(200, { scheduled: Boolean(renewal.runAt), runAt: renewal.runAt?.toISOString() ?? null });
 	})
@@ -182,4 +207,58 @@ export const xAddonsBundles = new Elysia({ prefix: "/addons-bundles" })
 		const bundle = await archiveBundle(lid, bundleId);
 		if (!bundle) return status(404, { error: "Bundle not found" });
 		return status(200, { bundle });
-	});
+	})
+	.post("/members/:memberId/bundle-purchases", async (ctx) => {
+		const { params, body, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;
+		if (!addonBundleLocationAccess.allowed) return forbidden(status);
+		const { lid, memberId } = params as { lid: string; memberId: string };
+		if (body.paymentType !== "cash" && !body.paymentMethodId) {
+			return status(400, { error: "Choose a payment method for this bundle" });
+		}
+		const result = await purchaseBundle(lid, memberId, body);
+		if (result.status !== "created") {
+			const statusCode = result.status === "invalid-components"
+				? 400
+				: result.status === "pricing-conflict" ? 409 : 404;
+			return status(statusCode, { error: result.error });
+		}
+		return status(201, result.value);
+	}, {
+		body: t.Object({
+			bundleId: t.String({ minLength: 1 }),
+			paymentType: t.Union([t.Literal("cash"), t.Literal("card"), t.Literal("us_bank_account")]),
+			paymentMethodId: t.Optional(t.String({ minLength: 1 })),
+			startDate: t.Optional(t.String({ minLength: 1 })),
+			selectedOptionalComponentIds: t.Array(t.String({ minLength: 1 })),
+		}),
+	})
+	.post("/bundle-purchases/:bundlePurchaseId/activate", async (ctx) => {
+		const { params, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;
+		if (!addonBundleLocationAccess.allowed) return forbidden(status);
+		const { lid, bundlePurchaseId } = params as { lid: string; bundlePurchaseId: string };
+		const result = await activateBundlePurchase(lid, bundlePurchaseId);
+		if (result.status === "not-found") return status(404, { error: "Bundle purchase not found" });
+		if (result.status === "inactive") return status(409, { error: "Bundle purchase is no longer active" });
+		if (result.status === "subscriptions-not-ready") {
+			return status(202, {
+				activated: false,
+				pending: true,
+				addonPurchaseIds: [],
+			});
+		}
+		if (result.status === "pricing-conflict") {
+			return status(409, { error: "Bundled add-ons would apply conflicting subscription prices" });
+		}
+		await Promise.all(result.addonPurchaseIds.map((purchaseId) =>
+			enqueueSubscriptionAddonJob("activate", purchaseId)
+		));
+		return status(202, { activated: result.addonPurchaseIds.length === 0, addonPurchaseIds: result.addonPurchaseIds });
+	})
+	.post("/bundle-purchases/:bundlePurchaseId/cancel", async (ctx) => {
+		const { params, body, status, addonBundleLocationAccess } = ctx as typeof ctx & CatalogAccessContext;
+		if (!addonBundleLocationAccess.allowed) return forbidden(status);
+		const { lid, bundlePurchaseId } = params as { lid: string; bundlePurchaseId: string };
+		const result = await cancelBundlePurchase(lid, bundlePurchaseId, body.reason);
+		if (result.status === "not-found") return status(404, { error: "Bundle purchase not found" });
+		return status(200, { canceled: true });
+	}, { body: t.Object({ reason: t.Optional(t.String()) }) });

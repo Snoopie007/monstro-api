@@ -30,7 +30,13 @@ const bundleInput: BundleEditorInput = {
   description: null,
   components: [
     { type: "subscription", memberPlanPricingId: "singles_regular", priceOverride: 32000, required: true },
-    { type: "addon", addonId: "annual_membership", priceOverride: null, required: true },
+    {
+      type: "addon",
+      addonId: "annual_membership",
+      targetMemberPlanPricingId: "singles_regular",
+      priceOverride: null,
+      required: true,
+    },
   ],
 };
 
@@ -50,7 +56,13 @@ describe("add-on and bundle request validation", () => {
   test("rejects bundles without a required subscription", () => {
     expect(validateBundleEditorInput({
       ...bundleInput,
-      components: [{ type: "addon", addonId: "annual_membership", priceOverride: null, required: true }],
+      components: [{
+        type: "addon",
+        addonId: "annual_membership",
+        targetMemberPlanPricingId: "singles_regular",
+        priceOverride: null,
+        required: true,
+      }],
     }, options)).toBe("A bundle needs at least one required subscription");
   });
 });

@@ -77,6 +77,9 @@ async function serializeBundles(reader: CatalogReader, bundleRows: BundleRow[]):
       displayName: component.memberPlanPricingId
         ? planPricingNames.get(component.memberPlanPricingId)!
         : addonNames.get(component.addonId!)!,
+      targetMemberPlanPricingId: component.targetSubscriptionComponentId
+        ? bundle.components.find((candidate) => candidate.id === component.targetSubscriptionComponentId)?.memberPlanPricingId ?? null
+        : null,
     })),
   }));
 }
@@ -151,18 +154,37 @@ async function insertBundleComponents(
   bundleId: string,
   input: BundleEditorInput,
 ) {
-  await tx.insert(bundleComponents).values(input.components.map((component, sortOrder) => {
-    const common = {
+  const subscriptionInputs = input.components.flatMap((component, sortOrder) => component.type === "subscription"
+    ? [{ component, sortOrder }]
+    : []);
+  const insertedSubscriptions = await tx.insert(bundleComponents).values(subscriptionInputs.map(({ component, sortOrder }) => ({
+    bundleId,
+    memberPlanPricingId: component.memberPlanPricingId,
+    priceOverride: component.priceOverride,
+    required: component.required,
+    sortOrder,
+  }))).returning({
+    id: bundleComponents.id,
+    memberPlanPricingId: bundleComponents.memberPlanPricingId,
+  });
+  const subscriptionComponentByPricing = new Map(insertedSubscriptions.map((component) => [
+    component.memberPlanPricingId!,
+    component.id,
+  ]));
+  const addonInputs = input.components.flatMap((component, sortOrder) => component.type === "addon"
+    ? [{ component, sortOrder }]
+    : []);
+
+  if (addonInputs.length > 0) {
+    await tx.insert(bundleComponents).values(addonInputs.map(({ component, sortOrder }) => ({
       bundleId,
+      addonId: component.addonId,
+      targetSubscriptionComponentId: subscriptionComponentByPricing.get(component.targetMemberPlanPricingId)!,
       priceOverride: component.priceOverride,
       required: component.required,
       sortOrder,
-    };
-
-    return component.type === "subscription"
-      ? { ...common, memberPlanPricingId: component.memberPlanPricingId }
-      : { ...common, addonId: component.addonId };
-  }));
+    })));
+  }
 }
 
 export async function getCatalogOptions(locationId: string): Promise<AddonBundleCatalogOptions> {

@@ -6,6 +6,7 @@ import type Elysia from "elysia";
 import { and, eq } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
 import { getCurrency } from "@/utils";
+import { resolveInitialSubscriptionPricing } from "./effectivePricing";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
@@ -41,6 +42,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         if (!sub || !sub.pricing || !sub.member || !sub.location) {
             return status(404, { error: "Subscription not found" });
         }
+        const { pricing, basePricing, pricingSource } = await resolveInitialSubscriptionPricing(sub.id);
 
         const isTrialing = !!(sub.trialEnd && isFuture(sub.trialEnd));
 
@@ -54,10 +56,14 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
 
             if (!existingDraft) {
                 const lineItems = [{
-                    name: sub.pricing.name,
+                    name: pricing.name,
                     description: "Subscription billing period",
                     quantity: 1,
-                    price: sub.pricing.price,
+                    price: pricing.price,
+                    billingSource: { type: "subscription" as const, memberSubscriptionId: sid },
+                    pricingSource,
+                    basePlanPricingId: basePricing.id,
+                    effectivePlanPricingId: pricing.id,
                 }];
 
                 const currency = getCurrency(sub.location.country);
@@ -65,10 +71,10 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     memberId: sub.memberId,
                     locationId: lid,
                     memberPlanId: sid,
-                    description: `${sub.pricing.name} - Billing Period`,
+                    description: `${pricing.name} - Billing Period`,
                     items: lineItems,
-                    subTotal: sub.pricing.price,
-                    total: sub.pricing.price,
+                    subTotal: pricing.price,
+                    total: pricing.price,
                     tax: 0,
                     currency: currency || "usd",
                     status: "draft",
@@ -87,12 +93,12 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     const [transaction] = await db.insert(transactions).values({
                         memberId: sub.memberId,
                         locationId: lid,
-                        description: `${sub.pricing.name} - Recurring Payment`,
+                        description: `${pricing.name} - Recurring Payment`,
                         type: "inbound",
                         status: "failed",
                         paymentType: "cash",
-                        total: sub.pricing.price,
-                        subTotal: sub.pricing.price,
+                        total: pricing.price,
+                        subTotal: pricing.price,
                         tax: 0,
                         currency: currency || "usd",
                     }).returning({ id: transactions.id });
