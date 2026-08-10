@@ -141,6 +141,9 @@ export const websiteSiteRevisions = pgTable(
       table.siteId,
       table.revisionNumber,
     ),
+    uniqueIndex("website_site_revisions_one_draft_idx")
+      .on(table.siteId)
+      .where(sql`${table.status} = 'draft'`),
     index("website_site_revisions_status_idx").on(table.siteId, table.status),
     check(
       "website_site_revisions_status_check",
