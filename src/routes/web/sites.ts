@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { timingSafeEqual } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import {
@@ -14,6 +15,7 @@ import { getLocationPlans } from "./plans";
 import { getLocationSchedules } from "./schedules";
 import { getPublishedBlogPost, getPublishedBlogPosts } from "./content";
 import { getActiveLocationProduct, getActiveLocationProducts } from "./merc";
+import { submitGhlFormContact } from "@/handlers/formSubmissions";
 
 async function findActiveSiteLocation(siteId: string, locationId: string) {
   const [siteLocation] = await db
@@ -71,6 +73,16 @@ function readCapabilities(config: unknown): unknown {
 
 function readGatewayService(value: string | null): "stripe" | "square" | "authorize" | null {
   return value === "stripe" || value === "square" || value === "authorize" ? value : null;
+}
+
+function hasSitesServiceToken(request: Request): boolean {
+  const expected = Bun.env.MONSTRO_SITES_SERVICE_TOKEN;
+  const supplied = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
+  if (!expected || !supplied) return false;
+  const expectedBytes = Buffer.from(expected);
+  const suppliedBytes = Buffer.from(supplied);
+  return expectedBytes.length === suppliedBytes.length
+    && timingSafeEqual(expectedBytes, suppliedBytes);
 }
 
 export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
@@ -133,6 +145,8 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           name: locations.name,
           address: locations.address,
           timezone: locations.timezone,
+          phone: locations.phone,
+          email: locations.email,
           gatewayService: integrations.service,
           vendorId: locations.vendorId,
           isPrimary: websiteSiteLocations.isPrimary,
@@ -179,6 +193,8 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           slug: location.slug,
           name: location.name,
           ...(location.address ? { address: location.address } : {}),
+          ...(location.phone ? { phone: location.phone } : {}),
+          ...(location.email ? { email: location.email } : {}),
           timezone: location.timezone,
           paymentGateway: readGatewayService(location.gatewayService),
         })),
@@ -468,6 +484,51 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
         siteId: t.String({ minLength: 1 }),
         locationId: t.String({ minLength: 1 }),
         productId: t.String({ minLength: 1 }),
+      }),
+    },
+  )
+  .post(
+    "/:siteId/locations/:locationId/forms/:formId/submissions",
+    async ({ params, body, request, status }) => {
+      if (!hasSitesServiceToken(request)) {
+        return status(401, { code: "UNAUTHORIZED", message: "Unauthorized" });
+      }
+      if (!await findActiveSiteLocation(params.siteId, params.locationId)) {
+        return status(404, {
+          code: "SITE_LOCATION_NOT_FOUND",
+          message: "Site location not found",
+        });
+      }
+      try {
+        await submitGhlFormContact(params.locationId, body.contact);
+        return status(200, { ok: true });
+      } catch {
+        return status(503, {
+          code: "FORM_PROVIDER_UNAVAILABLE",
+          message: "Form provider unavailable",
+        });
+      }
+    },
+    {
+      params: t.Object({
+        siteId: t.String({ minLength: 1, maxLength: 128 }),
+        locationId: t.String({ minLength: 1, maxLength: 128 }),
+        formId: t.String({ minLength: 1, maxLength: 128 }),
+      }),
+      body: t.Object({
+        contact: t.Object({
+          firstName: t.Optional(t.String({ maxLength: 500 })),
+          lastName: t.Optional(t.String({ maxLength: 500 })),
+          name: t.Optional(t.String({ maxLength: 1_000 })),
+          email: t.Optional(t.String({ maxLength: 500 })),
+          phone: t.Optional(t.String({ maxLength: 100 })),
+          source: t.Literal("Generated website form"),
+          tags: t.Array(t.String({ minLength: 1, maxLength: 200 }), { maxItems: 100 }),
+          customFields: t.Array(t.Object({
+            key: t.String({ minLength: 1, maxLength: 128 }),
+            field_value: t.String({ maxLength: 10_000 }),
+          }), { maxItems: 100 }),
+        }),
       }),
     },
   );

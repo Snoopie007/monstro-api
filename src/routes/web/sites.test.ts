@@ -6,6 +6,7 @@ const planRows: unknown[] = [];
 const scheduleRows: unknown[] = [];
 const postRows: unknown[] = [];
 const productRows: unknown[] = [];
+const submitGhlFormContact = mock(async () => undefined);
 
 const selectBuilder = {
   from() {
@@ -76,6 +77,7 @@ mock.module("@/utils/generatePDF", () => ({
 mock.module("@/utils/contractUtils", () => ({
   renderContractContent: mock(() => ""),
 }));
+mock.module("@/handlers/formSubmissions", () => ({ submitGhlFormContact }));
 
 const { webSiteRoutes } = await import("./sites");
 const { webPlansRoutes } = await import("./plans");
@@ -94,6 +96,8 @@ beforeEach(() => {
   productRows.length = 0;
   db.query.websiteContents.findMany.mockClear();
   db.query.products.findMany.mockClear();
+  submitGhlFormContact.mockClear();
+  Bun.env.MONSTRO_SITES_SERVICE_TOKEN = "sites-service-secret";
 });
 
 test("rejects a location that is not attached to the requested site", async () => {
@@ -104,6 +108,50 @@ test("rejects a location that is not attached to the requested site", async () =
   expect(response.status).toBe(404);
   expect(db.query.memberPlans.findMany).not.toHaveBeenCalled();
 });
+
+test("requires service authorization for native form submissions", async () => {
+  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-1/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(401);
+  expect(submitGhlFormContact).not.toHaveBeenCalled();
+});
+
+test("submits an authorized form only for an active attached location", async () => {
+  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-1/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(200);
+  expect(submitGhlFormContact).toHaveBeenCalledWith("location-1", validFormContact);
+});
+
+const validFormContact = {
+  firstName: "Jane",
+  lastName: "Smith",
+  name: "Jane Smith",
+  email: "jane@example.com",
+  phone: "5555555555",
+  source: "Generated website form",
+  tags: ["new lead", "web contact form"],
+  customFields: [{ key: "program", field_value: "kids" }],
+};
 
 test("returns only the selected site's location plans", async () => {
   siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
