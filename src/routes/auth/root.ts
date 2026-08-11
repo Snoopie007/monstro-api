@@ -5,9 +5,14 @@ import {
     verifySession, mobileRegister,
     mobileResetPassword,
 } from "./mobile";
+import { staffLogin } from "./staff/login";
 
 
 export const AuthRoutes = new Elysia({ prefix: '/auth' })
+    .group('/staff', (app) => {
+        app.use(staffLogin)
+        return app
+    })
     .group('/mobile', (app) => {
         app.use(mobileLogin)
         app.use(mobileGoogleLogin)

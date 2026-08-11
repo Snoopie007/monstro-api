@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { addMinutes } from "date-fns";
+import { addMinutes, startOfWeek } from "date-fns";
 import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
 import { findBlockedHoliday } from "@/libs/holidays";
 import { fromZonedTime } from 'date-fns-tz';
@@ -27,8 +27,9 @@ export const webLocationSchedulesRoutes = new Elysia({ prefix: "/schedules" })
         }
         const { date } = query;
 
-
-        const startDate = new Date(date ?? new Date());
+        const refDate = new Date(date ?? new Date());
+        // Calendar week Sunday → Saturday containing the requested date
+        const weekStart = startOfWeek(refDate, { weekStartsOn: 0 });
 
         try {
 
@@ -62,8 +63,16 @@ export const webLocationSchedulesRoutes = new Elysia({ prefix: "/schedules" })
                 },
             });
 
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+
             if (programs.length === 0) {
-                return status(200, { sessions: [] });
+                return status(200, {
+                    weekStart,
+                    weekEnd,
+                    sessions: [],
+                });
             }
 
             const holidays = location.locationState?.settings.holidays;
@@ -71,11 +80,9 @@ export const webLocationSchedulesRoutes = new Elysia({ prefix: "/schedules" })
             programs.forEach((program) => {
                 program.sessions.forEach((session) => {
                     // session.day is 0 (Sunday) through 6 (Saturday)
-                    // Find the next date in this week that matches session.day
                     const sessionDay = typeof session.day === "number" ? session.day : 0;
-                    const sessionDate = new Date(startDate);
-                    // Set sessionDate to the correct day of this week
-                    sessionDate.setDate(startDate.getDate() + (sessionDay - startDate.getDay() + 7) % 7);
+                    const sessionDate = new Date(weekStart);
+                    sessionDate.setDate(weekStart.getDate() + sessionDay);
 
                     const [hours, minutes, seconds] = session.time.split(":").map(Number);
                     sessionDate.setHours(hours!, minutes!, seconds!, 0);
@@ -101,18 +108,25 @@ export const webLocationSchedulesRoutes = new Elysia({ prefix: "/schedules" })
                         isHoliday: blockedHoliday !== null,
                         isBlocked: blockedHoliday !== null,
                         holidayName: blockedHoliday?.name ?? undefined,
-                        day: sessionDate, // actual date object of the session occurrence in this week
+                        day: sessionDate,
                         description: program.description ?? "",
                     });
                 });
             });
-            return status(200, { sessions: mappedSessions });
+
+            mappedSessions.sort((a, b) => a.utcStartTime.getTime() - b.utcStartTime.getTime());
+
+            return status(200, {
+                weekStart,
+                weekEnd,
+                sessions: mappedSessions,
+            });
         } catch (error) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
     }, {
         query: t.Object({
-            date: t.String(),
+            date: t.Optional(t.String()),
         }),
     });
