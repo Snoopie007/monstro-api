@@ -1,10 +1,17 @@
-import { beforeEach, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
 let rows: unknown[][] = [];
 let inserted: Record<string, unknown> | null = null;
 let returningRows: unknown[][] = [];
 const updates: Record<string, unknown>[] = [];
+let vercelResponses: Response[] = [];
+const originalFetch = globalThis.fetch;
+const vercelFetch = mock(async () => {
+  const response = vercelResponses.shift();
+  if (!response) throw new Error("Unexpected Vercel request");
+  return response;
+});
 
 function selectChain() {
   const chain = {
@@ -35,11 +42,17 @@ const tx = {
 };
 const db = {
   select: tx.select,
+  insert: tx.insert,
+  update: tx.update,
   transaction: mock(async (callback: (value: typeof tx) => unknown) => callback(tx)),
 };
 
 mock.module("@/db/db", () => ({ db }));
 Bun.env.MONSTRO_SITES_SERVICE_TOKEN = "sites-secret";
+Bun.env.VERCEL_TOKEN = "vercel-secret";
+Bun.env.VERCEL_SITES_PROJECT_ID = "sites-project";
+delete Bun.env.VERCEL_TEAM_ID;
+globalThis.fetch = vercelFetch as unknown as typeof fetch;
 const { sharedSiteAdminRoutes } = await import("./sharedSites");
 const app = new Elysia().use(sharedSiteAdminRoutes);
 
@@ -73,10 +86,16 @@ beforeEach(() => {
   inserted = null;
   returningRows = [];
   updates.length = 0;
+  vercelResponses = [];
   tx.select.mockClear();
   tx.update.mockClear();
   tx.insert.mockClear();
+  vercelFetch.mockClear();
 });
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+});
+
 
 test("requires service authentication", async () => {
   const response = await app.handle(new Request("http://localhost/shared-sites/site-1/editor"));
@@ -167,4 +186,90 @@ test("retries an already completed publish idempotently", async () => {
 
   expect(response.status).toBe(200);
   expect(updates).toHaveLength(0);
+});
+
+test("adds a pending custom domain with Vercel DNS records", async () => {
+  rows = [[site], []];
+  returningRows = [[{ id: "dom-1" }]];
+  vercelResponses = [
+    Response.json({ error: { message: "Domain not found" } }, { status: 404 }),
+    Response.json({
+      name: "academy.example.com",
+      apexName: "example.com",
+      projectId: "sites-project",
+      verified: false,
+    }),
+    Response.json({
+      misconfigured: true,
+      recommendedCNAME: [{ rank: 1, value: "project.vercel-dns.example." }],
+    }),
+  ];
+
+  const response = await request("/shared-sites/site-1/domains", {
+    method: "POST",
+    body: JSON.stringify({ hostname: "Academy.Example.com" }),
+  });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    domain: {
+      id: "dom-1",
+      hostname: "academy.example.com",
+      status: "pending",
+      source: "custom",
+      misconfigured: true,
+      dnsRecords: [{
+        type: "CNAME",
+        name: "academy",
+        value: "project.vercel-dns.example.",
+      }],
+      verifiedAt: null,
+    },
+  });
+  expect(updates).toContainEqual(expect.objectContaining({
+    status: "pending",
+    verificationData: expect.objectContaining({ provider: "vercel" }),
+  }));
+});
+
+test("marks a custom domain verified only after DNS is configured", async () => {
+  rows = [[site], [{
+    id: "dom-1",
+    hostname: "academy.example.com",
+    status: "pending",
+    verificationData: { source: "custom", provider: "vercel" },
+    verifiedAt: null,
+  }]];
+  vercelResponses = [
+    Response.json({
+      name: "academy.example.com",
+      apexName: "example.com",
+      projectId: "sites-project",
+      verified: true,
+    }),
+    Response.json({
+      misconfigured: false,
+      recommendedCNAME: [{ rank: 1, value: "project.vercel-dns.example." }],
+    }),
+  ];
+
+  const response = await request(
+    "/shared-sites/site-1/domains/academy.example.com/verify",
+    { method: "POST" },
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    domain: {
+      id: "dom-1",
+      hostname: "academy.example.com",
+      status: "verified",
+      source: "custom",
+      misconfigured: false,
+    },
+  });
+  expect(updates).toContainEqual(expect.objectContaining({
+    status: "verified",
+    verifiedAt: expect.any(Date),
+  }));
 });

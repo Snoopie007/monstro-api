@@ -11,10 +11,16 @@ import {
 
 class SiteEditorError extends Error {
   constructor(
-    readonly status: 404 | 409 | 503,
+    readonly status: 400 | 404 | 409 | 502 | 503,
     readonly code: string,
     message: string,
   ) {
+    super(message);
+  }
+}
+
+class VercelApiError extends Error {
+  constructor(readonly status: number, message: string) {
     super(message);
   }
 }
@@ -36,6 +42,176 @@ const configBody = t.Object({
 const publishBody = t.Object({
   expectedRevisionId: t.String({ minLength: 1 }),
 });
+const domainBody = t.Object({
+  hostname: t.String({ minLength: 1, maxLength: 253 }),
+});
+
+type DnsRecord = {
+  type: "A" | "CNAME" | "TXT";
+  name: string;
+  value: string;
+};
+
+type VercelProjectDomain = {
+  name: string;
+  apexName: string;
+  verified: boolean;
+  verification?: Array<{
+    type?: string;
+    domain?: string;
+    value?: string;
+  }>;
+};
+
+type VercelDomainConfig = {
+  misconfigured: boolean;
+  recommendedIPv4?: Array<{ rank: number; value: string[] }>;
+  recommendedCNAME?: Array<{ rank: number; value: string }>;
+};
+
+function normalizeHostname(value: string) {
+  const hostname = value.trim().toLowerCase().replace(/\.$/, "");
+  const labels = hostname.split(".");
+  const validLabel = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+  if (
+    hostname.length > 253 ||
+    labels.length < 2 ||
+    /^[\d.]+$/.test(hostname) ||
+    labels.some((label) => !validLabel.test(label))
+  ) {
+    throw new SiteEditorError(400, "INVALID_DOMAIN", "Enter a valid domain without https:// or a path");
+  }
+  return hostname;
+}
+
+function vercelSettings() {
+  const token = Bun.env.VERCEL_TOKEN?.trim();
+  const projectId = Bun.env.VERCEL_SITES_PROJECT_ID?.trim();
+  if (!token || !projectId) {
+    throw new SiteEditorError(
+      503,
+      "VERCEL_NOT_CONFIGURED",
+      "Vercel domain management is not configured",
+    );
+  }
+  return {
+    token,
+    projectId,
+    teamId: Bun.env.VERCEL_TEAM_ID?.trim() || null,
+  };
+}
+
+async function vercelRequest<T>(
+  settings: ReturnType<typeof vercelSettings>,
+  path: string,
+  init?: RequestInit,
+) {
+  const url = new URL(path, "https://api.vercel.com");
+  if (settings.teamId) url.searchParams.set("teamId", settings.teamId);
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+  const payload = await response.json().catch(() => null) as {
+    error?: { message?: string };
+  } | null;
+  if (!response.ok) {
+    throw new VercelApiError(
+      response.status,
+      payload?.error?.message ?? `Vercel returned ${response.status}`,
+    );
+  }
+  return payload as T;
+}
+
+function vercelFailure(error: unknown): never {
+  if (error instanceof VercelApiError) {
+    throw new SiteEditorError(
+      error.status === 400 || error.status === 409 ? 409 : 502,
+      "VERCEL_DOMAIN_ERROR",
+      error.message,
+    );
+  }
+  throw error;
+}
+
+function topRank<T extends { rank: number }>(values: T[] | undefined) {
+  if (!values?.length) return [];
+  const rank = Math.min(...values.map((value) => value.rank));
+  return values.filter((value) => value.rank === rank);
+}
+
+function dnsRecords(
+  hostname: string,
+  domain: VercelProjectDomain,
+  config: VercelDomainConfig,
+) {
+  const records: DnsRecord[] = [];
+  for (const record of domain.verification ?? []) {
+    if (
+      (record.type === "A" || record.type === "CNAME" || record.type === "TXT") &&
+      record.domain &&
+      record.value
+    ) {
+      records.push({ type: record.type, name: record.domain, value: record.value });
+    }
+  }
+  if (hostname === domain.apexName) {
+    for (const recommendation of topRank(config.recommendedIPv4)) {
+      for (const value of recommendation.value) {
+        records.push({ type: "A", name: "@", value });
+      }
+    }
+  } else {
+    const name = hostname.endsWith(`.${domain.apexName}`)
+      ? hostname.slice(0, -(domain.apexName.length + 1))
+      : hostname;
+    for (const recommendation of topRank(config.recommendedCNAME)) {
+      records.push({ type: "CNAME", name, value: recommendation.value });
+    }
+  }
+  return [...new Map(records.map((record) => [
+    `${record.type}:${record.name}:${record.value}`,
+    record,
+  ])).values()];
+}
+
+function storedDnsRecords(value: Record<string, unknown>) {
+  if (!Array.isArray(value.dnsRecords)) return [];
+  return value.dnsRecords.filter((record): record is DnsRecord => {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return false;
+    const candidate = record as Record<string, unknown>;
+    return (
+      (candidate.type === "A" || candidate.type === "CNAME" || candidate.type === "TXT") &&
+      typeof candidate.name === "string" &&
+      typeof candidate.value === "string"
+    );
+  });
+}
+
+function domainResponse(domain: {
+  id: string;
+  hostname: string;
+  status: string;
+  verificationData: Record<string, unknown>;
+  verifiedAt: Date | null;
+}) {
+  return {
+    id: domain.id,
+    hostname: domain.hostname,
+    status: domain.status,
+    source: domain.verificationData.source === "wildcard" ? "wildcard" : "custom",
+    misconfigured: typeof domain.verificationData.misconfigured === "boolean"
+      ? domain.verificationData.misconfigured
+      : null,
+    dnsRecords: storedDnsRecords(domain.verificationData),
+    verifiedAt: domain.verifiedAt?.toISOString() ?? null,
+  };
+}
 
 function actorId(headers: Record<string, string | undefined>) {
   return headers["x-monstro-actor-id"]?.trim() || "admin";
@@ -302,6 +478,177 @@ async function publishDraft(siteId: string, expectedRevisionId: string) {
     domains: domains.map(({ hostname }) => hostname),
   };
 }
+async function listDomains(siteId: string) {
+  await getSite(siteId);
+  const domains = await db
+    .select({
+      id: websiteSiteDomains.id,
+      hostname: websiteSiteDomains.hostname,
+      status: websiteSiteDomains.status,
+      verificationData: websiteSiteDomains.verificationData,
+      verifiedAt: websiteSiteDomains.verifiedAt,
+    })
+    .from(websiteSiteDomains)
+    .where(eq(websiteSiteDomains.siteId, siteId))
+    .orderBy(asc(websiteSiteDomains.created));
+  return { domains: domains.map(domainResponse) };
+}
+
+async function getVercelDomain(
+  settings: ReturnType<typeof vercelSettings>,
+  hostname: string,
+) {
+  try {
+    return await vercelRequest<VercelProjectDomain>(
+      settings,
+      `/v9/projects/${encodeURIComponent(settings.projectId)}/domains/${encodeURIComponent(hostname)}`,
+    );
+  } catch (error) {
+    if (error instanceof VercelApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+function domainState(
+  hostname: string,
+  domain: VercelProjectDomain,
+  config: VercelDomainConfig,
+  previousVerifiedAt: Date | null,
+) {
+  const status = domain.verified && !config.misconfigured ? "verified" : "pending";
+  const verifiedAt = status === "verified" ? previousVerifiedAt ?? new Date() : null;
+  const verificationData = {
+    source: "custom",
+    provider: "vercel",
+    apexName: domain.apexName,
+    misconfigured: config.misconfigured,
+    dnsRecords: dnsRecords(hostname, domain, config),
+  };
+  return { status, verifiedAt, verificationData };
+}
+
+async function vercelDomainConfig(
+  settings: ReturnType<typeof vercelSettings>,
+  hostname: string,
+) {
+  return vercelRequest<VercelDomainConfig>(
+    settings,
+    `/v6/domains/${encodeURIComponent(hostname)}/config?projectIdOrName=${encodeURIComponent(settings.projectId)}`,
+  );
+}
+
+async function addDomain(siteId: string, value: string) {
+  const settings = vercelSettings();
+  await getSite(siteId);
+  const hostname = normalizeHostname(value);
+  const [existing] = await db
+    .select({
+      id: websiteSiteDomains.id,
+      siteId: websiteSiteDomains.siteId,
+      status: websiteSiteDomains.status,
+      verificationData: websiteSiteDomains.verificationData,
+      verifiedAt: websiteSiteDomains.verifiedAt,
+    })
+    .from(websiteSiteDomains)
+    .where(eq(websiteSiteDomains.hostname, hostname))
+    .limit(1);
+  if (existing && existing.siteId !== siteId) {
+    throw new SiteEditorError(409, "DOMAIN_IN_USE", "This domain is already assigned to another site");
+  }
+  if (existing?.verificationData.source === "wildcard") {
+    throw new SiteEditorError(409, "DOMAIN_IN_USE", "This managed site domain cannot be added as a custom domain");
+  }
+
+  let domainId = existing?.id;
+  if (!domainId) {
+    try {
+      const [created] = await db
+        .insert(websiteSiteDomains)
+        .values({
+          siteId,
+          hostname,
+          status: "pending",
+          verificationData: { source: "custom", provider: "vercel" },
+        })
+        .returning({ id: websiteSiteDomains.id });
+      if (!created) throw new Error("Failed to save custom domain");
+      domainId = created.id;
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "23505"
+      ) {
+        throw new SiteEditorError(409, "DOMAIN_IN_USE", "This domain is already assigned");
+      }
+      throw error;
+    }
+  }
+
+  try {
+    const domain = await getVercelDomain(settings, hostname) ??
+      await vercelRequest<VercelProjectDomain>(
+        settings,
+        `/v10/projects/${encodeURIComponent(settings.projectId)}/domains`,
+        { method: "POST", body: JSON.stringify({ name: hostname }) },
+      );
+    const config = await vercelDomainConfig(settings, hostname);
+    const state = domainState(hostname, domain, config, existing?.verifiedAt ?? null);
+    await db
+      .update(websiteSiteDomains)
+      .set({ ...state, updated: new Date() })
+      .where(eq(websiteSiteDomains.id, domainId));
+    return domainResponse({
+      id: domainId,
+      hostname,
+      ...state,
+    });
+  } catch (error) {
+    return vercelFailure(error);
+  }
+}
+
+async function verifyDomain(siteId: string, value: string) {
+  const settings = vercelSettings();
+  await getSite(siteId);
+  const hostname = normalizeHostname(value);
+  const [existing] = await db
+    .select({
+      id: websiteSiteDomains.id,
+      hostname: websiteSiteDomains.hostname,
+      status: websiteSiteDomains.status,
+      verificationData: websiteSiteDomains.verificationData,
+      verifiedAt: websiteSiteDomains.verifiedAt,
+    })
+    .from(websiteSiteDomains)
+    .where(and(
+      eq(websiteSiteDomains.siteId, siteId),
+      eq(websiteSiteDomains.hostname, hostname),
+    ))
+    .limit(1);
+  if (!existing || existing.verificationData.source === "wildcard") {
+    throw new SiteEditorError(404, "DOMAIN_NOT_FOUND", "Custom domain not found");
+  }
+
+  try {
+    const domain = await vercelRequest<VercelProjectDomain>(
+      settings,
+      `/v9/projects/${encodeURIComponent(settings.projectId)}/domains/${encodeURIComponent(hostname)}/verify`,
+      { method: "POST" },
+    );
+    const config = await vercelDomainConfig(settings, hostname);
+    const state = domainState(hostname, domain, config, existing.verifiedAt);
+    await db
+      .update(websiteSiteDomains)
+      .set({ ...state, updated: new Date() })
+      .where(eq(websiteSiteDomains.id, existing.id));
+    return domainResponse({ ...existing, ...state });
+  } catch (error) {
+    return vercelFailure(error);
+  }
+}
+
 
 export const sharedSiteAdminRoutes = new Elysia({ prefix: "/shared-sites" })
   .onBeforeHandle(({ headers, set }) => {
@@ -325,6 +672,27 @@ export const sharedSiteAdminRoutes = new Elysia({ prefix: "/shared-sites" })
   .get("/:siteId/editor", async ({ params, set }) => {
     try {
       return await editorState(params.siteId);
+    } catch (error) {
+      return handleError(error, set);
+    }
+  })
+  .get("/:siteId/domains", async ({ params, set }) => {
+    try {
+      return await listDomains(params.siteId);
+    } catch (error) {
+      return handleError(error, set);
+    }
+  })
+  .post("/:siteId/domains", async ({ params, body, set }) => {
+    try {
+      return { domain: await addDomain(params.siteId, body.hostname) };
+    } catch (error) {
+      return handleError(error, set);
+    }
+  }, { body: domainBody })
+  .post("/:siteId/domains/:hostname/verify", async ({ params, set }) => {
+    try {
+      return { domain: await verifyDomain(params.siteId, params.hostname) };
     } catch (error) {
       return handleError(error, set);
     }
