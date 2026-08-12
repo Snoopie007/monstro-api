@@ -2,7 +2,7 @@ import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
 let rows: unknown[][] = [];
-let inserted: Record<string, unknown> | null = null;
+let inserted: unknown = null;
 let returningRows: unknown[][] = [];
 const updates: Record<string, unknown>[] = [];
 let vercelResponses: Response[] = [];
@@ -16,6 +16,7 @@ const vercelFetch = mock(async () => {
 function selectChain() {
   const chain = {
     from() { return chain; },
+    innerJoin() { return chain; },
     where() { return chain; },
     orderBy() { return chain; },
     limit() { return chain; },
@@ -25,18 +26,29 @@ function selectChain() {
   return chain;
 }
 
+function mutationChain() {
+  const chain = {
+    where: async () => [],
+    onConflictDoUpdate() { return chain; },
+    returning: async () => returningRows.shift() ?? [{ id: "rev-2" }],
+    then(resolve: (value: unknown[]) => void) { resolve([]); },
+  };
+  return chain;
+}
+
 const tx = {
   select: mock(() => selectChain()),
+  delete: mock(() => mutationChain()),
   update: mock(() => ({
     set(value: Record<string, unknown>) {
       updates.push(value);
-      return { where: async () => [] };
+      return mutationChain();
     },
   })),
   insert: mock(() => ({
-    values(value: Record<string, unknown>) {
+    values(value: unknown) {
       inserted = value;
-      return { returning: async () => returningRows.shift() ?? [{ id: "rev-2" }] };
+      return mutationChain();
     },
   })),
 };
@@ -63,11 +75,70 @@ const site = {
   status: "active",
   publishedRevisionId: "rev-1",
 };
-const revision = {
-  id: "rev-1",
+const templateConfig = {
   schemaVersion: 1,
-  config: { schemaVersion: 1 },
-  createdAt: new Date("2026-08-08T12:00:00.000Z"),
+  locale: "en-US",
+  business: { name: "{{businessName}}", tagline: "Train well" },
+  metadata: { titleTemplate: "%s", defaultDescription: "Train well" },
+  theme: {
+    colors: {
+      primary: "#2563eb",
+      background: "#ffffff",
+      foreground: "#111827",
+      muted: "#64748b",
+      accent: "#dbeafe",
+    },
+    typography: { heading: "sans", body: "sans" },
+    radius: "medium",
+  },
+  navigation: [],
+  footer: { credit: "", links: [] },
+  content: { programs: [], teams: [], testimonials: [], faqs: [] },
+  pages: [{
+    id: "home",
+    path: "/",
+    kind: "sections",
+    visible: true,
+    metadata: { title: "Home" },
+    sections: [{
+      id: "hero",
+      type: "hero",
+      visible: true,
+      props: { title: "{{businessName}}", description: "Train well" },
+    }],
+  }],
+  forms: [],
+  capabilities: {
+    blog: false,
+    commerce: false,
+    schedules: false,
+    downloads: false,
+    memberAuth: false,
+  },
+};
+const settings = {
+  ...Object.fromEntries(
+    Object.entries(templateConfig)
+      .filter(([key]) => key !== "schemaVersion" && key !== "pages"),
+  ),
+  business: { name: "Academy", tagline: "Train well" },
+};
+const storedPage = {
+  id: "page-home",
+  pageKey: "home",
+  path: "/",
+  kind: "sections" as const,
+  position: 0,
+  visible: true,
+  metadata: { title: "Home" },
+};
+const storedBlock = {
+  pageId: "page-home",
+  blockKey: "hero",
+  type: "hero",
+  position: 0,
+  visible: true,
+  props: { title: "Academy", description: "Train well" },
 };
 
 function request(path: string, init?: RequestInit) {
@@ -90,6 +161,7 @@ beforeEach(() => {
   tx.select.mockClear();
   tx.update.mockClear();
   tx.insert.mockClear();
+  tx.delete.mockClear();
   vercelFetch.mockClear();
 });
 afterAll(() => {
@@ -102,38 +174,61 @@ test("requires service authentication", async () => {
   expect(response.status).toBe(401);
 });
 
-test("creates the first shared-site draft", async () => {
+test("creates a relational draft from the active plan template", async () => {
   const createdSite = { ...site, id: "site-created", status: "draft", publishedRevisionId: null };
-  const createdRevision = { ...revision, id: "rev-created" };
   rows = [
-    [{ id: "location-1", vendorId: "vendor-1" }],
+    [{ id: "location-1", vendorId: "vendor-1", city: "Austin" }],
     [],
+    [{ versionId: "tplv-scale-1", payload: templateConfig }],
     [createdSite],
-    [createdRevision],
+    [{
+      schemaVersion: 1,
+      settings,
+      version: 1,
+      isDirty: true,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    }],
+    [storedPage],
+    [storedBlock],
     [],
   ];
-  returningRows = [[{ id: "site-created" }]];
+  returningRows = [
+    [{ id: "site-created" }],
+    [{ id: "page-home", pageKey: "home" }],
+  ];
   const response = await request("/shared-sites", {
     method: "POST",
     body: JSON.stringify({
       locationId: "location-1",
       slug: "academy",
       plan: "scale",
-      schemaVersion: 1,
-      config: { schemaVersion: 1 },
+      businessName: "Academy",
     }),
   });
 
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({
     siteId: "site-created",
-    revisionId: "rev-created",
+    revisionId: "draft:site-created:1",
     hasDraft: true,
+    config: { business: { name: "Academy" } },
   });
 });
 
-test("reads the published revision when no draft exists", async () => {
-  rows = [[site], [], [revision], [{ hostname: "academy.example.com" }]];
+test("reads a clean relational draft as the published revision", async () => {
+  rows = [
+    [site],
+    [{
+      schemaVersion: 1,
+      settings,
+      version: 2,
+      isDirty: false,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    }],
+    [storedPage],
+    [storedBlock],
+    [{ hostname: "academy.example.com" }],
+  ];
   const response = await request("/shared-sites/site-1/editor");
 
   expect(response.status).toBe(200);
@@ -145,14 +240,14 @@ test("reads the published revision when no draft exists", async () => {
   });
 });
 
-test("rejects a stale draft save", async () => {
-  rows = [[site], [{ id: "rev-newer" }]];
+test("rejects a stale relational draft save", async () => {
+  rows = [[site], [{ version: 2, isDirty: true }]];
   const response = await request("/shared-sites/site-1/draft", {
     method: "PUT",
     body: JSON.stringify({
-      expectedRevisionId: "rev-1",
+      expectedRevisionId: "draft:site-1:1",
       schemaVersion: 1,
-      config: { schemaVersion: 1 },
+      config: templateConfig,
     }),
   });
 
@@ -160,11 +255,65 @@ test("rejects a stale draft save", async () => {
   expect(inserted).toBeNull();
 });
 
-test("publishes only the expected draft", async () => {
-  rows = [[site], [{ id: "rev-2" }], [{ hostname: "academy.example.com" }]];
+test("saves page and block rows as a new relational draft version", async () => {
+  const editedConfig = structuredClone(templateConfig);
+  editedConfig.business.name = "Academy";
+  editedConfig.pages[0]!.sections[0]!.props.title = "Updated";
+  rows = [
+    [site],
+    [{ version: 1, isDirty: true }],
+    [site],
+    [{
+      schemaVersion: 1,
+      settings,
+      version: 2,
+      isDirty: true,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    }],
+    [storedPage],
+    [{ ...storedBlock, props: { title: "Updated" } }],
+    [],
+  ];
+  returningRows = [[{ id: "page-home", pageKey: "home" }]];
+
+  const response = await request("/shared-sites/site-1/draft", {
+    method: "PUT",
+    body: JSON.stringify({
+      expectedRevisionId: "draft:site-1:1",
+      schemaVersion: 1,
+      config: editedConfig,
+    }),
+  });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    revisionId: "draft:site-1:2",
+    config: {
+      pages: [{ sections: [{ props: { title: "Updated" } }] }],
+    },
+  });
+  expect(updates).toContainEqual(expect.objectContaining({ version: 2, isDirty: true }));
+});
+
+test("publishes only the expected relational draft", async () => {
+  rows = [
+    [site],
+    [{
+      schemaVersion: 1,
+      settings,
+      version: 2,
+      isDirty: true,
+      updatedBy: "admin",
+    }],
+    [storedPage],
+    [storedBlock],
+    [{ revisionNumber: 1 }],
+    [{ hostname: "academy.example.com" }],
+  ];
+  returningRows = [[{ id: "rev-2" }]];
   const response = await request("/shared-sites/site-1/publish", {
     method: "POST",
-    body: JSON.stringify({ expectedRevisionId: "rev-2" }),
+    body: JSON.stringify({ expectedRevisionId: "draft:site-1:2" }),
   });
 
   expect(response.status).toBe(200);
@@ -173,12 +322,45 @@ test("publishes only the expected draft", async () => {
     publishedRevisionId: "rev-2",
     domains: ["academy.example.com"],
   });
-  expect(updates).toContainEqual(expect.objectContaining({ status: "published" }));
+  expect(inserted).toEqual(expect.objectContaining({ status: "published" }));
   expect(updates).toContainEqual(expect.objectContaining({ status: "active", publishedRevisionId: "rev-2" }));
 });
 
+test("rejects publishing a draft outside the canonical site contract", async () => {
+  rows = [
+    [site],
+    [{
+      schemaVersion: 1,
+      settings: {},
+      version: 2,
+      isDirty: true,
+      updatedBy: "admin",
+    }],
+    [storedPage],
+    [storedBlock],
+  ];
+  const response = await request("/shared-sites/site-1/publish", {
+    method: "POST",
+    body: JSON.stringify({ expectedRevisionId: "draft:site-1:2" }),
+  });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ code: "SITE_CONFIG_INVALID" });
+  expect(inserted).toBeNull();
+});
+
 test("retries an already completed publish idempotently", async () => {
-  rows = [[{ ...site, publishedRevisionId: "rev-2" }], [], [{ hostname: "academy.example.com" }]];
+  rows = [
+    [{ ...site, publishedRevisionId: "rev-2" }],
+    [{
+      schemaVersion: 1,
+      settings,
+      version: 2,
+      isDirty: false,
+      updatedBy: "admin",
+    }],
+    [{ hostname: "academy.example.com" }],
+  ];
   const response = await request("/shared-sites/site-1/publish", {
     method: "POST",
     body: JSON.stringify({ expectedRevisionId: "rev-2" }),

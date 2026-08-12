@@ -1,13 +1,26 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import {
   locations,
+  websiteBlocks,
+  websitePages,
   websiteSiteDomains,
+  websiteSiteDrafts,
   websiteSiteRevisions,
   websiteSiteLocations,
   websiteSites,
+  websiteTemplates,
+  websiteTemplateVersions,
 } from "@subtrees/schemas";
+import {
+  assembleSiteConfig,
+  draftToken,
+  materializeSiteTemplate,
+  splitSiteConfig,
+  type StoredBlockRow,
+  type StoredPageRow,
+} from "@/libs/siteDraftConfig";
 
 class SiteEditorError extends Error {
   constructor(
@@ -29,8 +42,8 @@ const createBody = t.Object({
   locationId: t.String({ minLength: 1 }),
   slug: t.String({ pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }),
   plan: t.Union([t.Literal("growth"), t.Literal("scale")]),
-  schemaVersion: t.Integer({ minimum: 1 }),
-  config: t.Record(t.String(), t.Unknown()),
+  businessName: t.String({ minLength: 1, maxLength: 200 }),
+  themePrimaryColor: t.Optional(t.String({ pattern: "^#[0-9a-fA-F]{6}$" })),
 });
 const configBody = t.Object({
   expectedRevisionId: t.String({ minLength: 1 }),
@@ -225,12 +238,190 @@ function handleError(error: unknown, set: { status?: number | string }) {
   throw error;
 }
 
+type SiteTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function activeSiteTemplate(plan: "growth" | "scale") {
+  const [template] = await db
+    .select({
+      versionId: websiteTemplateVersions.id,
+      payload: websiteTemplateVersions.payload,
+    })
+    .from(websiteTemplates)
+    .innerJoin(
+      websiteTemplateVersions,
+      eq(websiteTemplateVersions.templateId, websiteTemplates.id),
+    )
+    .where(and(
+      eq(websiteTemplates.kind, "site"),
+      eq(websiteTemplates.plan, plan),
+      eq(websiteTemplates.status, "active"),
+      sql`${websiteTemplates.vendorId} is null`,
+    ))
+    .orderBy(desc(websiteTemplateVersions.versionNumber))
+    .limit(1);
+  if (!template) {
+    throw new SiteEditorError(
+      503,
+      "SITE_TEMPLATE_MISSING",
+      `No active ${plan} site template is configured`,
+    );
+  }
+  return template;
+}
+
+async function persistSiteRows(
+  tx: SiteTransaction,
+  siteId: string,
+  parsed: ReturnType<typeof splitSiteConfig>,
+  sourceTemplateVersionId: string | null,
+) {
+  const pageKeys = parsed.pages.map((page) => page.pageKey);
+  await tx
+    .delete(websitePages)
+    .where(and(
+      eq(websitePages.siteId, siteId),
+      notInArray(websitePages.pageKey, pageKeys),
+    ));
+  await tx
+    .update(websitePages)
+    .set({
+      path: sql`${websitePages.path} || '#staging'`,
+      position: sql`${websitePages.position} + 100000`,
+    })
+    .where(eq(websitePages.siteId, siteId));
+
+  const storedPages = await tx
+    .insert(websitePages)
+    .values(parsed.pages.map((page) => ({
+      siteId,
+      pageKey: page.pageKey,
+      path: page.path,
+      kind: page.kind,
+      position: page.position,
+      visible: page.visible,
+      metadata: page.metadata,
+      sourceTemplateVersionId,
+    })))
+    .onConflictDoUpdate({
+      target: [websitePages.siteId, websitePages.pageKey],
+      set: {
+        path: sql`excluded.path`,
+        kind: sql`excluded.kind`,
+        position: sql`excluded.position`,
+        visible: sql`excluded.visible`,
+        metadata: sql`excluded.metadata`,
+        sourceTemplateVersionId: sql`coalesce(${websitePages.sourceTemplateVersionId}, excluded.source_template_version_id)`,
+        updated: sql`now()`,
+      },
+    })
+    .returning({ id: websitePages.id, pageKey: websitePages.pageKey });
+  const pageIds = new Map(storedPages.map((page) => [page.pageKey, page.id]));
+
+  for (const page of parsed.pages) {
+    const pageId = pageIds.get(page.pageKey);
+    if (!pageId) throw new Error(`Failed to persist page ${page.pageKey}`);
+    const blockKeys = page.blocks.map((block) => block.blockKey);
+    if (blockKeys.length === 0) {
+      await tx.delete(websiteBlocks).where(eq(websiteBlocks.pageId, pageId));
+    } else {
+      await tx
+        .delete(websiteBlocks)
+        .where(and(
+          eq(websiteBlocks.pageId, pageId),
+          notInArray(websiteBlocks.blockKey, blockKeys),
+        ));
+      await tx
+        .update(websiteBlocks)
+        .set({ position: sql`${websiteBlocks.position} + 100000` })
+        .where(eq(websiteBlocks.pageId, pageId));
+    }
+  }
+
+  const blocks = parsed.pages.flatMap((page) => {
+    const pageId = pageIds.get(page.pageKey);
+    if (!pageId) throw new Error(`Failed to persist blocks for ${page.pageKey}`);
+    return page.blocks.map((block) => ({
+      pageId,
+      blockKey: block.blockKey,
+      type: block.type,
+      position: block.position,
+      visible: block.visible,
+      props: block.props,
+      sourceTemplateVersionId,
+    }));
+  });
+  if (blocks.length > 0) {
+    await tx
+      .insert(websiteBlocks)
+      .values(blocks)
+      .onConflictDoUpdate({
+        target: [websiteBlocks.pageId, websiteBlocks.blockKey],
+        set: {
+          type: sql`excluded.type`,
+          position: sql`excluded.position`,
+          visible: sql`excluded.visible`,
+          props: sql`excluded.props`,
+          sourceTemplateVersionId: sql`coalesce(${websiteBlocks.sourceTemplateVersionId}, excluded.source_template_version_id)`,
+          updated: sql`now()`,
+        },
+      });
+  }
+}
+
+async function readSiteConfig(
+  tx: SiteTransaction,
+  siteId: string,
+  draft: {
+    schemaVersion: number;
+    settings: Record<string, unknown>;
+  },
+) {
+  const pages: StoredPageRow[] = await tx
+    .select({
+      id: websitePages.id,
+      pageKey: websitePages.pageKey,
+      path: websitePages.path,
+      kind: websitePages.kind,
+      position: websitePages.position,
+      visible: websitePages.visible,
+      metadata: websitePages.metadata,
+    })
+    .from(websitePages)
+    .where(eq(websitePages.siteId, siteId))
+    .orderBy(asc(websitePages.position)) as StoredPageRow[];
+  const pageIds = pages.map((page) => page.id);
+  const blocks: StoredBlockRow[] = pageIds.length === 0
+    ? []
+    : await tx
+      .select({
+        pageId: websiteBlocks.pageId,
+        blockKey: websiteBlocks.blockKey,
+        type: websiteBlocks.type,
+        position: websiteBlocks.position,
+        visible: websiteBlocks.visible,
+        props: websiteBlocks.props,
+      })
+      .from(websiteBlocks)
+      .where(inArray(websiteBlocks.pageId, pageIds))
+      .orderBy(asc(websiteBlocks.pageId), asc(websiteBlocks.position)) as StoredBlockRow[];
+  return assembleSiteConfig({
+    schemaVersion: draft.schemaVersion,
+    settings: draft.settings,
+    pages,
+    blocks,
+  });
+}
+
 async function createSite(
   body: typeof createBody.static,
   createdBy: string,
 ) {
   const [location] = await db
-    .select({ id: locations.id, vendorId: locations.vendorId })
+    .select({
+      id: locations.id,
+      vendorId: locations.vendorId,
+      city: locations.city,
+    })
     .from(locations)
     .where(eq(locations.id, body.locationId))
     .limit(1);
@@ -242,6 +433,15 @@ async function createSite(
     .where(and(eq(websiteSites.vendorId, location.vendorId), eq(websiteSites.slug, body.slug)))
     .limit(1);
   if (existing) throw new SiteEditorError(409, "SITE_EXISTS", "A shared site with this slug already exists");
+
+  const template = await activeSiteTemplate(body.plan);
+  const config = materializeSiteTemplate(template.payload, {
+    businessName: body.businessName,
+    businessSlug: body.slug.replaceAll("-", ""),
+    city: location.city ?? "your area",
+    primaryColor: body.themePrimaryColor,
+  });
+  const parsed = splitSiteConfig(config);
 
   const siteId = await db.transaction(async (tx) => {
     const [site] = await tx
@@ -262,16 +462,17 @@ async function createSite(
       isPrimary: true,
       displayOrder: 0,
     });
-    await tx.insert(websiteSiteRevisions).values({
+    await tx.insert(websiteSiteDrafts).values({
       siteId: site.id,
-      revisionNumber: 1,
-      schemaVersion: body.schemaVersion,
-      status: "draft",
-      config: body.config,
-      createdBy,
+      schemaVersion: parsed.schemaVersion,
+      settings: parsed.settings,
+      version: 1,
+      isDirty: true,
+      updatedBy: createdBy,
     });
+    await persistSiteRows(tx, site.id, parsed, template.versionId);
 
-    const baseDomain = Bun.env.SHARED_SITES_BASE_DOMAIN?.trim().toLowerCase().replace(/^\\.+|\\.+$/g, "");
+    const baseDomain = Bun.env.SHARED_SITES_BASE_DOMAIN?.trim().toLowerCase().replace(/^\.+|\.+$/g, "");
     if (baseDomain) {
       await tx.insert(websiteSiteDomains).values({
         siteId: site.id,
@@ -305,57 +506,53 @@ async function getSite(siteId: string) {
 
 async function editorState(siteId: string) {
   const site = await getSite(siteId);
-  const [draft] = await db
-    .select({
-      id: websiteSiteRevisions.id,
-      schemaVersion: websiteSiteRevisions.schemaVersion,
-      config: websiteSiteRevisions.config,
-      createdAt: websiteSiteRevisions.created,
-    })
-    .from(websiteSiteRevisions)
-    .where(and(
-      eq(websiteSiteRevisions.siteId, siteId),
-      eq(websiteSiteRevisions.status, "draft"),
-    ))
-    .orderBy(desc(websiteSiteRevisions.revisionNumber))
-    .limit(1);
-
-  const revision = draft ?? (site.publishedRevisionId
-    ? (await db
+  const state = await db.transaction(async (tx) => {
+    const [draft] = await tx
       .select({
-        id: websiteSiteRevisions.id,
-        schemaVersion: websiteSiteRevisions.schemaVersion,
-        config: websiteSiteRevisions.config,
-        createdAt: websiteSiteRevisions.created,
+        schemaVersion: websiteSiteDrafts.schemaVersion,
+        settings: websiteSiteDrafts.settings,
+        version: websiteSiteDrafts.version,
+        isDirty: websiteSiteDrafts.isDirty,
+        updatedAt: websiteSiteDrafts.updated,
       })
-      .from(websiteSiteRevisions)
-      .where(eq(websiteSiteRevisions.id, site.publishedRevisionId))
-      .limit(1))[0]
-    : null);
-  if (!revision) throw new SiteEditorError(409, "SITE_HAS_NO_REVISION", "Site has no editable revision");
-
-  const domains = await db
-    .select({ hostname: websiteSiteDomains.hostname })
-    .from(websiteSiteDomains)
-    .where(and(
-      eq(websiteSiteDomains.siteId, siteId),
-      eq(websiteSiteDomains.status, "verified"),
-    ))
-    .orderBy(asc(websiteSiteDomains.created));
+      .from(websiteSiteDrafts)
+      .where(eq(websiteSiteDrafts.siteId, siteId))
+      .limit(1);
+    if (!draft) {
+      throw new SiteEditorError(
+        409,
+        "SITE_HAS_NO_DRAFT_SOURCE",
+        "Site has no editable relational draft",
+      );
+    }
+    const config = await readSiteConfig(tx, siteId, draft);
+    const domains = await tx
+      .select({ hostname: websiteSiteDomains.hostname })
+      .from(websiteSiteDomains)
+      .where(and(
+        eq(websiteSiteDomains.siteId, siteId),
+        eq(websiteSiteDomains.status, "verified"),
+      ))
+      .orderBy(asc(websiteSiteDomains.created));
+    return { draft, config, domains };
+  });
+  const revisionId = state.draft.isDirty
+    ? draftToken(siteId, state.draft.version)
+    : site.publishedRevisionId ?? draftToken(siteId, state.draft.version);
 
   return {
     siteId: site.id,
     slug: site.slug,
     plan: site.plan,
     status: site.status,
-    revisionId: revision.id,
+    revisionId,
     publishedRevisionId: site.publishedRevisionId,
-    hasDraft: Boolean(draft),
-    schemaVersion: revision.schemaVersion,
-    config: revision.config,
-    domain: domains[0]?.hostname ?? null,
-    domains: domains.map(({ hostname }) => hostname),
-    updatedAt: revision.createdAt.toISOString(),
+    hasDraft: state.draft.isDirty,
+    schemaVersion: state.draft.schemaVersion,
+    config: state.config,
+    domain: state.domains[0]?.hostname ?? null,
+    domains: state.domains.map(({ hostname }) => hostname),
+    updatedAt: state.draft.updatedAt.toISOString(),
   };
 }
 
@@ -364,6 +561,24 @@ async function saveDraft(
   body: typeof configBody.static,
   createdBy: string,
 ) {
+  let parsed: ReturnType<typeof splitSiteConfig>;
+  try {
+    parsed = splitSiteConfig(body.config);
+  } catch (error) {
+    throw new SiteEditorError(
+      400,
+      "SITE_CONFIG_INVALID",
+      error instanceof Error ? error.message : "Site config is invalid",
+    );
+  }
+  if (parsed.schemaVersion !== body.schemaVersion) {
+    throw new SiteEditorError(
+      400,
+      "SITE_CONFIG_INVALID",
+      "Site config schemaVersion does not match the request",
+    );
+  }
+
   await db.transaction(async (tx) => {
     const [site] = await tx
       .select({ id: websiteSites.id, publishedRevisionId: websiteSites.publishedRevisionId })
@@ -374,23 +589,108 @@ async function saveDraft(
     if (!site) throw new SiteEditorError(404, "SITE_NOT_FOUND", "Site not found");
 
     const [draft] = await tx
-      .select({ id: websiteSiteRevisions.id })
-      .from(websiteSiteRevisions)
-      .where(and(
-        eq(websiteSiteRevisions.siteId, siteId),
-        eq(websiteSiteRevisions.status, "draft"),
-      ))
-      .limit(1);
-    const currentRevisionId = draft?.id ?? site.publishedRevisionId;
+      .select({
+        version: websiteSiteDrafts.version,
+        isDirty: websiteSiteDrafts.isDirty,
+      })
+      .from(websiteSiteDrafts)
+      .where(eq(websiteSiteDrafts.siteId, siteId))
+      .limit(1)
+      .for("update");
+    if (!draft) {
+      throw new SiteEditorError(
+        409,
+        "SITE_HAS_NO_DRAFT_SOURCE",
+        "Site has no editable relational draft",
+      );
+    }
+    const currentRevisionId = draft.isDirty
+      ? draftToken(siteId, draft.version)
+      : site.publishedRevisionId ?? draftToken(siteId, draft.version);
     if (currentRevisionId !== body.expectedRevisionId) {
       throw new SiteEditorError(409, "STALE_REVISION", "The site changed since it was loaded");
     }
 
-    if (draft) {
-      await tx
-        .update(websiteSiteRevisions)
-        .set({ status: "archived" })
-        .where(eq(websiteSiteRevisions.id, draft.id));
+    await persistSiteRows(tx, siteId, parsed, null);
+    await tx
+      .update(websiteSiteDrafts)
+      .set({
+        schemaVersion: parsed.schemaVersion,
+        settings: parsed.settings,
+        version: draft.version + 1,
+        isDirty: true,
+        updatedBy: createdBy,
+        updated: new Date(),
+      })
+      .where(eq(websiteSiteDrafts.siteId, siteId));
+    await tx
+      .update(websiteSites)
+      .set({ ...(body.slug ? { slug: body.slug } : {}), updated: new Date() })
+      .where(eq(websiteSites.id, siteId));
+  });
+
+  return editorState(siteId);
+}
+
+async function publishDraft(siteId: string, expectedRevisionId: string) {
+  const result = await db.transaction(async (tx) => {
+    const [site] = await tx
+      .select({ id: websiteSites.id, publishedRevisionId: websiteSites.publishedRevisionId })
+      .from(websiteSites)
+      .where(eq(websiteSites.id, siteId))
+      .limit(1)
+      .for("update");
+    if (!site) throw new SiteEditorError(404, "SITE_NOT_FOUND", "Site not found");
+
+    const [draft] = await tx
+      .select({
+        schemaVersion: websiteSiteDrafts.schemaVersion,
+        settings: websiteSiteDrafts.settings,
+        version: websiteSiteDrafts.version,
+        isDirty: websiteSiteDrafts.isDirty,
+        updatedBy: websiteSiteDrafts.updatedBy,
+      })
+      .from(websiteSiteDrafts)
+      .where(eq(websiteSiteDrafts.siteId, siteId))
+      .limit(1)
+      .for("update");
+    if (!draft) {
+      throw new SiteEditorError(
+        409,
+        "SITE_HAS_NO_DRAFT_SOURCE",
+        "Site has no editable relational draft",
+      );
+    }
+
+    if (!draft.isDirty) {
+      if (site.publishedRevisionId !== expectedRevisionId) {
+        throw new SiteEditorError(409, "NO_DRAFT", "There are no unpublished changes");
+      }
+      const domains = await tx
+        .select({ hostname: websiteSiteDomains.hostname })
+        .from(websiteSiteDomains)
+        .where(and(
+          eq(websiteSiteDomains.siteId, siteId),
+          eq(websiteSiteDomains.status, "verified"),
+        ));
+      return {
+        publishedRevisionId: site.publishedRevisionId,
+        domains,
+      };
+    }
+
+    if (draftToken(siteId, draft.version) !== expectedRevisionId) {
+      throw new SiteEditorError(409, "STALE_REVISION", "The site changed since it was loaded");
+    }
+    const config = await readSiteConfig(tx, siteId, draft);
+    try {
+      splitSiteConfig(config);
+    } catch (error) {
+      throw new SiteEditorError(
+        400,
+        "SITE_CONFIG_INVALID",
+        error instanceof Error ? error.message : "Site config is invalid",
+      );
     }
     const [latest] = await tx
       .select({ revisionNumber: websiteSiteRevisions.revisionNumber })
@@ -403,79 +703,38 @@ async function saveDraft(
       .values({
         siteId,
         revisionNumber: (latest?.revisionNumber ?? 0) + 1,
-        schemaVersion: body.schemaVersion,
-        status: "draft",
-        config: body.config,
-        baseRevisionId: currentRevisionId,
-        createdBy,
+        schemaVersion: draft.schemaVersion,
+        status: "published",
+        config,
+        baseRevisionId: site.publishedRevisionId,
+        createdBy: draft.updatedBy,
+        publishedAt: new Date(),
       })
       .returning({ id: websiteSiteRevisions.id });
-    if (!revision) throw new Error("Failed to create draft revision");
+    if (!revision) throw new Error("Failed to create published revision");
 
     await tx
       .update(websiteSites)
-      .set({ ...(body.slug ? { slug: body.slug } : {}), updated: new Date() })
+      .set({ status: "active", publishedRevisionId: revision.id, updated: new Date() })
       .where(eq(websiteSites.id, siteId));
-  });
-
-  return editorState(siteId);
-}
-
-async function publishDraft(siteId: string, expectedRevisionId: string) {
-  const domains = await db.transaction(async (tx) => {
-    const [site] = await tx
-      .select({ id: websiteSites.id, publishedRevisionId: websiteSites.publishedRevisionId })
-      .from(websiteSites)
-      .where(eq(websiteSites.id, siteId))
-      .limit(1)
-      .for("update");
-    if (!site) throw new SiteEditorError(404, "SITE_NOT_FOUND", "Site not found");
-
-    const [draft] = await tx
-      .select({ id: websiteSiteRevisions.id })
-      .from(websiteSiteRevisions)
-      .where(and(
-        eq(websiteSiteRevisions.siteId, siteId),
-        eq(websiteSiteRevisions.status, "draft"),
-      ))
-      .limit(1);
-    if (!draft && site.publishedRevisionId !== expectedRevisionId) {
-      throw new SiteEditorError(409, "NO_DRAFT", "There is no draft to publish");
-    }
-    if (draft && draft.id !== expectedRevisionId) {
-      throw new SiteEditorError(409, "STALE_REVISION", "The site changed since it was loaded");
-    }
-
-    if (draft) {
-      if (site.publishedRevisionId) {
-        await tx
-          .update(websiteSiteRevisions)
-          .set({ status: "archived" })
-          .where(eq(websiteSiteRevisions.id, site.publishedRevisionId));
-      }
-      await tx
-        .update(websiteSiteRevisions)
-        .set({ status: "published", publishedAt: new Date() })
-        .where(eq(websiteSiteRevisions.id, draft.id));
-      await tx
-        .update(websiteSites)
-        .set({ status: "active", publishedRevisionId: draft.id, updated: new Date() })
-        .where(eq(websiteSites.id, siteId));
-    }
-
-    return tx
+    await tx
+      .update(websiteSiteDrafts)
+      .set({ isDirty: false, updated: new Date() })
+      .where(eq(websiteSiteDrafts.siteId, siteId));
+    const domains = await tx
       .select({ hostname: websiteSiteDomains.hostname })
       .from(websiteSiteDomains)
       .where(and(
         eq(websiteSiteDomains.siteId, siteId),
         eq(websiteSiteDomains.status, "verified"),
       ));
+    return { publishedRevisionId: revision.id, domains };
   });
 
   return {
     siteId,
-    publishedRevisionId: expectedRevisionId,
-    domains: domains.map(({ hostname }) => hostname),
+    publishedRevisionId: result.publishedRevisionId,
+    domains: result.domains.map(({ hostname }) => hostname),
   };
 }
 async function listDomains(siteId: string) {
