@@ -2,7 +2,7 @@ import { generateUsername } from "@/utils/userUtils";
 
 export const usernameField = {
     type: "string",
-    required: true,
+    required: false,
     input: false,
 } as const;
 
