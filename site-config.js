@@ -690,6 +690,16 @@ var SiteSectionsPageSchema = SitePageBaseSchema.extend({
   kind: z30.literal("sections").default("sections"),
   sections: z30.array(SiteSectionSchema).min(1)
 }).strict();
+var SitePageTemplateSchema = z30.object({
+  schemaVersion: z30.literal(1),
+  page: z30.object({
+    metadata: z30.object({
+      description: z30.string().optional(),
+      image: SiteImageSchema.optional()
+    }).strict(),
+    sections: z30.array(SiteSectionSchema).min(1)
+  }).strict()
+}).strict();
 var BuiltinPageIdSchema = z30.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
 var BUILTIN_PAGE_PATHS = {
   "/schedules": "schedules",
@@ -925,6 +935,7 @@ export {
   parseSiteConfig,
   SiteThemeSchema,
   SiteSectionsPageSchema,
+  SitePageTemplateSchema,
   SitePageSchema,
   SiteConfigSchema,
   SiteBuiltinPageSchema,

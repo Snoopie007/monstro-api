@@ -59,6 +59,7 @@ export const websiteTemplates = pgTable(
     kind: text("kind").notNull(),
     plan: text("plan"),
     name: text("name").notNull(),
+    description: text("description").notNull().default(""),
     status: text("status").notNull().default("active"),
     createdBy: text("created_by").notNull(),
     created: timestamp("created_at", { withTimezone: true })
