@@ -614,9 +614,27 @@ var TenantContextSchema = z29.object({
   allowedLocationIds: z29.array(z29.string().min(1).max(128)).min(1),
   locations: z29.array(SiteLocationSchema).min(1),
   domain: z29.string().min(1).max(253),
+  domainSource: z29.enum(["custom", "wildcard"]),
+  canonicalDomain: z29.string().min(1).max(253).nullable(),
+  isCanonicalDomain: z29.boolean(),
   publishedRevisionId: z29.string().min(1).max(128),
   capabilities: SiteCapabilitiesSchema
 }).strict().superRefine((context, issue) => {
+  if (context.isCanonicalDomain !== (context.canonicalDomain === context.domain)) {
+    issue.addIssue({
+      code: "custom",
+      message: "Canonical domain state must match the request domain",
+      path: ["isCanonicalDomain"]
+    });
+  }
+  if (context.isCanonicalDomain && context.domainSource !== "custom") {
+    issue.addIssue({
+      code: "custom",
+      message: "Managed domains cannot be canonical",
+      path: ["domainSource"]
+    });
+  }
+}).superRefine((context, issue) => {
   const allowedIds = new Set(context.allowedLocationIds);
   const locationIds = new Set(context.locations.map((location) => location.id));
   if (allowedIds.size !== context.allowedLocationIds.length) {
@@ -643,6 +661,69 @@ var TenantContextSchema = z29.object({
 });
 
 // src/config.ts
+function asRecord(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+var structuredDataTypes = new Set([
+  "LocalBusiness",
+  "SportsActivityLocation",
+  "EducationalOrganization",
+  "Organization"
+]);
+function normalizePageMetadata(value) {
+  const metadata = asRecord(value) ?? {};
+  const { image, ...rest } = metadata;
+  const openGraphImage = metadata.openGraphImage ?? image;
+  return {
+    ...rest,
+    ...openGraphImage === undefined ? {} : { openGraphImage },
+    indexable: typeof metadata.indexable === "boolean" ? metadata.indexable : true
+  };
+}
+function normalizeSitePageTemplateV2(input) {
+  const source = asRecord(input);
+  if (!source || source.schemaVersion !== 1)
+    return input;
+  const page = asRecord(source.page);
+  if (!page)
+    return input;
+  return {
+    ...source,
+    schemaVersion: 2,
+    page: { ...page, metadata: normalizePageMetadata(page.metadata) }
+  };
+}
+function normalizeSiteConfigV2(input) {
+  const source = asRecord(input);
+  if (!source || source.schemaVersion !== 1 && source.schemaVersion !== 2) {
+    return input;
+  }
+  const legacy = source.schemaVersion === 1;
+  const business = asRecord(source.business) ?? {};
+  const metadata = asRecord(source.metadata) ?? {};
+  const pages = legacy && Array.isArray(source.pages) ? source.pages.map((value) => {
+    const page = asRecord(value);
+    return page ? { ...page, metadata: normalizePageMetadata(page.metadata) } : value;
+  }) : source.pages;
+  const home = Array.isArray(pages) ? pages.map(asRecord).find((page) => page?.id === "home") : undefined;
+  const hero2 = Array.isArray(home?.sections) ? home.sections.map(asRecord).find((section) => section?.type === "hero" && section.visible !== false) : undefined;
+  const heroImage = asRecord(hero2?.props)?.image;
+  const openGraphImage = metadata.openGraphImage ?? (legacy ? metadata.image : undefined) ?? heroImage;
+  const defaultTitle = typeof metadata.defaultTitle === "string" ? metadata.defaultTitle : typeof business.name === "string" ? business.name : "Monstro Site";
+  const structuredDataType = !legacy || typeof business.structuredDataType === "string" && structuredDataTypes.has(business.structuredDataType) ? business.structuredDataType : "LocalBusiness";
+  const metadataRest = legacy ? Object.fromEntries(Object.entries(metadata).filter(([key]) => key !== "image")) : metadata;
+  return {
+    ...source,
+    schemaVersion: 2,
+    business: { ...business, structuredDataType },
+    metadata: {
+      ...metadataRest,
+      defaultTitle,
+      ...openGraphImage === undefined ? {} : { openGraphImage }
+    },
+    pages
+  };
+}
 var NavigationItemSchema = z30.lazy(() => z30.discriminatedUnion("type", [
   z30.object({
     type: z30.literal("link"),
@@ -683,7 +764,8 @@ var SitePageBaseSchema = z30.object({
   metadata: z30.object({
     title: z30.string().min(1),
     description: z30.string().optional(),
-    image: SiteImageSchema.optional()
+    openGraphImage: SiteImageSchema.optional(),
+    indexable: z30.boolean().optional()
   }).strict()
 });
 var SiteSectionsPageSchema = SitePageBaseSchema.extend({
@@ -691,15 +773,32 @@ var SiteSectionsPageSchema = SitePageBaseSchema.extend({
   sections: z30.array(SiteSectionSchema).min(1)
 }).strict();
 var SitePageTemplateSchema = z30.object({
-  schemaVersion: z30.literal(1),
+  schemaVersion: z30.literal(2),
   page: z30.object({
     metadata: z30.object({
       description: z30.string().optional(),
-      image: SiteImageSchema.optional()
+      openGraphImage: SiteImageSchema.optional(),
+      indexable: z30.boolean().optional()
     }).strict(),
     sections: z30.array(SiteSectionSchema).min(1)
   }).strict()
 }).strict();
+function replacePageTemplateTokens(value, businessName) {
+  if (typeof value === "string")
+    return value.replaceAll("{{businessName}}", businessName);
+  if (Array.isArray(value))
+    return value.map((item) => replacePageTemplateTokens(item, businessName));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+      key,
+      replacePageTemplateTokens(item, businessName)
+    ]));
+  }
+  return value;
+}
+function materializeSitePageTemplate(input, businessName) {
+  return SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(replacePageTemplateTokens(input, businessName)));
+}
 var BuiltinPageIdSchema = z30.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
 var BUILTIN_PAGE_PATHS = {
   "/schedules": "schedules",
@@ -718,16 +817,25 @@ var SitePageSchema = z30.union([
   SiteBuiltinPageSchema
 ]);
 var SiteConfigSchema = z30.object({
-  schemaVersion: z30.literal(1),
+  schemaVersion: z30.literal(2),
   locale: z30.string().min(2),
   business: z30.object({
     name: z30.string().min(1),
     tagline: z30.string().min(1),
-    logo: SiteImageSchema.optional()
+    logo: SiteImageSchema.optional(),
+    structuredDataType: z30.enum([
+      "LocalBusiness",
+      "SportsActivityLocation",
+      "EducationalOrganization",
+      "Organization"
+    ])
   }).strict(),
   metadata: z30.object({
+    defaultTitle: z30.string().min(1),
     titleTemplate: z30.string().min(1),
-    defaultDescription: z30.string().min(1)
+    defaultDescription: z30.string().min(1),
+    openGraphImage: SiteImageSchema.optional(),
+    googleSiteVerification: z30.string().min(1).optional()
   }).strict(),
   theme: SiteThemeSchema,
   navigation: z30.array(NavigationItemSchema),
@@ -933,6 +1041,9 @@ function parseSiteConfig(input) {
 }
 export {
   parseSiteConfig,
+  normalizeSitePageTemplateV2,
+  normalizeSiteConfigV2,
+  materializeSitePageTemplate,
   SiteThemeSchema,
   SiteSectionsPageSchema,
   SitePageTemplateSchema,

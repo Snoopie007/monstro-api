@@ -246,6 +246,7 @@ export const websiteSiteDomains = pgTable(
       .notNull()
       .default(sql`'{}'::jsonb`),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    isCanonical: boolean("is_canonical").notNull().default(false),
     created: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -256,6 +257,9 @@ export const websiteSiteDomains = pgTable(
   (table) => [
     uniqueIndex("website_site_domains_hostname_uq").on(table.hostname),
     index("website_site_domains_site_idx").on(table.siteId),
+    uniqueIndex("website_site_domains_canonical_uq")
+      .on(table.siteId)
+      .where(sql`${table.isCanonical}`),
     check(
       "website_site_domains_status_check",
       sql`${table.status} in ('pending', 'verified', 'disabled')`,
@@ -263,6 +267,10 @@ export const websiteSiteDomains = pgTable(
     check(
       "website_site_domains_verified_at_check",
       sql`${table.status} <> 'verified' or ${table.verifiedAt} is not null`,
+    ),
+    check(
+      "website_site_domains_canonical_check",
+      sql`not ${table.isCanonical} or (${table.status} = 'verified' and ${table.verifiedAt} is not null and ${table.verificationData}->>'source' = 'custom')`,
     ),
   ],
 );
