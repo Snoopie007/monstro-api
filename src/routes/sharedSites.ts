@@ -53,6 +53,13 @@ const configBody = t.Object({
   slug: t.Optional(t.String({ pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" })),
   pageTemplateSources: t.Optional(t.Record(t.String(), t.String({ minLength: 1 }))),
 });
+const migrationBody = t.Object({
+  sourceKey: t.String({ minLength: 1, maxLength: 200 }),
+  locationId: t.String({ minLength: 1 }),
+  slug: t.String({ pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }),
+  plan: t.Union([t.Literal("growth"), t.Literal("scale")]),
+  config: t.Record(t.String(), t.Unknown()),
+});
 
 const publishBody = t.Object({
   expectedRevisionId: t.String({ minLength: 1 }),
@@ -498,6 +505,83 @@ async function readSiteConfig(
   });
 }
 
+function businessName(settings: Record<string, unknown>, fallback: string) {
+  const business = settings.business;
+  if (
+    business &&
+    typeof business === "object" &&
+    !Array.isArray(business) &&
+    typeof (business as Record<string, unknown>).name === "string"
+  ) {
+    return (business as Record<string, unknown>).name as string;
+  }
+  return fallback;
+}
+
+async function listSites() {
+  const [sites, domains] = await Promise.all([
+    db
+      .select({
+        id: websiteSites.id,
+        slug: websiteSites.slug,
+        plan: websiteSites.plan,
+        status: websiteSites.status,
+        publishedRevisionId: websiteSites.publishedRevisionId,
+        createdAt: websiteSites.created,
+        updatedAt: websiteSiteDrafts.updated,
+        settings: websiteSiteDrafts.settings,
+        draftVersion: websiteSiteDrafts.version,
+        isDirty: websiteSiteDrafts.isDirty,
+        locationId: websiteSiteLocations.locationId,
+      })
+      .from(websiteSites)
+      .innerJoin(
+        websiteSiteDrafts,
+        eq(websiteSiteDrafts.siteId, websiteSites.id),
+      )
+      .leftJoin(
+        websiteSiteLocations,
+        and(
+          eq(websiteSiteLocations.siteId, websiteSites.id),
+          eq(websiteSiteLocations.isPrimary, true),
+        ),
+      )
+      .orderBy(desc(websiteSites.updated)),
+    db
+      .select({
+        siteId: websiteSiteDomains.siteId,
+        hostname: websiteSiteDomains.hostname,
+      })
+      .from(websiteSiteDomains)
+      .where(eq(websiteSiteDomains.status, "verified"))
+      .orderBy(asc(websiteSiteDomains.created)),
+  ]);
+  const domainBySite = new Map<string, string>();
+  for (const domain of domains) {
+    if (!domainBySite.has(domain.siteId)) {
+      domainBySite.set(domain.siteId, domain.hostname);
+    }
+  }
+  return {
+    sites: sites.map((site) => ({
+      id: site.id,
+      businessName: businessName(site.settings, site.slug),
+      slug: site.slug,
+      plan: site.plan,
+      status: site.status,
+      locationId: site.locationId ?? null,
+      publishedRevisionId: site.publishedRevisionId,
+      draftRevisionId: site.isDirty
+        ? draftToken(site.id, site.draftVersion)
+        : site.publishedRevisionId ?? draftToken(site.id, site.draftVersion),
+      hasDraft: site.isDirty,
+      domain: domainBySite.get(site.id) ?? null,
+      createdAt: site.createdAt.toISOString(),
+      updatedAt: site.updatedAt.toISOString(),
+    })),
+  };
+}
+
 async function createSite(
   body: typeof createBody.static,
   createdBy: string,
@@ -575,6 +659,136 @@ async function createSite(
 
   return editorState(siteId);
 }
+async function migrateSite(
+  body: typeof migrationBody.static,
+  createdBy: string,
+) {
+  let parsed: ReturnType<typeof splitSiteConfig>;
+  try {
+    parsed = splitSiteConfig(body.config);
+  } catch (error) {
+    throw new SiteEditorError(
+      400,
+      "SITE_CONFIG_INVALID",
+      error instanceof Error ? error.message : "Site config is invalid",
+    );
+  }
+
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${body.sourceKey}))`);
+    const [location] = await tx
+      .select({ id: locations.id, vendorId: locations.vendorId })
+      .from(locations)
+      .where(eq(locations.id, body.locationId))
+      .limit(1);
+    if (!location) {
+      throw new SiteEditorError(404, "LOCATION_NOT_FOUND", "Location not found");
+    }
+
+    const [existing] = await tx
+      .select({
+        id: websiteSites.id,
+        vendorId: websiteSites.vendorId,
+        slug: websiteSites.slug,
+        plan: websiteSites.plan,
+        locationId: websiteSiteLocations.locationId,
+      })
+      .from(websiteSites)
+      .leftJoin(
+        websiteSiteLocations,
+        and(
+          eq(websiteSiteLocations.siteId, websiteSites.id),
+          eq(websiteSiteLocations.isPrimary, true),
+        ),
+      )
+      .where(eq(websiteSites.migrationSource, body.sourceKey))
+      .limit(1);
+    if (existing) {
+      if (
+        existing.vendorId !== location.vendorId ||
+        existing.slug !== body.slug ||
+        existing.plan !== body.plan ||
+        existing.locationId !== body.locationId
+      ) {
+        throw new SiteEditorError(
+          409,
+          "MIGRATION_CONFLICT",
+          "Migration source is already linked to a different shared site",
+        );
+      }
+      return { siteId: existing.id, created: false };
+    }
+
+    const [slugConflict] = await tx
+      .select({ id: websiteSites.id })
+      .from(websiteSites)
+      .where(and(
+        eq(websiteSites.vendorId, location.vendorId),
+        eq(websiteSites.slug, body.slug),
+      ))
+      .limit(1);
+    if (slugConflict) {
+      throw new SiteEditorError(
+        409,
+        "MIGRATION_CONFLICT",
+        "A different shared site already uses this vendor and slug",
+      );
+    }
+
+    const [site] = await tx
+      .insert(websiteSites)
+      .values({
+        vendorId: location.vendorId,
+        slug: body.slug,
+        plan: body.plan,
+        status: "draft",
+        createdBy,
+        migrationSource: body.sourceKey,
+      })
+      .returning({ id: websiteSites.id });
+    if (!site) throw new Error("Failed to create migrated shared site");
+
+    await tx.insert(websiteSiteLocations).values({
+      siteId: site.id,
+      locationId: location.id,
+      isPrimary: true,
+      displayOrder: 0,
+    });
+    await tx.insert(websiteSiteDrafts).values({
+      siteId: site.id,
+      schemaVersion: parsed.schemaVersion,
+      settings: parsed.settings,
+      version: 1,
+      isDirty: false,
+      updatedBy: createdBy,
+    });
+    await persistSiteRows(tx, site.id, parsed, {});
+    const [revision] = await tx
+      .insert(websiteSiteRevisions)
+      .values({
+        siteId: site.id,
+        revisionNumber: 1,
+        schemaVersion: parsed.schemaVersion,
+        status: "published",
+        config: body.config,
+        createdBy,
+        publishedAt: new Date(),
+      })
+      .returning({ id: websiteSiteRevisions.id });
+    if (!revision) throw new Error("Failed to create migrated baseline");
+    await tx
+      .update(websiteSites)
+      .set({
+        status: "active",
+        publishedRevisionId: revision.id,
+        updated: new Date(),
+      })
+      .where(eq(websiteSites.id, site.id));
+    return { siteId: site.id, created: true };
+  });
+
+  return result;
+}
 
 async function getSite(siteId: string) {
   const [site] = await db
@@ -584,8 +798,17 @@ async function getSite(siteId: string) {
       plan: websiteSites.plan,
       status: websiteSites.status,
       publishedRevisionId: websiteSites.publishedRevisionId,
+      locationId: websiteSiteLocations.locationId,
+      createdAt: websiteSites.created,
     })
     .from(websiteSites)
+    .leftJoin(
+      websiteSiteLocations,
+      and(
+        eq(websiteSiteLocations.siteId, websiteSites.id),
+        eq(websiteSiteLocations.isPrimary, true),
+      ),
+    )
     .where(eq(websiteSites.id, siteId))
     .limit(1);
   if (!site) throw new SiteEditorError(404, "SITE_NOT_FOUND", "Site not found");
@@ -630,9 +853,11 @@ async function editorState(siteId: string) {
 
   return {
     siteId: site.id,
+    businessName: businessName(state.draft.settings, site.slug),
     slug: site.slug,
     plan: site.plan,
     status: site.status,
+    locationId: site.locationId ?? null,
     revisionId,
     publishedRevisionId: site.publishedRevisionId,
     hasDraft: state.draft.isDirty,
@@ -640,6 +865,7 @@ async function editorState(siteId: string) {
     config: state.config,
     domain: state.domains[0]?.hostname ?? null,
     domains: state.domains.map(({ hostname }) => hostname),
+    createdAt: site.createdAt.toISOString(),
     updatedAt: state.draft.updatedAt.toISOString(),
   };
 }
@@ -1090,6 +1316,13 @@ export const sharedSiteAdminRoutes = new Elysia({ prefix: "/shared-sites" })
       return { code: "UNAUTHORIZED", message: "Unauthorized" };
     }
   })
+  .get("/", async ({ set }) => {
+    try {
+      return await listSites();
+    } catch (error) {
+      return handleError(error, set);
+    }
+  })
   .post("/", async ({ body, headers, set }) => {
     try {
       return await createSite(body, actorId(headers));
@@ -1097,6 +1330,13 @@ export const sharedSiteAdminRoutes = new Elysia({ prefix: "/shared-sites" })
       return handleError(error, set);
     }
   }, { body: createBody })
+  .post("/migrations", async ({ body, headers, set }) => {
+    try {
+      return await migrateSite(body, actorId(headers));
+    } catch (error) {
+      return handleError(error, set);
+    }
+  }, { body: migrationBody })
   .get("/templates/pages", async ({ set }) => {
     try {
       return await listPageTemplates();

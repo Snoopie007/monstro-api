@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 
 let rows: unknown[][] = [];
 let inserted: unknown = null;
+const inserts: unknown[] = [];
 let returningRows: unknown[][] = [];
 const updates: Record<string, unknown>[] = [];
 let vercelResponses: Response[] = [];
@@ -16,6 +17,7 @@ const vercelFetch = mock(async () => {
 function selectChain() {
   const chain = {
     from() { return chain; },
+    leftJoin() { return chain; },
     innerJoin() { return chain; },
     where() { return chain; },
     orderBy() { return chain; },
@@ -37,6 +39,7 @@ function mutationChain() {
 }
 
 const tx = {
+  execute: mock(async () => []),
   select: mock(() => selectChain()),
   delete: mock(() => mutationChain()),
   update: mock(() => ({
@@ -48,6 +51,7 @@ const tx = {
   insert: mock(() => ({
     values(value: unknown) {
       inserted = value;
+      inserts.push(value);
       return mutationChain();
     },
   })),
@@ -72,6 +76,8 @@ const site = {
   id: "site-1",
   slug: "academy",
   plan: "scale",
+  locationId: "location-1",
+  createdAt: new Date("2026-08-08T11:00:00.000Z"),
   status: "active",
   publishedRevisionId: "rev-1",
 };
@@ -155,12 +161,14 @@ function request(path: string, init?: RequestInit) {
 beforeEach(() => {
   rows = [];
   inserted = null;
+  inserts.length = 0;
   returningRows = [];
   updates.length = 0;
   vercelResponses = [];
   tx.select.mockClear();
   tx.update.mockClear();
   tx.insert.mockClear();
+  tx.execute.mockClear();
   tx.delete.mockClear();
   vercelFetch.mockClear();
 });
@@ -277,6 +285,67 @@ test("creates a relational draft from the active plan template", async () => {
     hasDraft: true,
     config: { business: { name: "Academy" } },
   });
+});
+test("creates one clean published baseline for a legacy migration", async () => {
+  rows = [
+    [{ id: "location-1", vendorId: "vendor-1" }],
+    [],
+    [],
+  ];
+  returningRows = [
+    [{ id: "site-migrated" }],
+    [{ id: "page-home", pageKey: "home" }],
+    [{ id: "rev-migrated" }],
+  ];
+  const response = await request("/shared-sites/migrations", {
+    method: "POST",
+    headers: { "X-Monstro-Actor-Id": "admin-1" },
+    body: JSON.stringify({
+      sourceKey: "legacy-site:38",
+      locationId: "location-1",
+      slug: "academy",
+      plan: "scale",
+      config: templateConfig,
+    }),
+  });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ siteId: "site-migrated", created: true });
+  expect(inserts).toContainEqual(expect.objectContaining({ version: 1, isDirty: false }));
+  expect(inserts).toContainEqual(expect.objectContaining({ revisionNumber: 1, status: "published" }));
+  expect(updates).toContainEqual(expect.objectContaining({
+    status: "active",
+    publishedRevisionId: "rev-migrated",
+  }));
+  expect(inserts).not.toContainEqual(expect.objectContaining({ hostname: expect.any(String) }));
+  expect(vercelFetch).not.toHaveBeenCalled();
+});
+
+test("reuses a migrated target without writing another baseline", async () => {
+  rows = [
+    [{ id: "location-1", vendorId: "vendor-1" }],
+    [{
+      id: "site-migrated",
+      vendorId: "vendor-1",
+      slug: "academy",
+      plan: "scale",
+      locationId: "location-1",
+    }],
+  ];
+  const response = await request("/shared-sites/migrations", {
+    method: "POST",
+    body: JSON.stringify({
+      sourceKey: "legacy-site:38",
+      locationId: "location-1",
+      slug: "academy",
+      plan: "scale",
+      config: templateConfig,
+    }),
+  });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ siteId: "site-migrated", created: false });
+  expect(inserts).toHaveLength(0);
 });
 
 test("reads a clean relational draft as the published revision", async () => {
