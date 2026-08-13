@@ -21,6 +21,7 @@ import {
   type StoredBlockRow,
   type StoredPageRow,
 } from "@/libs/siteDraftConfig";
+import { SitePageTemplateSchema } from "@subtrees/site-config.js";
 
 class SiteEditorError extends Error {
   constructor(
@@ -50,6 +51,7 @@ const configBody = t.Object({
   schemaVersion: t.Integer({ minimum: 1 }),
   config: t.Record(t.String(), t.Unknown()),
   slug: t.Optional(t.String({ pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" })),
+  pageTemplateSources: t.Optional(t.Record(t.String(), t.String({ minLength: 1 }))),
 });
 
 const publishBody = t.Object({
@@ -269,12 +271,96 @@ async function activeSiteTemplate(plan: "growth" | "scale") {
   return template;
 }
 
+async function listPageTemplates() {
+  const rows = await db
+    .select({
+      templateId: websiteTemplates.id,
+      versionId: websiteTemplateVersions.id,
+      versionNumber: websiteTemplateVersions.versionNumber,
+      schemaVersion: websiteTemplateVersions.schemaVersion,
+      name: websiteTemplates.name,
+      description: websiteTemplates.description,
+      payload: websiteTemplateVersions.payload,
+    })
+    .from(websiteTemplates)
+    .innerJoin(
+      websiteTemplateVersions,
+      eq(websiteTemplateVersions.templateId, websiteTemplates.id),
+    )
+    .where(and(
+      eq(websiteTemplates.kind, "page"),
+      eq(websiteTemplates.status, "active"),
+      sql`${websiteTemplates.vendorId} is null`,
+    ))
+    .orderBy(asc(websiteTemplates.name), desc(websiteTemplateVersions.versionNumber));
+  const latest = new Map<string, typeof rows[number]>();
+  for (const row of rows) {
+    if (!latest.has(row.templateId)) latest.set(row.templateId, row);
+  }
+  return {
+    templates: [...latest.values()].map((row) => {
+      const payload = SitePageTemplateSchema.parse(row.payload);
+      if (payload.schemaVersion !== row.schemaVersion) {
+        throw new Error(`Page template schema mismatch: ${row.versionId}`);
+      }
+      return {
+        templateId: row.templateId,
+        versionId: row.versionId,
+        name: row.name,
+        description: row.description,
+      };
+    }),
+  };
+}
+
+async function resolvePageTemplate(versionId: string) {
+  const [row] = await db
+    .select({
+      templateId: websiteTemplates.id,
+      versionId: websiteTemplateVersions.id,
+      schemaVersion: websiteTemplateVersions.schemaVersion,
+      name: websiteTemplates.name,
+      description: websiteTemplates.description,
+      payload: websiteTemplateVersions.payload,
+    })
+    .from(websiteTemplateVersions)
+    .innerJoin(
+      websiteTemplates,
+      eq(websiteTemplates.id, websiteTemplateVersions.templateId),
+    )
+    .where(and(
+      eq(websiteTemplateVersions.id, versionId),
+      eq(websiteTemplates.kind, "page"),
+      eq(websiteTemplates.status, "active"),
+      sql`${websiteTemplates.vendorId} is null`,
+    ))
+    .limit(1);
+  if (!row) {
+    throw new SiteEditorError(404, "PAGE_TEMPLATE_NOT_FOUND", "Page template not found");
+  }
+  const payload = SitePageTemplateSchema.parse(row.payload);
+  if (payload.schemaVersion !== row.schemaVersion) {
+    throw new Error(`Page template schema mismatch: ${row.versionId}`);
+  }
+  return { ...row, payload };
+}
+
+type SiteRowTemplateSources = {
+  defaultTemplateVersionId?: string;
+  pageTemplateVersionIds?: ReadonlyMap<string, string>;
+};
+
+
 async function persistSiteRows(
   tx: SiteTransaction,
   siteId: string,
   parsed: ReturnType<typeof splitSiteConfig>,
-  sourceTemplateVersionId: string | null,
+  sources: SiteRowTemplateSources = {},
 ) {
+  const sourceForPage = (pageKey: string) =>
+    sources.pageTemplateVersionIds?.get(pageKey)
+    ?? sources.defaultTemplateVersionId
+    ?? null;
   const pageKeys = parsed.pages.map((page) => page.pageKey);
   await tx
     .delete(websitePages)
@@ -300,7 +386,7 @@ async function persistSiteRows(
       position: page.position,
       visible: page.visible,
       metadata: page.metadata,
-      sourceTemplateVersionId,
+      sourceTemplateVersionId: sourceForPage(page.pageKey),
     })))
     .onConflictDoUpdate({
       target: [websitePages.siteId, websitePages.pageKey],
@@ -347,7 +433,7 @@ async function persistSiteRows(
       position: block.position,
       visible: block.visible,
       props: block.props,
-      sourceTemplateVersionId,
+      sourceTemplateVersionId: sourceForPage(page.pageKey),
     }));
   });
   if (blocks.length > 0) {
@@ -470,7 +556,9 @@ async function createSite(
       isDirty: true,
       updatedBy: createdBy,
     });
-    await persistSiteRows(tx, site.id, parsed, template.versionId);
+    await persistSiteRows(tx, site.id, parsed, {
+      defaultTemplateVersionId: template.versionId,
+    });
 
     const baseDomain = Bun.env.SHARED_SITES_BASE_DOMAIN?.trim().toLowerCase().replace(/^\.+|\.+$/g, "");
     if (baseDomain) {
@@ -556,6 +644,79 @@ async function editorState(siteId: string) {
   };
 }
 
+async function validatePageTemplateSources(
+  tx: SiteTransaction,
+  siteId: string,
+  parsed: ReturnType<typeof splitSiteConfig>,
+  requested: Record<string, string> | undefined,
+) {
+  const entries = Object.entries(requested ?? {});
+  const sources = new Map(entries);
+  if (entries.length === 0) return sources;
+
+  const pages = new Map(parsed.pages.map((page) => [page.pageKey, page]));
+  for (const [pageKey] of entries) {
+    if (pages.get(pageKey)?.kind !== "sections") {
+      throw new SiteEditorError(
+        400,
+        "PAGE_TEMPLATE_SOURCE_INVALID",
+        `Page template source does not match an editable page: ${pageKey}`,
+      );
+    }
+  }
+
+  const existing = await tx
+    .select({ pageKey: websitePages.pageKey })
+    .from(websitePages)
+    .where(eq(websitePages.siteId, siteId));
+  const existingKeys = new Set(existing.map((page) => page.pageKey));
+  const existingSource = entries.find(([pageKey]) => existingKeys.has(pageKey));
+  if (existingSource) {
+    throw new SiteEditorError(
+      400,
+      "PAGE_TEMPLATE_SOURCE_INVALID",
+      `Template provenance may only be assigned when adding a page: ${existingSource[0]}`,
+    );
+  }
+
+  const versionIds = [...new Set(sources.values())];
+  const versions = await tx
+    .select({
+      id: websiteTemplateVersions.id,
+      schemaVersion: websiteTemplateVersions.schemaVersion,
+      payload: websiteTemplateVersions.payload,
+    })
+    .from(websiteTemplateVersions)
+    .innerJoin(
+      websiteTemplates,
+      eq(websiteTemplates.id, websiteTemplateVersions.templateId),
+    )
+    .where(and(
+      inArray(websiteTemplateVersions.id, versionIds),
+      eq(websiteTemplates.kind, "page"),
+      eq(websiteTemplates.status, "active"),
+      sql`${websiteTemplates.vendorId} is null`,
+    ));
+  if (versions.length !== versionIds.length) {
+    throw new SiteEditorError(
+      400,
+      "PAGE_TEMPLATE_SOURCE_INVALID",
+      "Page template source is missing, archived, or not a platform template",
+    );
+  }
+  for (const version of versions) {
+    const payload = SitePageTemplateSchema.parse(version.payload);
+    if (payload.schemaVersion !== version.schemaVersion) {
+      throw new SiteEditorError(
+        400,
+        "PAGE_TEMPLATE_SOURCE_INVALID",
+        `Page template schema mismatch: ${version.id}`,
+      );
+    }
+  }
+  return sources;
+}
+
 async function saveDraft(
   siteId: string,
   body: typeof configBody.static,
@@ -611,7 +772,15 @@ async function saveDraft(
       throw new SiteEditorError(409, "STALE_REVISION", "The site changed since it was loaded");
     }
 
-    await persistSiteRows(tx, siteId, parsed, null);
+    const templateSources = await validatePageTemplateSources(
+      tx,
+      siteId,
+      parsed,
+      body.pageTemplateSources,
+    );
+    await persistSiteRows(tx, siteId, parsed, {
+      pageTemplateVersionIds: templateSources,
+    });
     await tx
       .update(websiteSiteDrafts)
       .set({
@@ -928,6 +1097,20 @@ export const sharedSiteAdminRoutes = new Elysia({ prefix: "/shared-sites" })
       return handleError(error, set);
     }
   }, { body: createBody })
+  .get("/templates/pages", async ({ set }) => {
+    try {
+      return await listPageTemplates();
+    } catch (error) {
+      return handleError(error, set);
+    }
+  })
+  .get("/templates/pages/:versionId", async ({ params, set }) => {
+    try {
+      return await resolvePageTemplate(params.versionId);
+    } catch (error) {
+      return handleError(error, set);
+    }
+  })
   .get("/:siteId/editor", async ({ params, set }) => {
     try {
       return await editorState(params.siteId);

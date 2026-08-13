@@ -168,6 +168,70 @@ afterAll(() => {
   globalThis.fetch = originalFetch;
 });
 
+test("lists only the latest active platform page template versions", async () => {
+  const pageTemplate = {
+    schemaVersion: 1,
+    page: {
+      metadata: { description: "Tour page" },
+      sections: [{
+        id: "intro",
+        type: "rich_text",
+        visible: true,
+        props: { title: "Tour", body: ["Welcome"] },
+      }],
+    },
+  };
+  rows = [[
+    {
+      templateId: "page-tour",
+      versionId: "page-tour-v2",
+      versionNumber: 2,
+      schemaVersion: 1,
+      name: "Tour",
+      description: "Latest",
+      payload: pageTemplate,
+    },
+    {
+      templateId: "page-tour",
+      versionId: "page-tour-v1",
+      versionNumber: 1,
+      schemaVersion: 1,
+      name: "Tour",
+      description: "Old",
+      payload: pageTemplate,
+    },
+    {
+      templateId: "page-offer",
+      versionId: "page-offer-v1",
+      versionNumber: 1,
+      schemaVersion: 1,
+      name: "Offer",
+      description: "Offer",
+      payload: pageTemplate,
+    },
+  ]];
+
+  const response = await request("/shared-sites/templates/pages");
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    templates: [
+      {
+        templateId: "page-tour",
+        versionId: "page-tour-v2",
+        name: "Tour",
+        description: "Latest",
+      },
+      {
+        templateId: "page-offer",
+        versionId: "page-offer-v1",
+        name: "Offer",
+        description: "Offer",
+      },
+    ],
+  });
+});
+
 
 test("requires service authentication", async () => {
   const response = await app.handle(new Request("http://localhost/shared-sites/site-1/editor"));
