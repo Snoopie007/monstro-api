@@ -22,6 +22,7 @@ async function findActiveSiteLocation(siteId: string, locationId: string) {
     .select({
       siteId: websiteSites.id,
       locationId: locations.id,
+      currency: locationState.currency,
     })
     .from(websiteSites)
     .innerJoin(
@@ -29,6 +30,7 @@ async function findActiveSiteLocation(siteId: string, locationId: string) {
       eq(websiteSiteLocations.siteId, websiteSites.id),
     )
     .innerJoin(locations, eq(websiteSiteLocations.locationId, locations.id))
+    .leftJoin(locationState, eq(locationState.locationId, locations.id))
     .where(
       and(
         eq(websiteSites.id, siteId),
@@ -75,6 +77,59 @@ function readGatewayService(value: string | null): "stripe" | "square" | "author
   return value === "stripe" || value === "square" || value === "authorize" ? value : null;
 }
 
+const openingDays = new Set([
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+]);
+
+function locationFacts(value: unknown) {
+  const metadata = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  const latitude = metadata.lat;
+  const longitude = metadata.lng;
+  const coordinates =
+    typeof latitude === "number" && latitude >= -90 && latitude <= 90 &&
+    typeof longitude === "number" && longitude >= -180 && longitude <= 180
+      ? { latitude, longitude }
+      : undefined;
+  const openingHours = Array.isArray(metadata.openingHours)
+    ? metadata.openingHours.flatMap((value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+        const item = value as Record<string, unknown>;
+        if (
+          !Array.isArray(item.dayOfWeek) ||
+          !item.dayOfWeek.every((day) => typeof day === "string" && openingDays.has(day)) ||
+          typeof item.opens !== "string" ||
+          typeof item.closes !== "string" ||
+          !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.opens) ||
+          !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.closes)
+        ) return [];
+        return [{
+          dayOfWeek: item.dayOfWeek,
+          opens: item.opens,
+          closes: item.closes,
+        }];
+      })
+    : undefined;
+  const rating =
+    typeof metadata.rating === "number" && metadata.rating >= 0 && metadata.rating <= 5
+      ? metadata.rating
+      : undefined;
+  const reviewCount =
+    typeof metadata.userRatingCount === "number" &&
+    Number.isInteger(metadata.userRatingCount) &&
+    metadata.userRatingCount >= 0
+      ? metadata.userRatingCount
+      : undefined;
+  return { coordinates, openingHours, rating, reviewCount };
+}
+
 function hasSitesServiceToken(request: Request): boolean {
   const expected = Bun.env.MONSTRO_SITES_SERVICE_TOKEN;
   const supplied = request.headers.get("authorization")?.match(/^Bearer (.+)$/)?.[1];
@@ -102,6 +157,8 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
         vendorId: websiteSites.vendorId,
         publishedRevisionId: websiteSites.publishedRevisionId,
         domain: websiteSiteDomains.hostname,
+        verificationData: websiteSiteDomains.verificationData,
+        isCanonical: websiteSiteDomains.isCanonical,
       })
       .from(websiteSiteDomains)
       .innerJoin(websiteSites, eq(websiteSiteDomains.siteId, websiteSites.id))
@@ -121,7 +178,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
       });
     }
 
-    const [revisionRows, locationRows] = await Promise.all([
+    const [revisionRows, locationRows, canonicalRows] = await Promise.all([
       db
         .select({
           id: websiteSiteRevisions.id,
@@ -147,6 +204,12 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           timezone: locations.timezone,
           phone: locations.phone,
           email: locations.email,
+          city: locations.city,
+          state: locations.state,
+          postalCode: locations.postalCode,
+          country: locations.country,
+          metadata: locations.metadata,
+          currency: locationState.currency,
           gatewayService: integrations.service,
           vendorId: locations.vendorId,
           isPrimary: websiteSiteLocations.isPrimary,
@@ -166,6 +229,14 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           asc(websiteSiteLocations.displayOrder),
           asc(websiteSiteLocations.locationId),
         ),
+      db
+        .select({ hostname: websiteSiteDomains.hostname })
+        .from(websiteSiteDomains)
+        .where(and(
+          eq(websiteSiteDomains.siteId, resolved.siteId),
+          eq(websiteSiteDomains.isCanonical, true),
+        ))
+        .limit(1),
     ]);
 
     const revision = revisionRows[0];
@@ -195,10 +266,24 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           ...(location.address ? { address: location.address } : {}),
           ...(location.phone ? { phone: location.phone } : {}),
           ...(location.email ? { email: location.email } : {}),
+          ...(location.country ? {
+            postalAddress: {
+              ...(location.address ? { streetAddress: location.address } : {}),
+              ...(location.city ? { addressLocality: location.city } : {}),
+              ...(location.state ? { addressRegion: location.state } : {}),
+              ...(location.postalCode ? { postalCode: location.postalCode } : {}),
+              addressCountry: location.country,
+            },
+          } : {}),
+          ...locationFacts(location.metadata),
           timezone: location.timezone,
           paymentGateway: readGatewayService(location.gatewayService),
+          ...(location.currency ? { currency: location.currency } : {}),
         })),
         domain: resolved.domain,
+        domainSource: resolved.verificationData.source === "wildcard" ? "wildcard" : "custom",
+        canonicalDomain: canonicalRows[0]?.hostname ?? null,
+        isCanonicalDomain: resolved.isCanonical,
         publishedRevisionId: revision.id,
         capabilities: readCapabilities(revision.config),
       },
@@ -312,6 +397,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
             slug: post.slug,
             featuredImageUrl: post.featuredImageUrl,
             publishedAt: post.publishedAt?.toISOString() ?? null,
+            updatedAt: post.updated?.toISOString() ?? null,
           })),
         });
       } catch (error) {
@@ -356,6 +442,8 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           metaTitle: post.metaTitle,
           metaDescription: post.metaDescription,
           publishedAt: post.publishedAt?.toISOString() ?? null,
+          updatedAt: post.updated?.toISOString() ?? null,
+          authorName: post.authorName,
         });
       } catch (error) {
         console.error(error);
@@ -377,7 +465,8 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   .get(
     "/:siteId/locations/:locationId/products",
     async ({ params, status }) => {
-      if (!await findActiveSiteLocation(params.siteId, params.locationId)) {
+      const siteLocation = await findActiveSiteLocation(params.siteId, params.locationId);
+      if (!siteLocation) {
         return status(404, {
           code: "SITE_LOCATION_NOT_FOUND",
           message: "Site location not found",
@@ -394,6 +483,9 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           description: product.description,
           brand: product.brand,
           active: product.active,
+          currency: siteLocation.currency,
+          createdAt: product.created.toISOString(),
+          updatedAt: product.updated?.toISOString() ?? null,
           variants: product.variants
             .filter((variant) => variant.active)
             .map((variant) => ({
@@ -430,7 +522,8 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   .get(
     "/:siteId/locations/:locationId/products/:productId",
     async ({ params, status }) => {
-      if (!await findActiveSiteLocation(params.siteId, params.locationId)) {
+      const siteLocation = await findActiveSiteLocation(params.siteId, params.locationId);
+      if (!siteLocation) {
         return status(404, {
           code: "SITE_LOCATION_NOT_FOUND",
           message: "Site location not found",
@@ -453,6 +546,9 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           description: product.description,
           brand: product.brand,
           active: product.active,
+          currency: siteLocation.currency,
+          createdAt: product.created.toISOString(),
+          updatedAt: product.updated?.toISOString() ?? null,
           variants: product.variants
             .filter((variant) => variant.active)
             .map((variant) => ({

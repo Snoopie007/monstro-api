@@ -1,4 +1,4 @@
-import { SiteConfigSchema } from "@subtrees/site-config.js";
+import { normalizeSiteConfigV2, SiteConfigSchema } from "@subtrees/site-config.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -32,7 +32,7 @@ function record(value: unknown, label: string): JsonRecord {
 
 
 export function splitSiteConfig(input: unknown) {
-  const config = SiteConfigSchema.parse(input);
+  const config = SiteConfigSchema.parse(normalizeSiteConfigV2(input));
   const pages = config.pages.map((page, position): StoredPageInput => ({
     pageKey: page.id,
     path: page.path,
@@ -126,7 +126,7 @@ export function materializeSiteTemplate(
     materialized.theme = { ...theme, colors: { ...colors, primary: values.primaryColor } };
   }
 
-  return SiteConfigSchema.parse(materialized);
+  return SiteConfigSchema.parse(normalizeSiteConfigV2(materialized));
 }
 
 export function draftToken(siteId: string, version: number): string {

@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
 import { and, eq, sql } from "drizzle-orm";
-import { websiteContents } from "@subtrees/schemas";
+import { users, websiteContents } from "@subtrees/schemas";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -36,15 +36,19 @@ export async function getPublishedBlogPosts(
     return { posts, total: countRows[0]?.total ?? 0 };
 }
 
-export function getPublishedBlogPost(locationId: string, slug: string) {
-    return db.query.websiteContents.findFirst({
-        where: (content, { and, eq }) => and(
-            eq(content.locationId, locationId),
-            eq(content.slug, slug),
-            eq(content.type, "post"),
-            eq(content.status, "published"),
-        ),
-    });
+export async function getPublishedBlogPost(locationId: string, slug: string) {
+    const [result] = await db
+        .select({ post: websiteContents, authorName: users.name })
+        .from(websiteContents)
+        .leftJoin(users, eq(users.id, websiteContents.authorId))
+        .where(and(
+            eq(websiteContents.locationId, locationId),
+            eq(websiteContents.slug, slug),
+            eq(websiteContents.type, "post"),
+            eq(websiteContents.status, "published"),
+        ))
+        .limit(1);
+    return result ? { ...result.post, authorName: result.authorName } : undefined;
 }
 
 export const webContentRoutes = new Elysia({ prefix: "/content" })

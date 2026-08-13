@@ -21,7 +21,10 @@ import {
   type StoredBlockRow,
   type StoredPageRow,
 } from "@/libs/siteDraftConfig";
-import { SitePageTemplateSchema } from "@subtrees/site-config.js";
+import {
+  normalizeSitePageTemplateV2,
+  SitePageTemplateSchema,
+} from "@subtrees/site-config.js";
 
 class SiteEditorError extends Error {
   constructor(
@@ -221,6 +224,7 @@ function domainResponse(domain: {
   status: string;
   verificationData: Record<string, unknown>;
   verifiedAt: Date | null;
+  isCanonical: boolean;
 }) {
   return {
     id: domain.id,
@@ -232,6 +236,7 @@ function domainResponse(domain: {
       : null,
     dnsRecords: storedDnsRecords(domain.verificationData),
     verifiedAt: domain.verifiedAt?.toISOString() ?? null,
+    isCanonical: domain.isCanonical,
   };
 }
 
@@ -306,7 +311,7 @@ async function listPageTemplates() {
   }
   return {
     templates: [...latest.values()].map((row) => {
-      const payload = SitePageTemplateSchema.parse(row.payload);
+      const payload = SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(row.payload));
       if (payload.schemaVersion !== row.schemaVersion) {
         throw new Error(`Page template schema mismatch: ${row.versionId}`);
       }
@@ -345,7 +350,7 @@ async function resolvePageTemplate(versionId: string) {
   if (!row) {
     throw new SiteEditorError(404, "PAGE_TEMPLATE_NOT_FOUND", "Page template not found");
   }
-  const payload = SitePageTemplateSchema.parse(row.payload);
+  const payload = SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(row.payload));
   if (payload.schemaVersion !== row.schemaVersion) {
     throw new Error(`Page template schema mismatch: ${row.versionId}`);
   }
@@ -551,10 +556,11 @@ async function listSites() {
       .select({
         siteId: websiteSiteDomains.siteId,
         hostname: websiteSiteDomains.hostname,
+        isCanonical: websiteSiteDomains.isCanonical,
       })
       .from(websiteSiteDomains)
       .where(eq(websiteSiteDomains.status, "verified"))
-      .orderBy(asc(websiteSiteDomains.created)),
+      .orderBy(desc(websiteSiteDomains.isCanonical), asc(websiteSiteDomains.created)),
   ]);
   const domainBySite = new Map<string, string>();
   for (const domain of domains) {
@@ -838,13 +844,16 @@ async function editorState(siteId: string) {
     }
     const config = await readSiteConfig(tx, siteId, draft);
     const domains = await tx
-      .select({ hostname: websiteSiteDomains.hostname })
+      .select({
+        hostname: websiteSiteDomains.hostname,
+        isCanonical: websiteSiteDomains.isCanonical,
+      })
       .from(websiteSiteDomains)
       .where(and(
         eq(websiteSiteDomains.siteId, siteId),
         eq(websiteSiteDomains.status, "verified"),
       ))
-      .orderBy(asc(websiteSiteDomains.created));
+      .orderBy(desc(websiteSiteDomains.isCanonical), asc(websiteSiteDomains.created));
     return { draft, config, domains };
   });
   const revisionId = state.draft.isDirty
@@ -1141,11 +1150,61 @@ async function listDomains(siteId: string) {
       status: websiteSiteDomains.status,
       verificationData: websiteSiteDomains.verificationData,
       verifiedAt: websiteSiteDomains.verifiedAt,
+      isCanonical: websiteSiteDomains.isCanonical,
     })
     .from(websiteSiteDomains)
     .where(eq(websiteSiteDomains.siteId, siteId))
     .orderBy(asc(websiteSiteDomains.created));
   return { domains: domains.map(domainResponse) };
+}
+
+async function setCanonicalDomain(siteId: string, domainId: string) {
+  const domain = await db.transaction(async (tx) => {
+    const [target] = await tx
+      .select({
+        id: websiteSiteDomains.id,
+        hostname: websiteSiteDomains.hostname,
+        status: websiteSiteDomains.status,
+        verificationData: websiteSiteDomains.verificationData,
+        verifiedAt: websiteSiteDomains.verifiedAt,
+        isCanonical: websiteSiteDomains.isCanonical,
+      })
+      .from(websiteSiteDomains)
+      .where(and(
+        eq(websiteSiteDomains.siteId, siteId),
+        eq(websiteSiteDomains.id, domainId),
+      ))
+      .limit(1);
+    if (!target) {
+      throw new SiteEditorError(404, "DOMAIN_NOT_FOUND", "Domain not found");
+    }
+    if (
+      target.status !== "verified" ||
+      !target.verifiedAt ||
+      target.verificationData.source !== "custom"
+    ) {
+      throw new SiteEditorError(
+        409,
+        "DOMAIN_NOT_ELIGIBLE",
+        "Only a verified custom domain can be canonical",
+      );
+    }
+    if (!target.isCanonical) {
+      await tx
+        .update(websiteSiteDomains)
+        .set({ isCanonical: false, updated: new Date() })
+        .where(and(
+          eq(websiteSiteDomains.siteId, siteId),
+          eq(websiteSiteDomains.isCanonical, true),
+        ));
+      await tx
+        .update(websiteSiteDomains)
+        .set({ isCanonical: true, updated: new Date() })
+        .where(eq(websiteSiteDomains.id, domainId));
+    }
+    return { ...target, isCanonical: true };
+  });
+  return domainResponse(domain);
 }
 
 async function getVercelDomain(
@@ -1202,6 +1261,7 @@ async function addDomain(siteId: string, value: string) {
       status: websiteSiteDomains.status,
       verificationData: websiteSiteDomains.verificationData,
       verifiedAt: websiteSiteDomains.verifiedAt,
+      isCanonical: websiteSiteDomains.isCanonical,
     })
     .from(websiteSiteDomains)
     .where(eq(websiteSiteDomains.hostname, hostname))
@@ -1249,14 +1309,16 @@ async function addDomain(siteId: string, value: string) {
       );
     const config = await vercelDomainConfig(settings, hostname);
     const state = domainState(hostname, domain, config, existing?.verifiedAt ?? null);
+    const isCanonical = state.status === "verified" && (existing?.isCanonical ?? false);
     await db
       .update(websiteSiteDomains)
-      .set({ ...state, updated: new Date() })
+      .set({ ...state, isCanonical, updated: new Date() })
       .where(eq(websiteSiteDomains.id, domainId));
     return domainResponse({
       id: domainId,
       hostname,
       ...state,
+      isCanonical,
     });
   } catch (error) {
     return vercelFailure(error);
@@ -1274,6 +1336,7 @@ async function verifyDomain(siteId: string, value: string) {
       status: websiteSiteDomains.status,
       verificationData: websiteSiteDomains.verificationData,
       verifiedAt: websiteSiteDomains.verifiedAt,
+      isCanonical: websiteSiteDomains.isCanonical,
     })
     .from(websiteSiteDomains)
     .where(and(
@@ -1293,11 +1356,12 @@ async function verifyDomain(siteId: string, value: string) {
     );
     const config = await vercelDomainConfig(settings, hostname);
     const state = domainState(hostname, domain, config, existing.verifiedAt);
+    const isCanonical = state.status === "verified" && existing.isCanonical;
     await db
       .update(websiteSiteDomains)
-      .set({ ...state, updated: new Date() })
+      .set({ ...state, isCanonical, updated: new Date() })
       .where(eq(websiteSiteDomains.id, existing.id));
-    return domainResponse({ ...existing, ...state });
+    return domainResponse({ ...existing, ...state, isCanonical });
   } catch (error) {
     return vercelFailure(error);
   }
@@ -1375,6 +1439,13 @@ export const sharedSiteAdminRoutes = new Elysia({ prefix: "/shared-sites" })
   .post("/:siteId/domains/:hostname/verify", async ({ params, set }) => {
     try {
       return { domain: await verifyDomain(params.siteId, params.hostname) };
+    } catch (error) {
+      return handleError(error, set);
+    }
+  })
+  .put("/:siteId/domains/:domainId/canonical", async ({ params, set }) => {
+    try {
+      return { domain: await setCanonicalDomain(params.siteId, params.domainId) };
     } catch (error) {
       return handleError(error, set);
     }
