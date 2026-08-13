@@ -14,6 +14,7 @@ import { generateUsername } from "@/utils/userUtils";
 import { generateAppleClientSecret } from "./apple";
 import { sessionBridge } from "./plugins";
 import { resolveTrustedOrigins } from "./trustedOrigins";
+import { usernameField, withGeneratedUsername } from "./user";
 // Use secure cookies if we're on HTTPS (production, preview, or ngrok)
 const isProduction = Bun.env.BUN_ENV === "production";
 const isPreview = Bun.env.BUN_ENV === "preview";
@@ -54,10 +55,7 @@ export const auth = betterAuth({
             updatedAt: 'updated',
         },
         additionalFields: {
-            username: {
-                type: "string",
-                required: true,
-            },
+            username: usernameField,
         },
     },
     socialProviders: {
@@ -86,13 +84,14 @@ export const auth = betterAuth({
         user: {
             create: {
                 before: async (user, ctx) => {
+                    const data = withGeneratedUsername(user);
                     if (!ctx || !ctx.path || ctx.path !== "/callback/:id") {
-                        return { data: user };
+                        return { data };
                     }
                     // Get additional data from OAuth state
                     const oauthState = await getOAuthState();
                     if (!oauthState?.memberId) {
-                        return { data: user }; // No userId passed, proceed with normal creation
+                        return { data }; // No userId passed, proceed with normal creation
                     }
 
                     const targetMemberId = oauthState.memberId;
@@ -107,7 +106,7 @@ export const auth = betterAuth({
                         }
                     });
                     if (!existingMember) {
-                        return { data: user };
+                        return { data };
                     }
 
 
@@ -126,7 +125,7 @@ export const auth = betterAuth({
                     await ctx.context.internalAdapter.createAccount(accountData);
                     // Option 2: Return the existing user data 
                     // (if Better Auth uses this for session creation)
-                    return { data: user };
+                    return { data };
                 },
                 after: async (user, ctx) => {
                     try {
