@@ -27,6 +27,7 @@ export const websiteSites = pgTable(
     status: text("status").notNull().default("draft"),
     publishedRevisionId: text("published_revision_id"),
     createdBy: text("created_by").notNull(),
+    migrationSource: text("migration_source"),
     created: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -36,6 +37,9 @@ export const websiteSites = pgTable(
   },
   (table) => [
     uniqueIndex("website_sites_vendor_slug_uq").on(table.vendorId, table.slug),
+    uniqueIndex("website_sites_migration_source_uq")
+      .on(table.migrationSource)
+      .where(sql`${table.migrationSource} is not null`),
     check(
       "website_sites_plan_check",
       sql`${table.plan} in ('growth', 'scale')`,
