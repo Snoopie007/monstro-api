@@ -12,12 +12,13 @@ type OrderTotalResult = {
     feesAmount: number;
     tax: number;
     subtotal: number;
+    discount: number;
     processingFee: number;
     lineItems: OrderLineItem[];
 }
 export function calculateOrderTotals(
     items: OrderItems[],
-    variants: Pick<MercVariant, "id" | "name" | "price">[],
+    variants: Array<Pick<MercVariant, "id" | "name" | "price" | "salePrice">>,
     taxRate: number,
     passOnFees: boolean,
     usagePercent: number,
@@ -32,17 +33,18 @@ export function calculateOrderTotals(
         if (!variant) {
             throw new Error("Variant not found");
         }
-        const lineSubtotal = variant.price * item.quantity;
+        const unitCost = variant.salePrice ?? variant.price;
+        const lineSubtotal = unitCost * item.quantity;
         subtotal += lineSubtotal;
-        const totalTax = Math.floor((variant.price * taxRate) / 100);
+        const totalTax = Math.floor((lineSubtotal * taxRate) / 100);
         tax += totalTax;
         total += lineSubtotal + totalTax;
         itemsWithTax.push({
             variantId: variant.id,
             quantity: item.quantity,
             productName: variant.name,
-            unitCost: variant.price,
-            tax: Math.floor((variant.price * taxRate) / 100),
+            unitCost,
+            tax: totalTax,
         });
     }
 
@@ -50,7 +52,7 @@ export function calculateOrderTotals(
     let discount = 0;
     if (promoData) {
         const { redemptionCount, maxRedemptions, type, value } = promoData;
-        if (redemptionCount < (maxRedemptions || 0)) {
+        if (maxRedemptions === null || redemptionCount < maxRedemptions) {
             if (type === "fixed_amount") {
                 discount = Math.min(value, subtotal);
             } else {
@@ -76,6 +78,6 @@ export function calculateOrderTotals(
         total += feesAmount;
     }
 
-    return { total, lineItems: itemsWithTax, feesAmount, tax, subtotal, processingFee };
+    return { total, lineItems: itemsWithTax, discount, feesAmount, tax, subtotal, processingFee };
 }
 

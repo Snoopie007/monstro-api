@@ -115,13 +115,23 @@ export async function resolveTrustedOrigins(
     if (!request) {
         return staticOrigins;
     }
+    const origin = request.headers.get("origin");
+    if (Bun.env.BUN_ENV !== "production" && origin) {
+        try {
+            const { hostname, protocol } = new URL(origin);
+            if (protocol === "http:" && (hostname === "localhost" || hostname.endsWith(".localhost"))) {
+                return [...new Set([...staticOrigins, origin])];
+            }
+        } catch {
+            // Let Better Auth reject malformed origins.
+        }
+    }
 
     if (isCacheStale()) {
         return refreshOrigins(staticOrigins);
     }
 
     const list = cachedOrigins ?? await refreshOrigins(staticOrigins);
-    const origin = request.headers.get("origin");
 
     if (!origin || list.includes(origin)) {
         return list;

@@ -15,6 +15,7 @@ import { generateAppleClientSecret } from "./apple";
 import { sessionBridge } from "./plugins";
 import { resolveTrustedOrigins } from "./trustedOrigins";
 import { usernameField, withGeneratedUsername } from "./user";
+import { EmailSender } from "@/libs/email";
 // Use secure cookies if we're on HTTPS (production, preview, or ngrok)
 const isProduction = Bun.env.BUN_ENV === "production";
 const isPreview = Bun.env.BUN_ENV === "preview";
@@ -169,13 +170,30 @@ export const auth = betterAuth({
 
     emailAndPassword: {
         enabled: true,
+        sendResetPassword: async ({ user, url }) => {
+            const [firstName = "Member", ...lastName] = user.name.trim().split(/\s+/).filter(Boolean);
+            await new EmailSender().sendWithTemplate({
+                template: "ResetPasswordEmail",
+                data: {
+                    member: {
+                        firstName,
+                        lastName: lastName.join(" "),
+                        email: user.email,
+                    },
+                    url,
+                },
+                options: {
+                    to: user.email,
+                    subject: "Reset your Monstro password",
+                },
+            });
+        },
 
         password: {
             hash: async (password: string) => {
                 return bcrypt.hash(password, 10);
             },
             verify: async ({ hash, password }: { hash: string; password: string }) => {
-                console.log("Verifying password", password, hash);
                 return bcrypt.compare(password, hash);
             },
         },

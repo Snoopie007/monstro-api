@@ -5,16 +5,17 @@ import { handleMercCheckout, mapMercCheckoutError } from "@/handlers/merc";
 
 const mercCheckoutBody = t.Object({
     promoId: t.Optional(t.Nullable(t.String())),
-    paymentMethodId: t.String(),
+    paymentMethodId: t.String({ minLength: 1, maxLength: 256 }),
     paymentType: t.Optional(t.Union([
         t.Literal("card"),
         t.Literal("us_bank_account"),
     ])),
     items: t.Array(t.Object({
-        variantId: t.String(),
-        quantity: t.Number(),
-    })),
-    attemptId: t.String(),
+        variantId: t.String({ minLength: 1, maxLength: 128 }),
+        quantity: t.Integer({ minimum: 1 }),
+    }), { minItems: 1, maxItems: 100 }),
+    attemptId: t.String({ minLength: 1, maxLength: 128 }),
+    quoteOnly: t.Optional(t.Boolean()),
 });
 export function getActiveLocationProducts(locationId: string) {
     return db.query.products.findMany({
@@ -69,6 +70,7 @@ export const webMercsRoutes = new Elysia({ prefix: "/mercs" })
                 paymentType: body.paymentType,
                 promoId: body.promoId,
                 attemptId: body.attemptId,
+                quoteOnly: body.quoteOnly,
             });
             return status(200, order);
         } catch (error) {
