@@ -167,6 +167,10 @@ export const websitePages = pgTable(
     metadata: jsonb("metadata")
       .$type<Record<string, unknown>>()
       .notNull(),
+    settings: jsonb("settings")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     sourceTemplateVersionId: text("source_template_version_id").references(
       () => websiteTemplateVersions.id,
       { onDelete: "set null" },

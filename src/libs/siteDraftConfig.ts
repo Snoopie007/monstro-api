@@ -9,6 +9,7 @@ export type StoredPageInput = {
   position: number;
   visible: boolean;
   metadata: JsonRecord;
+  settings: JsonRecord;
   blocks: StoredBlockInput[];
 };
 
@@ -40,6 +41,7 @@ export function splitSiteConfig(input: unknown) {
     position,
     visible: page.visible,
     metadata: { ...page.metadata },
+    settings: page.header ? { header: page.header } : {},
     blocks: page.kind === "sections"
       ? page.sections.map((section, blockPosition): StoredBlockInput => ({
           blockKey: section.id,
@@ -70,12 +72,14 @@ export function assembleSiteConfig(input: {
   const pages = [...input.pages]
     .sort((a, b) => a.position - b.position)
     .map((page) => {
+      const header = page.settings.header;
       const base = {
         id: page.pageKey,
         kind: page.kind,
         path: page.path,
         visible: page.visible,
         metadata: page.metadata,
+        ...(header === undefined ? {} : { header }),
       };
       if (page.kind === "builtin") return base;
       return {

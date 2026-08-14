@@ -29,6 +29,7 @@ const template = {
     kind: "sections",
     path: "/",
     visible: true,
+    header: { mode: "sticky", contrast: "light" },
     metadata: { title: "{{businessName}}" },
     sections: [{
       id: "home-hero",
@@ -61,6 +62,10 @@ test("materializes, splits, and rebuilds a site template without changing its co
     primaryColor: "#2563eb",
   });
   const stored = splitSiteConfig(config);
+  expect(stored.pages[0]?.settings).toEqual({
+    header: { mode: "sticky", contrast: "light" },
+  });
+  expect(stored.pages[0]?.metadata).not.toHaveProperty("header");
   const pages = stored.pages.map((page, index) => ({ ...page, id: `page-${index}` }));
   const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
   const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({

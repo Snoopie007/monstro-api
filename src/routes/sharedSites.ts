@@ -398,6 +398,7 @@ async function persistSiteRows(
       position: page.position,
       visible: page.visible,
       metadata: page.metadata,
+      settings: page.settings,
       sourceTemplateVersionId: sourceForPage(page.pageKey),
     })))
     .onConflictDoUpdate({
@@ -408,6 +409,7 @@ async function persistSiteRows(
         position: sql`excluded.position`,
         visible: sql`excluded.visible`,
         metadata: sql`excluded.metadata`,
+        settings: sql`excluded.settings`,
         sourceTemplateVersionId: sql`coalesce(${websitePages.sourceTemplateVersionId}, excluded.source_template_version_id)`,
         updated: sql`now()`,
       },
@@ -483,6 +485,7 @@ async function readSiteConfig(
       position: websitePages.position,
       visible: websitePages.visible,
       metadata: websitePages.metadata,
+      settings: websitePages.settings,
     })
     .from(websitePages)
     .where(eq(websitePages.siteId, siteId))
