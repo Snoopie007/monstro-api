@@ -6,10 +6,18 @@ import {
 } from "./siteDraftConfig";
 
 const template = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   locale: "en-US",
-  business: { name: "{{businessName}}", tagline: "Train in {{city}}" },
-  metadata: { titleTemplate: "%s | {{businessName}}", defaultDescription: "Train well" },
+  business: {
+    name: "{{businessName}}",
+    tagline: "Train in {{city}}",
+    structuredDataType: "LocalBusiness",
+  },
+  metadata: {
+    defaultTitle: "{{businessName}}",
+    titleTemplate: "%s | {{businessName}}",
+    defaultDescription: "Train well",
+  },
   theme: {
     colors: {
       primary: "#000000",
@@ -83,7 +91,7 @@ test("materializes, splits, and rebuilds a site template without changing its co
 
 test("rejects a config outside the canonical site contract", () => {
   expect(() => splitSiteConfig({
-    schemaVersion: 1,
+    schemaVersion: 2,
     pages: template.pages,
   })).toThrow();
 });

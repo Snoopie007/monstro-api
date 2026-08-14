@@ -82,10 +82,18 @@ const site = {
   publishedRevisionId: "rev-1",
 };
 const templateConfig = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   locale: "en-US",
-  business: { name: "{{businessName}}", tagline: "Train well" },
-  metadata: { titleTemplate: "%s", defaultDescription: "Train well" },
+  business: {
+    name: "{{businessName}}",
+    tagline: "Train well",
+    structuredDataType: "LocalBusiness",
+  },
+  metadata: {
+    defaultTitle: "{{businessName}}",
+    titleTemplate: "%s",
+    defaultDescription: "Train well",
+  },
   theme: {
     colors: {
       primary: "#2563eb",
@@ -127,7 +135,7 @@ const settings = {
     Object.entries(templateConfig)
       .filter(([key]) => key !== "schemaVersion" && key !== "pages"),
   ),
-  business: { name: "Academy", tagline: "Train well" },
+  business: { ...templateConfig.business, name: "Academy" },
 };
 const storedPage = {
   id: "page-home",
@@ -137,6 +145,7 @@ const storedPage = {
   position: 0,
   visible: true,
   metadata: { title: "Home" },
+  settings: {},
 };
 const storedBlock = {
   pageId: "page-home",
@@ -178,7 +187,7 @@ afterAll(() => {
 
 test("lists only the latest active platform page template versions", async () => {
   const pageTemplate = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     page: {
       metadata: { description: "Tour page" },
       sections: [{
@@ -194,7 +203,7 @@ test("lists only the latest active platform page template versions", async () =>
       templateId: "page-tour",
       versionId: "page-tour-v2",
       versionNumber: 2,
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "Tour",
       description: "Latest",
       payload: pageTemplate,
@@ -203,7 +212,7 @@ test("lists only the latest active platform page template versions", async () =>
       templateId: "page-tour",
       versionId: "page-tour-v1",
       versionNumber: 1,
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "Tour",
       description: "Old",
       payload: pageTemplate,
@@ -212,7 +221,7 @@ test("lists only the latest active platform page template versions", async () =>
       templateId: "page-offer",
       versionId: "page-offer-v1",
       versionNumber: 1,
-      schemaVersion: 1,
+      schemaVersion: 2,
       name: "Offer",
       description: "Offer",
       payload: pageTemplate,
@@ -254,7 +263,7 @@ test("creates a relational draft from the active plan template", async () => {
     [{ versionId: "tplv-scale-1", payload: templateConfig }],
     [createdSite],
     [{
-      schemaVersion: 1,
+      schemaVersion: 2,
       settings,
       version: 1,
       isDirty: true,
@@ -352,7 +361,7 @@ test("reads a clean relational draft as the published revision", async () => {
   rows = [
     [site],
     [{
-      schemaVersion: 1,
+      schemaVersion: 2,
       settings,
       version: 2,
       isDirty: false,
@@ -379,7 +388,7 @@ test("rejects a stale relational draft save", async () => {
     method: "PUT",
     body: JSON.stringify({
       expectedRevisionId: "draft:site-1:1",
-      schemaVersion: 1,
+      schemaVersion: 2,
       config: templateConfig,
     }),
   });
@@ -397,7 +406,7 @@ test("saves page and block rows as a new relational draft version", async () => 
     [{ version: 1, isDirty: true }],
     [site],
     [{
-      schemaVersion: 1,
+      schemaVersion: 2,
       settings,
       version: 2,
       isDirty: true,
@@ -413,7 +422,7 @@ test("saves page and block rows as a new relational draft version", async () => 
     method: "PUT",
     body: JSON.stringify({
       expectedRevisionId: "draft:site-1:1",
-      schemaVersion: 1,
+      schemaVersion: 2,
       config: editedConfig,
     }),
   });
@@ -432,7 +441,7 @@ test("publishes only the expected relational draft", async () => {
   rows = [
     [site],
     [{
-      schemaVersion: 1,
+      schemaVersion: 2,
       settings,
       version: 2,
       isDirty: true,
@@ -463,7 +472,7 @@ test("rejects publishing a draft outside the canonical site contract", async () 
   rows = [
     [site],
     [{
-      schemaVersion: 1,
+      schemaVersion: 2,
       settings: {},
       version: 2,
       isDirty: true,
@@ -486,7 +495,7 @@ test("retries an already completed publish idempotently", async () => {
   rows = [
     [{ ...site, publishedRevisionId: "rev-2" }],
     [{
-      schemaVersion: 1,
+      schemaVersion: 2,
       settings,
       version: 2,
       isDirty: false,
@@ -539,6 +548,7 @@ test("adds a pending custom domain with Vercel DNS records", async () => {
         value: "project.vercel-dns.example.",
       }],
       verifiedAt: null,
+      isCanonical: false,
     },
   });
   expect(updates).toContainEqual(expect.objectContaining({
