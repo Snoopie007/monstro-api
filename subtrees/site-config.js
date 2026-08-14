@@ -1099,7 +1099,6 @@ function resolveSitePageHeader(page, theme) {
     mode,
     contrast,
     placement,
-    surface: mode === "overlay" ? contrast === "light" ? "dark-scrim" : "light-scrim" : "solid",
     reserveSpace: placement === "legacy" && mode === "stacked" && firstSection?.type !== "not_sure"
   };
 }
