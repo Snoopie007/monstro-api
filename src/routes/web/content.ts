@@ -51,6 +51,40 @@ export async function getPublishedBlogPost(locationId: string, slug: string) {
     return result ? { ...result.post, authorName: result.authorName } : undefined;
 }
 
+const SUMMARY_WORD_LIMIT = 30;
+
+/** Strip MDX/markdown noise to plain text for list excerpts. */
+function mdxToPlainText(mdx: string): string {
+    return mdx
+        .replace(/```[\s\S]*?```/g, " ")
+        .replace(/`[^`]*`/g, " ")
+        .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+        .replace(/\[[^\]]*]\([^)]*\)/g, " ")
+        .replace(/<\/?[^>]+>/g, " ")
+        .replace(/^#{1,6}\s+/gm, "")
+        .replace(/[*_~>#-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+/** First sentence if present; otherwise first 30 words. */
+function createPostSummary(mdx: string): string {
+    const text = mdxToPlainText(mdx);
+    if (!text) return "";
+
+    const sentenceMatch = text.match(/^(.+?[.!?])(?:\s|$)/);
+    if (sentenceMatch?.[1]) {
+        const sentence = sentenceMatch[1].trim();
+        const words = sentence.split(/\s+/);
+        if (words.length <= SUMMARY_WORD_LIMIT) return sentence;
+        return `${words.slice(0, SUMMARY_WORD_LIMIT).join(" ")}…`;
+    }
+
+    const words = text.split(/\s+/);
+    if (words.length <= SUMMARY_WORD_LIMIT) return text;
+    return `${words.slice(0, SUMMARY_WORD_LIMIT).join(" ")}…`;
+}
+
 export const webContentRoutes = new Elysia({ prefix: "/content" })
     .use(WebAuthMiddleware)
     .group('/posts', (app) => {
@@ -61,7 +95,14 @@ export const webContentRoutes = new Elysia({ prefix: "/content" })
             const { limit, page } = query;
             const pageSize = limit || DEFAULT_PAGE_SIZE;
             try {
-                return status(200, await getPublishedBlogPosts(lid, page, pageSize));
+                const { posts, total } = await getPublishedBlogPosts(lid, page, pageSize);
+                return status(200, {
+                    total,
+                    posts: posts.map((post) => {
+                        const { mdx, ...rest } = post;
+                        return { ...rest, summary: createPostSummary(mdx) };
+                    }),
+                });
             } catch (error) {
                 console.error(error);
                 return status(500, { error: "Failed to fetch posts" });

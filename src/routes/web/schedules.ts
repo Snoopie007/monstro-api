@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { addMinutes } from "date-fns";
+import { addMinutes, startOfWeek } from "date-fns";
 import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
 import { findBlockedHoliday } from "@/libs/holidays";
 import { fromZonedTime } from 'date-fns-tz';
@@ -22,10 +22,14 @@ type MappedSession = {
 export type LocationSchedulesResult =
     | { kind: "not_found" }
     | { kind: "inactive" }
-    | { kind: "ok"; sessions: MappedSession[] };
+    | { kind: "ok"; weekStart: Date; weekEnd: Date; sessions: MappedSession[] };
 
 export async function getLocationSchedules(lid: string, date?: string): Promise<LocationSchedulesResult> {
-    const startDate = new Date(date ?? new Date());
+    const refDate = new Date(date ?? new Date());
+    const weekStart = startOfWeek(refDate, { weekStartsOn: 0 });
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
     const location = await db.query.locations.findFirst({
         where: (l, { eq }) => eq(l.id, lid),
         columns: {
@@ -58,7 +62,7 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
     });
 
     if (programs.length === 0) {
-        return { kind: "ok", sessions: [] };
+        return { kind: "ok", weekStart, weekEnd, sessions: [] };
     }
 
     const holidays = location.locationState?.settings.holidays;
@@ -66,11 +70,9 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
     programs.forEach((program) => {
         program.sessions.forEach((session) => {
             // session.day is 0 (Sunday) through 6 (Saturday)
-            // Find the next date in this week that matches session.day
             const sessionDay = typeof session.day === "number" ? session.day : 0;
-            const sessionDate = new Date(startDate);
-            // Set sessionDate to the correct day of this week
-            sessionDate.setDate(startDate.getDate() + (sessionDay - startDate.getDay() + 7) % 7);
+            const sessionDate = new Date(weekStart);
+            sessionDate.setDate(weekStart.getDate() + sessionDay);
 
             const [hours, minutes, seconds] = session.time.split(":").map(Number);
             sessionDate.setHours(hours!, minutes!, seconds!, 0);
@@ -101,7 +103,8 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
         });
     });
 
-    return { kind: "ok", sessions: mappedSessions };
+    mappedSessions.sort((a, b) => a.utcStartTime.getTime() - b.utcStartTime.getTime());
+    return { kind: "ok", weekStart, weekEnd, sessions: mappedSessions };
 }
 
 export const webLocationSchedulesRoutes = new Elysia({ prefix: "/schedules" })
@@ -111,6 +114,7 @@ export const webLocationSchedulesRoutes = new Elysia({ prefix: "/schedules" })
             return status(401, { message: "No Location ID provided" });
         }
 
+
         try {
             const result = await getLocationSchedules(lid, query.date);
             if (result.kind === "not_found") {
@@ -119,13 +123,17 @@ export const webLocationSchedulesRoutes = new Elysia({ prefix: "/schedules" })
             if (result.kind === "inactive") {
                 return status(400, { error: "Location is not active" });
             }
-            return status(200, { sessions: result.sessions });
+            return status(200, {
+                weekStart: result.weekStart,
+                weekEnd: result.weekEnd,
+                sessions: result.sessions,
+            });
         } catch (error) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
     }, {
         query: t.Object({
-            date: t.String(),
+            date: t.Optional(t.String()),
         }),
     });

@@ -15,6 +15,9 @@ const selectBuilder = {
   innerJoin() {
     return this;
   },
+  leftJoin() {
+    return this;
+  },
   where() {
     return this;
   },
@@ -200,6 +203,7 @@ test("returns only published posts for the selected site location", async () => 
     slug: "training-tips",
     featuredImageUrl: null,
     publishedAt: new Date("2026-08-01T12:00:00.000Z"),
+    updated: null,
   });
 
   const response = await app.handle(
@@ -215,6 +219,7 @@ test("returns only published posts for the selected site location", async () => 
       slug: "training-tips",
       featuredImageUrl: null,
       publishedAt: "2026-08-01T12:00:00.000Z",
+      updatedAt: null,
     }],
   });
   expect(db.query.websiteContents.findMany).toHaveBeenCalled();
@@ -231,6 +236,8 @@ test("returns active products for the selected site location", async () => {
     description: "Cotton shirt",
     brand: null,
     active: true,
+    created: new Date("2026-08-01T12:00:00.000Z"),
+    updated: null,
     variants: [{
       id: "variant-1",
       productId: "product-1",
@@ -251,7 +258,31 @@ test("returns active products for the selected site location", async () => {
   );
 
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual(productRows);
+  expect(await response.json()).toEqual([{
+    id: "product-1",
+    slug: "academy-shirt",
+    name: "Academy Shirt",
+    category: "Apparel",
+    subCategory: null,
+    description: "Cotton shirt",
+    brand: null,
+    active: true,
+    createdAt: "2026-08-01T12:00:00.000Z",
+    updatedAt: null,
+    variants: [{
+      id: "variant-1",
+      productId: "product-1",
+      name: "Medium",
+      sku: "shirt-m",
+      color: null,
+      size: "M",
+      price: 2000,
+      salePrice: null,
+      stock: 5,
+      active: true,
+    }],
+    images: [],
+  }]);
   expect(db.query.products.findMany).toHaveBeenCalled();
 });
 

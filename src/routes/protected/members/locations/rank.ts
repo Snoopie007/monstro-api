@@ -32,9 +32,13 @@ export function mlRankRoutes(app: Elysia) {
                     },
                 }),
                 db.query.memberRankRequirements.findMany({
-                    where: (memberRankRequirement, { eq }) => eq(memberRankRequirement.memberId, params.mid),
+                    where: (mrr, { eq, and }) => and(
+                        eq(mrr.memberId, params.mid),
+                        eq(mrr.locationId, params.lid),
+                    ),
                 }),
             ]);
+
             if (!memberRanks) {
                 return status(404, { error: "Member rank not found" });
             }
