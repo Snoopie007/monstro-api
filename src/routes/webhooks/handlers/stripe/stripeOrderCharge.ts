@@ -33,6 +33,14 @@ export async function handleStripeOrderCharge({
     feeAmount,
     stripeChargeId,
 }: HandleStripeOrderChargeProps) {
+    if (paymentIntentId) {
+        const existingTransaction = await db.query.transactions.findFirst({
+            where: eq(transactions.paymentIntentId, paymentIntentId),
+            columns: { id: true },
+        });
+        if (existingTransaction) return;
+    }
+
     const previousOrder = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
         with: {

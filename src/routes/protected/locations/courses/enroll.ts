@@ -11,7 +11,10 @@ export function locationCoursesEnroll(app: Elysia) {
 
         try {
             const course = await db.query.courses.findFirst({
-                where: (c, { eq }) => eq(c.id, courseId),
+                where: (c, { eq, and }) => and(
+                    eq(c.id, courseId),
+                    eq(c.locationId, lid),
+                ),
                 columns: {
                     title: true,
                     price: true,

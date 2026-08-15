@@ -4,6 +4,7 @@ import {
     authorizeReferenceIdForTransaction,
     calculateOrderTotals,
     chargeWithGateway,
+    CheckoutError,
     CheckoutPendingError,
     getCheckoutContext,
     PaymentChargeError,
@@ -11,7 +12,7 @@ import {
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { orders, products, productVariants, transactions } from "@subtrees/schemas";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 
 export type MercCheckoutItem = {
     variantId: string;
@@ -26,12 +27,13 @@ export type MercCheckoutInput = {
     promoId?: string | null;
     paymentType?: "card" | "us_bank_account";
     attemptId: string;
+    quoteOnly?: boolean;
 };
 
 export async function handleMercCheckout(input: MercCheckoutInput) {
-    const { lid, mid, items, paymentMethodId, promoId, paymentType = "card", attemptId } = input;
-    if (!items.length) {
-        throw new Error("No items provided");
+    const { lid, mid, items, paymentMethodId, promoId, paymentType = "card", attemptId, quoteOnly = false } = input;
+    if (!items.length || items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1)) {
+        throw new CheckoutError(400, "Invalid items");
     }
 
     const transactionId = stableCheckoutTransactionId("order", lid, mid, attemptId);
@@ -60,6 +62,10 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         id: productVariants.id,
         name: products.name,
         price: productVariants.price,
+        salePrice: productVariants.salePrice,
+        stock: productVariants.stock,
+        active: productVariants.active,
+        productActive: products.active,
     }).from(productVariants).innerJoin(
         products,
         eq(productVariants.productId, products.id),
@@ -67,13 +73,17 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         inArray(productVariants.id, items.map((item) => item.variantId)),
         eq(products.locationId, lid),
     ));
-    if (variants.length !== items.length) throw new Error("Invalid items");
+    if (variants.length !== items.length || variants.some((variant) =>
+        !variant.active || !variant.productActive
+        || variant.stock < (items.find((item) => item.variantId === variant.id)?.quantity ?? 0)
+    )) throw new CheckoutError(400, "Invalid or unavailable items");
 
     let promoData: Pick<Promo, "redemptionCount" | "maxRedemptions" | "type" | "value"> | undefined;
     if (promoId) {
         const promo = await db.query.promos.findFirst({
             where: (p, { eq, and, gt, isNull, or }) => and(
                 eq(p.id, promoId),
+                eq(p.locationId, lid),
                 eq(p.isActive, true),
                 or(isNull(p.expiresAt), gt(p.expiresAt, new Date())),
             ),
@@ -89,14 +99,18 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         }
     }
 
-    const { total, feesAmount, tax, subtotal, processingFee, lineItems } = calculateOrderTotals(
+    const passOnFees = locationState.settings?.passOnFees || false;
+    const { total, discount, feesAmount, tax, subtotal, processingFee, lineItems } = calculateOrderTotals(
         items,
         variants,
         taxRates.find((r) => r.isDefault)?.percentage || 0,
-        locationState.settings?.passOnFees || false,
+        passOnFees,
         locationState.usagePercent || 0,
         promoData,
     );
+    if (quoteOnly) {
+        return { total, discount, feesAmount, tax, subtotal, processingFee: passOnFees ? processingFee : 0, lineItems };
+    }
     const currency = locationState.currency;
     const description = `Payment for order ${orderId}`;
     const metadata: Record<string, unknown> = {
@@ -161,6 +175,20 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     });
                     if (current?.status === "paid") return current;
                     throw new CheckoutPendingError(transactionId, "Payment is being finalized; do not retry");
+                }
+
+                // ponytail: recheck after charging; add stock reservations if concurrent sellouts become possible.
+                for (const item of items.toSorted((a, b) => a.variantId.localeCompare(b.variantId))) {
+                    const [decremented] = await tx.update(productVariants).set({
+                        stock: sql`${productVariants.stock} - ${item.quantity}`,
+                        updated: now,
+                    }).where(and(
+                        eq(productVariants.id, item.variantId),
+                        gte(productVariants.stock, item.quantity),
+                    )).returning({ id: productVariants.id });
+                    if (!decremented) {
+                        throw new CheckoutError(400, "Item inventory changed during checkout");
+                    }
                 }
 
                 const [order] = await tx.insert(orders).values({

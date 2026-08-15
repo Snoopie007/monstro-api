@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { memberContracts } from "@subtrees/schemas";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { generatePDFBuffer } from "@/libs/PDFGenerator";
 import S3Bucket from "@/libs/s3";
 
@@ -32,7 +32,11 @@ export async function generatePDF({
         );
 
         await db.update(memberContracts).set({ pdfFilename: filename })
-            .where(eq(memberContracts.id, did));
+            .where(and(
+                eq(memberContracts.id, did),
+                eq(memberContracts.memberId, mid),
+                eq(memberContracts.locationId, lid),
+            ));
     } catch (error) {
         console.error("Background PDF generation failed:", error);
     }

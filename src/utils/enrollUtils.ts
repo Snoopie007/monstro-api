@@ -56,6 +56,50 @@ export async function createEnrollUnsignedDocs(
 	return unsignedDocs;
 }
 
+/** Recovers pending enrollment documents after a paid transaction replay without duplicating existing rows. */
+export async function recoverEnrollUnsignedDocs(input: {
+    mid: string;
+    lid: string;
+    memberPlanId: string;
+    contractId?: string | null;
+    waiverId?: string | null;
+}): Promise<string[]> {
+    const templateIds = [input.contractId, input.waiverId]
+        .filter((id): id is string => Boolean(id));
+    if (templateIds.length === 0) return [];
+
+    const existing = await db.query.memberContracts.findMany({
+        where: (doc, { and, eq }) => and(
+            eq(doc.memberId, input.mid),
+            eq(doc.locationId, input.lid),
+            eq(doc.memberPlanId, input.memberPlanId),
+        ),
+        columns: {
+            id: true,
+            templateId: true,
+            signedOn: true,
+        },
+    });
+    const unsignedDocs: string[] = [];
+    for (const templateId of templateIds) {
+        const docs = existing.filter((doc) => doc.templateId === templateId);
+        if (docs.some((doc) => doc.signedOn)) continue;
+        const pending = docs.filter((doc) => !doc.signedOn);
+        if (pending.length > 0) {
+            unsignedDocs.push(...pending.map((doc) => doc.id));
+            continue;
+        }
+        const [created] = await db.insert(memberContracts).values({
+            memberId: input.mid,
+            templateId,
+            locationId: input.lid,
+            memberPlanId: input.memberPlanId,
+        }).returning({ id: memberContracts.id });
+        if (created) unsignedDocs.push(created.id);
+    }
+    return unsignedDocs;
+}
+
 export function calculateGatewayFeeAmount(
 	amount: number,
 	paymentType: PaymentType,

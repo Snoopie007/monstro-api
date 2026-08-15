@@ -29,7 +29,7 @@ export async function createSubscriptionRoutes(app: Elysia) {
             return status(404, { error: "Pricing not found" });
         }
 
-        if (pricing.plan.locationId !== lid) {
+        if (pricing.plan.locationId !== lid || pricing.plan.archived) {
             return status(404, { error: "Pricing not found for this location" });
         }
 
