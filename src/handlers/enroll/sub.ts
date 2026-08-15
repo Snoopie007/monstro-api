@@ -35,6 +35,7 @@ export type EnrollSubProps = {
     endDate?: string;
     trialDays?: number;
     allowProration?: boolean;
+    quoteOnly?: boolean;
 };
 
 export async function handleEnrollSubscription(props: EnrollSubProps) {
@@ -50,6 +51,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         endDate,
         trialDays,
         allowProration,
+        quoteOnly = false,
     } = props;
     const transactionId = stableCheckoutTransactionId("subscription", lid, mid, attemptId);
     const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
@@ -239,6 +241,17 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         isRecurring: noGrowthPlan,
         passOnFees: settings?.passOnFees || false,
     });
+    if (quoteOnly) {
+        const baseAmount = pricing.downpayment || pricing.price;
+        return {
+            baseAmount,
+            discount,
+            tax: chargeDetails.tax,
+            fees: chargeDetails.total - Math.max(0, baseAmount - discount) - chargeDetails.tax,
+            total: chargeDetails.total,
+            currency,
+        };
+    }
     const productName = pricing.name;
     const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
     const metadata: Record<string, unknown> = {

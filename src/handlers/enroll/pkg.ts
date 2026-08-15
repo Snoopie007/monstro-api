@@ -28,10 +28,11 @@ export type EnrollPkgInput = {
     startDate?: string;
     expireDate?: string;
     totalClassLimit?: number;
+    quoteOnly?: boolean;
 };
 
 export async function handleEnrollPackage(props: EnrollPkgInput) {
-    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit } = props;
+    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit, quoteOnly = false } = props;
     const transactionId = stableCheckoutTransactionId("package", lid, mid, attemptId);
     const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
     const existing = await db.query.transactions.findFirst({
@@ -190,6 +191,16 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         isRecurring: false,
         passOnFees: settings?.passOnFees || false,
     });
+    if (quoteOnly) {
+        return {
+            baseAmount: pricing.price,
+            discount,
+            tax: chargeDetails.tax,
+            fees: chargeDetails.total - Math.max(0, pricing.price - discount) - chargeDetails.tax,
+            total: chargeDetails.total,
+            currency,
+        };
+    }
     const packageStart = startDate ? new Date(startDate) : new Date();
     if (Number.isNaN(packageStart.getTime())) throw new CheckoutError(400, "Invalid package start date");
     const endDate = expireDate

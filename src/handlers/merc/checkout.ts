@@ -12,7 +12,7 @@ import {
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { orders, products, productVariants, transactions } from "@subtrees/schemas";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 
 export type MercCheckoutItem = {
     variantId: string;
@@ -175,6 +175,20 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     });
                     if (current?.status === "paid") return current;
                     throw new CheckoutPendingError(transactionId, "Payment is being finalized; do not retry");
+                }
+
+                // ponytail: recheck after charging; add stock reservations if concurrent sellouts become possible.
+                for (const item of items.toSorted((a, b) => a.variantId.localeCompare(b.variantId))) {
+                    const [decremented] = await tx.update(productVariants).set({
+                        stock: sql`${productVariants.stock} - ${item.quantity}`,
+                        updated: now,
+                    }).where(and(
+                        eq(productVariants.id, item.variantId),
+                        gte(productVariants.stock, item.quantity),
+                    )).returning({ id: productVariants.id });
+                    if (!decremented) {
+                        throw new CheckoutError(400, "Item inventory changed during checkout");
+                    }
                 }
 
                 const [order] = await tx.insert(orders).values({
