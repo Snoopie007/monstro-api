@@ -5,14 +5,14 @@ import { z } from "zod";
 export const ProgramDraftSchema = z.object({
     name: z.string().min(1),
     description: z.string().optional().default("Imported program"),
-    capacity: z.number().int().min(1).default(10),
-    minAge: z.number().int().min(0).default(3),
-    maxAge: z.number().int().min(1).default(18),
+    capacity: z.number().int().min(1).catch(10),
+    minAge: z.number().int().min(0).catch(3),
+    maxAge: z.number().int().min(1).catch(18),
     sessions: z.array(z.object({
         day: z.number().int().min(1).max(7),
         time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).default("12:00"),
         duration: z.number().int().min(1).default(30),
-    })).min(1).default([{ day: 1, time: "12:00", duration: 30 }]),
+    })).min(1).catch([{ day: 1, time: "12:00", duration: 30 }]),
 }).strip();
 
 const ProgramImportSchema = z.object({
