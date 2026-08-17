@@ -7,6 +7,7 @@ import {
   integrations,
   locationState,
   locations,
+  normalizeLocationSlug,
   websiteSiteDomains,
   websiteSiteLocations,
   websiteSiteRevisions,
@@ -281,7 +282,9 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
         allowedLocationIds: locationRows.map((location) => location.id),
         locations: locationRows.map((location) => ({
           id: location.id,
-          slug: location.slug,
+          slug: normalizeLocationSlug(location.slug)
+            || normalizeLocationSlug(location.name)
+            || normalizeLocationSlug(location.id),
           name: location.name,
           ...(location.address ? { address: location.address } : {}),
           ...(location.phone ? { phone: location.phone } : {}),

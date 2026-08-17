@@ -1,5 +1,6 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
+import { normalizeLocationSlug } from "@subtrees/schemas";
 
 let siteLocationRows: Array<{
   siteId: string;
@@ -108,6 +109,13 @@ beforeEach(() => {
   submitGhlFormContact.mockClear();
   Bun.env.MONSTRO_SITES_SERVICE_TOKEN = "sites-service-secret";
 });
+test("normalizes legacy location slugs for public site context", () => {
+  expect(normalizeLocationSlug("gracie-humaita west craig"))
+    .toBe("gracie-humaita-west-craig");
+  expect(normalizeLocationSlug("odyssey-health-spa---fitness--inc-"))
+    .toBe("odyssey-health-spa-fitness-inc");
+});
+
 
 test("rejects a location that is not attached to the requested site", async () => {
   const response = await app.handle(
