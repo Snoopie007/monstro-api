@@ -772,6 +772,16 @@ async function migrateSite(
       updatedBy: createdBy,
     });
     await persistSiteRows(tx, site.id, parsed, {});
+    const baseDomain = Bun.env.SHARED_SITES_BASE_DOMAIN?.trim().toLowerCase().replace(/^\.+|\.+$/g, "");
+    if (baseDomain) {
+      await tx.insert(websiteSiteDomains).values({
+        siteId: site.id,
+        hostname: `${body.slug}.${baseDomain}`,
+        status: "verified",
+        verificationData: { source: "wildcard" },
+        verifiedAt: new Date(),
+      });
+    }
     const [revision] = await tx
       .insert(websiteSiteRevisions)
       .values({

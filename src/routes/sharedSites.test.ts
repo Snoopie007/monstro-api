@@ -68,6 +68,7 @@ Bun.env.MONSTRO_SITES_SERVICE_TOKEN = "sites-secret";
 Bun.env.VERCEL_TOKEN = "vercel-secret";
 Bun.env.VERCEL_SITES_PROJECT_ID = "sites-project";
 delete Bun.env.VERCEL_TEAM_ID;
+Bun.env.SHARED_SITES_BASE_DOMAIN = "monstro.site";
 globalThis.fetch = vercelFetch as unknown as typeof fetch;
 const { sharedSiteAdminRoutes } = await import("./sharedSites");
 const app = new Elysia().use(sharedSiteAdminRoutes);
@@ -344,7 +345,13 @@ test("creates one clean published baseline for a legacy migration", async () => 
     status: "active",
     publishedRevisionId: "rev-migrated",
   }));
-  expect(inserts).not.toContainEqual(expect.objectContaining({ hostname: expect.any(String) }));
+  expect(inserts).toContainEqual(expect.objectContaining({
+    siteId: "site-migrated",
+    hostname: "academy.monstro.site",
+    status: "verified",
+    verificationData: { source: "wildcard" },
+    verifiedAt: expect.any(Date),
+  }));
   expect(vercelFetch).not.toHaveBeenCalled();
 });
 
