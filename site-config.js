@@ -854,6 +854,12 @@ var SitePageSchema = z30.union([
   SiteSectionsPageSchema,
   SiteBuiltinPageSchema
 ]);
+var SiteIntegrationsSchema = z30.object({
+  ghl: z30.object({
+    privateIntegrationToken: z30.string().trim().min(1).max(4096),
+    locationId: z30.string().trim().min(1).max(255)
+  }).strict()
+}).strict();
 var SiteConfigSchema = z30.object({
   schemaVersion: z30.literal(2),
   locale: z30.string().min(2),
@@ -889,7 +895,8 @@ var SiteConfigSchema = z30.object({
   }),
   pages: z30.array(SitePageSchema).min(1),
   forms: z30.array(SiteFormSchema),
-  capabilities: SiteCapabilitiesSchema
+  capabilities: SiteCapabilitiesSchema,
+  integrations: SiteIntegrationsSchema.optional()
 }).strict().superRefine((config, issue) => {
   const pageIds = new Set;
   const pagePaths = new Set;
