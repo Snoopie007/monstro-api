@@ -314,13 +314,31 @@ test("creates one clean published baseline for a legacy migration", async () => 
       locationId: "location-1",
       slug: "academy",
       plan: "scale",
-      config: templateConfig,
+      config: {
+        ...templateConfig,
+        integrations: {
+          ghl: {
+            privateIntegrationToken: "pit-private",
+            locationId: "ghl-location",
+          },
+        },
+      },
     }),
   });
 
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ siteId: "site-migrated", created: true });
   expect(inserts).toContainEqual(expect.objectContaining({ version: 1, isDirty: false }));
+  expect(inserts).toContainEqual(expect.objectContaining({
+    settings: expect.objectContaining({
+      integrations: {
+        ghl: {
+          privateIntegrationToken: "pit-private",
+          locationId: "ghl-location",
+        },
+      },
+    }),
+  }));
   expect(inserts).toContainEqual(expect.objectContaining({ revisionNumber: 1, status: "published" }));
   expect(updates).toContainEqual(expect.objectContaining({
     status: "active",
@@ -348,7 +366,15 @@ test("reuses a migrated target without writing another baseline", async () => {
       locationId: "location-1",
       slug: "academy",
       plan: "scale",
-      config: templateConfig,
+      config: {
+        ...templateConfig,
+        integrations: {
+          ghl: {
+            privateIntegrationToken: "pit-private",
+            locationId: "ghl-location",
+          },
+        },
+      },
     }),
   });
 

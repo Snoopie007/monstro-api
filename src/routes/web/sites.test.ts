@@ -1,7 +1,12 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
-let siteLocationRows: Array<{ siteId: string; locationId: string }> = [];
+let siteLocationRows: Array<{
+  siteId: string;
+  locationId: string;
+  publishedRevisionId?: string | null;
+}> = [];
+let selectedRows: unknown[][] = [];
 const planRows: unknown[] = [];
 const scheduleRows: unknown[] = [];
 const postRows: unknown[] = [];
@@ -27,7 +32,7 @@ const selectBuilder = {
   then(resolve: (value: Array<{ total: number }>) => void) {
     resolve([{ total: postRows.length }]);
   },
-  limit: mock(async () => siteLocationRows),
+  limit: mock(async () => selectedRows.shift() ?? siteLocationRows),
 };
 
 const db = {
@@ -91,6 +96,7 @@ const docsApp = new Elysia().use(webDocRoutes);
 
 beforeEach(() => {
   siteLocationRows = [];
+  selectedRows = [];
   db.select.mockClear();
   db.query.memberPlans.findMany.mockClear();
   db.query.locations.findFirst.mockClear();
@@ -128,7 +134,23 @@ test("requires service authorization for native form submissions", async () => {
 });
 
 test("submits an authorized form only for an active attached location", async () => {
-  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      locationId: "location-1",
+      publishedRevisionId: "revision-1",
+    }],
+    [{
+      config: {
+        integrations: {
+          ghl: {
+            privateIntegrationToken: "private-token",
+            locationId: "ghl-location",
+          },
+        },
+      },
+    }],
+  ];
   const response = await app.handle(new Request(
     "http://localhost/sites/site-1/locations/location-1/forms/contact-form/submissions",
     {
@@ -142,7 +164,10 @@ test("submits an authorized form only for an active attached location", async ()
   ));
 
   expect(response.status).toBe(200);
-  expect(submitGhlFormContact).toHaveBeenCalledWith("location-1", validFormContact);
+  expect(submitGhlFormContact).toHaveBeenCalledWith({
+    privateIntegrationToken: "private-token",
+    locationId: "ghl-location",
+  }, validFormContact);
 });
 
 const validFormContact = {

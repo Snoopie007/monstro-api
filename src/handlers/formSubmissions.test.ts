@@ -1,10 +1,6 @@
 import { expect, mock, test } from "bun:test";
 
 const upsertContact = mock(async () => ({}));
-const findFirst = mock(async () => ({
-  apiKey: "private-token",
-  accountId: "ghl-location",
-}));
 let highLevelOptions: unknown;
 
 mock.module("@gohighlevel/api-client", () => ({
@@ -15,13 +11,10 @@ mock.module("@gohighlevel/api-client", () => ({
     contacts = { upsertContact };
   },
 }));
-mock.module("@/db/db", () => ({
-  db: { query: { integrations: { findFirst } } },
-}));
 
 const { submitGhlFormContact } = await import("./formSubmissions");
 
-test("uses the location GHL private token and preserves the full upsert payload", async () => {
+test("uses the site settings GHL credentials and preserves the full upsert payload", async () => {
   const contact = {
     firstName: "Jane",
     lastName: "Smith",
@@ -33,9 +26,11 @@ test("uses the location GHL private token and preserves the full upsert payload"
     customFields: [{ key: "program", field_value: "kids" }],
   };
 
-  await submitGhlFormContact("monstro-location", contact);
+  await submitGhlFormContact({
+    privateIntegrationToken: "private-token",
+    locationId: "ghl-location",
+  }, contact);
 
-  expect(findFirst).toHaveBeenCalledTimes(1);
   expect(highLevelOptions).toEqual({ privateIntegrationToken: "private-token" });
   expect(upsertContact).toHaveBeenCalledWith({
     ...contact,

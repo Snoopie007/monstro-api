@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { timingSafeEqual } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/db";
+import { publicSiteConfig } from "@/libs/siteDraftConfig";
 import {
   integrations,
   locationState,
@@ -21,6 +22,7 @@ async function findActiveSiteLocation(siteId: string, locationId: string) {
   const [siteLocation] = await db
     .select({
       siteId: websiteSites.id,
+      publishedRevisionId: websiteSites.publishedRevisionId,
       locationId: locations.id,
       currency: locationState.currency,
     })
@@ -72,6 +74,24 @@ function readCapabilities(config: unknown): unknown {
   if (!config || typeof config !== "object" || Array.isArray(config)) return null;
   return (config as Record<string, unknown>).capabilities ?? null;
 }
+
+function readGhlCredentials(config: unknown) {
+  if (!config || typeof config !== "object" || Array.isArray(config)) return null;
+  const integrations = (config as Record<string, unknown>).integrations;
+  if (!integrations || typeof integrations !== "object" || Array.isArray(integrations)) return null;
+  const ghl = (integrations as Record<string, unknown>).ghl;
+  if (!ghl || typeof ghl !== "object" || Array.isArray(ghl)) return null;
+  const privateIntegrationToken = (ghl as Record<string, unknown>).privateIntegrationToken;
+  const locationId = (ghl as Record<string, unknown>).locationId;
+  return typeof privateIntegrationToken === "string" && privateIntegrationToken.trim()
+    && typeof locationId === "string" && locationId.trim()
+    ? {
+        privateIntegrationToken: privateIntegrationToken.trim(),
+        locationId: locationId.trim(),
+      }
+    : null;
+}
+
 
 function readGatewayService(value: string | null): "stripe" | "square" | "authorize" | null {
   return value === "stripe" || value === "square" || value === "authorize" ? value : null;
@@ -290,7 +310,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
       revision: {
         id: revision.id,
         schemaVersion: revision.schemaVersion,
-        config: revision.config,
+        config: publicSiteConfig(revision.config),
         publishedAt: revision.publishedAt?.toISOString() ?? null,
       },
     });
@@ -589,14 +609,26 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
       if (!hasSitesServiceToken(request)) {
         return status(401, { code: "UNAUTHORIZED", message: "Unauthorized" });
       }
-      if (!await findActiveSiteLocation(params.siteId, params.locationId)) {
+      const siteLocation = await findActiveSiteLocation(params.siteId, params.locationId);
+      if (!siteLocation?.publishedRevisionId) {
         return status(404, {
           code: "SITE_LOCATION_NOT_FOUND",
           message: "Site location not found",
         });
       }
       try {
-        await submitGhlFormContact(params.locationId, body.contact);
+        const [revision] = await db
+          .select({ config: websiteSiteRevisions.config })
+          .from(websiteSiteRevisions)
+          .where(and(
+            eq(websiteSiteRevisions.id, siteLocation.publishedRevisionId),
+            eq(websiteSiteRevisions.siteId, params.siteId),
+            eq(websiteSiteRevisions.status, "published"),
+          ))
+          .limit(1);
+        const credentials = readGhlCredentials(revision?.config);
+        if (!credentials) throw new Error("GHL credentials are not configured");
+        await submitGhlFormContact(credentials, body.contact);
         return status(200, { ok: true });
       } catch {
         return status(503, {

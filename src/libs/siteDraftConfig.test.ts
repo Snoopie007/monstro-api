@@ -3,6 +3,7 @@ import {
   assembleSiteConfig,
   materializeSiteTemplate,
   splitSiteConfig,
+  publicSiteConfig,
 } from "./siteDraftConfig";
 
 const template = {
@@ -87,6 +88,23 @@ test("materializes, splits, and rebuilds a site template without changing its co
     pages,
     blocks,
   })).toEqual(config);
+});
+
+test("keeps credentials in stored settings but removes them from public config", () => {
+  const credentials = {
+    privateIntegrationToken: "pit-private",
+    locationId: "ghl-location",
+  };
+  const stored = splitSiteConfig({
+    ...template,
+    integrations: { ghl: credentials },
+  });
+
+  expect(stored.settings.integrations).toEqual({ ghl: credentials });
+  expect(publicSiteConfig({
+    ...template,
+    integrations: { ghl: credentials },
+  })).not.toHaveProperty("integrations");
 });
 
 test("rejects a config outside the canonical site contract", () => {

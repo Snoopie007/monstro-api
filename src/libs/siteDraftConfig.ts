@@ -98,6 +98,13 @@ export function assembleSiteConfig(input: {
   return { ...input.settings, schemaVersion: input.schemaVersion, pages };
 }
 
+export function publicSiteConfig(input: unknown): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return input;
+  const config = { ...input as JsonRecord };
+  delete config.integrations;
+  return config;
+}
+
 function replaceTokens(value: unknown, replacements: Record<string, string>): unknown {
   if (typeof value === "string") {
     return Object.entries(replacements).reduce(
