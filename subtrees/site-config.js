@@ -941,6 +941,15 @@ var NavigationItemSchema = z31.lazy(() => z31.discriminatedUnion("type", [
     items: z31.array(NavigationItemSchema).min(1)
   }).strict()
 ]));
+var SiteHeaderActionSchema = z31.discriminatedUnion("kind", [
+  z31.object({
+    kind: z31.literal("link"),
+    label: z31.string().min(1).max(100),
+    href: SiteHrefSchema,
+    external: z31.boolean()
+  }).strict(),
+  z31.object({ kind: z31.literal("hidden") }).strict()
+]);
 var HexColorSchema = z31.string().regex(/^#[0-9a-f]{6}$/i);
 var PagePathSchema = z31.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
 var SiteThemeSchema = z31.object({
@@ -1049,6 +1058,7 @@ var SiteConfigSchema = z31.object({
     googleSiteVerification: z31.string().min(1).optional()
   }).strict(),
   theme: SiteThemeSchema,
+  headerAction: SiteHeaderActionSchema.optional(),
   navigation: z31.array(NavigationItemSchema),
   footer: z31.object({
     credit: z31.string(),
@@ -1294,6 +1304,7 @@ export {
   SitePageTemplateSchema,
   SitePageSchema,
   SitePageHeaderSchema,
+  SiteHeaderActionSchema,
   SiteConfigSchema,
   SiteBuiltinPageSchema,
   NavigationItemSchema,
