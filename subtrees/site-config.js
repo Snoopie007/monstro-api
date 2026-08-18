@@ -695,6 +695,7 @@ var TenantContextSchema = z29.object({
 
 // src/scripts-and-embeds.ts
 import { z as z30 } from "zod";
+var MAX_SITE_CUSTOM_EMBED_BYTES = 75000;
 var SiteScriptPurposeSchema = z30.enum([
   "functional",
   "analytics",
@@ -768,30 +769,40 @@ var SiteCustomInlineScriptPartSchema = z30.object({
 }).strict();
 var SiteCustomMarkupPartSchema = z30.object({
   type: z30.literal("markup"),
-  html: z30.string().min(1).max(20000).superRefine((value, issue) => {
-    if (/<\/?script\b/i.test(value)) {
-      issue.addIssue({ code: "custom", message: "Markup parts cannot contain script tags" });
-    }
-    if (/\son[a-z]+\s*=/i.test(value)) {
-      issue.addIssue({ code: "custom", message: "Inline event handlers are not supported" });
-    }
-    if (/\b(?:javascript|data|blob):/i.test(value)) {
-      issue.addIssue({ code: "custom", message: "Unsafe markup URL scheme" });
-    }
-  })
+  html: z30.string().min(1).max(75000).refine((value) => !/<\/?script\b/i.test(value), "Markup parts cannot contain script tags")
 }).strict();
 var SiteCustomEmbedPartSchema = z30.discriminatedUnion("type", [
   SiteCustomExternalScriptPartSchema,
   SiteCustomInlineScriptPartSchema,
   SiteCustomMarkupPartSchema
 ]);
+function siteCustomEmbedPartsByteLength(parts) {
+  let bytes = 0;
+  for (const character of JSON.stringify(parts)) {
+    const codePoint = character.codePointAt(0);
+    if (codePoint <= 127)
+      bytes += 1;
+    else if (codePoint <= 2047)
+      bytes += 2;
+    else if (codePoint <= 65535)
+      bytes += 3;
+    else
+      bytes += 4;
+  }
+  return bytes;
+}
 var SiteCustomEmbedEntrySchema = SiteScriptEntryBaseSchema.extend({
   kind: z30.literal("custom"),
   placement: SiteScriptPlacementSchema,
-  source: z30.string().trim().min(1).max(75000),
-  compilerVersion: z30.literal(1),
   parts: z30.array(SiteCustomEmbedPartSchema).min(1).max(40)
 }).strict().superRefine((entry, issue) => {
+  if (siteCustomEmbedPartsByteLength(entry.parts) > MAX_SITE_CUSTOM_EMBED_BYTES) {
+    issue.addIssue({
+      code: "custom",
+      message: "Custom embed content cannot exceed 75 KB",
+      path: ["parts"]
+    });
+  }
   if (entry.placement === "head" && entry.parts.some((part) => part.type === "markup")) {
     issue.addIssue({
       code: "custom",

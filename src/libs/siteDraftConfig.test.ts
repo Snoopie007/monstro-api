@@ -117,6 +117,21 @@ test("round trips public scripts and embeds through site settings", () => {
       purpose: "analytics",
       kind: "gtm",
       containerId: "GTM-ABC123",
+    }, {
+      id: "support-widget",
+      name: "Support widget",
+      enabled: true,
+      purpose: "functional",
+      kind: "custom",
+      placement: "body_end",
+      parts: [
+        { type: "markup", html: '<div id="support-root"></div>' },
+        {
+          type: "external_script",
+          src: "https://chat.example.com/widget.js",
+          attributes: { async: true },
+        },
+      ],
     }],
   };
   const stored = splitSiteConfig({ ...template, scriptsAndEmbeds });
