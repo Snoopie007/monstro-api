@@ -818,6 +818,15 @@ async function getSite(siteId: string) {
       status: websiteSites.status,
       publishedRevisionId: websiteSites.publishedRevisionId,
       locationId: websiteSiteLocations.locationId,
+      locationName: locations.name,
+      locationAddress: locations.address,
+      locationCity: locations.city,
+      locationState: locations.state,
+      locationPostalCode: locations.postalCode,
+      locationCountry: locations.country,
+      locationPhone: locations.phone,
+      locationEmail: locations.email,
+      locationTimezone: locations.timezone,
       createdAt: websiteSites.created,
     })
     .from(websiteSites)
@@ -828,6 +837,7 @@ async function getSite(siteId: string) {
         eq(websiteSiteLocations.isPrimary, true),
       ),
     )
+    .leftJoin(locations, eq(locations.id, websiteSiteLocations.locationId))
     .where(eq(websiteSites.id, siteId))
     .limit(1);
   if (!site) throw new SiteEditorError(404, "SITE_NOT_FOUND", "Site not found");
@@ -880,6 +890,20 @@ async function editorState(siteId: string) {
     plan: site.plan,
     status: site.status,
     locationId: site.locationId ?? null,
+    primaryLocation: site.locationId && site.locationName && site.locationTimezone
+      ? {
+          id: site.locationId,
+          name: site.locationName,
+          address: site.locationAddress,
+          city: site.locationCity,
+          state: site.locationState,
+          postalCode: site.locationPostalCode,
+          country: site.locationCountry,
+          phone: site.locationPhone,
+          email: site.locationEmail,
+          timezone: site.locationTimezone,
+        }
+      : null,
     revisionId,
     publishedRevisionId: site.publishedRevisionId,
     hasDraft: state.draft.isDirty,

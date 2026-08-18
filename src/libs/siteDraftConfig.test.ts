@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { SiteConfigSchema } from "@subtrees/site-config.js";
 import {
   assembleSiteConfig,
   materializeSiteTemplate,
@@ -105,6 +106,55 @@ test("keeps credentials in stored settings but removes them from public config",
     ...template,
     integrations: { ghl: credentials },
   })).not.toHaveProperty("integrations");
+});
+
+test("round trips public scripts and embeds through site settings", () => {
+  const scriptsAndEmbeds = SiteConfigSchema.parse({
+    ...template,
+    scriptsAndEmbeds: {
+      enabled: true,
+      entries: [{
+        id: "primary-tags",
+        name: "Primary tags",
+        enabled: true,
+        purpose: "analytics",
+        kind: "gtm",
+        containerId: "GTM-ABC123",
+      }, {
+        id: "support-widget",
+        name: "Support widget",
+        enabled: true,
+        purpose: "functional",
+        kind: "custom",
+        placement: "body_end",
+        parts: [
+          { type: "markup", html: '<div id="support-root"></div>' },
+          {
+            type: "external_script",
+            src: "https://chat.example.com/widget.js",
+            attributes: { async: true },
+          },
+        ],
+      }],
+    },
+  }).scriptsAndEmbeds;
+  const stored = splitSiteConfig({ ...template, scriptsAndEmbeds });
+  const pages = stored.pages.map((page, index) => ({ ...page, id: `page-scripts-${index}` }));
+  const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+  const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+    ...block,
+    pageId: pageIds.get(page.pageKey)!,
+  })));
+  const rebuilt = assembleSiteConfig({
+    schemaVersion: stored.schemaVersion,
+    settings: stored.settings,
+    pages,
+    blocks,
+  });
+
+  expect(stored.settings.scriptsAndEmbeds).toEqual(scriptsAndEmbeds);
+  expect(rebuilt).toEqual(expect.objectContaining({ scriptsAndEmbeds }));
+  expect(publicSiteConfig(rebuilt)).toEqual(expect.objectContaining({ scriptsAndEmbeds }));
 });
 
 test("rejects a config outside the canonical site contract", () => {
