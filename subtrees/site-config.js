@@ -1,6 +1,6 @@
 // @bun
 // src/config.ts
-import { z as z30 } from "zod";
+import { z as z31 } from "zod";
 
 // src/collections.ts
 import { z as z27 } from "zod";
@@ -693,6 +693,162 @@ var TenantContextSchema = z29.object({
   }
 });
 
+// src/scripts-and-embeds.ts
+import { z as z30 } from "zod";
+var SiteScriptPurposeSchema = z30.enum([
+  "functional",
+  "analytics",
+  "marketing"
+]);
+var SiteScriptPlacementSchema = z30.enum([
+  "head",
+  "body_start",
+  "body_end"
+]);
+var SiteScriptEntryBaseSchema = z30.object({
+  id: z30.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  name: z30.string().trim().min(1).max(120),
+  enabled: z30.boolean(),
+  purpose: SiteScriptPurposeSchema
+});
+var SiteGtmEntrySchema = SiteScriptEntryBaseSchema.extend({
+  kind: z30.literal("gtm"),
+  containerId: z30.string().trim().regex(/^GTM-[A-Z0-9]+$/i)
+}).strict();
+var SiteGoogleTagEntrySchema = SiteScriptEntryBaseSchema.extend({
+  kind: z30.literal("google_tag"),
+  tagId: z30.string().trim().regex(/^(?:GT|G|AW|DC)-[A-Z0-9]+$/i)
+}).strict();
+var SiteMetaPixelEntrySchema = SiteScriptEntryBaseSchema.extend({
+  kind: z30.literal("meta_pixel"),
+  pixelId: z30.string().trim().regex(/^\d{5,32}$/)
+}).strict();
+var SiteTikTokPixelEntrySchema = SiteScriptEntryBaseSchema.extend({
+  kind: z30.literal("tiktok_pixel"),
+  pixelId: z30.string().trim().regex(/^[A-Z0-9]{10,32}$/i)
+}).strict();
+var ReferrerPolicySchema = z30.enum([
+  "no-referrer",
+  "no-referrer-when-downgrade",
+  "origin",
+  "origin-when-cross-origin",
+  "same-origin",
+  "strict-origin",
+  "strict-origin-when-cross-origin",
+  "unsafe-url"
+]);
+var SiteCustomScriptAttributesSchema = z30.object({
+  async: z30.boolean().optional(),
+  defer: z30.boolean().optional(),
+  crossOrigin: z30.enum(["anonymous", "use-credentials"]).optional(),
+  integrity: z30.string().trim().min(1).max(1024).optional(),
+  module: z30.boolean().optional(),
+  referrerPolicy: ReferrerPolicySchema.optional(),
+  data: z30.record(z30.string().regex(/^[a-z0-9_.:-]+$/i), z30.string().max(4096)).optional()
+}).strict();
+function isAllowedScriptUrl(value) {
+  if (/^\/(?!\/)/.test(value))
+    return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+var SiteCustomExternalScriptPartSchema = z30.object({
+  type: z30.literal("external_script"),
+  src: z30.string().trim().max(4096).refine(isAllowedScriptUrl, "External scripts require a same-origin path or credential-free HTTPS URL"),
+  attributes: SiteCustomScriptAttributesSchema.default({})
+}).strict();
+var SiteCustomInlineScriptPartSchema = z30.object({
+  type: z30.literal("inline_script"),
+  code: z30.string().min(1).max(50000).refine((value) => !/\bdocument\s*\.\s*write(?:ln)?\s*\(/i.test(value), "document.write is not supported"),
+  module: z30.boolean().optional()
+}).strict();
+var SiteCustomMarkupPartSchema = z30.object({
+  type: z30.literal("markup"),
+  html: z30.string().min(1).max(20000).superRefine((value, issue) => {
+    if (/<\/?script\b/i.test(value)) {
+      issue.addIssue({ code: "custom", message: "Markup parts cannot contain script tags" });
+    }
+    if (/\son[a-z]+\s*=/i.test(value)) {
+      issue.addIssue({ code: "custom", message: "Inline event handlers are not supported" });
+    }
+    if (/\b(?:javascript|data|blob):/i.test(value)) {
+      issue.addIssue({ code: "custom", message: "Unsafe markup URL scheme" });
+    }
+  })
+}).strict();
+var SiteCustomEmbedPartSchema = z30.discriminatedUnion("type", [
+  SiteCustomExternalScriptPartSchema,
+  SiteCustomInlineScriptPartSchema,
+  SiteCustomMarkupPartSchema
+]);
+var SiteCustomEmbedEntrySchema = SiteScriptEntryBaseSchema.extend({
+  kind: z30.literal("custom"),
+  placement: SiteScriptPlacementSchema,
+  source: z30.string().trim().min(1).max(75000),
+  compilerVersion: z30.literal(1),
+  parts: z30.array(SiteCustomEmbedPartSchema).min(1).max(40)
+}).strict().superRefine((entry, issue) => {
+  if (entry.placement === "head" && entry.parts.some((part) => part.type === "markup")) {
+    issue.addIssue({
+      code: "custom",
+      message: "Visible markup cannot be placed in the document head",
+      path: ["parts"]
+    });
+  }
+});
+var SiteScriptEntrySchema = z30.discriminatedUnion("kind", [
+  SiteGtmEntrySchema,
+  SiteGoogleTagEntrySchema,
+  SiteMetaPixelEntrySchema,
+  SiteTikTokPixelEntrySchema,
+  SiteCustomEmbedEntrySchema
+]);
+function providerIdentity(entry) {
+  switch (entry.kind) {
+    case "gtm":
+      return `${entry.kind}:${entry.containerId.toUpperCase()}`;
+    case "google_tag":
+      return `${entry.kind}:${entry.tagId.toUpperCase()}`;
+    case "meta_pixel":
+    case "tiktok_pixel":
+      return `${entry.kind}:${entry.pixelId.toUpperCase()}`;
+    case "custom":
+      return null;
+  }
+}
+var SiteScriptsAndEmbedsSchema = z30.object({
+  enabled: z30.boolean().default(true),
+  entries: z30.array(SiteScriptEntrySchema).max(20).default([])
+}).strict().superRefine((config, issue) => {
+  const entryIds = new Set;
+  const providerIds = new Set;
+  for (const [index, entry] of config.entries.entries()) {
+    if (entryIds.has(entry.id)) {
+      issue.addIssue({
+        code: "custom",
+        message: `Duplicate script or embed ID: ${entry.id}`,
+        path: ["entries", index, "id"]
+      });
+    }
+    entryIds.add(entry.id);
+    const identity = providerIdentity(entry);
+    if (!identity)
+      continue;
+    if (providerIds.has(identity)) {
+      issue.addIssue({
+        code: "custom",
+        message: "This provider ID is already configured",
+        path: ["entries", index]
+      });
+    }
+    providerIds.add(identity);
+  }
+});
+
 // src/config.ts
 function asRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
@@ -757,68 +913,68 @@ function normalizeSiteConfigV2(input) {
     pages
   };
 }
-var NavigationItemSchema = z30.lazy(() => z30.discriminatedUnion("type", [
-  z30.object({
-    type: z30.literal("link"),
-    id: z30.string().min(1),
-    label: z30.string().min(1),
+var NavigationItemSchema = z31.lazy(() => z31.discriminatedUnion("type", [
+  z31.object({
+    type: z31.literal("link"),
+    id: z31.string().min(1),
+    label: z31.string().min(1),
     href: SiteHrefSchema,
-    external: z30.boolean(),
-    visible: z30.boolean()
+    external: z31.boolean(),
+    visible: z31.boolean()
   }).strict(),
-  z30.object({
-    type: z30.literal("group"),
-    id: z30.string().min(1),
-    label: z30.string().min(1),
-    visible: z30.boolean(),
-    items: z30.array(NavigationItemSchema).min(1)
+  z31.object({
+    type: z31.literal("group"),
+    id: z31.string().min(1),
+    label: z31.string().min(1),
+    visible: z31.boolean(),
+    items: z31.array(NavigationItemSchema).min(1)
   }).strict()
 ]));
-var HexColorSchema = z30.string().regex(/^#[0-9a-f]{6}$/i);
-var PagePathSchema = z30.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
-var SiteThemeSchema = z30.object({
-  colors: z30.object({
+var HexColorSchema = z31.string().regex(/^#[0-9a-f]{6}$/i);
+var PagePathSchema = z31.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
+var SiteThemeSchema = z31.object({
+  colors: z31.object({
     primary: HexColorSchema,
     background: HexColorSchema,
     foreground: HexColorSchema,
     muted: HexColorSchema,
     accent: HexColorSchema
   }).strict(),
-  typography: z30.object({
-    heading: z30.enum(["sans", "serif"]),
-    body: z30.enum(["sans", "serif"])
+  typography: z31.object({
+    heading: z31.enum(["sans", "serif"]),
+    body: z31.enum(["sans", "serif"])
   }).strict(),
-  radius: z30.enum(["none", "small", "medium", "large"])
+  radius: z31.enum(["none", "small", "medium", "large"])
 }).strict();
-var SitePageHeaderSchema = z30.object({
-  mode: z30.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
-  contrast: z30.enum(["auto", "light", "dark"]).default("auto")
+var SitePageHeaderSchema = z31.object({
+  mode: z31.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
+  contrast: z31.enum(["auto", "light", "dark"]).default("auto")
 }).strict();
-var SitePageBaseSchema = z30.object({
-  id: z30.string().min(1),
+var SitePageBaseSchema = z31.object({
+  id: z31.string().min(1),
   path: PagePathSchema,
-  visible: z30.boolean(),
-  metadata: z30.object({
-    title: z30.string().min(1),
-    description: z30.string().optional(),
+  visible: z31.boolean(),
+  metadata: z31.object({
+    title: z31.string().min(1),
+    description: z31.string().optional(),
     openGraphImage: SiteImageSchema.optional(),
-    indexable: z30.boolean().optional()
+    indexable: z31.boolean().optional()
   }).strict(),
   header: SitePageHeaderSchema.optional()
 });
 var SiteSectionsPageSchema = SitePageBaseSchema.extend({
-  kind: z30.literal("sections").default("sections"),
-  sections: z30.array(SiteSectionSchema).min(1)
+  kind: z31.literal("sections").default("sections"),
+  sections: z31.array(SiteSectionSchema).min(1)
 }).strict();
-var SitePageTemplateSchema = z30.object({
-  schemaVersion: z30.literal(2),
-  page: z30.object({
-    metadata: z30.object({
-      description: z30.string().optional(),
+var SitePageTemplateSchema = z31.object({
+  schemaVersion: z31.literal(2),
+  page: z31.object({
+    metadata: z31.object({
+      description: z31.string().optional(),
       openGraphImage: SiteImageSchema.optional(),
-      indexable: z30.boolean().optional()
+      indexable: z31.boolean().optional()
     }).strict(),
-    sections: z30.array(SiteSectionSchema).min(1)
+    sections: z31.array(SiteSectionSchema).min(1)
   }).strict()
 }).strict();
 function replacePageTemplateTokens(value, businessName) {
@@ -837,7 +993,7 @@ function replacePageTemplateTokens(value, businessName) {
 function materializeSitePageTemplate(input, businessName) {
   return SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(replacePageTemplateTokens(input, businessName)));
 }
-var BuiltinPageIdSchema = z30.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
+var BuiltinPageIdSchema = z31.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
 var BUILTIN_PAGE_PATHS = {
   "/schedules": "schedules",
   "/blog": "blog",
@@ -846,46 +1002,46 @@ var BUILTIN_PAGE_PATHS = {
   "/shop/plans": "shop-plans"
 };
 var SiteBuiltinPageSchema = SitePageBaseSchema.extend({
-  kind: z30.literal("builtin"),
+  kind: z31.literal("builtin"),
   id: BuiltinPageIdSchema,
-  path: z30.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
+  path: z31.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
 }).strict().refine((page) => BUILTIN_PAGE_PATHS[page.path] === page.id, "Builtin page ID and path must match");
-var SitePageSchema = z30.union([
+var SitePageSchema = z31.union([
   SiteSectionsPageSchema,
   SiteBuiltinPageSchema
 ]);
-var SiteIntegrationsSchema = z30.object({
-  ghl: z30.object({
-    privateIntegrationToken: z30.string().trim().min(1).max(4096),
-    locationId: z30.string().trim().min(1).max(255)
+var SiteIntegrationsSchema = z31.object({
+  ghl: z31.object({
+    privateIntegrationToken: z31.string().trim().min(1).max(4096),
+    locationId: z31.string().trim().min(1).max(255)
   }).strict()
 }).strict();
-var SiteConfigSchema = z30.object({
-  schemaVersion: z30.literal(2),
-  locale: z30.string().min(2),
-  business: z30.object({
-    name: z30.string().min(1),
-    tagline: z30.string().min(1),
+var SiteConfigSchema = z31.object({
+  schemaVersion: z31.literal(2),
+  locale: z31.string().min(2),
+  business: z31.object({
+    name: z31.string().min(1),
+    tagline: z31.string().min(1),
     logo: SiteImageSchema.optional(),
-    structuredDataType: z30.enum([
+    structuredDataType: z31.enum([
       "LocalBusiness",
       "SportsActivityLocation",
       "EducationalOrganization",
       "Organization"
     ])
   }).strict(),
-  metadata: z30.object({
-    defaultTitle: z30.string().min(1),
-    titleTemplate: z30.string().min(1),
-    defaultDescription: z30.string().min(1),
+  metadata: z31.object({
+    defaultTitle: z31.string().min(1),
+    titleTemplate: z31.string().min(1),
+    defaultDescription: z31.string().min(1),
     openGraphImage: SiteImageSchema.optional(),
-    googleSiteVerification: z30.string().min(1).optional()
+    googleSiteVerification: z31.string().min(1).optional()
   }).strict(),
   theme: SiteThemeSchema,
-  navigation: z30.array(NavigationItemSchema),
-  footer: z30.object({
-    credit: z30.string(),
-    links: z30.array(NavigationItemSchema)
+  navigation: z31.array(NavigationItemSchema),
+  footer: z31.object({
+    credit: z31.string(),
+    links: z31.array(NavigationItemSchema)
   }).strict(),
   content: SiteContentSchema.default({
     programs: [],
@@ -893,10 +1049,14 @@ var SiteConfigSchema = z30.object({
     testimonials: [],
     faqs: []
   }),
-  pages: z30.array(SitePageSchema).min(1),
-  forms: z30.array(SiteFormSchema),
+  pages: z31.array(SitePageSchema).min(1),
+  forms: z31.array(SiteFormSchema),
   capabilities: SiteCapabilitiesSchema,
-  integrations: SiteIntegrationsSchema.optional()
+  integrations: SiteIntegrationsSchema.optional(),
+  scriptsAndEmbeds: SiteScriptsAndEmbedsSchema.default({
+    enabled: true,
+    entries: []
+  })
 }).strict().superRefine((config, issue) => {
   const pageIds = new Set;
   const pagePaths = new Set;

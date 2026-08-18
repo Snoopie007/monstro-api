@@ -107,6 +107,37 @@ test("keeps credentials in stored settings but removes them from public config",
   })).not.toHaveProperty("integrations");
 });
 
+test("round trips public scripts and embeds through site settings", () => {
+  const scriptsAndEmbeds = {
+    enabled: true,
+    entries: [{
+      id: "primary-tags",
+      name: "Primary tags",
+      enabled: true,
+      purpose: "analytics",
+      kind: "gtm",
+      containerId: "GTM-ABC123",
+    }],
+  };
+  const stored = splitSiteConfig({ ...template, scriptsAndEmbeds });
+  const pages = stored.pages.map((page, index) => ({ ...page, id: `page-scripts-${index}` }));
+  const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+  const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+    ...block,
+    pageId: pageIds.get(page.pageKey)!,
+  })));
+  const rebuilt = assembleSiteConfig({
+    schemaVersion: stored.schemaVersion,
+    settings: stored.settings,
+    pages,
+    blocks,
+  });
+
+  expect(stored.settings.scriptsAndEmbeds).toEqual(scriptsAndEmbeds);
+  expect(rebuilt).toEqual(expect.objectContaining({ scriptsAndEmbeds }));
+  expect(publicSiteConfig(rebuilt)).toEqual(expect.objectContaining({ scriptsAndEmbeds }));
+});
+
 test("rejects a config outside the canonical site contract", () => {
   expect(() => splitSiteConfig({
     schemaVersion: 2,
