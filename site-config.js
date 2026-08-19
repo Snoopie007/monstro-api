@@ -805,6 +805,10 @@ var SiteLocationSchema = z30.object({
   rating: z30.number().min(0).max(5).optional(),
   reviewCount: z30.number().int().nonnegative().optional()
 }).strict();
+var RenderedSiteLocationSchema = SiteLocationSchema.extend({
+  mapQuery: z30.string().min(1).max(500).optional(),
+  hoursDescription: z30.string().min(1).max(2000).optional()
+}).strict();
 var SiteLocationOverrideSchema = z30.object({
   name: z30.string().trim().max(200).optional(),
   mapQuery: z30.string().trim().max(500).optional(),
@@ -916,7 +920,7 @@ var SiteCapabilitiesSchema = z31.object({
   downloads: z31.boolean(),
   memberAuth: z31.boolean()
 }).strict();
-var TenantContextSchema = z31.object({
+var TenantContextObjectSchema = z31.object({
   siteId: z31.string().min(1).max(128),
   vendorId: z31.string().min(1).max(128),
   primaryLocationId: z31.string().min(1).max(128),
@@ -928,7 +932,8 @@ var TenantContextSchema = z31.object({
   isCanonicalDomain: z31.boolean(),
   publishedRevisionId: z31.string().min(1).max(128),
   capabilities: SiteCapabilitiesSchema
-}).strict().superRefine((context, issue) => {
+}).strict();
+function validateTenantContext(context, issue) {
   if (context.isCanonicalDomain !== (context.canonicalDomain === context.domain)) {
     issue.addIssue({
       code: "custom",
@@ -943,7 +948,6 @@ var TenantContextSchema = z31.object({
       path: ["domainSource"]
     });
   }
-}).superRefine((context, issue) => {
   const allowedIds = new Set(context.allowedLocationIds);
   const locationIds = new Set(context.locations.map((location) => location.id));
   if (allowedIds.size !== context.allowedLocationIds.length) {
@@ -967,7 +971,11 @@ var TenantContextSchema = z31.object({
       path: ["locations"]
     });
   }
-});
+}
+var TenantContextSchema = TenantContextObjectSchema.superRefine(validateTenantContext);
+var RenderedTenantContextSchema = TenantContextObjectSchema.extend({
+  locations: z31.array(RenderedSiteLocationSchema).min(1)
+}).strict().superRefine(validateTenantContext);
 
 // src/scripts-and-embeds.ts
 import { z as z32 } from "zod";
@@ -1724,21 +1732,19 @@ var PublishableStoredSiteConfigSchema = StoredSiteConfigSchema.superRefine((conf
 function toPublicSiteConfig(config) {
   return PublicSiteConfigSchema.parse(publicConfigInput(config));
 }
-var SiteLocationPresentationSchema = z33.object({
-  location: SiteLocationSchema,
-  mapQuery: z33.string().min(1).max(500).optional(),
-  hoursDescription: z33.string().min(1).max(2000).optional()
-}).strict();
-function resolveSiteLocationPresentations(config, context) {
+function resolveRenderedTenantContext(config, context) {
   const connectionByLocation = new Map(config.locationConnections?.map((connection) => [connection.locationId, connection]) ?? []);
-  return context.locations.map((location) => {
-    const connection = connectionByLocation.get(location.id);
-    const override = connection?.override ?? (location.id === context.primaryLocationId ? config.locationOverride : undefined);
-    return {
-      location: applySiteLocationOverride(location, override),
-      ...override?.mapQuery ? { mapQuery: override.mapQuery } : {},
-      ...override?.hoursDescription ? { hoursDescription: override.hoursDescription } : {}
-    };
+  return RenderedTenantContextSchema.parse({
+    ...context,
+    locations: context.locations.map((location) => {
+      const connection = connectionByLocation.get(location.id);
+      const override = connection?.override ?? (location.id === context.primaryLocationId ? config.locationOverride : undefined);
+      return {
+        ...applySiteLocationOverride(location, override),
+        ...override?.mapQuery ? { mapQuery: override.mapQuery } : {},
+        ...override?.hoursDescription ? { hoursDescription: override.hoursDescription } : {}
+      };
+    })
   });
 }
 function relativeLuminance(hex) {
@@ -3167,14 +3173,8 @@ function parseRuntimeSite(input) {
       throw new Error("Published site capabilities are inconsistent");
     }
   }
-  const locationPresentations = resolveSiteLocationPresentations(config, payload.context);
-  const context = {
-    ...payload.context,
-    locations: locationPresentations.map((presentation) => presentation.location)
-  };
   return {
-    context,
-    locationPresentations,
+    context: resolveRenderedTenantContext(config, payload.context),
     revision: {
       ...payload.revision,
       schemaVersion: config.schemaVersion,
@@ -3240,8 +3240,8 @@ export {
   scheduleQueryKey,
   safeSameOriginPath,
   resolveSitePageHeader,
-  resolveSiteLocationPresentations,
   resolveSelectedLocation,
+  resolveRenderedTenantContext,
   resolveFormRedirect,
   publicSiteConfigFromStored,
   plansQueryKey,
@@ -3296,7 +3296,6 @@ export {
   SiteMetaPixelEntrySchema,
   SiteLocationSlugSchema,
   SiteLocationSchema,
-  SiteLocationPresentationSchema,
   SiteLocationOverrideSchema,
   SiteLocationLeadRoutingSchema,
   SiteLocationConnectionSchema,
@@ -3332,6 +3331,8 @@ export {
   SITE_SECTION_TEMPLATES,
   SITE_FOOTER_EDITOR_TARGET_ID,
   RichTextSectionSchema,
+  RenderedTenantContextSchema,
+  RenderedSiteLocationSchema,
   RedirectRuleSchema,
   REQUIRED_CONSENT_FIELDS,
   PublishableStoredSiteConfigSchema,
