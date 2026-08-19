@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/db";
-import { classifySiteMapCoverage, type SiteMapCoverage } from "@/libs/siteLocationMapFacts";
+import { siteLocationMapFacts, type SiteMapCoverage } from "@/libs/siteLocationMapFacts";
 import {
   locations,
   locationState,
@@ -39,8 +39,6 @@ async function main() {
       selectedGmb: locationState.gmb,
       address: locations.address,
       city: locations.city,
-      state: locations.state,
-      postalCode: locations.postalCode,
       country: locations.country,
     })
     .from(websiteSites)
@@ -63,15 +61,13 @@ async function main() {
     no_target: 0,
   };
   const audited = rows.map((row) => {
-    const source = classifySiteMapCoverage({
+    const source = siteLocationMapFacts({
       locationMetadata: row.metadata,
       selectedGmb: row.selectedGmb,
       address: row.address,
       city: row.city,
-      state: row.state,
-      postalCode: row.postalCode,
       country: row.country,
-    });
+    }).source;
     summary[source] += 1;
     return {
       siteId: row.siteId,

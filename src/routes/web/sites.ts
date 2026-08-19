@@ -18,7 +18,7 @@ import { getLocationSchedules } from "./schedules";
 import { getPublishedBlogPost, getPublishedBlogPosts } from "./content";
 import { getActiveLocationProduct, getActiveLocationProducts } from "./merc";
 import { submitGhlFormContact } from "@/handlers/formSubmissions";
-import { projectSiteLocationMapFacts } from "@/libs/siteLocationMapFacts";
+import { siteLocationMapFacts } from "@/libs/siteLocationMapFacts";
 
 async function findActiveSiteLocation(siteId: string, locationId: string) {
   const [siteLocation] = await db
@@ -143,7 +143,10 @@ function locationFacts(value: unknown, selectedGmb: unknown) {
       ? metadata.userRatingCount
       : undefined;
   return {
-    ...projectSiteLocationMapFacts(value, selectedGmb),
+    ...siteLocationMapFacts({
+      locationMetadata: value,
+      selectedGmb,
+    }).location,
     openingHours,
     rating,
     reviewCount,
