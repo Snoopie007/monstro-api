@@ -31,7 +31,8 @@ const selectBuilder = {
     return this;
   },
   then(resolve: (value: Array<{ total: number }>) => void) {
-    resolve([{ total: postRows.length }]);
+    resolve((selectedRows.shift() as Array<{ total: number }> | undefined)
+      ?? [{ total: postRows.length }]);
   },
   limit: mock(async () => selectedRows.shift() ?? siteLocationRows),
 };
@@ -114,6 +115,117 @@ test("normalizes legacy location slugs for public site context", () => {
     .toBe("gracie-humaita-west-craig");
   expect(normalizeLocationSlug("odyssey-health-spa---fitness--inc-"))
     .toBe("odyssey-health-spa-fitness-inc");
+});
+
+test("projects map identity and structured address through the public resolve response", async () => {
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      vendorId: "vendor-1",
+      publishedRevisionId: "revision-1",
+      domain: "hannmima.monstro.site",
+      verificationData: { source: "wildcard" },
+      isCanonical: false,
+    }],
+    [{
+      id: "revision-1",
+      schemaVersion: 2,
+      config: {
+        capabilities: {
+          blog: false,
+          commerce: false,
+          schedules: false,
+          downloads: false,
+          memberAuth: false,
+        },
+      },
+      publishedAt: new Date("2026-08-19T12:00:00.000Z"),
+    }],
+    [{ hostname: "hannmima.com" }],
+    [{
+      id: "location-1",
+      slug: "hann-mima",
+      name: "Hann Mima",
+      address: "123 Meridian Ave",
+      timezone: "America/Los_Angeles",
+      phone: "408-555-0100",
+      email: "hello@hannmima.com",
+      city: "San Jose",
+      state: "CA",
+      postalCode: "95126",
+      country: "US",
+      metadata: {
+        placeId: "places-id",
+        lat: 37.3318,
+        lng: -121.891,
+      },
+      selectedGmb: {
+        metadata: {
+          placeId: "gmb-id",
+          mapsUri: "https://maps.google.com/example",
+        },
+      },
+      currency: "USD",
+      gatewayService: null,
+      vendorId: "vendor-1",
+      isPrimary: true,
+    }, {
+      id: "location-2",
+      slug: "places-only",
+      name: "Places Only Academy",
+      address: "456 Market St",
+      timezone: "America/Los_Angeles",
+      phone: null,
+      email: null,
+      city: "San Francisco",
+      state: "CA",
+      postalCode: "94105",
+      country: "US",
+      metadata: { placeId: "places-only-id" },
+      selectedGmb: { metadata: { placeId: " " } },
+      currency: "USD",
+      gatewayService: null,
+      vendorId: "vendor-1",
+      isPrimary: false,
+    }],
+  ];
+
+  const response = await app.handle(new Request(
+    "http://localhost/sites/resolve?hostname=hannmima.monstro.site",
+  ));
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    context: {
+      primaryLocationId: "location-1",
+      locations: [{
+        id: "location-1",
+        googlePlaceId: "gmb-id",
+        address: "123 Meridian Ave",
+        postalAddress: {
+          streetAddress: "123 Meridian Ave",
+          addressLocality: "San Jose",
+          addressRegion: "CA",
+          postalCode: "95126",
+          addressCountry: "US",
+        },
+        coordinates: {
+          latitude: 37.3318,
+          longitude: -121.891,
+        },
+      }, {
+        id: "location-2",
+        googlePlaceId: "places-only-id",
+        postalAddress: {
+          streetAddress: "456 Market St",
+          addressLocality: "San Francisco",
+          addressRegion: "CA",
+          postalCode: "94105",
+          addressCountry: "US",
+        },
+      }],
+    },
+  });
 });
 
 

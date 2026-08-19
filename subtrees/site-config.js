@@ -654,6 +654,7 @@ var SiteLocationSchema = z30.object({
   id: z30.string().min(1).max(128),
   name: z30.string().min(1),
   slug: SiteLocationSlugSchema,
+  googlePlaceId: z30.string().trim().min(1).max(256).optional(),
   address: z30.string().min(1).optional(),
   postalAddress: SitePostalAddressSchema.optional(),
   phone: z30.string().min(1).optional(),
