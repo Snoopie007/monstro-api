@@ -157,6 +157,43 @@ test("round trips public scripts and embeds through site settings", () => {
   expect(publicSiteConfig(rebuilt)).toEqual(expect.objectContaining({ scriptsAndEmbeds }));
 });
 
+test("round trips site-only location overrides through site settings", () => {
+  const locationOverride = {
+    name: "Downtown Academy",
+    mapQuery: "Downtown Academy, Austin, TX",
+    address: {
+      streetAddress: "123 Site St",
+      addressLocality: "Austin",
+      addressRegion: "TX",
+      postalCode: "78701",
+      addressCountry: "US",
+    },
+    phone: "555-111-1111",
+    email: "site@example.com",
+    hoursDescription: "Weekdays from 9 AM to 5 PM.",
+  };
+  const stored = splitSiteConfig({ ...template, locationOverride });
+  const pages = stored.pages.map((page, index) => ({
+    ...page,
+    id: `page-location-${index}`,
+  }));
+  const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+  const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+    ...block,
+    pageId: pageIds.get(page.pageKey)!,
+  })));
+  const rebuilt = assembleSiteConfig({
+    schemaVersion: stored.schemaVersion,
+    settings: stored.settings,
+    pages,
+    blocks,
+  });
+
+  expect(stored.settings.locationOverride).toEqual(locationOverride);
+  expect(rebuilt).toEqual(expect.objectContaining({ locationOverride }));
+  expect(publicSiteConfig(rebuilt)).toEqual(expect.objectContaining({ locationOverride }));
+});
+
 test("rejects a config outside the canonical site contract", () => {
   expect(() => splitSiteConfig({
     schemaVersion: 2,
