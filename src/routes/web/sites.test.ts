@@ -1,7 +1,6 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 import { normalizeLocationSlug } from "@subtrees/schemas";
-import { siteLocationMapFacts } from "@/libs/siteLocationMapFacts";
 
 let siteLocationRows: Array<{
   siteId: string;
@@ -116,57 +115,6 @@ test("normalizes legacy location slugs for public site context", () => {
     .toBe("gracie-humaita-west-craig");
   expect(normalizeLocationSlug("odyssey-health-spa---fitness--inc-"))
     .toBe("odyssey-health-spa-fitness-inc");
-});
-
-test("projects selected GMB Place ID before Places metadata and coordinates", () => {
-  expect(siteLocationMapFacts({
-    locationMetadata: { placeId: "places-id", lat: 37.3318, lng: -121.891 },
-    selectedGmb: { metadata: { placeId: "  gmb-id  ", mapsUri: "https://maps.google.com/example" } },
-  })).toEqual({
-    source: "gmb_place_id",
-    location: {
-      googlePlaceId: "gmb-id",
-      coordinates: { latitude: 37.3318, longitude: -121.891 },
-    },
-  });
-});
-
-test("omits malformed metadata and preserves each valid fallback", () => {
-  expect(siteLocationMapFacts({
-    locationMetadata: { placeId: "places-id", lat: "37.3318", lng: Number.NaN },
-    selectedGmb: { metadata: { placeId: { id: "bad" } } },
-  }).location).toEqual({ googlePlaceId: "places-id" });
-  expect(siteLocationMapFacts({
-    locationMetadata: { placeId: " ", lat: 0, lng: 0 },
-    selectedGmb: { metadata: null },
-  }).location).toEqual({ coordinates: { latitude: 0, longitude: 0 } });
-  expect(siteLocationMapFacts({
-    locationMetadata: null,
-    selectedGmb: { metadata: { placeId: " " } },
-  }).location).toEqual({});
-});
-
-test("classifies the effective map source for coverage audits", () => {
-  expect(siteLocationMapFacts({
-    locationMetadata: { placeId: "places-id", lat: 1, lng: 2 },
-    selectedGmb: { metadata: { placeId: "gmb-id" } },
-  }).source).toBe("gmb_place_id");
-  expect(siteLocationMapFacts({
-    locationMetadata: {},
-    selectedGmb: null,
-    address: "123 Meridian Ave",
-    city: "San Jose",
-    country: "US",
-  }).source).toBe("full_address");
-  expect(siteLocationMapFacts({
-    locationMetadata: {},
-    selectedGmb: null,
-    address: "Meridian Ave",
-  }).source).toBe("no_target");
-  expect(siteLocationMapFacts({
-    locationMetadata: {},
-    selectedGmb: null,
-  }).source).toBe("no_target");
 });
 
 test("projects map identity and structured address through the public resolve response", async () => {

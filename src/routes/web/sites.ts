@@ -18,7 +18,7 @@ import { getLocationSchedules } from "./schedules";
 import { getPublishedBlogPost, getPublishedBlogPosts } from "./content";
 import { getActiveLocationProduct, getActiveLocationProducts } from "./merc";
 import { submitGhlFormContact } from "@/handlers/formSubmissions";
-import { siteLocationMapFacts } from "@/libs/siteLocationMapFacts";
+import { siteLocationMapIdentity } from "@/libs/siteLocationMapIdentity";
 
 async function findActiveSiteLocation(siteId: string, locationId: string) {
   const [siteLocation] = await db
@@ -142,11 +142,10 @@ function locationFacts(value: unknown, selectedGmb: unknown) {
     metadata.userRatingCount >= 0
       ? metadata.userRatingCount
       : undefined;
+  const mapIdentity = siteLocationMapIdentity(value, selectedGmb);
   return {
-    ...siteLocationMapFacts({
-      locationMetadata: value,
-      selectedGmb,
-    }).location,
+    ...(mapIdentity.googlePlaceId ? { googlePlaceId: mapIdentity.googlePlaceId } : {}),
+    ...(mapIdentity.coordinates ? { coordinates: mapIdentity.coordinates } : {}),
     openingHours,
     rating,
     reviewCount,

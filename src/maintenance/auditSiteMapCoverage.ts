@@ -1,12 +1,17 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/db";
-import { siteLocationMapFacts, type SiteMapCoverage } from "@/libs/siteLocationMapFacts";
+import {
+  siteLocationMapIdentity,
+  type SiteMapIdentitySource,
+} from "@/libs/siteLocationMapIdentity";
 import {
   locations,
   locationState,
   websiteSiteLocations,
   websiteSites,
 } from "@subtrees/schemas";
+
+type SiteMapCoverage = SiteMapIdentitySource | "full_address" | "no_target";
 
 function readScope(args: string[]): { allActive: boolean; siteIds: string[] } {
   const allActive = args.includes("--all-active");
@@ -61,13 +66,11 @@ async function main() {
     no_target: 0,
   };
   const audited = rows.map((row) => {
-    const source = siteLocationMapFacts({
-      locationMetadata: row.metadata,
-      selectedGmb: row.selectedGmb,
-      address: row.address,
-      city: row.city,
-      country: row.country,
-    }).source;
+    const identity = siteLocationMapIdentity(row.metadata, row.selectedGmb);
+    const hasCompleteAddress = [row.address, row.city, row.country]
+      .every((value) => typeof value === "string" && value.trim());
+    const source: SiteMapCoverage = identity.source
+      ?? (hasCompleteAddress ? "full_address" : "no_target");
     summary[source] += 1;
     return {
       siteId: row.siteId,
