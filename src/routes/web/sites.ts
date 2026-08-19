@@ -18,6 +18,7 @@ import { getLocationSchedules } from "./schedules";
 import { getPublishedBlogPost, getPublishedBlogPosts } from "./content";
 import { getActiveLocationProduct, getActiveLocationProducts } from "./merc";
 import { submitGhlFormContact } from "@/handlers/formSubmissions";
+import { projectSiteLocationMapFacts } from "@/libs/siteLocationMapFacts";
 
 async function findActiveSiteLocation(siteId: string, locationId: string) {
   const [siteLocation] = await db
@@ -108,17 +109,10 @@ const openingDays = new Set([
   "Sunday",
 ]);
 
-function locationFacts(value: unknown) {
+function locationFacts(value: unknown, selectedGmb: unknown) {
   const metadata = value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {};
-  const latitude = metadata.lat;
-  const longitude = metadata.lng;
-  const coordinates =
-    typeof latitude === "number" && latitude >= -90 && latitude <= 90 &&
-    typeof longitude === "number" && longitude >= -180 && longitude <= 180
-      ? { latitude, longitude }
-      : undefined;
   const openingHours = Array.isArray(metadata.openingHours)
     ? metadata.openingHours.flatMap((value) => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -148,7 +142,12 @@ function locationFacts(value: unknown) {
     metadata.userRatingCount >= 0
       ? metadata.userRatingCount
       : undefined;
-  return { coordinates, openingHours, rating, reviewCount };
+  return {
+    ...projectSiteLocationMapFacts(value, selectedGmb),
+    openingHours,
+    rating,
+    reviewCount,
+  };
 }
 
 function hasSitesServiceToken(request: Request): boolean {
@@ -230,6 +229,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           postalCode: locations.postalCode,
           country: locations.country,
           metadata: locations.metadata,
+          selectedGmb: locationState.gmb,
           currency: locationState.currency,
           gatewayService: integrations.service,
           vendorId: locations.vendorId,
@@ -298,7 +298,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
               addressCountry: location.country,
             },
           } : {}),
-          ...locationFacts(location.metadata),
+          ...locationFacts(location.metadata, location.selectedGmb),
           timezone: location.timezone,
           paymentGateway: readGatewayService(location.gatewayService),
           ...(location.currency ? { currency: location.currency } : {}),
