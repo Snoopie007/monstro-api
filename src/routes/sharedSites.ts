@@ -17,6 +17,7 @@ import {
   assembleSiteConfig,
   draftToken,
   materializeSiteTemplate,
+  splitDraftSiteConfig,
   splitSiteConfig,
   type StoredBlockRow,
   type StoredPageRow,
@@ -24,17 +25,15 @@ import {
 import {
   normalizeSitePageTemplateV2,
   SitePageTemplateSchema,
+  storedSiteConfigFromStored,
 } from "@subtrees/site-config.js";
-
-class SiteEditorError extends Error {
-  constructor(
-    readonly status: 400 | 404 | 409 | 502 | 503,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+import { SiteEditorError } from "@/services/siteEditorError";
+import {
+  normalizeEditorSiteConfig,
+  syncPublishedLocations,
+  validateStoredLocationConnections,
+  type StoredSiteConfig,
+} from "@/services/siteLocationBindings";
 
 class VercelApiError extends Error {
   constructor(readonly status: number, message: string) {
@@ -76,6 +75,11 @@ type DnsRecord = {
   name: string;
   value: string;
 };
+
+function sharedSitePlan(value: string): "growth" | "scale" {
+  if (value === "growth" || value === "scale") return value;
+  throw new SiteEditorError(500, "SITE_PLAN_INVALID", "Site has an invalid plan");
+}
 
 type VercelProjectDomain = {
   name: string;
@@ -576,7 +580,7 @@ async function listSites() {
       id: site.id,
       businessName: businessName(site.settings, site.slug),
       slug: site.slug,
-      plan: site.plan,
+      plan: sharedSitePlan(site.plan),
       status: site.status,
       locationId: site.locationId ?? null,
       publishedRevisionId: site.publishedRevisionId,
@@ -614,13 +618,18 @@ async function createSite(
   if (existing) throw new SiteEditorError(409, "SITE_EXISTS", "A shared site with this slug already exists");
 
   const template = await activeSiteTemplate(body.plan);
-  const config = materializeSiteTemplate(template.payload, {
+  const templateConfig = materializeSiteTemplate(template.payload, {
     businessName: body.businessName,
     businessSlug: body.slug.replaceAll("-", ""),
     city: location.city ?? "your area",
     primaryColor: body.themePrimaryColor,
   });
-  const parsed = splitSiteConfig(config);
+  const config = storedSiteConfigFromStored(templateConfig, body.plan, [{
+    locationId: location.id,
+    isPrimary: true,
+    displayOrder: 0,
+  }]);
+  const parsed = splitDraftSiteConfig(config);
 
   const siteId = await db.transaction(async (tx) => {
     const [site] = await tx
@@ -672,17 +681,6 @@ async function migrateSite(
   body: typeof migrationBody.static,
   createdBy: string,
 ) {
-  let parsed: ReturnType<typeof splitSiteConfig>;
-  try {
-    parsed = splitSiteConfig(body.config);
-  } catch (error) {
-    throw new SiteEditorError(
-      400,
-      "SITE_CONFIG_INVALID",
-      error instanceof Error ? error.message : "Site config is invalid",
-    );
-  }
-
   const result = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${body.sourceKey}))`);
     const [location] = await tx
@@ -692,6 +690,20 @@ async function migrateSite(
       .limit(1);
     if (!location) {
       throw new SiteEditorError(404, "LOCATION_NOT_FOUND", "Location not found");
+    }
+    let parsed: ReturnType<typeof splitSiteConfig>;
+    try {
+      parsed = splitSiteConfig(storedSiteConfigFromStored(body.config, body.plan, [{
+        locationId: location.id,
+        isPrimary: true,
+        displayOrder: 0,
+      }]));
+    } catch (error) {
+      throw new SiteEditorError(
+        400,
+        "SITE_CONFIG_INVALID",
+        error instanceof Error ? error.message : "Site config is invalid",
+      );
     }
 
     const [existing] = await tx
@@ -789,7 +801,7 @@ async function migrateSite(
         revisionNumber: 1,
         schemaVersion: parsed.schemaVersion,
         status: "published",
-        config: body.config,
+        config: parsed.config,
         createdBy,
         publishedAt: new Date(),
       })
@@ -813,6 +825,7 @@ async function getSite(siteId: string) {
   const [site] = await db
     .select({
       id: websiteSites.id,
+      vendorId: websiteSites.vendorId,
       slug: websiteSites.slug,
       plan: websiteSites.plan,
       status: websiteSites.status,
@@ -865,7 +878,13 @@ async function editorState(siteId: string) {
         "Site has no editable relational draft",
       );
     }
-    const config = await readSiteConfig(tx, siteId, draft);
+    const rawConfig = await readSiteConfig(tx, siteId, draft);
+    const { config, siteLocations } = await normalizeEditorSiteConfig(tx, {
+      siteId,
+      vendorId: site.vendorId,
+      plan: sharedSitePlan(site.plan),
+      config: rawConfig,
+    });
     const domains = await tx
       .select({
         hostname: websiteSiteDomains.hostname,
@@ -877,37 +896,26 @@ async function editorState(siteId: string) {
         eq(websiteSiteDomains.status, "verified"),
       ))
       .orderBy(desc(websiteSiteDomains.isCanonical), asc(websiteSiteDomains.created));
-    return { draft, config, domains };
+    return { draft, config, domains, siteLocations };
   });
   const revisionId = state.draft.isDirty
     ? draftToken(siteId, state.draft.version)
     : site.publishedRevisionId ?? draftToken(siteId, state.draft.version);
 
+  const primaryLocation = state.siteLocations.find((location) => location.isPrimary) ?? null;
   return {
     siteId: site.id,
     businessName: businessName(state.draft.settings, site.slug),
     slug: site.slug,
-    plan: site.plan,
+    plan: sharedSitePlan(site.plan),
     status: site.status,
-    locationId: site.locationId ?? null,
-    primaryLocation: site.locationId && site.locationName && site.locationTimezone
-      ? {
-          id: site.locationId,
-          name: site.locationName,
-          address: site.locationAddress,
-          city: site.locationCity,
-          state: site.locationState,
-          postalCode: site.locationPostalCode,
-          country: site.locationCountry,
-          phone: site.locationPhone,
-          email: site.locationEmail,
-          timezone: site.locationTimezone,
-        }
-      : null,
+    locationId: primaryLocation?.id ?? null,
+    primaryLocation,
+    locations: state.siteLocations,
     revisionId,
     publishedRevisionId: site.publishedRevisionId,
     hasDraft: state.draft.isDirty,
-    schemaVersion: state.draft.schemaVersion,
+    schemaVersion: state.config.schemaVersion,
     config: state.config,
     domain: state.domains[0]?.hostname ?? null,
     domains: state.domains.map(({ hostname }) => hostname),
@@ -1014,7 +1022,12 @@ async function saveDraft(
 
   await db.transaction(async (tx) => {
     const [site] = await tx
-      .select({ id: websiteSites.id, publishedRevisionId: websiteSites.publishedRevisionId })
+      .select({
+        id: websiteSites.id,
+        vendorId: websiteSites.vendorId,
+        plan: websiteSites.plan,
+        publishedRevisionId: websiteSites.publishedRevisionId,
+      })
       .from(websiteSites)
       .where(eq(websiteSites.id, siteId))
       .limit(1)
@@ -1043,6 +1056,7 @@ async function saveDraft(
     if (currentRevisionId !== body.expectedRevisionId) {
       throw new SiteEditorError(409, "STALE_REVISION", "The site changed since it was loaded");
     }
+    await validateStoredLocationConnections(tx, site.vendorId, parsed.config);
 
     const templateSources = await validatePageTemplateSources(
       tx,
@@ -1076,7 +1090,12 @@ async function saveDraft(
 async function publishDraft(siteId: string, expectedRevisionId: string) {
   const result = await db.transaction(async (tx) => {
     const [site] = await tx
-      .select({ id: websiteSites.id, publishedRevisionId: websiteSites.publishedRevisionId })
+      .select({
+        id: websiteSites.id,
+        vendorId: websiteSites.vendorId,
+        plan: websiteSites.plan,
+        publishedRevisionId: websiteSites.publishedRevisionId,
+      })
       .from(websiteSites)
       .where(eq(websiteSites.id, siteId))
       .limit(1)
@@ -1123,8 +1142,15 @@ async function publishDraft(siteId: string, expectedRevisionId: string) {
     if (draftToken(siteId, draft.version) !== expectedRevisionId) {
       throw new SiteEditorError(409, "STALE_REVISION", "The site changed since it was loaded");
     }
-    const config = await readSiteConfig(tx, siteId, draft);
+    const rawConfig = await readSiteConfig(tx, siteId, draft);
+    let config: StoredSiteConfig;
     try {
+      ({ config } = await normalizeEditorSiteConfig(tx, {
+        siteId,
+        vendorId: site.vendorId,
+        plan: sharedSitePlan(site.plan),
+        config: rawConfig,
+      }));
       splitSiteConfig(config);
     } catch (error) {
       throw new SiteEditorError(
@@ -1133,6 +1159,7 @@ async function publishDraft(siteId: string, expectedRevisionId: string) {
         error instanceof Error ? error.message : "Site config is invalid",
       );
     }
+    await syncPublishedLocations(tx, siteId, site.vendorId, config);
     const [latest] = await tx
       .select({ revisionNumber: websiteSiteRevisions.revisionNumber })
       .from(websiteSiteRevisions)

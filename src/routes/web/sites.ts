@@ -19,6 +19,7 @@ import { getPublishedBlogPost, getPublishedBlogPosts } from "./content";
 import { getActiveLocationProduct, getActiveLocationProducts } from "./merc";
 import { submitGhlFormContact } from "@/handlers/formSubmissions";
 import { siteLocationMapIdentity } from "@/libs/siteLocationMapIdentity";
+import { siteGhlCredentials } from "@/services/siteLeadRouting";
 
 async function findActiveSiteLocation(siteId: string, locationId: string) {
   const [siteLocation] = await db
@@ -26,6 +27,7 @@ async function findActiveSiteLocation(siteId: string, locationId: string) {
       siteId: websiteSites.id,
       publishedRevisionId: websiteSites.publishedRevisionId,
       locationId: locations.id,
+      isPrimary: websiteSiteLocations.isPrimary,
       currency: locationState.currency,
     })
     .from(websiteSites)
@@ -76,24 +78,6 @@ function readCapabilities(config: unknown): unknown {
   if (!config || typeof config !== "object" || Array.isArray(config)) return null;
   return (config as Record<string, unknown>).capabilities ?? null;
 }
-
-function readGhlCredentials(config: unknown) {
-  if (!config || typeof config !== "object" || Array.isArray(config)) return null;
-  const integrations = (config as Record<string, unknown>).integrations;
-  if (!integrations || typeof integrations !== "object" || Array.isArray(integrations)) return null;
-  const ghl = (integrations as Record<string, unknown>).ghl;
-  if (!ghl || typeof ghl !== "object" || Array.isArray(ghl)) return null;
-  const privateIntegrationToken = (ghl as Record<string, unknown>).privateIntegrationToken;
-  const locationId = (ghl as Record<string, unknown>).locationId;
-  return typeof privateIntegrationToken === "string" && privateIntegrationToken.trim()
-    && typeof locationId === "string" && locationId.trim()
-    ? {
-        privateIntegrationToken: privateIntegrationToken.trim(),
-        locationId: locationId.trim(),
-      }
-    : null;
-}
-
 
 function readGatewayService(value: string | null): "stripe" | "square" | "authorize" | null {
   return value === "stripe" || value === "square" || value === "authorize" ? value : null;
@@ -631,7 +615,11 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
             eq(websiteSiteRevisions.status, "published"),
           ))
           .limit(1);
-        const credentials = readGhlCredentials(revision?.config);
+        const credentials = siteGhlCredentials(
+          revision?.config,
+          params.locationId,
+          siteLocation.isPrimary,
+        );
         if (!credentials) throw new Error("GHL credentials are not configured");
         await submitGhlFormContact(credentials, body.contact);
         return status(200, { ok: true });

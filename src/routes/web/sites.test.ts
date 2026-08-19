@@ -1,6 +1,10 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 import { normalizeLocationSlug } from "@subtrees/schemas";
+import {
+  createSitePreset,
+  storedSiteConfigFromStored,
+} from "@subtrees/site-config.js";
 
 let siteLocationRows: Array<{
   siteId: string;
@@ -13,6 +17,40 @@ const scheduleRows: unknown[] = [];
 const postRows: unknown[] = [];
 const productRows: unknown[] = [];
 const submitGhlFormContact = mock(async () => undefined);
+
+function routingConfig(connections: Array<{
+  locationId: string;
+  isPrimary: boolean;
+  ghlLocationId: string;
+  privateIntegrationToken: string;
+}>) {
+  const config = storedSiteConfigFromStored(
+    createSitePreset({
+      preset: "scale",
+      businessName: "Academy",
+      tagline: "Train well",
+    }),
+    "scale",
+    connections.map((connection, displayOrder) => ({
+      locationId: connection.locationId,
+      isPrimary: connection.isPrimary,
+      displayOrder,
+    })),
+  );
+  return {
+    ...config,
+    locationConnections: config.locationConnections.map((connection) => {
+      const routing = connections.find((candidate) => candidate.locationId === connection.locationId)!;
+      return {
+        ...connection,
+        leadRouting: {
+          ghlLocationId: routing.ghlLocationId,
+          privateIntegrationToken: routing.privateIntegrationToken,
+        },
+      };
+    }),
+  };
+}
 
 const selectBuilder = {
   from() {
@@ -258,17 +296,16 @@ test("submits an authorized form only for an active attached location", async ()
     [{
       siteId: "site-1",
       locationId: "location-1",
+      isPrimary: true,
       publishedRevisionId: "revision-1",
     }],
     [{
-      config: {
-        integrations: {
-          ghl: {
-            privateIntegrationToken: "private-token",
-            locationId: "ghl-location",
-          },
-        },
-      },
+      config: routingConfig([{
+        locationId: "location-1",
+        isPrimary: true,
+        privateIntegrationToken: "private-token",
+        ghlLocationId: "ghl-location",
+      }]),
     }],
   ];
   const response = await app.handle(new Request(
@@ -288,6 +325,85 @@ test("submits an authorized form only for an active attached location", async ()
     privateIntegrationToken: "private-token",
     locationId: "ghl-location",
   }, validFormContact);
+});
+
+test("routes a secondary location form to its keyed GHL destination", async () => {
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      locationId: "location-2",
+      isPrimary: false,
+      publishedRevisionId: "revision-1",
+    }],
+    [{
+      config: routingConfig([
+        {
+          locationId: "location-1",
+          isPrimary: true,
+          ghlLocationId: "ghl-primary",
+          privateIntegrationToken: "pit-primary",
+        },
+        {
+          locationId: "location-2",
+          isPrimary: false,
+          ghlLocationId: "ghl-secondary",
+          privateIntegrationToken: "pit-secondary",
+        },
+      ]),
+    }],
+  ];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-2/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(200);
+  expect(submitGhlFormContact).toHaveBeenCalledWith({
+    privateIntegrationToken: "pit-secondary",
+    locationId: "ghl-secondary",
+  }, validFormContact);
+});
+
+test("does not route a secondary location through legacy primary-only credentials", async () => {
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      locationId: "location-2",
+      isPrimary: false,
+      publishedRevisionId: "revision-1",
+    }],
+    [{
+      config: {
+        integrations: {
+          ghl: {
+            privateIntegrationToken: "legacy-primary-pit",
+            locationId: "legacy-primary-ghl",
+          },
+        },
+      },
+    }],
+  ];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-2/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(503);
+  expect(submitGhlFormContact).not.toHaveBeenCalled();
 });
 
 const validFormContact = {
