@@ -670,6 +670,20 @@ var SiteLocationSchema = z30.object({
   rating: z30.number().min(0).max(5).optional(),
   reviewCount: z30.number().int().nonnegative().optional()
 }).strict();
+var SiteLocationOverrideSchema = z30.object({
+  name: z30.string().trim().max(200).optional(),
+  mapQuery: z30.string().trim().max(500).optional(),
+  address: z30.object({
+    streetAddress: z30.string().trim().max(500).optional(),
+    addressLocality: z30.string().trim().max(200).optional(),
+    addressRegion: z30.string().trim().max(200).optional(),
+    postalCode: z30.string().trim().max(50).optional(),
+    addressCountry: z30.string().trim().max(100).optional()
+  }).strict().optional(),
+  phone: z30.string().trim().max(100).optional(),
+  email: z30.string().trim().max(320).optional(),
+  hoursDescription: z30.string().trim().max(2000).optional()
+}).strict();
 
 // src/context.ts
 var SiteCapabilitiesSchema = z31.object({
@@ -1133,6 +1147,7 @@ var SiteConfigSchema = z33.object({
     credit: z33.string(),
     links: z33.array(NavigationItemSchema)
   }).strict(),
+  locationOverride: SiteLocationOverrideSchema.optional(),
   content: SiteContentSchema.default({
     programs: [],
     teams: [],
