@@ -139,6 +139,20 @@ test("keeps credentials in stored settings but removes them from public config",
     .not.toHaveProperty("leadRouting");
 });
 
+test("rejects malformed stored configs instead of returning private routing data", () => {
+  const config = publishableConfig({
+    ...template,
+    integrations: {
+      ghl: {
+        privateIntegrationToken: "pit-private",
+        locationId: "ghl-location",
+      },
+    },
+  });
+
+  expect(() => publicSiteConfig({ ...config, unexpected: true })).toThrow();
+});
+
 test("round trips public scripts and embeds through site settings", () => {
   const scriptsAndEmbeds = PublicSiteConfigSchema.parse({
     ...template,

@@ -156,6 +156,17 @@ test("normalizes legacy location slugs for public site context", () => {
 });
 
 test("projects map identity and structured address through the public resolve response", async () => {
+  const publishedConfig = routingConfig([{
+    locationId: "location-1",
+    isPrimary: true,
+    ghlLocationId: "ghl-location-1",
+    privateIntegrationToken: "pit-location-1",
+  }, {
+    locationId: "location-2",
+    isPrimary: false,
+    ghlLocationId: "ghl-location-2",
+    privateIntegrationToken: "pit-location-2",
+  }]);
   selectedRows = [
     [{
       siteId: "site-1",
@@ -167,16 +178,8 @@ test("projects map identity and structured address through the public resolve re
     }],
     [{
       id: "revision-1",
-      schemaVersion: 2,
-      config: {
-        capabilities: {
-          blog: false,
-          commerce: false,
-          schedules: false,
-          downloads: false,
-          memberAuth: false,
-        },
-      },
+      schemaVersion: publishedConfig.schemaVersion,
+      config: publishedConfig,
       publishedAt: new Date("2026-08-19T12:00:00.000Z"),
     }],
     [{ hostname: "hannmima.com" }],

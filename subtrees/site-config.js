@@ -1724,6 +1724,11 @@ var PublishableStoredSiteConfigSchema = StoredSiteConfigSchema.superRefine((conf
 function toPublicSiteConfig(config) {
   return PublicSiteConfigSchema.parse(publicConfigInput(config));
 }
+var SiteLocationPresentationSchema = z33.object({
+  location: SiteLocationSchema,
+  mapQuery: z33.string().min(1).max(500).optional(),
+  hoursDescription: z33.string().min(1).max(2000).optional()
+}).strict();
 function resolveSiteLocationPresentations(config, context) {
   const connectionByLocation = new Map(config.locationConnections?.map((connection) => [connection.locationId, connection]) ?? []);
   return context.locations.map((location) => {
@@ -3162,12 +3167,14 @@ function parseRuntimeSite(input) {
       throw new Error("Published site capabilities are inconsistent");
     }
   }
+  const locationPresentations = resolveSiteLocationPresentations(config, payload.context);
   const context = {
     ...payload.context,
-    locations: resolveSiteLocationPresentations(config, payload.context).map((presentation) => presentation.location)
+    locations: locationPresentations.map((presentation) => presentation.location)
   };
   return {
     context,
+    locationPresentations,
     revision: {
       ...payload.revision,
       schemaVersion: config.schemaVersion,
@@ -3289,6 +3296,7 @@ export {
   SiteMetaPixelEntrySchema,
   SiteLocationSlugSchema,
   SiteLocationSchema,
+  SiteLocationPresentationSchema,
   SiteLocationOverrideSchema,
   SiteLocationLeadRoutingSchema,
   SiteLocationConnectionSchema,
