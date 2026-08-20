@@ -1,5 +1,9 @@
 import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
+import {
+  PublishableStoredSiteConfigSchema,
+  storedSiteConfigFromStored,
+} from "@subtrees/site-config.js";
 
 let rows: unknown[][] = [];
 let inserted: unknown = null;
@@ -75,6 +79,7 @@ const app = new Elysia().use(sharedSiteAdminRoutes);
 
 const site = {
   id: "site-1",
+  vendorId: "vendor-1",
   slug: "academy",
   plan: "scale",
   locationId: "location-1",
@@ -140,12 +145,37 @@ const templateConfig = {
     memberAuth: false,
   },
 };
+
+function publishableConfig(input: unknown = templateConfig) {
+  const stored = storedSiteConfigFromStored(input, "scale", [{
+    locationId: "location-1",
+    isPrimary: true,
+    displayOrder: 0,
+  }]);
+  return PublishableStoredSiteConfigSchema.parse({
+    ...stored,
+    locationConnections: stored.locationConnections.map((connection) => ({
+      ...connection,
+      leadRouting: {
+        ghlLocationId: connection.leadRouting.ghlLocationId || `ghl-${connection.locationId}`,
+        privateIntegrationToken:
+          connection.leadRouting.privateIntegrationToken || `pit-${connection.locationId}`,
+      },
+    })),
+  });
+}
 const settings = {
   ...Object.fromEntries(
     Object.entries(templateConfig)
       .filter(([key]) => key !== "schemaVersion" && key !== "pages"),
   ),
   business: { ...templateConfig.business, name: "Academy" },
+  integrations: {
+    ghl: {
+      privateIntegrationToken: "pit-location-1",
+      locationId: "ghl-location-1",
+    },
+  },
 };
 const storedPage = {
   id: "page-home",
@@ -281,6 +311,13 @@ test("creates a relational draft from the active plan template", async () => {
     }],
     [storedPage],
     [storedBlock],
+    [{ locationId: "location-1", isPrimary: true, displayOrder: 0 }],
+    [{
+      id: "location-1",
+      vendorId: "vendor-1",
+      name: "Academy HQ",
+      timezone: "America/Chicago",
+    }],
     [],
   ];
   returningRows = [
@@ -341,12 +378,13 @@ test("creates one clean published baseline for a legacy migration", async () => 
   expect(inserts).toContainEqual(expect.objectContaining({ version: 1, isDirty: false }));
   expect(inserts).toContainEqual(expect.objectContaining({
     settings: expect.objectContaining({
-      integrations: {
-        ghl: {
+      locationConnections: [expect.objectContaining({
+        locationId: "location-1",
+        leadRouting: {
+          ghlLocationId: "ghl-location",
           privateIntegrationToken: "pit-private",
-          locationId: "ghl-location",
         },
-      },
+      })],
     }),
   }));
   expect(inserts).toContainEqual(expect.objectContaining({ revisionNumber: 1, status: "published" }));
@@ -411,12 +449,30 @@ test("reads a clean relational draft as the published revision", async () => {
     }],
     [storedPage],
     [storedBlock],
+    [{ locationId: "location-1", isPrimary: true, displayOrder: 0 }],
+    [{
+      id: "location-1",
+      vendorId: "vendor-1",
+      name: "Academy HQ",
+      address: "123 Main St",
+      city: "Austin",
+      state: "TX",
+      postalCode: "78701",
+      country: "US",
+      phone: "512-555-0100",
+      email: "hello@academy.example",
+      timezone: "America/Chicago",
+    }],
     [{ hostname: "academy.example.com" }],
   ];
   const response = await request("/shared-sites/site-1/editor");
 
   expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({
+  const payload = await response.json() as {
+    locations: Array<Record<string, unknown>>;
+    primaryLocation: Record<string, unknown>;
+  };
+  expect(payload).toMatchObject({
     revisionId: "rev-1",
     publishedRevisionId: "rev-1",
     hasDraft: false,
@@ -434,16 +490,19 @@ test("reads a clean relational draft as the published revision", async () => {
       timezone: "America/Chicago",
     },
   });
+  expect(payload.locations[0]).not.toHaveProperty("leadRouting");
+  expect(payload.primaryLocation).not.toHaveProperty("leadRouting");
 });
 
 test("rejects a stale relational draft save", async () => {
+  const config = publishableConfig();
   rows = [[site], [{ version: 2, isDirty: true }]];
   const response = await request("/shared-sites/site-1/draft", {
     method: "PUT",
     body: JSON.stringify({
       expectedRevisionId: "draft:site-1:1",
-      schemaVersion: 2,
-      config: templateConfig,
+      schemaVersion: 3,
+      config,
     }),
   });
 
@@ -455,19 +514,29 @@ test("saves page and block rows as a new relational draft version", async () => 
   const editedConfig = structuredClone(templateConfig);
   editedConfig.business.name = "Academy";
   editedConfig.pages[0]!.sections[0]!.props.title = "Updated";
+  const config = publishableConfig(editedConfig);
+  const { pages: _pages, schemaVersion, ...storedSettings } = config;
   rows = [
     [site],
     [{ version: 1, isDirty: true }],
+    [{ id: "location-1", vendorId: "vendor-1" }],
     [site],
     [{
-      schemaVersion: 2,
-      settings,
+      schemaVersion,
+      settings: storedSettings,
       version: 2,
       isDirty: true,
       updatedAt: new Date("2026-08-08T12:00:00.000Z"),
     }],
     [storedPage],
-    [{ ...storedBlock, props: { title: "Updated" } }],
+    [{ ...storedBlock, props: { title: "Updated", description: "Train well" } }],
+    [{ locationId: "location-1", isPrimary: true, displayOrder: 0 }],
+    [{
+      id: "location-1",
+      vendorId: "vendor-1",
+      name: "Academy HQ",
+      timezone: "America/Chicago",
+    }],
     [],
   ];
   returningRows = [[{ id: "page-home", pageKey: "home" }]];
@@ -476,8 +545,8 @@ test("saves page and block rows as a new relational draft version", async () => 
     method: "PUT",
     body: JSON.stringify({
       expectedRevisionId: "draft:site-1:1",
-      schemaVersion: 2,
-      config: editedConfig,
+      schemaVersion: 3,
+      config,
     }),
   });
 
@@ -503,6 +572,9 @@ test("publishes only the expected relational draft", async () => {
     }],
     [storedPage],
     [storedBlock],
+    [{ locationId: "location-1", isPrimary: true, displayOrder: 0 }],
+    [{ id: "location-1", vendorId: "vendor-1" }],
+    [{ id: "location-1", vendorId: "vendor-1" }],
     [{ revisionNumber: 1 }],
     [{ hostname: "academy.example.com" }],
   ];
@@ -522,6 +594,68 @@ test("publishes only the expected relational draft", async () => {
   expect(updates).toContainEqual(expect.objectContaining({ status: "active", publishedRevisionId: "rev-2" }));
 });
 
+test("publishing atomically replaces the live location snapshot", async () => {
+  const multiLocationSettings = {
+    ...settings,
+    locationConnections: [
+      { locationId: "location-1", isPrimary: true, displayOrder: 0 },
+      { locationId: "location-2", isPrimary: false, displayOrder: 1 },
+    ],
+    integrations: {
+      ghl: {
+        locations: [
+          {
+            locationId: "location-1",
+            ghlLocationId: "ghl-1",
+            privateIntegrationToken: "pit-1",
+          },
+          {
+            locationId: "location-2",
+            ghlLocationId: "ghl-2",
+            privateIntegrationToken: "pit-2",
+          },
+        ],
+      },
+    },
+  };
+  rows = [
+    [site],
+    [{
+      schemaVersion: 2,
+      settings: multiLocationSettings,
+      version: 2,
+      isDirty: true,
+      updatedBy: "admin",
+    }],
+    [storedPage],
+    [storedBlock],
+    [],
+    [
+      { id: "location-1", vendorId: "vendor-1" },
+      { id: "location-2", vendorId: "vendor-1" },
+    ],
+    [
+      { id: "location-1", vendorId: "vendor-1" },
+      { id: "location-2", vendorId: "vendor-1" },
+    ],
+    [{ revisionNumber: 1 }],
+    [{ hostname: "academy.example.com" }],
+  ];
+  returningRows = [[{ id: "rev-2" }]];
+
+  const response = await request("/shared-sites/site-1/publish", {
+    method: "POST",
+    body: JSON.stringify({ expectedRevisionId: "draft:site-1:2" }),
+  });
+
+  expect(response.status).toBe(200);
+  expect(tx.delete).toHaveBeenCalledTimes(1);
+  expect(inserts).toContainEqual([
+    { siteId: "site-1", locationId: "location-1", isPrimary: true, displayOrder: 0 },
+    { siteId: "site-1", locationId: "location-2", isPrimary: false, displayOrder: 1 },
+  ]);
+});
+
 test("rejects publishing a draft outside the canonical site contract", async () => {
   rows = [
     [site],
@@ -534,6 +668,7 @@ test("rejects publishing a draft outside the canonical site contract", async () 
     }],
     [storedPage],
     [storedBlock],
+    [],
   ];
   const response = await request("/shared-sites/site-1/publish", {
     method: "POST",

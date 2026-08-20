@@ -1,4 +1,10 @@
-import { normalizeSiteConfigV2, SiteConfigSchema } from "@subtrees/site-config.js";
+import {
+  normalizeSiteConfigV2,
+  PublicSiteConfigSchema,
+  PublishableStoredSiteConfigSchema,
+  StoredSiteConfigSchema,
+  toPublicSiteConfig,
+} from "@subtrees/site-config.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -33,7 +39,18 @@ function record(value: unknown, label: string): JsonRecord {
 
 
 export function splitSiteConfig(input: unknown) {
-  const config = SiteConfigSchema.parse(normalizeSiteConfigV2(input));
+  const config = PublishableStoredSiteConfigSchema.parse(input);
+  return splitParsedSiteConfig(config);
+}
+
+export function splitDraftSiteConfig(input: unknown) {
+  const config = StoredSiteConfigSchema.parse(input);
+  return splitParsedSiteConfig(config);
+}
+
+function splitParsedSiteConfig(
+  config: ReturnType<typeof StoredSiteConfigSchema.parse>,
+) {
   const pages = config.pages.map((page, position): StoredPageInput => ({
     pageKey: page.id,
     path: page.path,
@@ -53,7 +70,7 @@ export function splitSiteConfig(input: unknown) {
       : [],
   }));
   const { pages: _pages, schemaVersion, ...settings } = config;
-  return { schemaVersion, settings, pages };
+  return { config, schemaVersion, settings, pages };
 }
 
 export function assembleSiteConfig(input: {
@@ -98,11 +115,12 @@ export function assembleSiteConfig(input: {
   return { ...input.settings, schemaVersion: input.schemaVersion, pages };
 }
 
-export function publicSiteConfig(input: unknown): unknown {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return input;
-  const config = { ...input as JsonRecord };
+export function publicSiteConfig(input: unknown) {
+  const stored = StoredSiteConfigSchema.safeParse(input);
+  if (stored.success) return toPublicSiteConfig(stored.data);
+  const config = { ...record(input, "Site config") };
   delete config.integrations;
-  return config;
+  return PublicSiteConfigSchema.parse(normalizeSiteConfigV2(config));
 }
 
 function replaceTokens(value: unknown, replacements: Record<string, string>): unknown {
@@ -137,7 +155,7 @@ export function materializeSiteTemplate(
     materialized.theme = { ...theme, colors: { ...colors, primary: values.primaryColor } };
   }
 
-  return SiteConfigSchema.parse(normalizeSiteConfigV2(materialized));
+  return PublicSiteConfigSchema.parse(normalizeSiteConfigV2(materialized));
 }
 
 export function draftToken(siteId: string, version: number): string {

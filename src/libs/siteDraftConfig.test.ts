@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { SiteConfigSchema } from "@subtrees/site-config.js";
+import {
+  PublicSiteConfigSchema,
+  PublishableStoredSiteConfigSchema,
+  storedSiteConfigFromStored,
+} from "@subtrees/site-config.js";
 import {
   assembleSiteConfig,
   materializeSiteTemplate,
@@ -64,13 +68,32 @@ const template = {
   },
 };
 
+function publishableConfig(input: unknown) {
+  const stored = storedSiteConfigFromStored(input, "scale", [{
+    locationId: "location-1",
+    isPrimary: true,
+    displayOrder: 0,
+  }]);
+  return PublishableStoredSiteConfigSchema.parse({
+    ...stored,
+    locationConnections: stored.locationConnections.map((connection) => ({
+      ...connection,
+      leadRouting: {
+        ghlLocationId: connection.leadRouting.ghlLocationId || "ghl-location-1",
+        privateIntegrationToken: connection.leadRouting.privateIntegrationToken || "pit-test-1",
+      },
+    })),
+  });
+}
+
 test("materializes, splits, and rebuilds a site template without changing its contract", () => {
-  const config = materializeSiteTemplate(template, {
+  const publicConfig = materializeSiteTemplate(template, {
     businessName: "Academy",
     businessSlug: "academy",
     city: "Austin",
     primaryColor: "#2563eb",
   });
+  const config = publishableConfig(publicConfig);
   const stored = splitSiteConfig(config);
   expect(stored.pages[0]?.settings).toEqual({
     header: { mode: "sticky", contrast: "light" },
@@ -96,20 +119,42 @@ test("keeps credentials in stored settings but removes them from public config",
     privateIntegrationToken: "pit-private",
     locationId: "ghl-location",
   };
-  const stored = splitSiteConfig({
+  const config = publishableConfig({
     ...template,
     integrations: { ghl: credentials },
   });
+  const stored = splitSiteConfig(config);
 
-  expect(stored.settings.integrations).toEqual({ ghl: credentials });
-  expect(publicSiteConfig({
+  expect(stored.settings.locationConnections).toEqual([expect.objectContaining({
+    locationId: "location-1",
+    leadRouting: {
+      ghlLocationId: "ghl-location",
+      privateIntegrationToken: "pit-private",
+    },
+  })]);
+  const publicConfig = publicSiteConfig(config) as Record<string, unknown>;
+  expect(publicConfig).not.toHaveProperty("integrations");
+  expect(JSON.stringify(publicConfig)).not.toContain("pit-private");
+  expect((publicConfig.locationConnections as Array<Record<string, unknown>>)[0])
+    .not.toHaveProperty("leadRouting");
+});
+
+test("rejects malformed stored configs instead of returning private routing data", () => {
+  const config = publishableConfig({
     ...template,
-    integrations: { ghl: credentials },
-  })).not.toHaveProperty("integrations");
+    integrations: {
+      ghl: {
+        privateIntegrationToken: "pit-private",
+        locationId: "ghl-location",
+      },
+    },
+  });
+
+  expect(() => publicSiteConfig({ ...config, unexpected: true })).toThrow();
 });
 
 test("round trips public scripts and embeds through site settings", () => {
-  const scriptsAndEmbeds = SiteConfigSchema.parse({
+  const scriptsAndEmbeds = PublicSiteConfigSchema.parse({
     ...template,
     scriptsAndEmbeds: {
       enabled: true,
@@ -138,7 +183,7 @@ test("round trips public scripts and embeds through site settings", () => {
       }],
     },
   }).scriptsAndEmbeds;
-  const stored = splitSiteConfig({ ...template, scriptsAndEmbeds });
+  const stored = splitSiteConfig(publishableConfig({ ...template, scriptsAndEmbeds }));
   const pages = stored.pages.map((page, index) => ({ ...page, id: `page-scripts-${index}` }));
   const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
   const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
@@ -155,6 +200,49 @@ test("round trips public scripts and embeds through site settings", () => {
   expect(stored.settings.scriptsAndEmbeds).toEqual(scriptsAndEmbeds);
   expect(rebuilt).toEqual(expect.objectContaining({ scriptsAndEmbeds }));
   expect(publicSiteConfig(rebuilt)).toEqual(expect.objectContaining({ scriptsAndEmbeds }));
+});
+
+test("round trips site-only location overrides through site settings", () => {
+  const locationOverride = {
+    name: "Downtown Academy",
+    mapQuery: "Downtown Academy, Austin, TX",
+    address: {
+      streetAddress: "123 Site St",
+      addressLocality: "Austin",
+      addressRegion: "TX",
+      postalCode: "78701",
+      addressCountry: "US",
+    },
+    phone: "555-111-1111",
+    email: "site@example.com",
+    hoursDescription: "Weekdays from 9 AM to 5 PM.",
+  };
+  const stored = splitSiteConfig(publishableConfig({ ...template, locationOverride }));
+  const pages = stored.pages.map((page, index) => ({
+    ...page,
+    id: `page-location-${index}`,
+  }));
+  const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+  const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+    ...block,
+    pageId: pageIds.get(page.pageKey)!,
+  })));
+  const rebuilt = assembleSiteConfig({
+    schemaVersion: stored.schemaVersion,
+    settings: stored.settings,
+    pages,
+    blocks,
+  });
+
+  expect(stored.settings.locationConnections).toEqual([expect.objectContaining({
+    override: locationOverride,
+  })]);
+  expect(rebuilt).toEqual(expect.objectContaining({
+    locationConnections: [expect.objectContaining({ override: locationOverride })],
+  }));
+  expect(publicSiteConfig(rebuilt)).toEqual(expect.objectContaining({
+    locationConnections: [expect.objectContaining({ override: locationOverride })],
+  }));
 });
 
 test("rejects a config outside the canonical site contract", () => {
