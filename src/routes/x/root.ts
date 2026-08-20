@@ -17,6 +17,7 @@ import { xPrograms } from './loc/programs/root';
 import { xEvents } from './loc/events/root';
 import { xCourses } from './loc/courses/root';
 import { locationEnrollRoutes } from "../protected/locations/enroll";
+import { xAdditionalFees } from "./loc/additionalFees";
 
 export const XRoutes = new Elysia()
     .use(AuthXMiddleware)
@@ -37,6 +38,7 @@ export const XRoutes = new Elysia()
         app.use(xCourses);
         app.use(locationEnrollRoutes);
         app.use(xAssistant);
+        app.use(xAdditionalFees);
         app.group('/members', (app) => app.use(locMembers));
         return app;
     })
