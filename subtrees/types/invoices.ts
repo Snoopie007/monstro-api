@@ -9,7 +9,7 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     memberSubscription?: MemberSubscription;
 }
 
-export type InvoiceItem = {
+type InvoiceItemBase = {
     name: string;
     quantity: number;
     price: number;
@@ -17,5 +17,15 @@ export type InvoiceItem = {
     discount?: number;
     tax?: number;
 }
+
+export type InvoiceItem =
+    | (InvoiceItemBase & {
+        kind?: "item";
+        sourceFeeId?: never;
+    })
+    | (InvoiceItemBase & {
+        kind: "additional_fee";
+        sourceFeeId: string;
+    });
 
 export type NewInvoice = typeof memberInvoices.$inferInsert;
