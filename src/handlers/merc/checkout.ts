@@ -6,6 +6,7 @@ import {
     chargeWithGateway,
     CheckoutError,
     CheckoutPendingError,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
     PaymentChargeError,
     stableCheckoutTransactionId,
@@ -99,17 +100,37 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         }
     }
 
-    const passOnFees = locationState.settings?.passOnFees || false;
-    const { total, discount, feesAmount, tax, subtotal, processingFee, lineItems } = calculateOrderTotals(
+    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "order" });
+    const {
+        total,
+        discount,
+        feesAmount,
+        tax,
+        subtotal,
+        processingFee,
+        lineItems,
+        additionalFeeTotal,
+        additionalFeeLines,
+    } = calculateOrderTotals(
         items,
         variants,
         taxRates.find((r) => r.isDefault)?.percentage || 0,
-        passOnFees,
         locationState.usagePercent || 0,
+        additionalFees,
         promoData,
     );
     if (quoteOnly) {
-        return { total, discount, feesAmount, tax, subtotal, processingFee: passOnFees ? processingFee : 0, lineItems };
+        return {
+            total,
+            discount,
+            feesAmount: additionalFeeTotal,
+            tax,
+            subtotal,
+            processingFee,
+            additionalFeeTotal,
+            additionalFeeLines,
+            lineItems,
+        };
     }
     const currency = locationState.currency;
     const description = `Payment for order ${orderId}`;
@@ -123,7 +144,17 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         checkoutAttemptId: attemptId,
         orderId,
     };
-
+    const transactionItems = [
+        ...lineItems.map((item) => ({
+            kind: "item" as const,
+            name: item.productName,
+            quantity: item.quantity,
+            price: item.unitCost,
+            productId: item.variantId,
+            tax: item.tax,
+        })),
+        ...additionalFeeLines,
+    ];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
@@ -156,6 +187,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     subTotal: subtotal,
                     tax,
                     feeAmount: feesAmount,
+                    items: transactionItems,
                     currency,
                     status: "paid",
                     chargeDate: now,
@@ -223,6 +255,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                 subTotal: subtotal,
                 tax,
                 feeAmount: feesAmount,
+                items: transactionItems,
                 currency,
                 status: "failed",
                 chargeDate: now,

@@ -3,6 +3,7 @@ import {
     authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
     stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
@@ -65,14 +66,14 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
 
     const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const taxRate = taxRates.find((r) => r.isDefault)?.percentage || 0;
-    const { total, feesAmount, tax, subTotal } = calculateChargeDetails({
+    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "course" });
+    const chargeDetails = calculateChargeDetails({
         amount: coursePrice,
         taxRate,
-        passOnFees: locationState.settings?.passOnFees || false,
         usagePercent: locationState.usagePercent || 0,
-        paymentType,
-        isRecurring: false,
+        additionalFees,
     });
+    const { total, feesAmount, tax, subTotal } = chargeDetails;
     const currency = locationState.currency;
     const description = `Payment for course enrollment ${courseTitle}`;
     const metadata: Record<string, unknown> = {
@@ -85,7 +86,6 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
         checkoutAttemptId: attemptId,
         courseId,
     };
-
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
@@ -119,6 +119,13 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                     paymentMethodId,
                     paymentType,
                     feeAmount: feesAmount,
+                    items: [{
+                        kind: "item",
+                        name: courseTitle,
+                        quantity: 1,
+                        price: chargeDetails.unitCost,
+                        productId: courseId,
+                    }, ...chargeDetails.additionalFeeLines],
                     currency,
                     chargeDate: now,
                     paymentIntentId: charge.paymentIntentId,
@@ -171,6 +178,13 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                 paymentMethodId,
                 paymentType,
                 feeAmount: feesAmount,
+                items: [{
+                    kind: "item",
+                    name: courseTitle,
+                    quantity: 1,
+                    price: chargeDetails.unitCost,
+                    productId: courseId,
+                }, ...chargeDetails.additionalFeeLines],
                 currency,
                 chargeDate: now,
                 paymentIntentId: charge.paymentIntentId,

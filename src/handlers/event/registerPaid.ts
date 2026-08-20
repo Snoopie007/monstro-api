@@ -3,6 +3,7 @@ import {
     authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
     PaymentChargeError,
     stableCheckoutTransactionId,
@@ -51,14 +52,14 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
 
     const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const { currency } = locationState;
-    const { total, feesAmount, tax, subTotal } = calculateChargeDetails({
+    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "event" });
+    const chargeDetails = calculateChargeDetails({
         amount: ticket.price,
         taxRate: taxRates.find((r) => r.isDefault)?.percentage || 0,
-        passOnFees: locationState.settings?.passOnFees || false,
         usagePercent: locationState.usagePercent || 0,
-        paymentType,
-        isRecurring: false,
+        additionalFees,
     });
+    const { total, feesAmount, tax, subTotal } = chargeDetails;
     const description = `${event.name} - ${ticket.name}`;
     const registrationId = generateUUID("erg_");
     const metadata: Record<string, unknown> = {
@@ -73,7 +74,6 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
         ticketId: ticket.id,
         registrationId,
     };
-
     let charge: ChargeWithGatewayResult;
     try {
         charge = await chargeWithGateway({
@@ -122,6 +122,13 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
                     paymentType,
                     chargeDate: now,
                     feeAmount: feesAmount,
+                    items: [{
+                        kind: "item",
+                        name: description,
+                        quantity: 1,
+                        price: chargeDetails.unitCost,
+                        productId: ticket.id,
+                    }, ...chargeDetails.additionalFeeLines],
                     currency,
                     paymentIntentId: charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
@@ -167,6 +174,13 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
                 paymentType,
                 chargeDate: now,
                 feeAmount: feesAmount,
+                items: [{
+                    kind: "item",
+                    name: description,
+                    quantity: 1,
+                    price: chargeDetails.unitCost,
+                    productId: ticket.id,
+                }, ...chargeDetails.additionalFeeLines],
                 currency,
                 paymentIntentId: charge.paymentIntentId,
                 failedReason: charge.failureReason,

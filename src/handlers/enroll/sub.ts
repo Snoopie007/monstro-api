@@ -10,6 +10,7 @@ import {
     recoverEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
     stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
@@ -175,7 +176,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         }
     }
 
-    const { usagePercent, settings, currency } = locationState;
+    const { usagePercent, currency } = locationState;
     const signedWaiverId = ml.signedWaiverId;
     if (signedWaiverId) {
         if (!waiverId) {
@@ -231,15 +232,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         : 0;
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
     const discount = await fetchPromoDiscount(promoId ?? undefined, pricing, lid);
-    const noGrowthPlan = [1, 2].includes(locationState.planId);
+    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "subscription" });
     const chargeDetails = calculateChargeDetails({
         amount: pricing.downpayment || pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
         usagePercent: usagePercent || 0,
-        paymentType,
-        isRecurring: noGrowthPlan,
-        passOnFees: settings?.passOnFees || false,
+        additionalFees,
     });
     if (quoteOnly) {
         const baseAmount = pricing.downpayment || pricing.price;
@@ -247,7 +246,8 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             baseAmount,
             discount,
             tax: chargeDetails.tax,
-            fees: chargeDetails.total - Math.max(0, baseAmount - discount) - chargeDetails.tax,
+            fees: chargeDetails.additionalFeeTotal,
+            additionalFeeLines: chargeDetails.additionalFeeLines,
             total: chargeDetails.total,
             currency,
         };
@@ -273,7 +273,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         subscriptionAllowProration: resolvedAllowProration,
         classCredits,
     };
-
+    const items = [{
+        kind: "item" as const,
+        name: productName,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        discount,
+    }, ...chargeDetails.additionalFeeLines];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
@@ -301,6 +307,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     subTotal: chargeDetails.subTotal,
                     tax: chargeDetails.tax,
                     feeAmount: chargeDetails.feesAmount,
+                    items,
                     description,
                     currency,
                     locationId: lid,
@@ -345,12 +352,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
 
                 const [invoice] = await tx.insert(memberInvoices).values({
                     description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
+                    items,
                     status: "paid",
                     paid: true,
                     memberPlanId: result.id,
@@ -430,6 +432,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                 subTotal: chargeDetails.subTotal,
                 tax: chargeDetails.tax,
                 feeAmount: chargeDetails.feesAmount,
+                items,
                 description,
                 currency,
                 locationId: lid,

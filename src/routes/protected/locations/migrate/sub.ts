@@ -10,6 +10,7 @@ import { z } from "zod";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
+    getAdditionalFeesForCheckout,
 } from "@/utils";
 import { isToday } from "date-fns";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
@@ -189,14 +190,15 @@ export function migrateSubRoutes(app: Elysia) {
                 const productName = pricing.name;
                 const description = `Payment for ${pricing.name}`;
 
-                const noGrowthPlan = [1, 2].includes(locationState.planId);
+                const additionalFees = await getAdditionalFeesForCheckout({
+                    locationId: lid,
+                    checkoutType: "subscription",
+                });
                 const chargeDetails = calculateChargeDetails({
                     amount: pricing.price,
                     taxRate: taxRate?.percentage ?? 0,
                     usagePercent: locationState.usagePercent || 0,
-                    paymentType: paymentType,
-                    isRecurring: noGrowthPlan,
-                    passOnFees: locationState.settings?.passOnFees || false,
+                    additionalFees,
                 });
 
 
@@ -204,10 +206,11 @@ export function migrateSubRoutes(app: Elysia) {
                 const [invoice] = await db.insert(memberInvoices).values({
                     description,
                     items: [{
+                        kind: "item",
                         name: productName,
                         quantity: 1,
                         price: chargeDetails.unitCost
-                    }],
+                    }, ...chargeDetails.additionalFeeLines],
                     memberPlanId: sub.id,
                     memberId: mid,
                     locationId: lid,

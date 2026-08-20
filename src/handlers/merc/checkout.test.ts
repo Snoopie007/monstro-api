@@ -1,4 +1,4 @@
-import { expect, mock, test } from "bun:test";
+import { beforeEach, expect, mock, test } from "bun:test";
 
 const steps: string[] = [];
 const stockUpdates: Record<string, unknown>[] = [];
@@ -26,6 +26,7 @@ const tx = {
 const db = {
     query: {
         transactions: { findFirst: mock(async () => undefined) },
+        orders: { findFirst: mock(async () => undefined) },
         promos: { findFirst: mock(async () => undefined) },
     },
     select: mock(() => ({
@@ -53,6 +54,12 @@ class CheckoutError extends Error {
 }
 
 mock.module("@/db/db", () => ({ db }));
+const chargeWithGateway = mock(async () => ({
+    status: "approved" as const,
+    paymentIntentId: "payment-1",
+    paymentType: "card" as const,
+    gatewayMetadata: {},
+}));
 mock.module("@/utils", () => ({
     authorizeReferenceIdForTransaction: () => "reference-1",
     calculateOrderTotals: () => ({
@@ -62,19 +69,17 @@ mock.module("@/utils", () => ({
         tax: 0,
         subtotal: 1200,
         processingFee: 0,
-        lineItems: [{ variantId: "variant-1", quantity: 1, price: 1200 }],
+        additionalFeeTotal: 0,
+        additionalFeeLines: [],
+        lineItems: [{ variantId: "variant-1", productName: "Uniform", quantity: 1, unitCost: 1200, tax: 0 }],
     }),
-    chargeWithGateway: mock(async () => ({
-        status: "approved",
-        paymentIntentId: "payment-1",
-        paymentType: "card",
-        gatewayMetadata: {},
-    })),
+    chargeWithGateway,
     CheckoutError,
     CheckoutPendingError: CheckoutError,
+    getAdditionalFeesForCheckout: mock(async () => []),
     getCheckoutContext: mock(async () => ({
         gatewayCustomerId: "customer-1",
-        locationState: { settings: { passOnFees: false }, usagePercent: 0, currency: "USD" },
+        locationState: { usagePercent: 0, currency: "USD" },
         taxRates: [],
         gateway: { service: "stripe", integrationId: "integration-1" },
     })),
@@ -83,6 +88,13 @@ mock.module("@/utils", () => ({
 }));
 
 const { handleMercCheckout } = await import("./checkout");
+
+beforeEach(() => {
+    steps.length = 0;
+    stockUpdates.length = 0;
+    inserted.length = 0;
+    chargeWithGateway.mockClear();
+});
 
 test("decrements inventory in the paid order transaction", async () => {
     const order = await handleMercCheckout({
