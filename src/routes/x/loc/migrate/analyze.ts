@@ -2,12 +2,11 @@ import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { memberPlans, memberPlanPricing, locations } from "@subtrees/schemas";
-import { analyzeCsvMigration, type PricingPlanInput } from "@/libs/migrate";
+import { analyzeCsvMigration, getMigrationAnalysisModelName, type PricingPlanInput } from "@/libs/migrate";
 import { calculateAICost } from "@/libs/ai";
 import { chargeWallet } from "@/libs/wallet";
 
 const MIN_ANALYZE_WALLET_UNITS = 1;
-const MIGRATION_MODEL = "gpt-4o-mini";
 
 type AnalyzeBody = {
     csvData: Record<string, string>[];
@@ -105,7 +104,7 @@ export const migrationAnalyze = new Elysia()
 
             const usage = result.usage;
             const walletCharge = usage
-                ? calculateAICost(usage, MIGRATION_MODEL)
+                ? calculateAICost(usage, getMigrationAnalysisModelName())
                 : MIN_ANALYZE_WALLET_UNITS;
 
             if (walletCharge > 0) {

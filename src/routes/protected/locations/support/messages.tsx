@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { supportConversations, supportMessages } from "@subtrees/schemas";
-import { calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory, getModel } from "@/libs/ai";
+import { calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory, getModel, getModelName } from "@/libs/ai";
 import { ToolFunctions } from "@/libs/ai/FNHandler";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { broadcastSupportMessage, formatSupportMessagePayload } from "@/libs/broadcast";
@@ -66,10 +66,11 @@ export async function supportMessagesRoute(app: Elysia) {
                 limit: 20,
             });
 
+            const modelName = getModelName(conversation.assistant.model);
             const model = getModel(conversation.assistant.model, async (output) => {
                 const usage = output.llmOutput?.tokenUsage;
                 if (usage) {
-                    const cost = calculateAICost(usage, conversation.assistant.model);
+                    const cost = calculateAICost(usage, modelName);
                     await hasEnoughBalance({ lid, amount: cost });
                     await chargeWallet({
                         lid,

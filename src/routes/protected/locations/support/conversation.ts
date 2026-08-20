@@ -8,6 +8,7 @@ import type { SupportConversation } from "@subtrees/types";
 import { eq } from "drizzle-orm";
 import type { Elysia } from "elysia";
 import { OpenAI } from "openai";
+import { DEFAULT_OPENAI_MODEL, getOpenAIModelKwargs } from "@/libs/ai/models";
 
 
 const NamePrompt = (message: string, category: string) => {
@@ -71,12 +72,13 @@ export async function supportConversation(app: Elysia) {
         const { message, mid, category } = body as { message: string, mid: string, category: string };
         try {
 
-
+            const modelName = process.env.SUPPORT_CONVERSATION_TITLE_MODEL || DEFAULT_OPENAI_MODEL;
             const res = await openai.chat.completions.create({
-                model: 'gpt-3.5-turbo',
+                model: modelName,
                 messages: [{ role: 'system', content: NamePrompt(message, category) }],
-                max_tokens: 50,
+                max_completion_tokens: 50,
                 temperature: 0,
+                ...getOpenAIModelKwargs(modelName, "chat"),
             });
             const conversationName = res.choices[0]?.message?.content?.toString() || 'Unknown';
 

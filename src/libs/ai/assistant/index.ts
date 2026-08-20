@@ -4,6 +4,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
 import { calculateAICost } from "@/libs/ai/AI";
+import { DEFAULT_OPENAI_MODEL, getOpenAIModelKwargs } from "@/libs/ai/models";
 import { db } from "@/db/db";
 import { sql } from "drizzle-orm";
 import {
@@ -114,8 +115,6 @@ type RunAssistantTurnStreamProps = RunAssistantTurnProps & {
   onFailed?: () => Promise<void> | void;
 };
 
-const DEFAULT_ASSISTANT_MODEL = "gpt-4.1-mini";
-
 type RecalledMemory = {
   id: string;
   content: string;
@@ -123,6 +122,7 @@ type RecalledMemory = {
 };
 
 function getAssistantModel(onTokenUsage?: (usage: TokenUsage) => void) {
+  const modelName = getAssistantModelName();
   const callbacks = onTokenUsage
     ? [{
       handleLLMEnd: (output: any) => {
@@ -138,7 +138,8 @@ function getAssistantModel(onTokenUsage?: (usage: TokenUsage) => void) {
 
   return new ChatOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    modelName: process.env.ASSISTANT_MODEL || DEFAULT_ASSISTANT_MODEL,
+    modelName,
+    modelKwargs: getOpenAIModelKwargs(modelName, "chat"),
     temperature: 0.7,
     maxRetries: 3,
     callbacks,
@@ -146,7 +147,7 @@ function getAssistantModel(onTokenUsage?: (usage: TokenUsage) => void) {
 }
 
 function getAssistantModelName() {
-  return process.env.ASSISTANT_MODEL || DEFAULT_ASSISTANT_MODEL;
+  return process.env.ASSISTANT_MODEL || DEFAULT_OPENAI_MODEL;
 }
 
 function estimateTokensFromText(text: string) {

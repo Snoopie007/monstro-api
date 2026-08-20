@@ -1,6 +1,7 @@
 import { HumanMessage, SystemMessage, type MessageContent } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
+import { DEFAULT_OPENAI_MODEL, getOpenAIModelKwargs } from "@/libs/ai/models";
 
 export const ProgramDraftSchema = z.object({
     name: z.string().min(1),
@@ -42,6 +43,7 @@ export function normalizeProgramDrafts(input: unknown): ProgramDraft[] {
 }
 
 export async function parseProgramImportFile(file: File): Promise<ProgramDraft[]> {
+    const modelName = process.env.PROGRAM_IMPORT_MODEL || DEFAULT_OPENAI_MODEL;
     const bytes = Buffer.from(await file.arrayBuffer()).toString("base64");
     // ponytail: LangChain's standard file block maps to Chat Completions `file`; Responses needs provider-native `input_file`.
     const content: MessageContent = [
@@ -52,9 +54,10 @@ export async function parseProgramImportFile(file: File): Promise<ProgramDraft[]
     ] as unknown as MessageContent;
 
     const model = new ChatOpenAI({
-        model: process.env.PROGRAM_IMPORT_MODEL || "gpt-5.4",
+        model: modelName,
         apiKey: process.env.OPENAI_API_KEY,
         maxRetries: 2,
+        modelKwargs: getOpenAIModelKwargs(modelName, "responses"),
         useResponsesApi: true,
     });
 

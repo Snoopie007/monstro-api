@@ -3,7 +3,12 @@ export function calculateAiCostMicrousd(
   value: unknown,
   completedWebSearches = 0,
 ) {
-  if (modelName !== "gpt-5.5" || !value || typeof value !== "object") {
+  const prices = {
+    "gpt-5.5": { input: 5, cachedInput: 0.5, output: 30 },
+    "gpt-5.6-luna": { input: 1, cachedInput: 0.1, output: 6 },
+  }[modelName];
+
+  if (!prices || !value || typeof value !== "object") {
     return null;
   }
 
@@ -29,9 +34,9 @@ export function calculateAiCostMicrousd(
   }
 
   const rounded = Math.round(
-    (inputTokens - cachedInputTokens) * 5 +
-      cachedInputTokens * 0.5 +
-      outputTokens * 30 +
+    (inputTokens - cachedInputTokens) * prices.input +
+      cachedInputTokens * prices.cachedInput +
+      outputTokens * prices.output +
       completedWebSearches * 10_000,
   );
   return Number.isSafeInteger(rounded) ? rounded : null;

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { supportAssistants } from "subtrees/schemas";
-import { calculateAICost, chunkedStream, getModel } from "@/libs/ai";
+import { calculateAICost, chunkedStream, getModel, getModelName } from "@/libs/ai";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { createMockConversation, invokeTestBot } from "@/libs/ai/TestChat";
 import { getRedisClient } from "@/libs/redis";
@@ -82,10 +82,11 @@ export async function testChatRoute(app: Elysia) {
 
             await history.addUserMessage(message.content as string)
 
+            const modelName = getModelName(assistant.model);
             const model = getModel(assistant.model, (output) => {
                 const usage = output.llmOutput?.tokenUsage;
                 if (usage) {
-                    const cost = calculateAICost(usage, assistant.model);
+                    const cost = calculateAICost(usage, modelName);
                     console.log(`💰 Test chat AI cost: ${cost} credits`);
                 }
             });
@@ -173,6 +174,5 @@ export async function testChatRoute(app: Elysia) {
         }
     });
 }
-
 
 

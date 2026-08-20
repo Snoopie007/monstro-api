@@ -1,6 +1,7 @@
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
+import { DEFAULT_OPENAI_MODEL, getOpenAIModelKwargs } from "@/libs/ai/models";
 
 const MIGRATION_AGENT_PROMPT = `You are an expert data migration assistant for Monstro, a membership management platform.
 
@@ -98,6 +99,10 @@ export type MigrationAnalysisResult = {
     };
 };
 
+export function getMigrationAnalysisModelName() {
+    return process.env.MIGRATION_ANALYSIS_MODEL || DEFAULT_OPENAI_MODEL;
+}
+
 function buildAnalysisPrompt(params: AnalyzeParams): string {
     const { csvData, headers, availablePricingPlans } = params;
     const sampleData = csvData.slice(0, 20);
@@ -129,12 +134,14 @@ ${plansInfo}`;
 
 export async function analyzeCsvMigration(params: AnalyzeParams): Promise<MigrationAnalysisResult> {
     let tokenUsage: { promptTokens: number; completionTokens: number } | undefined;
+    const modelName = getMigrationAnalysisModelName();
 
     const model = new ChatOpenAI({
-        model: "gpt-4o-mini",
+        model: modelName,
         apiKey: process.env.OPENAI_API_KEY,
         temperature: 0,
         maxRetries: 3,
+        modelKwargs: getOpenAIModelKwargs(modelName, "chat"),
         callbacks: [{
             handleLLMEnd: (output) => {
                 const usage = output.llmOutput?.tokenUsage;

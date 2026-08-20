@@ -12,6 +12,12 @@ primary_region = "sjc"
 [env]
   PORT = "3000"
   BUN_ENV = "production"
+  ASSISTANT_MODEL = "gpt-5.6-luna"
+  MIGRATION_ANALYSIS_MODEL = "gpt-5.6-luna"
+  PROGRAM_IMPORT_MODEL = "gpt-5.6-luna"
+  SUPPORT_AI_MODEL = "gpt-5.6-luna"
+  SUPPORT_BOT_MODEL = "gpt-5.6-luna"
+  SUPPORT_CONVERSATION_TITLE_MODEL = "gpt-5.6-luna"
 
 [[vm]]
   memory = "512mb"
