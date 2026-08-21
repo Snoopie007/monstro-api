@@ -230,7 +230,6 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         ...(endDate ? { packageExpireAt: endDate.toISOString() } : {}),
     };
     const items = [{
-        kind: "item" as const,
         name: productName,
         quantity: 1,
         price: chargeDetails.unitCost,

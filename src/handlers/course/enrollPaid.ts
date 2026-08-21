@@ -77,7 +77,6 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
     const currency = locationState.currency;
     const description = `Payment for course enrollment ${courseTitle}`;
     const items = [{
-        kind: "item" as const,
         name: courseTitle,
         quantity: 1,
         price: chargeDetails.unitCost,

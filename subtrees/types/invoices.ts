@@ -16,8 +16,8 @@ export type InvoiceItem = {
     productId?: string;
     discount?: number;
     tax?: number;
-    kind?: "item" | "additional_fee";
-    sourceFeeId?: string;
+    feeId?: string;
+    refundable?: boolean;
 }
 
 export type NewInvoice = typeof memberInvoices.$inferInsert;

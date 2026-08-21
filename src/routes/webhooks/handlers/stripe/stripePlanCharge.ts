@@ -59,6 +59,7 @@ export async function handleStripePlanCharge({
             total: amount,
             subTotal: invoice.subTotal,
             tax: invoice.tax,
+            items: invoice.items || [],
             type: "inbound" as const,
             status: success ? "paid" as const : "failed" as const,
             failedReason,

@@ -203,7 +203,6 @@ export function migrateSubRoutes(app: Elysia) {
                 const [invoice] = await db.insert(memberInvoices).values({
                     description,
                     items: [{
-                        kind: "item",
                         name: productName,
                         quantity: 1,
                         price: chargeDetails.unitCost

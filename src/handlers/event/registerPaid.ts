@@ -62,7 +62,6 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     const { total, feesAmount, tax, subTotal } = chargeDetails;
     const description = `${event.name} - ${ticket.name}`;
     const items = [{
-        kind: "item" as const,
         name: description,
         quantity: 1,
         price: chargeDetails.unitCost,

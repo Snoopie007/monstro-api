@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { Elysia } from "elysia";
 
 const originalFetch = globalThis.fetch;
@@ -13,8 +13,8 @@ const transaction = {
     total: 1250,
     currency: "USD",
     items: [] as Array<{
-        kind?: "item" | "additional_fee";
-        sourceFeeId?: string;
+        feeId?: string;
+        refundable?: boolean;
         name: string;
         quantity: number;
         price: number;
@@ -23,7 +23,7 @@ const transaction = {
     refunded: false,
     refundedAmount: 0,
     paymentIntentId: providerId,
-    invoice: null,
+    invoice: null as { id: string; memberPlanId: string | null } | null,
     metadata: {
         gatewayService: "authorize",
         authorizeIntegrationId: "integration-1",
@@ -36,6 +36,21 @@ type TestTransaction = Omit<typeof transaction, "metadata"> & {
 let activeTransaction: TestTransaction = transaction;
 const updates: Array<Record<string, unknown>> = [];
 let transactionRead = 0;
+const update = mock(() => ({
+    set: mock((values: Record<string, unknown>) => {
+        updates.push(values);
+        return {
+            where: mock(() => ({ returning: mock(async () => [{ id: transaction.id }]) })),
+        };
+    }),
+}));
+const transactionDb = {
+    query: {
+        memberInvoices: { findFirst: mock(async () => ({ id: "invoice-1", metadata: {} })) },
+        memberPackages: { findFirst: mock(async () => undefined) },
+    },
+    update,
+};
 const db = {
     query: {
         transactions: {
@@ -60,16 +75,9 @@ const db = {
         orders: { findFirst: mock(async () => undefined) },
         eventRegistrations: { findFirst: mock(async () => undefined) },
         courseEnrollments: { findFirst: mock(async () => undefined) },
-        additionalFees: { findMany: mock(async () => [{ id: "fee-retained", refundable: false }]) },
     },
-    update: mock(() => ({
-        set: mock((values: Record<string, unknown>) => {
-            updates.push(values);
-            return {
-                where: mock(() => ({ returning: mock(async () => [{ id: transaction.id }]) })),
-            };
-        }),
-    })),
+    update,
+    transaction: mock(async (callback: (tx: typeof transactionDb) => unknown) => callback(transactionDb)),
 };
 
 mock.module("@/db/db", () => ({ db }));
@@ -163,8 +171,8 @@ describe("Standalone transaction refund", () => {
             ...transaction,
             total: 500,
             items: [{
-                kind: "additional_fee",
-                sourceFeeId: "fee-retained",
+                feeId: "fee-retained",
+                refundable: false,
                 name: "Signup fee",
                 quantity: 1,
                 price: 300,
@@ -196,5 +204,47 @@ describe("Standalone transaction refund", () => {
         });
         expect(providerFetch).not.toHaveBeenCalled();
         expect(updates).toHaveLength(0);
+    });
+
+    test("keeps an invoice paid when a full Square refund retains a non-refundable fee", async () => {
+        activeTransaction = {
+            ...transaction,
+            total: 500,
+            items: [{
+                feeId: "fee-retained",
+                refundable: false,
+                name: "Signup fee",
+                quantity: 1,
+                price: 300,
+            }],
+            invoice: { id: "invoice-1", memberPlanId: null },
+            paymentIntentId: "square-payment-1",
+            metadata: {
+                gatewayService: "square",
+                squarePaymentId: "square-payment-1",
+            },
+        };
+        const refundPayment = spyOn(
+            (await import("@/libs/PaymentGateway")).SquarePaymentGateway.prototype,
+            "refundPayment",
+        ).mockResolvedValue({ id: "refund-1", status: "COMPLETED" } as never);
+
+        const response = await app.handle(new Request(
+            `http://localhost/x/loc/location-1/transactions/${transaction.id}/refund`,
+            {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ amountType: "full" }),
+            },
+        ));
+
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(expect.objectContaining({
+            amount: 200,
+            nonRefundableAmount: 300,
+        }));
+        expect(refundPayment).toHaveBeenCalledWith("square-payment-1", 200, "Vendor requested refund");
+        expect(updates.some((values) => values.status === "void" || values.paid === false)).toBe(false);
+        refundPayment.mockRestore();
     });
 });

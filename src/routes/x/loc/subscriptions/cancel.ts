@@ -97,8 +97,7 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                         })
                         : null;
 
-                const refundAmounts = await getRefundAmounts(
-                    lid,
+                const refundAmounts = getRefundAmounts(
                     latestPaidTransaction.total,
                     latestPaidTransaction.items,
                 );

@@ -291,7 +291,8 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 			return status(400, { error: "Cash transactions cannot be refunded through Stripe" });
 		}
 
-		const refundAmounts = await getRefundAmounts(lid, transaction.total, transaction.items);
+		const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
+		const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
 		let refundAmount = refundAmounts.refundableAmount;
 		if (amountType === "partial") {
 			if (typeof amount !== "number" || amount <= 0) {
@@ -365,7 +366,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 					});
 					if (invoice) {
 						await tx.update(memberInvoices).set({
-							...(amountType === "full" ? { status: "void", paid: false } : {}),
+							...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
 							updated: new Date(),
 						}).where(eq(memberInvoices.id, transaction.invoice.id));
 					}
@@ -455,7 +456,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
                 if (invoice) {
                     await tx.update(memberInvoices).set({
-                        ...(amountType === "full" ? { status: "void", paid: false } : {}),
+                        ...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
                         updated: new Date(),
                         metadata: {
                             ...(invoice.metadata || {}),
@@ -574,7 +575,8 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             });
         }
 
-		const refundAmounts = await getRefundAmounts(lid, transaction.total, transaction.items);
+		const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
+		const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
 		let refundAmount = refundAmounts.refundableAmount;
 		if (amountType === "partial") {
 			if (typeof amount !== "number" || amount <= 0) {
@@ -621,7 +623,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
                 if (invoice) {
                     await tx.update(memberInvoices).set({
-                        ...(amountType === "full" ? { status: "void", paid: false } : {}),
+                        ...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
                         updated: new Date(),
                         metadata: {
                             ...(invoice.metadata || {}),

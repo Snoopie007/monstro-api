@@ -102,7 +102,7 @@ export type CalculateChargeDetailsProps = {
 	taxAmount?: number;
 	usagePercent: number;
 	platformFeeBase?: number;
-	additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable">>;
+	additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable" | "refundable">>;
 };
 
 export function calculateChargeDetails(
@@ -142,8 +142,8 @@ export function calculateChargeDetails(
 		additionalFeeTotal += lineAmount;
 		additionalFeeTax += lineTax;
 		additionalFeeLines.push({
-			kind: "additional_fee",
-			sourceFeeId: fee.id,
+			feeId: fee.id,
+			refundable: fee.refundable,
 			name: fee.label,
 			quantity: 1,
 			price: lineAmount,

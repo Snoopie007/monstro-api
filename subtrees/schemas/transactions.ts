@@ -17,7 +17,7 @@ import type { InvoiceItem } from "../types/invoices";
 export const transactions = pgTable("transactions", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('txn_')`),
 	description: text("description"),
-	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
+	items: jsonb("items").array().$type<InvoiceItem[]>().notNull().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
 	feeAmount: integer("fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),

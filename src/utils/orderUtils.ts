@@ -22,7 +22,7 @@ export function calculateOrderTotals(
     variants: Array<Pick<MercVariant, "id" | "name" | "price" | "salePrice">>,
     taxRate: number,
     usagePercent: number,
-    additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable">>,
+    additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable" | "refundable">>,
     promoData?: Pick<Promo, "redemptionCount" | "maxRedemptions" | "type" | "value">,
 ): OrderTotalResult {
     let subtotal = 0;

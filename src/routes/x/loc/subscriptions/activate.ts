@@ -249,7 +249,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         });
 
         const lineItems = [{
-            kind: "item" as const,
             name: planName,
             description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
             quantity: 1,

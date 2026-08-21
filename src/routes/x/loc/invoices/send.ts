@@ -99,7 +99,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
         const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
         const additionalFeeTax = (invoice.items || []).reduce(
-            (total, item) => item.kind === "additional_fee" ? total + (item.tax || 0) : total,
+            (total, item) => item.feeId ? total + (item.tax || 0) : total,
             0,
         );
 

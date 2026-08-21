@@ -24,13 +24,13 @@ test("adds scoped fees without adding Monstro's platform fee to the member total
     [{ id: "variant-1", name: "Gloves", price: 1000, salePrice: null }],
     10,
     5,
-    [{ id: "fee-1", label: "Facility fee", type: "percentage", amount: 500, taxable: true }],
+    [{ id: "fee-1", label: "Facility fee", type: "percentage", amount: 500, taxable: true, refundable: false }],
   )).toMatchObject({
     subtotal: 1000,
     platformFeeAmount: 50,
     additionalFeeTotal: 50,
     tax: 105,
     total: 1155,
-    additionalFeeLines: [{ kind: "additional_fee", sourceFeeId: "fee-1", price: 50, tax: 5 }],
+    additionalFeeLines: [{ feeId: "fee-1", refundable: false, price: 50, tax: 5 }],
   });
 });

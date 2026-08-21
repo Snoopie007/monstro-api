@@ -274,7 +274,6 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         classCredits,
     };
     const items = [{
-        kind: "item" as const,
         name: productName,
         quantity: 1,
         price: chargeDetails.unitCost,

@@ -1,35 +1,23 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-
-const findMany = mock(async () => [
-	{ id: "fee-retained", refundable: false },
-	{ id: "fee-refunded", refundable: true },
-]);
-
-mock.module("@/db/db", () => ({
-	db: { query: { additionalFees: { findMany } } },
-}));
-
-const { getRefundAmounts } = await import("./refunds");
+import { describe, expect, test } from "bun:test";
+import { getRefundAmounts } from "./refunds";
 
 describe("getRefundAmounts", () => {
-	beforeEach(() => mock.clearAllMocks());
-
-	test("retains only fees currently configured as non-refundable, including their tax", async () => {
-		const result = await getRefundAmounts("location-1", 1650, [
+	test("retains only fee lines captured as non-refundable, including their tax", () => {
+		const result = getRefundAmounts(1650, [
 			{ name: "Membership", quantity: 1, price: 1100 },
-			{ kind: "additional_fee", sourceFeeId: "fee-retained", name: "Signup fee", quantity: 1, price: 300, tax: 30 },
-			{ kind: "additional_fee", sourceFeeId: "fee-refunded", name: "Service fee", quantity: 1, price: 200, tax: 20 },
+			{ feeId: "fee-retained", refundable: false, name: "Signup fee", quantity: 1, price: 300, tax: 30 },
+			{ feeId: "fee-refunded", refundable: true, name: "Service fee", quantity: 1, price: 200, tax: 20 },
 		]);
 
 		expect(result).toEqual({ refundableAmount: 1320, nonRefundableAmount: 330 });
 	});
 
-	test("treats charges without fee policies as fully refundable", async () => {
-		const result = await getRefundAmounts("location-1", 500, [
+	test("treats older lines without a refund snapshot as refundable", () => {
+		const result = getRefundAmounts(800, [
 			{ name: "Drop-in", quantity: 1, price: 500 },
+			{ feeId: "legacy-fee", name: "Service fee", quantity: 1, price: 300 },
 		]);
 
-		expect(result).toEqual({ refundableAmount: 500, nonRefundableAmount: 0 });
-		expect(findMany).not.toHaveBeenCalled();
+		expect(result).toEqual({ refundableAmount: 800, nonRefundableAmount: 0 });
 	});
 });

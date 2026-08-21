@@ -145,7 +145,6 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
     };
     const transactionItems = [
         ...lineItems.map((item) => ({
-            kind: "item" as const,
             name: item.productName,
             quantity: item.quantity,
             price: item.unitCost,

@@ -62,7 +62,6 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     additionalFees,
                 });
                 const lineItems = [{
-                    kind: "item" as const,
                     name: sub.pricing.name,
                     description: "Subscription billing period",
                     quantity: 1,
