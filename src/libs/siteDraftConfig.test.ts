@@ -114,6 +114,58 @@ test("materializes, splits, and rebuilds a site template without changing its co
   })).toEqual(config);
 });
 
+test("round trips section image presentation through page settings", () => {
+  const target = {
+    kind: "section",
+    sectionId: "home-hero",
+    slot: "image",
+  };
+  const configured = {
+    ...template,
+    pages: template.pages.map((page) => page.id === "home"
+      ? {
+          ...page,
+          sections: page.sections?.map((section) => ({
+            ...section,
+            presentation: {
+              imageOverrides: [{
+                target,
+                fit: "contain",
+                position: "top",
+              }],
+            },
+          })),
+        }
+      : page),
+  };
+  const config = publishableConfig(configured);
+  const stored = splitSiteConfig(config);
+  const pages = stored.pages.map((page, index) => ({
+    ...page,
+    id: `page-presentation-${index}`,
+  }));
+  const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+  const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+    ...block,
+    pageId: pageIds.get(page.pageKey)!,
+  })));
+
+  expect(stored.pages[0]?.settings).toEqual({
+    header: { mode: "sticky", contrast: "light" },
+    sectionPresentations: {
+      "home-hero": {
+        imageOverrides: [{ target, fit: "contain", position: "top" }],
+      },
+    },
+  });
+  expect(assembleSiteConfig({
+    schemaVersion: stored.schemaVersion,
+    settings: stored.settings,
+    pages,
+    blocks,
+  })).toEqual(config);
+});
+
 test("keeps credentials in stored settings but removes them from public config", () => {
   const credentials = {
     privateIntegrationToken: "pit-private",

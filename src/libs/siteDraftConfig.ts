@@ -51,24 +51,38 @@ export function splitDraftSiteConfig(input: unknown) {
 function splitParsedSiteConfig(
   config: ReturnType<typeof StoredSiteConfigSchema.parse>,
 ) {
-  const pages = config.pages.map((page, position): StoredPageInput => ({
-    pageKey: page.id,
-    path: page.path,
-    kind: page.kind,
-    position,
-    visible: page.visible,
-    metadata: { ...page.metadata },
-    settings: page.header ? { header: page.header } : {},
-    blocks: page.kind === "sections"
-      ? page.sections.map((section, blockPosition): StoredBlockInput => ({
-          blockKey: section.id,
-          type: section.type,
-          position: blockPosition,
-          visible: section.visible,
-          props: { ...section.props },
-        }))
-      : [],
-  }));
+  const pages = config.pages.map((page, position): StoredPageInput => {
+    const sectionPresentations = page.kind === "sections"
+      ? Object.fromEntries(page.sections.flatMap((section) =>
+          "presentation" in section && section.presentation
+            ? [[section.id, section.presentation]]
+            : []
+        ))
+      : {};
+    return {
+      pageKey: page.id,
+      path: page.path,
+      kind: page.kind,
+      position,
+      visible: page.visible,
+      metadata: { ...page.metadata },
+      settings: {
+        ...(page.header ? { header: page.header } : {}),
+        ...(Object.keys(sectionPresentations).length > 0
+          ? { sectionPresentations }
+          : {}),
+      },
+      blocks: page.kind === "sections"
+        ? page.sections.map((section, blockPosition): StoredBlockInput => ({
+            blockKey: section.id,
+            type: section.type,
+            position: blockPosition,
+            visible: section.visible,
+            props: { ...section.props },
+          }))
+        : [],
+    };
+  });
   const { pages: _pages, schemaVersion, ...settings } = config;
   return { config, schemaVersion, settings, pages };
 }
@@ -90,6 +104,12 @@ export function assembleSiteConfig(input: {
     .sort((a, b) => a.position - b.position)
     .map((page) => {
       const header = page.settings.header;
+      const sectionPresentations = page.settings.sectionPresentations;
+      const presentations = sectionPresentations &&
+        typeof sectionPresentations === "object" &&
+        !Array.isArray(sectionPresentations)
+        ? sectionPresentations as JsonRecord
+        : {};
       const base = {
         id: page.pageKey,
         kind: page.kind,
@@ -103,12 +123,16 @@ export function assembleSiteConfig(input: {
         ...base,
         sections: (blocksByPage.get(page.id) ?? [])
           .sort((a, b) => a.position - b.position)
-          .map((block) => ({
-            id: block.blockKey,
-            type: block.type,
-            visible: block.visible,
-            props: block.props,
-          })),
+          .map((block) => {
+            const presentation = presentations[block.blockKey];
+            return {
+              id: block.blockKey,
+              type: block.type,
+              visible: block.visible,
+              ...(presentation === undefined ? {} : { presentation }),
+              props: block.props,
+            };
+          }),
       };
     });
 
