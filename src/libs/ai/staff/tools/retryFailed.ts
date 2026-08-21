@@ -1,9 +1,4 @@
 import { db } from "@/db/db";
-import { paymentQueue } from "@/queues/payments";
-import {
-    resolveGatewayPaymentId,
-    resolveGatewayService,
-} from "@/routes/x/loc/subscriptions/shared";
 import type { ToolArgs, ToolExecutorResult } from "../type";
 import {
     argString,
@@ -110,10 +105,13 @@ export async function executeRetryFailed(args: ToolArgs, lid: string): Promise<T
     }
 
     const unpaid = await db.query.memberSubscriptions.findMany({
-        where: (s, { and: andWhere, eq: eqCol }) => andWhere(
-            eqCol(s.memberId, mid),
-            eqCol(s.locationId, lid),
-            eqCol(s.status, "unpaid"),
+        where: (s, { and, eq, or }) => and(
+            eq(s.memberId, mid),
+            eq(s.locationId, lid),
+            or(
+                eq(s.status, "unpaid"),
+                eq(s.status, "past_due"),
+            ),
         ),
         columns: { id: true },
         with: {

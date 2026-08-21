@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { memberSubscriptions, reservations } from "@subtrees/schemas";
+import { attendances, memberPackages, memberSubscriptions, reservations } from "@subtrees/schemas";
 import { format } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { toZonedTime } from "date-fns-tz";
+import { and, eq, gt, sql } from "drizzle-orm";
 import type { ToolArgs, ToolExecutorResult } from "../type";
 import {
     argString,
@@ -12,11 +12,12 @@ import {
     jsonResult,
     memberFromArgs,
     memberLabel,
+    parseTime,
     pauseAsk,
     pauseClarify,
 } from "../utils";
 
-function parseRefundClassCredit(value: unknown): boolean | null {
+function parseRefund(value: unknown): boolean | null {
     if (typeof value === "boolean") return value;
     const raw = asString(value).toLowerCase();
     if (["refund", "yes", "true", "credit"].includes(raw)) return true;
@@ -24,178 +25,227 @@ function parseRefundClassCredit(value: unknown): boolean | null {
     return null;
 }
 
-function parseReservationArg(value: string) {
-    if (value.startsWith("refund:")) return { reservationId: value.slice(7), refundClassCredit: true as const };
-    if (value.startsWith("keep:")) return { reservationId: value.slice(5), refundClassCredit: false as const };
-    return { reservationId: value, refundClassCredit: null };
+function parseReservationChip(value: string) {
+    if (value.startsWith("refund:")) return { reservationId: value.slice(7), refund: true as const };
+    if (value.startsWith("keep:")) return { reservationId: value.slice(5), refund: false as const };
+    return { reservationId: value, refund: null };
 }
 
-export async function executeCancelSession(args: ToolArgs, locationId: string): Promise<ToolExecutorResult> {
-    let { memberId, name } = memberFromArgs(args);
-    const reservationArg = argString(args, "reservationId", "rid");
-    const undoId = `${reservationArg} ${asString(args.name)}`.match(/undo booking ([A-Za-z0-9_]+)/i)?.[1] || "";
-    const refundChip = [reservationArg, memberId, name, undoId]
-        .map(parseReservationArg)
-        .find((item) => item.refundClassCredit !== null);
-    let reservationId = refundChip?.reservationId || undoId || reservationArg;
-    const refundClassCredit = refundChip?.refundClassCredit
-        ?? parseRefundClassCredit(args.refundClassCredit)
-        ?? (undoId ? true : null);
+function sessionLabel(reservation: { programName: string | null; startOn: Date }, timezone: string) {
+    const local = toZonedTime(reservation.startOn, timezone);
+    return `${reservation.programName || "Session"} · ${format(local, "EEE, MMM d · h:mm a")}`;
+}
+
+function creditKind(reservation: {
+    memberPackageId: string | null;
+    memberSubscription: { pricing: { plan: { classLimitInterval: string | null } | null } | null } | null;
+}) {
+    if (reservation.memberPackageId) return "package" as const;
+    if (reservation.memberSubscription?.pricing?.plan?.classLimitInterval === "term") return "term" as const;
+    return null;
+}
+
+export async function executeCancelSession(args: ToolArgs, lid: string): Promise<ToolExecutorResult> {
+    const { memberId, name } = memberFromArgs(args);
+    const program = asString(args.program);
+    const time = parseTime(asString(args.time));
+    const chip = parseReservationChip(argString(args, "reservationId", "rid"));
+    let reservationId = chip.reservationId;
+    const refund = chip.refund ?? (parseRefund(args.refundClassCredit) === true ? true : null);
 
     const location = await db.query.locations.findFirst({
-        where: (row, { eq: eqLoc }) => eqLoc(row.id, locationId),
+        where: (row, { eq: eqLoc }) => eqLoc(row.id, lid),
         columns: { timezone: true },
     });
     const timezone = location?.timezone || "UTC";
-    const localStart = toZonedTime(new Date(), timezone);
-    localStart.setHours(0, 0, 0, 0);
-    const from = fromZonedTime(localStart, timezone);
+    const now = new Date();
 
-    if (reservationId && refundClassCredit !== null) {
-        const reservation = await db.query.reservations.findFirst({
-            where: (r, { and: andWhere, eq: eqCol }) => andWhere(
-                eqCol(r.id, reservationId),
-                eqCol(r.locationId, locationId),
-                eqCol(r.status, "confirmed"),
-            ),
-            columns: {
-                id: true,
-                sessionId: true,
-                programName: true,
-                startOn: true,
-                memberSubscriptionId: true,
-            },
-        });
-        if (!reservation) {
-            return {
-                content: jsonResult({
-                    ok: false,
-                    error: "That session is not available to cancel.",
-                    ui: actionCard("error", "Couldn't cancel that session — it is no longer available."),
-                }),
-            };
-        }
-
-        await db.transaction(async (tx) => {
-            await tx.update(reservations).set({
-                status: "cancelled_by_vendor",
-                cancelledAt: new Date(),
-                cancelledReason: "Cancelled by staff assistant",
-                updated: new Date(),
-            }).where(and(
-                eq(reservations.id, reservation.id),
-                eq(reservations.locationId, locationId),
-            ));
-
-            if (refundClassCredit && reservation.memberSubscriptionId) {
-                await tx.update(memberSubscriptions).set({
-                    classCredits: sql`${memberSubscriptions.classCredits} + 1`,
-                    updated: new Date(),
-                }).where(eq(memberSubscriptions.id, reservation.memberSubscriptionId));
+    if (!reservationId) {
+        if (!memberId) {
+            if (!name) return pauseAsk("What is the member's first and last name?");
+            const matches = await findMemberByName(lid, name);
+            if (matches.length === 0) {
+                return pauseAsk("I couldn't find that member. What is the first and last name?");
             }
-        });
-
-        const local = toZonedTime(reservation.startOn, timezone);
-        const when = `${format(local, "h:mm a")} ${reservation.programName || "class"}`;
-        return {
-            content: jsonResult({
-                ok: true,
-                status: "cancelled",
-                reservationId: reservation.id,
-                sessionId: reservation.sessionId,
-                refundClassCredit,
-                ui: actionCard(
-                    "success",
-                    `Done. **${when}** has been canceled.`,
-                ),
-            }),
-        };
-    }
-
-    if (reservationId) {
-        const reservation = await db.query.reservations.findFirst({
-            where: (r, { and: andWhere, eq: eqCol }) => andWhere(
-                eqCol(r.id, reservationId),
-                eqCol(r.locationId, locationId),
-                eqCol(r.status, "confirmed"),
-            ),
-            columns: {
-                id: true,
-                programName: true,
-                startOn: true,
-            },
-        });
-        if (reservation) {
-            const local = toZonedTime(reservation.startOn, timezone);
-            const label = `${reservation.programName || "Session"} · ${format(local, "EEE, MMM d · h:mm a")}`;
             return pauseClarify(
-                `Cancel ${label}? Refund the class credit?`,
-                [
-                    { id: `refund:${reservation.id}`, label: "Yes, cancel and refund class credit" },
-                    { id: `keep:${reservation.id}`, label: "Yes, cancel without refund" },
-                ],
+                "Which member did you mean?",
+                matches.map((item) => ({
+                    id: item.id,
+                    label: [memberLabel(item), item.email].filter(Boolean).join(" · "),
+                })),
             );
         }
-        if (!memberId) memberId = reservationId;
-        reservationId = "";
-    }
 
-    if (!memberId) {
-        if (!name) return pauseAsk("What is the member's first and last name?");
+        const upcoming = await db.query.reservations.findMany({
+            where: (r, { and: andWhere, eq: eqCol }) => andWhere(
+                eqCol(r.locationId, lid),
+                eqCol(r.memberId, memberId),
+                eqCol(r.status, "confirmed"),
+                gt(r.startOn, now),
+            ),
+            columns: {
+                id: true,
+                programName: true,
+                startOn: true,
+            },
+            orderBy: (r, { asc }) => asc(r.startOn),
+            limit: 20,
+        });
 
-        const matches = await findMemberByName(locationId, name);
+        const matches = upcoming.filter((item) => {
+            if (program && !item.programName?.toLowerCase().includes(program.toLowerCase())) return false;
+            if (time && format(toZonedTime(item.startOn, timezone), "HH:mm") !== time) return false;
+            return true;
+        });
+
         if (matches.length === 0) {
             return {
                 content: jsonResult({
                     ok: false,
-                    error: "We cannot find this member.",
-                    ui: actionCard("error", "We cannot find this member."),
+                    error: "No upcoming session found",
+                    ui: actionCard(
+                        "error",
+                        program
+                            ? `Couldn't find an upcoming ${program} session to cancel.`
+                            : "This member has no upcoming sessions to cancel.",
+                    ),
                 }),
             };
         }
-        return pauseClarify(
-            matches.length === 1 ? "Is this the right member?" : "Which member did you mean?",
-            matches.map((item) => ({
-                id: item.id,
-                label: [memberLabel(item), item.email].filter(Boolean).join(" · "),
-            })),
-        );
+
+        if (matches.length > 1) {
+            return pauseClarify(
+                "Which session should I cancel?",
+                matches.map((item) => ({
+                    id: item.id,
+                    label: sessionLabel(item, timezone),
+                })),
+            );
+        }
+
+        reservationId = matches[0]!.id;
     }
 
-    const upcoming = await db.query.reservations.findMany({
+    const reservation = await db.query.reservations.findFirst({
         where: (r, { and: andWhere, eq: eqCol }) => andWhere(
-            eqCol(r.locationId, locationId),
-            eqCol(r.memberId, memberId),
+            eqCol(r.id, reservationId),
+            eqCol(r.locationId, lid),
             eqCol(r.status, "confirmed"),
-            gte(r.startOn, from),
         ),
         columns: {
             id: true,
+            sessionId: true,
             programName: true,
+            memberId: true,
             startOn: true,
+            memberSubscriptionId: true,
+            memberPackageId: true,
         },
-        orderBy: (r, { asc }) => asc(r.startOn),
-        limit: 20,
+        with: {
+            attendance: true,
+            memberSubscription: {
+                columns: { id: true },
+                with: {
+                    pricing: {
+                        columns: { id: true },
+                        with: { plan: { columns: { classLimitInterval: true } } },
+                    },
+                },
+            },
+        },
     });
 
-    if (upcoming.length === 0) {
+    if (!reservation) {
         return {
             content: jsonResult({
                 ok: false,
-                error: "This member has no upcoming sessions to cancel.",
-                ui: actionCard("error", "This member has no upcoming sessions to cancel."),
+                error: "That session is not available to cancel.",
+                ui: actionCard("error", "Couldn't cancel that session it is no longer available."),
             }),
         };
     }
 
-    return pauseClarify(
-        "Which session should I cancel?",
-        upcoming.map((item) => {
-            const local = toZonedTime(item.startOn, timezone);
-            return {
-                id: item.id,
-                label: `${item.programName || "Session"} · ${format(local, "EEE, MMM d · h:mm a")}`,
-            };
+    if (reservation.attendance) {
+        return {
+            content: jsonResult({
+                ok: false,
+                error: "Session already attended",
+                ui: actionCard("error", `Couldn't cancel ${sessionLabel(reservation, timezone)}it has already been attended.`),
+            }),
+        };
+    }
+
+    if (reservation.startOn.getTime() <= now.getTime()) {
+        return {
+            content: jsonResult({
+                ok: false,
+                error: "Session already started",
+                ui: actionCard("error", `Couldn't cancel ${sessionLabel(reservation, timezone)} it has already started.`),
+            }),
+        };
+    }
+
+    const refundable = creditKind(reservation);
+    const label = sessionLabel(reservation, timezone);
+
+    if (refund === null) {
+        return pauseClarify(
+            `Cancel ${label}? Refund the class credit?`,
+            [
+                { id: `refund:${reservation.id}`, label: "Yes, cancel and refund class credit" },
+                { id: `keep:${reservation.id}`, label: "Yes, cancel without refund" },
+            ],
+        );
+    }
+
+    await db.transaction(async (tx) => {
+        await tx.update(reservations).set({
+            status: "cancelled_by_vendor",
+            cancelledAt: new Date(),
+            cancelledReason: "Cancelled by staff",
+            updated: new Date(),
+        }).where(and(
+            eq(reservations.id, reservation.id),
+            eq(reservations.locationId, lid),
+        ));
+
+
+        if (!refund) return;
+
+        if (refundable === "package" && reservation.memberPackageId) {
+            await tx.update(memberPackages).set({
+                totalClassAttended: sql`greatest(${memberPackages.totalClassAttended} - 1, 0)`,
+                updated: new Date(),
+            }).where(eq(memberPackages.id, reservation.memberPackageId));
+        }
+
+        if (refundable === "term" && reservation.memberSubscriptionId) {
+            await tx.update(memberSubscriptions).set({
+                classCredits: sql`${memberSubscriptions.classCredits} + 1`,
+                updated: new Date(),
+            }).where(eq(memberSubscriptions.id, reservation.memberSubscriptionId));
+        }
+    });
+
+    const when = `${format(toZonedTime(reservation.startOn, timezone), "h:mm a")} ${reservation.programName || "class"}`;
+    return {
+        content: jsonResult({
+            ok: true,
+            status: "cancelled",
+            reservationId: reservation.id,
+            sessionId: reservation.sessionId,
+            refundClassCredit: refund,
+            ui: actionCard(
+                "success",
+                `Done. ${when} has been canceled.`,
+                "session-cancelled",
+                {
+                    lid,
+                    memberId: reservation.memberId,
+                    sessionId: reservation.sessionId,
+                    reservationId: reservation.id
+                },
+            ),
         }),
-    );
+    };
 }
