@@ -41,7 +41,7 @@ import { taxRates } from "./tax";
 import { transactions } from "./transactions";
 import { userNotifications, users } from "./users";
 import { supportPlans, vendors } from "./vendors";
-import { wallets, walletUsages } from "./wallets";
+import { wallets, walletLedgers } from "./wallets";
 
 // Chat tables
 import {
@@ -384,7 +384,15 @@ export const walletRelations = relations(wallets, ({ one, many }) => ({
 		fields: [wallets.locationId],
 		references: [locations.id],
 	}),
-	usages: many(walletUsages, { relationName: "usages" }),
+	ledgers: many(walletLedgers, { relationName: "ledgers" }),
+}));
+
+export const walletLedgerRelations = relations(walletLedgers, ({ one }) => ({
+	wallet: one(wallets, {
+		fields: [walletLedgers.walletId],
+		references: [wallets.id],
+		relationName: "ledgers",
+	}),
 }));
 
 // ============================================================================
