@@ -11,6 +11,15 @@ const transaction = {
     status: "paid",
     paymentType: "card",
     total: 1250,
+    currency: "USD",
+    items: [] as Array<{
+        kind?: "item" | "additional_fee";
+        sourceFeeId?: string;
+        name: string;
+        quantity: number;
+        price: number;
+        tax?: number;
+    }>,
     refunded: false,
     refundedAmount: 0,
     paymentIntentId: providerId,
@@ -51,6 +60,7 @@ const db = {
         orders: { findFirst: mock(async () => undefined) },
         eventRegistrations: { findFirst: mock(async () => undefined) },
         courseEnrollments: { findFirst: mock(async () => undefined) },
+        additionalFees: { findMany: mock(async () => [{ id: "fee-retained", refundable: false }]) },
     },
     update: mock(() => ({
         set: mock((values: Record<string, unknown>) => {
@@ -148,10 +158,17 @@ describe("Standalone transaction refund", () => {
         expect(updates).toHaveLength(0);
     });
 
-    test("rejects an excessive Square partial refund before calling the provider", async () => {
+    test("rejects a Square partial refund above the refundable amount", async () => {
         activeTransaction = {
             ...transaction,
-            total: 100,
+            total: 500,
+            items: [{
+                kind: "additional_fee",
+                sourceFeeId: "fee-retained",
+                name: "Signup fee",
+                quantity: 1,
+                price: 300,
+            }],
             paymentIntentId: "square-payment-1",
             metadata: {
                 gatewayService: "square",
@@ -168,13 +185,14 @@ describe("Standalone transaction refund", () => {
             {
                 method: "POST",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ amountType: "partial", amount: 200 }),
+                body: JSON.stringify({ amountType: "partial", amount: 300 }),
             },
         ));
 
         expect(response.status).toBe(400);
         expect(await response.json()).toEqual({
-            error: "Refund amount cannot exceed transaction total",
+            error: "Refund amount cannot exceed refundable amount",
+            maximumRefundableAmount: 200,
         });
         expect(providerFetch).not.toHaveBeenCalled();
         expect(updates).toHaveLength(0);

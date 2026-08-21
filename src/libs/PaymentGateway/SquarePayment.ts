@@ -190,6 +190,11 @@ export class SquarePaymentGateway {
                 // TEMP: We only accepting usd for now
                 currency: Currency.Usd,
             },
+            // Monstro's application fee is vendor-side and is never refunded.
+            appFeeMoney: {
+                amount: BigInt(0),
+                currency: Currency.Usd,
+            },
             reason,
         });
         if (!data.refund) {

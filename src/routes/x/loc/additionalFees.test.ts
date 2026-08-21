@@ -16,6 +16,7 @@ const sampleFee = {
 	amount: 500,
 	checkoutTypes: ["package"],
 	taxable: false,
+	refundable: true,
 	active: true,
 	created: new Date("2026-08-20T00:00:00Z"),
 	updated: new Date("2026-08-20T00:00:00Z"),
@@ -90,6 +91,7 @@ describe("Additional fee management", () => {
 				amount: 250,
 				checkoutTypes: ["order", "package", "order"],
 				taxable: true,
+				refundable: false,
 			}),
 		});
 
@@ -102,6 +104,7 @@ describe("Additional fee management", () => {
 			amount: 250,
 			checkoutTypes: ["package", "order"],
 			taxable: true,
+			refundable: false,
 		}));
 	});
 
@@ -118,14 +121,17 @@ describe("Additional fee management", () => {
 		});
 
 		expect(response.status).toBe(201);
-		expect(insertedValues[0]).toEqual(expect.objectContaining({ amount: 15_000 }));
+		expect(insertedValues[0]).toEqual(expect.objectContaining({
+			amount: 15_000,
+			refundable: true,
+		}));
 	});
 
 	test("updates editable fields while retaining existing values", async () => {
 		const response = await request("/fee-1", {
 			method: "PATCH",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ active: false, taxable: true }),
+			body: JSON.stringify({ active: false, taxable: true, refundable: false }),
 		});
 
 		expect(response.status).toBe(200);
@@ -136,6 +142,7 @@ describe("Additional fee management", () => {
 			checkoutTypes: sampleFee.checkoutTypes,
 			active: false,
 			taxable: true,
+			refundable: false,
 		}));
 	});
 

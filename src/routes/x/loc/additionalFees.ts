@@ -27,6 +27,7 @@ const editableFeeFields = {
 	amount: t.Optional(t.Integer({ minimum: 1, maximum: 2_147_483_647 })),
 	checkoutTypes: t.Optional(t.Array(checkoutTypeSchema, { minItems: 1, maxItems: 5 })),
 	taxable: t.Optional(t.Boolean()),
+	refundable: t.Optional(t.Boolean()),
 	active: t.Optional(t.Boolean()),
 };
 
@@ -94,6 +95,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			amount: body.amount,
 			checkoutTypes,
 			taxable: body.taxable ?? false,
+			refundable: body.refundable ?? true,
 			active: body.active ?? true,
 		}).returning();
 
@@ -106,6 +108,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			amount: t.Integer({ minimum: 1, maximum: 2_147_483_647 }),
 			checkoutTypes: t.Array(checkoutTypeSchema, { minItems: 1, maxItems: 5 }),
 			taxable: t.Optional(t.Boolean()),
+			refundable: t.Optional(t.Boolean()),
 			active: t.Optional(t.Boolean()),
 		}),
 	})
@@ -138,6 +141,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 				: {}),
 			...(body.active !== undefined ? { active: body.active } : {}),
 			...(body.taxable !== undefined ? { taxable: body.taxable } : {}),
+			...(body.refundable !== undefined ? { refundable: body.refundable } : {}),
 			updated: new Date(),
 		}).where(
 			and(eq(additionalFees.id, feeId), eq(additionalFees.locationId, lid)),

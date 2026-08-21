@@ -5,6 +5,7 @@ import { memberSubscriptions, transactions } from "@subtrees/schemas";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, desc, eq, sql } from "drizzle-orm";
+import { getRefundAmounts } from "@/utils/refunds";
 
 export async function cancelSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/cancel", async ({ params, body, status }) => {
@@ -24,6 +25,7 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                 transactionId?: string;
                 paymentIntentId?: string;
                 amount?: number;
+                nonRefundableAmount?: number;
             } = { executed: false };
 
             if (refund?.enabled) {
@@ -31,6 +33,8 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                     .select({
                         id: transactions.id,
                         total: transactions.total,
+                        items: transactions.items,
+                        currency: transactions.currency,
                         paymentIntentId: transactions.paymentIntentId,
                         metadata: transactions.metadata,
                     })
@@ -93,10 +97,24 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                         })
                         : null;
 
-                const requestedAmount =
-                    refund.amountType === "partial" && typeof refund.amount === "number"
-                        ? Math.max(0, Math.min(refund.amount, latestPaidTransaction.total))
-                        : latestPaidTransaction.total;
+                const refundAmounts = await getRefundAmounts(
+                    lid,
+                    latestPaidTransaction.total,
+                    latestPaidTransaction.items,
+                );
+                let requestedAmount = refundAmounts.refundableAmount;
+                if (refund.amountType === "partial") {
+                    if (typeof refund.amount !== "number" || refund.amount <= 0) {
+                        return status(400, { error: "Valid amount is required for partial refunds" });
+                    }
+                    if (refund.amount > refundAmounts.refundableAmount) {
+                        return status(400, {
+                            error: "Refund amount cannot exceed refundable amount",
+                            maximumRefundableAmount: refundAmounts.refundableAmount,
+                        });
+                    }
+                    requestedAmount = refund.amount;
+                }
 
                 if (requestedAmount <= 0) {
                     return status(400, { error: "Refund amount must be greater than 0" });
@@ -113,7 +131,7 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                         }
 
                         const stripe = new StripePaymentGateway(integration.accessToken);
-                        await stripe.createRefund(paymentIntentId, requestedAmount, "usd");
+                        await stripe.createRefund(paymentIntentId, requestedAmount, latestPaidTransaction.currency);
                     } else if (integration.service === "square") {
                         const square = new SquarePaymentGateway(integration.accessToken);
                         await square.refundPayment(
@@ -145,6 +163,11 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                     metadata: {
                         ...(latestPaidTransaction.metadata || {}),
                         refundGatewayService: integration.service,
+                        refund: {
+                            amount: requestedAmount,
+                            nonRefundableAmount: refundAmounts.nonRefundableAmount,
+                            refundedAt: new Date().toISOString(),
+                        },
                     },
                     updated: new Date(),
                 }).where(eq(transactions.id, latestPaidTransaction.id));
@@ -154,6 +177,7 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                     transactionId: latestPaidTransaction.id,
                     paymentIntentId,
                     amount: requestedAmount,
+                    nonRefundableAmount: refundAmounts.nonRefundableAmount,
                 };
             }
 
