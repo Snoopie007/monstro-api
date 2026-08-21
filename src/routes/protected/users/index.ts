@@ -5,3 +5,4 @@ export * from './chats';
 export * from './support';
 export * from './notifications';
 export * from './online';
+export * from './groups';

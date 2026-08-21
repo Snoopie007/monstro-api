@@ -1,8 +1,8 @@
 import type {
-    supportAssistants,
-    supportConversations,
-    supportMessages,
-    supportTriggers,
+  supportAssistants,
+  supportConversations,
+  supportMessages,
+  supportTriggers,
 } from "../schemas";
 import type { KnowledgeBase } from "./KnowledgeBase";
 import type { Member } from "./member";
@@ -48,10 +48,10 @@ export type SupportMessage = typeof supportMessages.$inferSelect & {
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
 export type SupportPersona = {
-    name: string;
-    avatar: string;
-    responseStyle: string;
-    personality: string[];
+  name: string;
+  avatar: string;
+  responseStyle: string;
+  personality: string[];
 };
 
 export type SupportTool = {
@@ -62,14 +62,14 @@ export type SupportTool = {
 };
 
 export type SupportMessageRole =
-    | "human"
-    | "ai"
-    | "staff"
-    | "assistant"
-    | "system"
-    | "tool"
-    | "tool_response"
-    | "tool_call";
+  | "human"
+  | "ai"
+  | "staff"
+  | "assistant"
+  | "system"
+  | "tool"
+  | "tool_response"
+  | "tool_call";
 
 // Test Chat API Routes
 export interface TestChatMessage {

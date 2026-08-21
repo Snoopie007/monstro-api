@@ -1,8 +1,13 @@
 import { db } from "@/db/db";
 import { supportAssistants } from "subtrees/schemas";
-import { calculateAICost, chunkedStream, getModel } from "@/libs/ai";
-import { formattedPrompt } from "@/libs/ai/Prompts";
-import { createMockConversation, invokeTestBot } from "@/libs/ai/TestChat";
+import {
+    calculateAICost,
+    chunkedStream,
+    getModel,
+    formattedPrompt,
+    createMockConversation,
+    invokeTestBot
+} from "@/libs/ai/MemberSupport";
 import { getRedisClient } from "@/libs/redis";
 import type {
     SupportConversation,

@@ -55,7 +55,6 @@ test("passes subscription options to the enrollment handler", async () => {
         mid: "member-1",
         paymentMethodId: "payment-method-1",
         priceId: "pricing-1",
-        attemptId: "attempt-1",
         promoId: null,
         paymentType: "card",
         startDate: "2030-01-01T00:00:00.000Z",
@@ -103,12 +102,12 @@ test("accepts the legacy mobile enrollment body", async () => {
     }));
 
     expect(response.status).toBe(200);
-    expect(input).toEqual({
+    expect(input).toEqual(expect.objectContaining({
         lid: "location-1",
         mid: "member-1",
         paymentMethodId: "payment-method-1",
         priceId: "pricing-1",
-        attemptId: expect.any(String),
         paymentType: "card",
-    });
+    }));
+    expect(input).not.toHaveProperty("attemptId");
 });

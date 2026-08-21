@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
 import type { Promo } from "@subtrees/types";
 import {
-    authorizeReferenceIdForTransaction,
     calculateOrderTotals,
     chargeWithGateway,
     CheckoutError,
@@ -9,11 +8,11 @@ import {
     getAdditionalFeesForCheckout,
     getCheckoutContext,
     PaymentChargeError,
-    stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { orders, products, productVariants, transactions } from "@subtrees/schemas";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { generateUUID } from "subtrees/utils";
 
 export type MercCheckoutItem = {
     variantId: string;
@@ -32,31 +31,15 @@ export type MercCheckoutInput = {
 };
 
 export async function handleMercCheckout(input: MercCheckoutInput) {
-    const { lid, mid, items, paymentMethodId, promoId, paymentType = "card", attemptId, quoteOnly = false } = input;
+    const { lid, mid, items, paymentMethodId,
+        promoId, paymentType = "card", attemptId, quoteOnly = false } = input;
     if (!items.length || items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1)) {
         throw new CheckoutError(400, "Invalid items");
     }
 
-    const transactionId = stableCheckoutTransactionId("order", lid, mid, attemptId);
-    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
-    const orderId = `ord_${transactionId.replaceAll("-", "")}`;
-    const existingTransaction = await db.query.transactions.findFirst({
-        where: (tx, { and, eq }) => and(eq(tx.id, transactionId), eq(tx.locationId, lid), eq(tx.memberId, mid)),
-    });
-    if (existingTransaction) {
-        const order = await db.query.orders.findFirst({
-            where: (candidate, { eq }) => eq(candidate.transactionId, transactionId),
-        });
-        if (existingTransaction.status === "paid" && order) return order;
-        if (existingTransaction.status === "pending") throw new CheckoutPendingError(transactionId);
-        if (existingTransaction.status === "failed") {
-            throw new PaymentChargeError(
-                existingTransaction.failedReason || "Payment was declined",
-                existingTransaction.failedCode || "PAYMENT_FAILED",
-            );
-        }
-        throw new Error("Order payment is not complete");
-    }
+    const transactionId = generateUUID('txn_');
+    const orderId = generateUUID('ord_');
+
 
     const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const variants = await db.select({
@@ -137,7 +120,6 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         gatewayService: gateway.service,
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
-            authorizeReferenceId,
         } : {}),
         checkoutKind: "order",
         checkoutAttemptId: attemptId,
@@ -158,13 +140,11 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         gatewayCustomerId,
         paymentMethodId,
         transactionId,
-        authorizeReferenceId,
         paymentType,
         total,
         feesAmount: platformFeeAmount,
         currency,
         description,
-        referenceId: orderId,
         note: `orderId:${orderId}|mid:${mid}|locationId:${lid}`,
         metadata: { memberId: mid, locationId: lid, orderId, transactionId },
     });

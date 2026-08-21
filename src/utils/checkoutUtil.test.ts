@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { authorizeReferenceIdForTransaction, chargeWithGateway } from "./checkoutUtil";
+import { chargeWithGateway } from "./checkoutUtil";
 
 const originalFetch = globalThis.fetch;
 const originalApiUrl = process.env.AUTHORIZE_API_URL;
@@ -39,12 +39,10 @@ describe("chargeWithGateway Authorize.net", () => {
             gatewayCustomerId: "customer-1",
             paymentMethodId: "card-1",
             transactionId: "00000000-0000-4000-8000-000000000001",
-            authorizeReferenceId: "0123456789abcdef0123",
             total: 1250,
             feesAmount: 0,
             currency: "USD",
             description: "Course enrollment",
-            referenceId: "ignored",
             note: "test charge",
             metadata: {},
             paymentType: "card",
@@ -55,15 +53,14 @@ describe("chargeWithGateway Authorize.net", () => {
         expect(result.paymentIntentId).toBe("provider-1");
         expect(result.gatewayMetadata).toEqual(expect.objectContaining({
             gatewayService: "authorize",
-            authorizeTransactionId: "provider-1",
             authorizeAvsResultCode: "Y",
             authorizeCavvResultCode: "2",
         }));
         expect(body?.createTransactionRequest?.transactionRequest?.order?.description)
             .toBe("Course enrollment");
-        expect(body?.createTransactionRequest?.refId).toBe("0123456789abcdef0123");
+        expect(body?.createTransactionRequest?.refId).toBe("00000000-0000-4000-8000-000000000001");
         expect(body?.createTransactionRequest?.transactionRequest?.order?.invoiceNumber)
-            .toBe("0123456789abcdef0123");
+            .toBe("00000000-0000-4000-8000-000000000001");
         expect(body?.createTransactionRequest?.transactionRequest?.transactionType)
             .toBe("authCaptureTransaction");
     });
@@ -85,12 +82,10 @@ describe("chargeWithGateway Authorize.net", () => {
             gatewayCustomerId: "customer-1",
             paymentMethodId: "card-1",
             transactionId: "00000000-0000-4000-8000-000000000002",
-            authorizeReferenceId: "abcdef0123456789abcd",
             total: 1250,
             feesAmount: 0,
             currency: "USD",
             description: "description",
-            referenceId: "reference",
             note: "test charge",
             metadata: {},
             paymentType: "card" as const,
@@ -102,9 +97,9 @@ describe("chargeWithGateway Authorize.net", () => {
         const held = await chargeWithGateway(input);
         expect(held).toMatchObject({
             status: "failed",
-            paymentIntentId: "provider-2",
             failureCode: "4",
         });
+        expect(held).not.toHaveProperty("paymentIntentId");
     });
 
     test("keeps duplicate responses detached from the prior provider transaction", async () => {
@@ -124,12 +119,10 @@ describe("chargeWithGateway Authorize.net", () => {
             gatewayCustomerId: "customer-1",
             paymentMethodId: "card-1",
             transactionId: "00000000-0000-4000-8000-000000000003",
-            authorizeReferenceId: "fedcba9876543210fedc",
             total: 100,
             feesAmount: 0,
             currency: "USD",
             description: "course",
-            referenceId: "reference",
             note: "test charge",
             metadata: {},
             paymentType: "card",
@@ -139,11 +132,4 @@ describe("chargeWithGateway Authorize.net", () => {
         expect(result).not.toHaveProperty("paymentIntentId");
         expect(result.gatewayMetadata).not.toHaveProperty("authorizeTransactionId");
     });
-});
-
-test("creates stable distinct Authorize.net references from local transactions", () => {
-    const first = authorizeReferenceIdForTransaction("txn-1");
-    expect(first).toMatch(/^[a-f0-9]{20}$/);
-    expect(authorizeReferenceIdForTransaction("txn-1")).toBe(first);
-    expect(authorizeReferenceIdForTransaction("txn-2")).not.toBe(first);
 });

@@ -11,8 +11,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { differenceInMilliseconds } from "date-fns";
 import { toZonedTime } from 'date-fns-tz';
-import { checkSubClassCredits, getSessionState, scheduleClassReminderJobs } from "./utils";
-import { chargeWallet } from "@/libs/wallet";
+import { checkSubClassCredits, getSessionState } from "./utils";
 import { triggerFirstBooking } from "@/utils/triggers";
 import { broadcastAchievement } from "@/libs/broadcast";
 
@@ -43,7 +42,7 @@ export async function locationReservations(app: Elysia) {
     app.group('/reservations', (app) => {
         app.post('/', async ({ body, params, status }) => {
             const { lid } = params;
-            const { memberPlanId, session, autoReschedule, plan } = body;
+            const { memberPlanId, session, plan } = body;
             const isPackage = memberPlanId.startsWith("pkg_");
 
             try {
@@ -222,42 +221,12 @@ export async function locationReservations(app: Elysia) {
                 });
 
 
-                // No growth charge 10 cents per reservation
-                const noGrowthPlan = [1, 2].includes(location.locationState?.planId);
-                if (noGrowthPlan) {
-                    chargeWallet({
-                        lid,
-                        vendorId: location.vendorId,
-                        amount: 1000,
-                        description: `Reservation fee for ${session.programName}`,
-                    }).then((charged) => {
-                        if (charged) {
-                            scheduleClassReminderJobs({
-                                lid,
-                                reservationId: reservation.id,
-                                memberPlanId,
-                                member,
-                                location,
-                                session,
-                                plan,
-                                autoReschedule: autoReschedule ?? false,
-                            }).catch((error) => {
-                                console.error("Error scheduling class reminder jobs:", error);
-                            });
-                        }
-                    }).catch((error) => {
-                        console.error("Error charging wallet:", error);
-                        return false;
-                    });
-                }
-
                 if (!ml.onboarded) {
                     triggerFirstBooking({ mid: memberId, lid }).then((achievement) => {
                         if (achievement) {
                             broadcastAchievement(member.userId, achievement)
                         }
-                    }).catch((error) => {
-                    });
+                    })
                 }
                 return status(200, { success: true, data: reservation });
             } catch (err) {
@@ -265,11 +234,15 @@ export async function locationReservations(app: Elysia) {
                 return status(500, { error: err });
             }
         }, ReservationsProps)
-        app.delete('/:rid', async ({ params, status }) => {
+        app.delete('/:rid', async ({ body, params, status }) => {
             const { rid } = params;
+            const refundCredit = body?.refundCredit;
             try {
                 const reservation = await db.query.reservations.findFirst({
                     where: (reservations, { eq }) => eq(reservations.id, rid),
+                    with: {
+                        attendance: true,
+                    }
 
                 })
 
@@ -277,61 +250,72 @@ export async function locationReservations(app: Elysia) {
                     return status(404, { error: "Reservation not found" })
                 }
 
+                if (reservation.attendance) {
+                    return status(200, { success: false, message: "Reservation is already attended" })
+                }
 
                 await db.transaction(async (tx) => {
                     await tx.delete(reservations).where(eq(reservations.id, reservation.id))
-                    if (reservation.memberPackageId) {
-                        // Prevent decrementing below 0
-                        await tx.execute(sql`
-                            UPDATE ${memberPackages}
-                            SET total_class_attended = CASE 
-                                WHEN total_class_attended > 0 THEN total_class_attended - 1
-                                ELSE 0
-                            END
-                            WHERE id = ${reservation.memberPackageId!}
-                        `);
-                    } else {
-                        const sub = await tx.query.memberSubscriptions.findFirst({
+                    if (refundCredit) {
+                        if (reservation.memberPackageId) {
+                            // Prevent decrementing below 0
+                            await tx.execute(sql`
+                                UPDATE ${memberPackages}
+                                SET total_class_attended = CASE
+                                    WHEN total_class_attended > 0 THEN total_class_attended - 1
+                                    ELSE 0
+                                END
+                                WHERE id = ${reservation.memberPackageId!}
+                            `);
+                        } else {
+                            /*
+                              Handle refunding class credits for term-based subscriptions:
+                              For example, if a user subscribes for a total number of classes over a term (e.g., 100 classes paid monthly),
+                              and cancels after attending some classes (e.g., attended 50 and cancels), refund any unused class credits.
+                            */
 
-                            where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, reservation.memberSubscriptionId!),
-                            with: {
-                                pricing: {
-                                    columns: {
-                                        id: true,
-                                    },
-                                    with: {
-                                        plan: {
-                                            columns: {
-                                                id: true,
-                                                classLimitInterval: true,
-                                                totalClassLimit: true,
+                            const sub = await tx.query.memberSubscriptions.findFirst({
+
+                                where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, reservation.memberSubscriptionId!),
+                                with: {
+                                    pricing: {
+                                        columns: {
+                                            id: true,
+                                        },
+                                        with: {
+                                            plan: {
+                                                columns: {
+                                                    id: true,
+                                                    classLimitInterval: true,
+                                                    totalClassLimit: true,
+                                                },
                                             },
                                         },
                                     },
                                 },
-                            },
-                        })
-                        if (!sub) {
-                            throw new Error("Member subscription not found");
-                        }
-                        const { pricing } = sub;
-
-                        if (pricing.plan && pricing.plan.classLimitInterval) {
-                            const limit = pricing.plan.totalClassLimit;
-
-                            if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
-                                // Make sure not to exceed the original classCredits limit
-                                await tx.execute(sql` UPDATE ${memberSubscriptions}
-                                    SET class_credits = 
-                                        CASE 
-                                            WHEN class_credits < ${limit} THEN class_credits + 1
-                                            ELSE class_credits
-                                        END
-                                    WHERE id = ${reservation.memberSubscriptionId!}
-                                `);
+                            })
+                            if (!sub) {
+                                throw new Error("Member subscription not found");
                             }
-                        }
+                            const { pricing } = sub;
 
+                            if (pricing.plan && pricing.plan.classLimitInterval) {
+                                const limit = pricing.plan.totalClassLimit;
+
+                                if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
+                                    // Make sure not to exceed the original classCredits limit
+                                    await tx.execute(sql` UPDATE ${memberSubscriptions}
+                                        SET class_credits =
+                                            CASE
+                                                WHEN class_credits < ${limit} THEN class_credits + 1
+                                                ELSE class_credits
+                                            END
+                                        WHERE id = ${reservation.memberSubscriptionId!}
+                                    `);
+                                }
+                            }
+
+                        }
                     }
                 });
 
@@ -346,14 +330,16 @@ export async function locationReservations(app: Elysia) {
             params: t.Object({
                 lid: t.String(),
                 rid: t.String(),
-            })
+            }),
+            body: t.Optional(t.Object({
+                refundCredit: t.Boolean(),
+            })),
         })
 
         return app;
     })
     return app;
 }
-
 
 
 

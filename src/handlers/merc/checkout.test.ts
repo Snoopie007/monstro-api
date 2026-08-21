@@ -61,7 +61,6 @@ const chargeWithGateway = mock(async () => ({
     gatewayMetadata: {},
 }));
 mock.module("@/utils", () => ({
-    authorizeReferenceIdForTransaction: () => "reference-1",
     calculateOrderTotals: () => ({
         total: 1200,
         discount: 0,
@@ -83,7 +82,6 @@ mock.module("@/utils", () => ({
         gateway: { service: "stripe", integrationId: "integration-1" },
     })),
     PaymentChargeError: CheckoutError,
-    stableCheckoutTransactionId: () => "transaction-1",
 }));
 
 const { handleMercCheckout } = await import("./checkout");
@@ -105,7 +103,7 @@ test("decrements inventory in the paid order transaction", async () => {
         attemptId: "attempt-1",
     });
 
-    expect(order).toEqual(expect.objectContaining({ id: "ord_transaction1" }));
+    expect(order).toEqual(expect.objectContaining({ id: expect.stringMatching(/^ord_/) }));
     expect(stockUpdates).toHaveLength(1);
     expect(stockUpdates[0]).toEqual(expect.objectContaining({ updated: expect.any(Date) }));
     expect(steps).toEqual(["transaction", "stock", "order"]);

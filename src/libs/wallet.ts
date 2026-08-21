@@ -1,450 +1,362 @@
 import { db } from "@/db/db";
 import { VendorStripePayments } from "./stripe";
-import { wallets, walletUsages } from "@subtrees/schemas";
-import { eq, sql } from "drizzle-orm";
+import { wallets, walletLedgers } from "@subtrees/schemas";
+import { eq } from "drizzle-orm";
 
-type ReserveAIBudgetProps = {
-    lid: string;
-    operationId: string;
-    amount: number;
-    description?: string;
-};
+export const RESERVATION_OFFSET = 0.1;
 
-type SettleAIBudgetProps = {
-    lid: string;
-    operationId: string;
-    reservedAmount: number;
-    actualAmount: number;
-    description?: string;
-};
+function applyReservationOffset(amount: number) {
+    const base = Math.max(0, Math.floor(amount));
+    if (!base) return 0;
+    return Math.ceil(base * (1 + RESERVATION_OFFSET));
+}
 
-type RefundAIBudgetProps = {
-    lid: string;
-    operationId: string;
-    reservedAmount: number;
-    reason?: string;
-};
+function needsRecharge(balance: number, threshold: number) {
+    return balance < 0 || balance < threshold;
+}
 
 type WalletMutationResult = {
     ok: boolean;
     reason?: string;
-    available?: number;
-    charged?: number;
-    refunded?: number;
-    shortfall?: number;
 };
 
-type RechargeWalletProps = {
-    lid: string;
-    vendorId: string;
+type LockedWallet = {
+    id: string;
+    balance: number;
     rechargeAmount: number;
+    rechargeThreshold: number;
 };
 
+type ReserveAtomicProps = {
+    amount: number;
+    description: string;
+    id?: string;
+};
 
-async function rechargeWallet({ lid, vendorId, rechargeAmount }: RechargeWalletProps): Promise<boolean> {
-    try {
-        const stripe = new VendorStripePayments();
-        const vendor = await db.query.vendors.findFirst({
-            where: (vendor, { eq }) => eq(vendor.id, vendorId),
-            columns: {
-                stripeCustomerId: true,
-            }
-        });
+type SettleAtomicProps = {
+    ledgerId: string;
+    actualAmount: number;
+};
 
-        if (!vendor || !vendor.stripeCustomerId) {
-            return false;
-        }
+type VoidAtomicProps = {
+    ledgerId: string;
+};
 
-        stripe.setCustomer(vendor.stripeCustomerId);
-
-        await stripe.createPaymentIntent(rechargeAmount, undefined, {
-            description: `Auto-charge USD ${(rechargeAmount / 100).toFixed(2)} was successfully added to wallet.`,
-            metadata: {
-                locationId: lid
-            }
-        });
-
-        // Optionally: Save the payment intent or trigger further DB updates here if needed
-
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-
-
-
-async function hasEnoughBalance({ lid, amount }: { lid: string, amount: number }): Promise<boolean> {
-    try {
-        const res = await db.execute(sql`
-            SELECT (balance > ${amount}) AS ok
-            FROM wallets
-            WHERE location_id = ${lid}
-            LIMIT 1
-        `);
-        const row = (res as unknown as { ok: boolean }[])[0];
-        return row?.ok === true;
-    } catch {
-        return false;
-    }
-}
-
-type ChargeWalletProps = {
-    lid: string;
+type ChargeProps = {
     vendorId: string;
     amount: number;
     description: string;
-}
+};
 
-
-
-async function chargeWallet({ lid, vendorId, amount, description }: ChargeWalletProps): Promise<boolean> {
-    let isCredit = false;
-
-    try {
-        const wallet = await db.query.wallets.findFirst({
-            where: (wallets, { eq }) => eq(wallets.locationId, lid),
-            columns: {
-                id: true,
-                balance: true,
-                credits: true,
-                rechargeAmount: true,
-                rechargeThreshold: true,
-            }
+async function findStripeCustomer(lid: string, vendorId?: string): Promise<string | null> {
+    let resolvedVendorId = vendorId;
+    if (!resolvedVendorId) {
+        const location = await db.query.locations.findFirst({
+            where: (row, { eq }) => eq(row.id, lid),
+            columns: { vendorId: true },
         });
-        if (!wallet) {
-            return false;
-
-        }
-
-        const { balance, credits, rechargeAmount, rechargeThreshold } = wallet;
-
-        // Use credits first, charge the rest to balance if needed
-        let chargeAmount: number;
-        let creditAfterCharge: number;
-
-        if (credits >= amount) {
-            chargeAmount = 0;
-            creditAfterCharge = credits - amount;
-            isCredit = true;
-        } else {
-            chargeAmount = amount - credits;
-            creditAfterCharge = 0;
-        }
-
-        // When charging balance, optionally trigger recharge and check we have enough
-        let newBalance = balance;
-        if (chargeAmount > 0) {
-            if (balance < rechargeThreshold) {
-                await rechargeWallet({ lid, vendorId, rechargeAmount });
-                newBalance = balance + rechargeAmount;
-            }
-            if (newBalance < chargeAmount) {
-                return false;
-            }
-            newBalance = newBalance - chargeAmount;
-        }
-
-        await db.transaction(async (tx) => {
-            await tx.update(wallets).set({
-                balance: newBalance,
-                credits: creditAfterCharge,
-                updated: new Date()
-            }).where(eq(wallets.id, wallet.id))
-
-            await tx.insert(walletUsages).values({
-                walletId: wallet.id,
-                balance: newBalance,
-                amount: amount,
-                isCredit,
-                description,
-                activityDate: new Date()
-            })
-        })
-        return true;
-    } catch {
-        return false;
+        resolvedVendorId = location?.vendorId;
     }
+    if (!resolvedVendorId) return null;
+
+    const vendor = await db.query.vendors.findFirst({
+        where: (row, { eq }) => eq(row.id, resolvedVendorId!),
+        columns: { stripeCustomerId: true },
+    });
+    return vendor?.stripeCustomerId || null;
 }
 
-async function reserveAIBudgetAtomic({ lid, operationId, amount, description }: ReserveAIBudgetProps): Promise<WalletMutationResult> {
-    const reserveAmount = Math.max(0, Math.floor(amount));
-    if (!reserveAmount) {
-        return { ok: true, charged: 0 };
-    }
+export class Wallet {
+    constructor(private readonly lid: string) { }
 
-    try {
-        return await db.transaction(async (tx) => {
-            const rows = await tx.execute(sql`
-                SELECT id, balance, credits
-                FROM wallets
-                WHERE location_id = ${lid}
-                LIMIT 1
-                FOR UPDATE
-            `) as unknown as Array<{ id: string; balance: number; credits: number }>;
+    async charge({ vendorId, amount, description }: ChargeProps): Promise<boolean> {
+        const chargeAmount = Math.max(0, Math.floor(amount));
+        if (!chargeAmount) return true;
 
-            const wallet = rows[0];
-            if (!wallet) {
-                return { ok: false, reason: "WALLET_NOT_FOUND" };
-            }
-
-            const reserveLabel = `AI_RESERVE op:${operationId}`;
-            const existingReserve = await tx.execute(sql`
-                SELECT id, amount
-                FROM wallet_usages
-                WHERE wallet_id = ${wallet.id}
-                  AND description LIKE ${`${reserveLabel}%`}
-                LIMIT 1
-            `) as unknown as Array<{ id: string; amount: number }>;
-
-            if (existingReserve[0]) {
-                return { ok: true, charged: Number(existingReserve[0].amount || reserveAmount) };
-            }
-
-            const startingBalance = Number(wallet.balance || 0);
-            const startingCredits = Number(wallet.credits || 0);
-            const available = startingBalance + startingCredits;
-
-            if (available < reserveAmount) {
-                return { ok: false, reason: "INSUFFICIENT_FUNDS", available };
-            }
-
-            const creditsUsed = Math.min(startingCredits, reserveAmount);
-            const chargeFromBalance = reserveAmount - creditsUsed;
-            const newCredits = startingCredits - creditsUsed;
-            const newBalance = startingBalance - chargeFromBalance;
-
-            await tx.update(wallets).set({
-                balance: newBalance,
-                credits: newCredits,
-                updated: new Date(),
-            }).where(eq(wallets.id, wallet.id));
-
-            await tx.insert(walletUsages).values({
-                walletId: wallet.id,
-                balance: newBalance,
-                amount: reserveAmount,
-                isCredit: chargeFromBalance === 0,
-                description: reserveLabel + (description ? ` ${description}` : ""),
-                activityDate: new Date(),
+        try {
+            const current = await db.query.wallets.findFirst({
+                where: (row, { eq }) => eq(row.locationId, this.lid),
+                columns: {
+                    id: true,
+                    balance: true,
+                    rechargeAmount: true,
+                    rechargeThreshold: true,
+                },
             });
+            if (!current) return false;
 
-            return { ok: true, charged: reserveAmount };
-        });
-    } catch {
-        return { ok: false, reason: "RESERVE_FAILED" };
+            if (needsRecharge(current.balance, current.rechargeThreshold)) {
+                const recharged = await this.recharge(current.rechargeAmount, vendorId);
+                if (!recharged) return false;
+            }
+
+            return await db.transaction(async (tx) => {
+                const wallet = await this.lock(tx);
+                if (!wallet) return false;
+                if (wallet.balance < chargeAmount) return false;
+
+                const newBalance = wallet.balance - chargeAmount;
+                await tx.update(wallets).set({
+                    balance: newBalance,
+                    updated: new Date(),
+                }).where(eq(wallets.id, wallet.id));
+
+                await tx.insert(walletLedgers).values({
+                    walletId: wallet.id,
+                    type: "usage",
+                    description,
+                    amount: chargeAmount,
+                    balance: newBalance,
+                    activityDate: new Date(),
+                });
+
+                return true;
+            });
+        } catch {
+            return false;
+        }
     }
-}
 
-async function settleAIBudgetAtomic({ lid, operationId, reservedAmount, actualAmount, description }: SettleAIBudgetProps): Promise<WalletMutationResult> {
-    const reserve = Math.max(0, Math.floor(reservedAmount));
-    const actual = Math.max(0, Math.floor(actualAmount));
+    async reserveAtomic({ amount, description, id }: ReserveAtomicProps): Promise<WalletMutationResult> {
+        const reserveAmount = applyReservationOffset(amount);
+        if (!reserveAmount) {
+            return { ok: true };
+        }
 
-    try {
-        return await db.transaction(async (tx) => {
-            const rows = await tx.execute(sql`
-                SELECT id, balance, credits
-                FROM wallets
-                WHERE location_id = ${lid}
-                LIMIT 1
-                FOR UPDATE
-            `) as unknown as Array<{ id: string; balance: number; credits: number }>;
-
-            const wallet = rows[0];
-            if (!wallet) {
-                return { ok: false, reason: "WALLET_NOT_FOUND" };
-            }
-
-            const settleLabel = `AI_SETTLE op:${operationId}`;
-            const existingSettle = await tx.execute(sql`
-                SELECT id
-                FROM wallet_usages
-                WHERE wallet_id = ${wallet.id}
-                  AND description LIKE ${`${settleLabel}%`}
-                LIMIT 1
-            `) as unknown as Array<{ id: string }>;
-
-            if (existingSettle[0]) {
-                return { ok: true, charged: actual };
-            }
-
-            const reserveLabel = `AI_RESERVE op:${operationId}`;
-            const reserveExists = await tx.execute(sql`
-                SELECT id
-                FROM wallet_usages
-                WHERE wallet_id = ${wallet.id}
-                  AND description LIKE ${`${reserveLabel}%`}
-                LIMIT 1
-            `) as unknown as Array<{ id: string }>;
-
-            if (!reserveExists[0]) {
-                return { ok: false, reason: "RESERVE_NOT_FOUND" };
-            }
-
-            let balance = Number(wallet.balance || 0);
-            let credits = Number(wallet.credits || 0);
-            let refunded = 0;
-            let charged = reserve;
-            let shortfall = 0;
-
-            if (actual < reserve) {
-                refunded = reserve - actual;
-                balance += refunded;
-                charged = actual;
-            } else if (actual > reserve) {
-                const extra = actual - reserve;
-                const available = balance + credits;
-                if (available >= extra) {
-                    const creditsUsed = Math.min(credits, extra);
-                    const fromBalance = extra - creditsUsed;
-                    credits -= creditsUsed;
-                    balance -= fromBalance;
-                    charged = actual;
-
-                    await tx.insert(walletUsages).values({
-                        walletId: wallet.id,
-                        balance,
-                        amount: extra,
-                        isCredit: fromBalance === 0,
-                        description: `AI_TOPUP op:${operationId}`,
-                        activityDate: new Date(),
-                    });
-                } else {
-                    shortfall = extra - available;
-                    charged = reserve + available;
-                    balance = 0;
-                    credits = 0;
-
-                    if (available > 0) {
-                        await tx.insert(walletUsages).values({
-                            walletId: wallet.id,
-                            balance,
-                            amount: available,
-                            isCredit: false,
-                            description: `AI_PARTIAL_TOPUP op:${operationId}`,
-                            activityDate: new Date(),
-                        });
-                    }
+        try {
+            if (id) {
+                const existing = await db.query.walletLedgers.findFirst({
+                    where: (row, { eq }) => eq(row.id, id),
+                    columns: { id: true },
+                });
+                if (existing) {
+                    return { ok: true };
                 }
             }
 
-            await tx.update(wallets).set({
-                balance,
-                credits,
-                updated: new Date(),
-            }).where(eq(wallets.id, wallet.id));
-
-            if (refunded > 0) {
-                await tx.insert(walletUsages).values({
-                    walletId: wallet.id,
-                    balance,
-                    amount: refunded,
-                    isCredit: true,
-                    description: `AI_REFUND op:${operationId}`,
-                    activityDate: new Date(),
-                });
-            }
-
-            await tx.insert(walletUsages).values({
-                walletId: wallet.id,
-                balance,
-                amount: charged,
-                isCredit: false,
-                description: settleLabel + (description ? ` ${description}` : "") + (shortfall > 0 ? ` shortfall:${shortfall}` : ""),
-                activityDate: new Date(),
+            const current = await db.query.wallets.findFirst({
+                where: (row, { eq }) => eq(row.locationId, this.lid),
+                columns: {
+                    id: true,
+                    balance: true,
+                    rechargeAmount: true,
+                    rechargeThreshold: true,
+                },
             });
-
-            return { ok: shortfall === 0, charged, refunded, shortfall };
-        });
-    } catch {
-        return { ok: false, reason: "SETTLE_FAILED" };
-    }
-}
-
-async function refundAIBudgetAtomic({ lid, operationId, reservedAmount, reason }: RefundAIBudgetProps): Promise<WalletMutationResult> {
-    const reserve = Math.max(0, Math.floor(reservedAmount));
-    if (!reserve) {
-        return { ok: true, refunded: 0 };
-    }
-
-    try {
-        return await db.transaction(async (tx) => {
-            const rows = await tx.execute(sql`
-                SELECT id, balance
-                FROM wallets
-                WHERE location_id = ${lid}
-                LIMIT 1
-                FOR UPDATE
-            `) as unknown as Array<{ id: string; balance: number }>;
-
-            const wallet = rows[0];
-            if (!wallet) {
+            if (!current) {
                 return { ok: false, reason: "WALLET_NOT_FOUND" };
             }
 
-            const settleLabel = `AI_SETTLE op:${operationId}`;
-            const existingSettle = await tx.execute(sql`
-                SELECT id
-                FROM wallet_usages
-                WHERE wallet_id = ${wallet.id}
-                  AND description LIKE ${`${settleLabel}%`}
-                LIMIT 1
-            `) as unknown as Array<{ id: string }>;
-            if (existingSettle[0]) {
-                return { ok: true, refunded: 0 };
+            if (reserveAmount >= current.rechargeThreshold) {
+                return { ok: false, reason: "RESERVE_EXCEEDS_THRESHOLD" };
             }
 
-            const refundLabel = `AI_RESERVE_REFUND op:${operationId}`;
-            const existingRefund = await tx.execute(sql`
-                SELECT id
-                FROM wallet_usages
-                WHERE wallet_id = ${wallet.id}
-                  AND description LIKE ${`${refundLabel}%`}
-                LIMIT 1
-            `) as unknown as Array<{ id: string }>;
-            if (existingRefund[0]) {
-                return { ok: true, refunded: reserve };
+            if (needsRecharge(current.balance, current.rechargeThreshold)) {
+                const recharged = await this.recharge(current.rechargeAmount);
+                if (!recharged) {
+                    return { ok: false, reason: "RECHARGE_FAILED" };
+                }
             }
 
-            const reserveLabel = `AI_RESERVE op:${operationId}`;
-            const reserveExists = await tx.execute(sql`
-                SELECT id
-                FROM wallet_usages
-                WHERE wallet_id = ${wallet.id}
-                  AND description LIKE ${`${reserveLabel}%`}
-                LIMIT 1
-            `) as unknown as Array<{ id: string }>;
-            if (!reserveExists[0]) {
-                return { ok: true, refunded: 0 };
-            }
+            return await db.transaction(async (tx) => {
+                const wallet = await this.lock(tx);
+                if (!wallet) {
+                    return { ok: false, reason: "WALLET_NOT_FOUND" };
+                }
 
-            const newBalance = Number(wallet.balance || 0) + reserve;
-            await tx.update(wallets).set({
-                balance: newBalance,
-                updated: new Date(),
-            }).where(eq(wallets.id, wallet.id));
+                if (id) {
+                    const existing = await tx.query.walletLedgers.findFirst({
+                        where: (row, { eq }) => eq(row.id, id),
+                        columns: { id: true },
+                    });
+                    if (existing) {
+                        return { ok: true };
+                    }
+                }
 
-            await tx.insert(walletUsages).values({
-                walletId: wallet.id,
-                balance: newBalance,
-                amount: reserve,
-                isCredit: true,
-                description: refundLabel + (reason ? ` ${reason}` : ""),
-                activityDate: new Date(),
+                if (reserveAmount >= wallet.rechargeThreshold) {
+                    return { ok: false, reason: "RESERVE_EXCEEDS_THRESHOLD" };
+                }
+
+                const newBalance = wallet.balance - reserveAmount;
+                const now = new Date();
+                await tx.update(wallets).set({
+                    balance: newBalance,
+                    updated: now,
+                }).where(eq(wallets.id, wallet.id));
+
+                await tx.insert(walletLedgers).values({
+                    ...(id ? { id } : {}),
+                    walletId: wallet.id,
+                    type: "reserved",
+                    description,
+                    amount: reserveAmount,
+                    balance: newBalance,
+                    activityDate: now,
+                });
+
+                return { ok: true };
+            });
+        } catch {
+            return { ok: false, reason: "RESERVE_FAILED" };
+        }
+    }
+
+    async settleAtomic({ ledgerId, actualAmount }: SettleAtomicProps): Promise<WalletMutationResult> {
+        const actual = Math.max(0, Math.floor(actualAmount));
+
+        try {
+            return await db.transaction(async (tx) => {
+                const wallet = await this.lock(tx);
+                if (!wallet) {
+                    return { ok: false, reason: "WALLET_NOT_FOUND" };
+                }
+
+                const ledger = await tx.query.walletLedgers.findFirst({
+                    where: (row, { eq }) => eq(row.id, ledgerId),
+                });
+                if (!ledger) {
+                    return { ok: false, reason: "RESERVE_NOT_FOUND" };
+                }
+                if (ledger.type === "usage") {
+                    return { ok: true };
+                }
+                if (ledger.type !== "reserved") {
+                    return { ok: false, reason: "RESERVE_NOT_FOUND" };
+                }
+
+                const reserved = Number(ledger.amount || 0);
+                let balance = wallet.balance;
+                let charged = reserved;
+
+                if (actual < reserved) {
+                    charged = actual;
+                    balance += reserved - actual;
+                } else if (actual > reserved) {
+                    charged = actual;
+                    balance -= actual - reserved;
+                }
+
+                await tx.update(wallets).set({
+                    balance,
+                    updated: new Date(),
+                }).where(eq(wallets.id, wallet.id));
+
+                await tx.update(walletLedgers).set({
+                    type: "usage",
+                    amount: charged,
+                    balance,
+                }).where(eq(walletLedgers.id, ledger.id));
+
+                return { ok: true };
+            });
+        } catch {
+            return { ok: false, reason: "SETTLE_FAILED" };
+        }
+    }
+
+    async voidAtomic({ ledgerId }: VoidAtomicProps): Promise<WalletMutationResult> {
+        if (!ledgerId) {
+            return { ok: true };
+        }
+
+        try {
+            return await db.transaction(async (tx) => {
+                const wallet = await this.lock(tx);
+                if (!wallet) {
+                    return { ok: false, reason: "WALLET_NOT_FOUND" };
+                }
+
+                const ledger = await tx.query.walletLedgers.findFirst({
+                    where: (row, { eq }) => eq(row.id, ledgerId),
+                });
+                if (!ledger) {
+                    return { ok: true };
+                }
+                if (ledger.type !== "reserved") {
+                    return { ok: true };
+                }
+
+                const reserved = Number(ledger.amount || 0);
+                const newBalance = wallet.balance + reserved;
+                await tx.update(wallets).set({
+                    balance: newBalance,
+                    updated: new Date(),
+                }).where(eq(wallets.id, wallet.id));
+
+                await tx.delete(walletLedgers).where(eq(walletLedgers.id, ledger.id));
+
+                return { ok: true, refunded: reserved, id: ledger.id };
+            });
+        } catch {
+            return { ok: false, reason: "VOID_FAILED" };
+        }
+    }
+
+    private async recharge(rechargeAmount: number, vendorId?: string): Promise<boolean> {
+        const amount = Math.max(0, Math.floor(rechargeAmount));
+        if (!amount) return false;
+
+        try {
+            const stripeCustomerId = await findStripeCustomer(this.lid, vendorId);
+            if (!stripeCustomerId) return false;
+
+            const stripe = new VendorStripePayments();
+            stripe.setCustomer(stripeCustomerId);
+            await stripe.createPaymentIntent(amount, undefined, {
+                description: `Auto-charge USD ${(amount / 100).toFixed(2)} was successfully added to wallet.`,
+                metadata: {
+                    locationId: this.lid,
+                },
             });
 
-            return { ok: true, refunded: reserve };
-        });
-    } catch {
-        return { ok: false, reason: "REFUND_FAILED" };
-    }
-}
+            return await db.transaction(async (tx) => {
+                const wallet = await this.lock(tx);
+                if (!wallet) return false;
 
-export {
-    hasEnoughBalance,
-    chargeWallet,
-    reserveAIBudgetAtomic,
-    settleAIBudgetAtomic,
-    refundAIBudgetAtomic,
+                const newBalance = wallet.balance + amount;
+                const now = new Date();
+                await tx.update(wallets).set({
+                    balance: newBalance,
+                    lastCharged: now,
+                    updated: now,
+                }).where(eq(wallets.id, wallet.id));
+
+                await tx.insert(walletLedgers).values({
+                    walletId: wallet.id,
+                    type: "credit",
+                    description: `Auto-charge USD ${(amount / 100).toFixed(2)} was successfully added to wallet.`,
+                    amount,
+                    balance: newBalance,
+                    activityDate: now,
+                });
+
+                return true;
+            });
+        } catch {
+            return false;
+        }
+    }
+
+    private async lock(tx: Parameters<Parameters<typeof db.transaction>[0]>[0]): Promise<LockedWallet | null> {
+        const [row] = await tx
+            .select({
+                id: wallets.id,
+                balance: wallets.balance,
+                rechargeAmount: wallets.rechargeAmount,
+                rechargeThreshold: wallets.rechargeThreshold,
+            })
+            .from(wallets)
+            .where(eq(wallets.locationId, this.lid))
+            .limit(1)
+            .for("update");
+
+        if (!row) return null;
+        return {
+            id: row.id,
+            balance: Number(row.balance || 0),
+            rechargeAmount: Number(row.rechargeAmount || 0),
+            rechargeThreshold: Number(row.rechargeThreshold || 0),
+        };
+    }
 }

@@ -1,10 +1,12 @@
 import { db } from "@/db/db";
 import { supportConversations, supportMessages } from "@subtrees/schemas";
-import { calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory, getModel } from "@/libs/ai";
-import { ToolFunctions } from "@/libs/ai/FNHandler";
-import { formattedPrompt } from "@/libs/ai/Prompts";
+import {
+    calculateAICost, DEFAULT_SUPPORT_TOOLS,
+    formatHistory, getModel, ToolFunctions,
+    formattedPrompt
+} from "@/libs/ai/MemberSupport";
 import { broadcastSupportMessage, formatSupportMessagePayload } from "@/libs/broadcast";
-import { chargeWallet, hasEnoughBalance } from "@/libs/wallet";
+import { Wallet } from "@/libs/wallet";
 import type {
     MemberLocation, NewSupportMessage,
     SupportConversation, SupportMessage
@@ -66,17 +68,19 @@ export async function supportMessagesRoute(app: Elysia) {
                 limit: 20,
             });
 
+            const wallet = new Wallet(lid);
             const model = getModel(conversation.assistant.model, async (output) => {
                 const usage = output.llmOutput?.tokenUsage;
-                if (usage) {
-                    const cost = calculateAICost(usage, conversation.assistant.model);
-                    await hasEnoughBalance({ lid, amount: cost });
-                    await chargeWallet({
-                        lid,
-                        vendorId: ml.location.vendorId,
-                        amount: cost,
-                        description: `AI Support: ${cost}`,
-                    });
+                if (!usage) return;
+
+                const cost = calculateAICost(usage, conversation.assistant.model);
+                const charged = await wallet.charge({
+                    vendorId: ml.location.vendorId,
+                    amount: cost,
+                    description: "AI Support",
+                });
+                if (!charged) {
+                    console.warn("Support wallet charge failed", { lid, cid, cost });
                 }
             });
 

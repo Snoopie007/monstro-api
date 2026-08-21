@@ -1,12 +1,11 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { and, eq, inArray } from "drizzle-orm";
-import { memberPlans, memberPlanPricing, locations } from "@subtrees/schemas";
+import { calculateAICost } from "@/libs/ai/AI";
 import { analyzeCsvMigration, type PricingPlanInput } from "@/libs/migrate";
-import { calculateAICost } from "@/libs/ai";
-import { chargeWallet } from "@/libs/wallet";
+import { Wallet } from "@/libs/wallet";
+import { memberPlans, memberPlanPricing } from "@subtrees/schemas";
+import { and, eq, inArray } from "drizzle-orm";
 
-const MIN_ANALYZE_WALLET_UNITS = 1;
 const MIGRATION_MODEL = "gpt-4o-mini";
 
 type AnalyzeBody = {
@@ -27,29 +26,17 @@ export const migrationAnalyze = new Elysia()
             return status(400, { error: "CSV data is empty" });
         }
 
-        const wallet = await db.query.wallets.findFirst({
-            where: (wallets, { eq }) => eq(wallets.locationId, lid),
-            columns: {
-                balance: true,
-                credits: true,
-            },
+        const location = await db.query.locations.findFirst({
+            where: (row, { eq }) => eq(row.id, lid),
+            columns: { vendorId: true },
         });
-
-        if (!wallet) {
-            return status(404, {
-                error: "Wallet not found for this location",
-                code: "WALLET_NOT_FOUND",
-            });
+        if (!location) {
+            return status(404, { error: "Location not found" });
         }
-
-        const available = wallet.balance + wallet.credits;
-        if (available < MIN_ANALYZE_WALLET_UNITS) {
-            return status(402, {
-                error: "Insufficient wallet balance for AI analysis",
-                code: "WALLET_INSUFFICIENT",
-                required: MIN_ANALYZE_WALLET_UNITS,
-                available,
-                shortfall: MIN_ANALYZE_WALLET_UNITS - available,
+        if (!location.vendorId) {
+            return status(422, {
+                error: "Location vendor is required to analyze CSV",
+                code: "MISSING_VENDOR",
             });
         }
 
@@ -96,31 +83,18 @@ export const migrationAnalyze = new Elysia()
                 availablePricingPlans,
             });
 
-            const location = await db.query.locations.findFirst({
-                where: eq(locations.id, lid),
-                columns: {
-                    vendorId: true,
-                },
-            });
-
-            const usage = result.usage;
-            const walletCharge = usage
-                ? calculateAICost(usage, MIGRATION_MODEL)
-                : MIN_ANALYZE_WALLET_UNITS;
-
-            if (walletCharge > 0) {
-                const charged = await chargeWallet({
-                    lid,
-                    vendorId: location?.vendorId || "",
-                    amount: walletCharge,
-                    description: "CSV migration AI analysis",
+            if (result.usage) {
+                const cost = Math.max(1, calculateAICost(result.usage, MIGRATION_MODEL));
+                const wallet = new Wallet(lid);
+                const charged = await wallet.charge({
+                    vendorId: location.vendorId,
+                    amount: cost,
+                    description: `CSV migration analysis`,
                 });
-
                 if (!charged) {
                     return status(402, {
-                        error: "Insufficient wallet balance to charge AI analysis",
+                        error: "Insufficient wallet funds for migration analysis",
                         code: "WALLET_CHARGE_FAILED",
-                        required: walletCharge,
                     });
                 }
             }
