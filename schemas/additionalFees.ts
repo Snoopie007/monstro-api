@@ -40,6 +40,7 @@ export const additionalFees = pgTable(
 			.array()
 			.notNull(),
 		taxable: boolean("taxable").notNull().default(false),
+		refundable: boolean("refundable").notNull().default(true),
 		active: boolean("active").notNull().default(true),
 		created: timestamp("created_at", { withTimezone: true })
 			.notNull()
