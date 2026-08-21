@@ -5,7 +5,7 @@ import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { and, eq } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
-import { getCurrency } from "@/utils";
+import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
@@ -25,6 +25,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                 location: {
                     with: {
                         taxRates: true,
+                        locationState: true,
                     },
                     columns: {
                         country: true,
@@ -53,12 +54,19 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             });
 
             if (!existingDraft) {
+                const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
+                const chargeDetails = calculateChargeDetails({
+                    amount: sub.pricing.price,
+                    taxRate: 0,
+                    usagePercent: sub.location.locationState?.usagePercent ?? 0,
+                    additionalFees,
+                });
                 const lineItems = [{
                     name: sub.pricing.name,
                     description: "Subscription billing period",
                     quantity: 1,
-                    price: sub.pricing.price,
-                }];
+                    price: chargeDetails.unitCost,
+                }, ...chargeDetails.additionalFeeLines];
 
                 const currency = getCurrency(sub.location.country);
                 const [invoice] = await db.insert(memberInvoices).values({
@@ -67,9 +75,9 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     memberPlanId: sid,
                     description: `${sub.pricing.name} - Billing Period`,
                     items: lineItems,
-                    subTotal: sub.pricing.price,
-                    total: sub.pricing.price,
-                    tax: 0,
+                    subTotal: chargeDetails.subTotal,
+                    total: chargeDetails.total,
+                    tax: chargeDetails.tax,
                     currency: currency || "usd",
                     status: "draft",
                     dueDate: new Date(sub.currentPeriodEnd),
@@ -91,9 +99,11 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                         type: "inbound",
                         status: "failed",
                         paymentType: "cash",
-                        total: sub.pricing.price,
-                        subTotal: sub.pricing.price,
-                        tax: 0,
+                        total: chargeDetails.total,
+                        subTotal: chargeDetails.subTotal,
+                        tax: chargeDetails.tax,
+                        feeAmount: chargeDetails.feesAmount,
+                        items: lineItems,
                         currency: currency || "usd",
                     }).returning({ id: transactions.id });
                     assert(transaction);

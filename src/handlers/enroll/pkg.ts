@@ -9,6 +9,7 @@ import {
     triggerPurchase,
     fetchPromoDiscount,
     calculateThresholdDate,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
     type ChargeWithGatewayResult,
 } from "@/utils";
@@ -30,7 +31,7 @@ export type EnrollPkgInput = {
 };
 
 export async function handleEnrollPackage(props: EnrollPkgInput) {
-    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit } = props;
+    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit, quoteOnly = false } = props;
     const transactionId = generateUUID('txn_');
 
 
@@ -70,7 +71,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         }
     }
 
-    const { settings, usagePercent, currency } = locationState;
+    const { usagePercent, currency } = locationState;
     const signedWaiverId = ml.signedWaiverId;
     if (signedWaiverId) {
         if (!waiverId) {
@@ -100,17 +101,26 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
     const productName = `${pricing.plan.name}/${pricing.name}`;
     const description = `Payment for ${productName}`;
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "package");
     const chargeDetails = calculateChargeDetails({
         amount: pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
         usagePercent: usagePercent || 0,
-        paymentType,
-        isRecurring: false,
-        passOnFees: settings?.passOnFees || false,
+        additionalFees,
     });
-
-
+    // TODO: Reconcile quoteOnly with the Sites GET /api/enroll proxy before changing this early return.
+    if (quoteOnly) {
+        return {
+            baseAmount: pricing.price,
+            discount,
+            tax: chargeDetails.tax,
+            fees: chargeDetails.additionalFeeTotal,
+            additionalFeeLines: chargeDetails.additionalFeeLines,
+            total: chargeDetails.total,
+            currency,
+        };
+    }
     const packageStart = startDate ? new Date(startDate) : new Date();
     if (Number.isNaN(packageStart.getTime())) throw new CheckoutError(400, "Invalid package start date");
     const endDate = expireDate
@@ -129,7 +139,12 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         } : {}),
         checkoutKind: "package",
     };
-
+    const items = [{
+        name: productName,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        discount,
+    }, ...chargeDetails.additionalFeeLines];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
@@ -157,6 +172,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     subTotal: chargeDetails.subTotal,
                     tax: chargeDetails.tax,
                     feeAmount: chargeDetails.feesAmount,
+                    items,
                     description,
                     type: "inbound",
                     status: "paid",
@@ -191,12 +207,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 const [invoice] = await tx.insert(memberInvoices).values({
                     ...chargeDetails,
                     description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
+                    items,
                     memberId: mid,
                     locationId: lid,
                     memberPlanId: pkg.id,
@@ -234,6 +245,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 subTotal: chargeDetails.subTotal,
                 tax: chargeDetails.tax,
                 feeAmount: chargeDetails.feesAmount,
+                items,
                 description,
                 type: "inbound",
                 status: "failed",

@@ -1,6 +1,6 @@
-import type { OrderLineItem, Promo } from "@subtrees/types";
+import type { AdditionalFee, InvoiceItem, OrderLineItem, Promo } from "@subtrees/types";
 
-import { calculateGatewayFeeAmount } from "./enrollUtils";
+import { calculateChargeDetails } from "./enrollUtils";
 import type { MercVariant } from "@subtrees/types/mercs";
 type OrderItems = {
     variantId: string;
@@ -9,24 +9,24 @@ type OrderItems = {
 
 type OrderTotalResult = {
     total: number;
-    feesAmount: number;
+    platformFeeAmount: number;
     tax: number;
     subtotal: number;
     discount: number;
-    processingFee: number;
+    additionalFeeTotal: number;
+    additionalFeeLines: InvoiceItem[];
     lineItems: OrderLineItem[];
 }
 export function calculateOrderTotals(
     items: OrderItems[],
     variants: Array<Pick<MercVariant, "id" | "name" | "price" | "salePrice">>,
     taxRate: number,
-    passOnFees: boolean,
     usagePercent: number,
+    additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable" | "refundable">>,
     promoData?: Pick<Promo, "redemptionCount" | "maxRedemptions" | "type" | "value">,
 ): OrderTotalResult {
     let subtotal = 0;
     let tax = 0;
-    let total = 0;
     const itemsWithTax: OrderLineItem[] = [];
     for (const item of items) {
         const variant = variants.find((variant) => variant.id === item.variantId);
@@ -38,7 +38,6 @@ export function calculateOrderTotals(
         subtotal += lineSubtotal;
         const totalTax = Math.floor((lineSubtotal * taxRate) / 100);
         tax += totalTax;
-        total += lineSubtotal + totalTax;
         itemsWithTax.push({
             variantId: variant.id,
             quantity: item.quantity,
@@ -61,23 +60,24 @@ export function calculateOrderTotals(
         }
     }
 
-    if (discount > 0) {
-        total -= discount;
-    }
+    const chargeDetails = calculateChargeDetails({
+        amount: subtotal,
+        discount,
+        taxRate,
+        taxAmount: tax,
+        usagePercent,
+        platformFeeBase: subtotal,
+        additionalFees,
+    });
 
-    const processingFee = calculateGatewayFeeAmount(subtotal, 'card', false);
-
-    if (passOnFees) {
-
-        total += processingFee;
-    }
-
-    const feesAmount = Math.floor((subtotal * usagePercent) / 100);
-    if (usagePercent > 0) {
-
-        total += feesAmount;
-    }
-
-    return { total, lineItems: itemsWithTax, discount, feesAmount, tax, subtotal, processingFee };
+    return {
+        total: chargeDetails.total,
+        lineItems: itemsWithTax,
+        discount,
+        platformFeeAmount: chargeDetails.feesAmount,
+        tax: chargeDetails.tax,
+        subtotal,
+        additionalFeeTotal: chargeDetails.additionalFeeTotal,
+        additionalFeeLines: chargeDetails.additionalFeeLines,
+    };
 }
-

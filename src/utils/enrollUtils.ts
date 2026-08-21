@@ -1,12 +1,7 @@
-import type { PaymentType, ChargeDetails } from "@subtrees/types";
+import type { AdditionalFee, ChargeDetails, InvoiceItem } from "@subtrees/types";
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
 import { db } from "@/db/db";
 import { memberContracts } from "@subtrees/schemas";
-
-const GATEWAY_BILLING_FEE = 0.7;
-const GATEWAY_FEE_PERCENT = 2.9;
-const GATEWAY_FEE_AMOUNT = 30;
-const GATEWAY_BANK_FEE = 0.8;
 
 type EnrollTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -100,35 +95,14 @@ export async function recoverEnrollUnsignedDocs(input: {
     return unsignedDocs;
 }
 
-export function calculateGatewayFeeAmount(
-	amount: number,
-	paymentType: PaymentType,
-	isRecurring?: boolean,
-): number {
-	if (amount <= 0) return 0;
-
-	if (paymentType === "us_bank_account") {
-		return Math.ceil(amount * (GATEWAY_BANK_FEE / 100));
-	}
-
-	const percentage = isRecurring
-		? GATEWAY_BILLING_FEE + GATEWAY_FEE_PERCENT
-		: GATEWAY_FEE_PERCENT;
-
-	const fees = Math.ceil(amount * (percentage / 100)) + GATEWAY_FEE_AMOUNT;
-	const feeOnStripeFees = Math.ceil(fees * (percentage / 100));
-
-	return fees + feeOnStripeFees;
-}
-
 export type CalculateChargeDetailsProps = {
 	amount: number;
 	discount?: number;
 	taxRate: number;
+	taxAmount?: number;
 	usagePercent: number;
-	paymentType: PaymentType;
-	isRecurring: boolean;
-	passOnFees: boolean;
+	platformFeeBase?: number;
+	additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable" | "refundable">>;
 };
 
 export function calculateChargeDetails(
@@ -138,40 +112,56 @@ export function calculateChargeDetails(
 		amount,
 		discount,
 		taxRate,
+		taxAmount,
 		usagePercent,
-		paymentType,
-		isRecurring,
-		passOnFees,
+		platformFeeBase,
+		additionalFees,
 	} = props;
 
-	let price = Math.max(0, amount - (discount || 0));
+	const subTotal = Math.max(0, amount - (discount || 0));
+	const productTax = taxAmount ?? Math.floor((subTotal * (taxRate || 0)) / 100);
 
-	const tax = Math.floor((price * (taxRate || 0)) / 100);
+	// Monstro's platform fee is vendor-side and never part of the member total.
+	const platformBase = platformFeeBase ?? subTotal + productTax;
+	const feesAmount = usagePercent > 0
+		? Math.floor((platformBase * usagePercent) / 100)
+		: 0;
 
-	let total = price + tax;
+	const additionalFeeLines: InvoiceItem[] = [];
+	let additionalFeeTotal = 0;
+	let additionalFeeTax = 0;
+	for (const fee of subTotal > 0 ? additionalFees : []) {
+		const lineAmount = fee.type === "fixed"
+			? fee.amount
+			: Math.floor((subTotal * fee.amount) / 10000);
+		if (lineAmount <= 0) continue;
 
-	let feesAmount = 0;
-	if (usagePercent > 0) {
-		feesAmount = Math.floor((total * usagePercent) / 100);
+		const lineTax = fee.taxable
+			? Math.floor((lineAmount * (taxRate || 0)) / 100)
+			: 0;
+		additionalFeeTotal += lineAmount;
+		additionalFeeTax += lineTax;
+		additionalFeeLines.push({
+			feeId: fee.id,
+			refundable: fee.refundable,
+			name: fee.label,
+			quantity: 1,
+			price: lineAmount,
+			...(fee.taxable ? { tax: lineTax } : {}),
+		});
 	}
-	const gatewayFee = calculateGatewayFeeAmount(
-		total,
-		paymentType,
-		isRecurring || false,
-	);
 
-	if (passOnFees) {
-		const fees = feesAmount + gatewayFee;
-		total += fees;
-		price += fees;
-	}
+	const tax = productTax + additionalFeeTax;
+	const total = subTotal + tax + additionalFeeTotal;
 
 	return {
 		total,
-		subTotal: price,
-		unitCost: price,
+		subTotal,
+		unitCost: subTotal,
 		tax,
-		feesAmount: feesAmount,
+		feesAmount,
+		additionalFeeTotal,
+		additionalFeeLines,
 	};
 }
 

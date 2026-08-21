@@ -1,4 +1,5 @@
 export * from "./accounts";
+export * from "./additionalFees";
 export * from "./achievements";
 export * from "./attendances";
 export * from "./chat";
@@ -44,4 +45,3 @@ export * from "./verifications";
 export * from "./relations";
 export * from "./wallets";
 export * from "./WebsiteContents";
-

@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { calculateChargeDetails, getCurrency } from "@/utils";
+import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
 import {
     removeRenewalJobs,
     scheduleCronBasedRenewal,
@@ -239,25 +239,22 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
         const planName = `${sub.pricing.plan?.name || "Plan"}/${sub.pricing.name}`;
         const billedAmount = sub.pricing.downpayment || sub.pricing.price;
-        const locationState = sub.location?.locationState;
-        const isGrowthPlan = locationState?.planId === 3;
+        const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
         const chargeDetails = calculateChargeDetails({
             amount: billedAmount,
             discount: discountAmount,
             taxRate: taxRate?.percentage ?? 0,
             usagePercent: sub.location.locationState?.usagePercent ?? 0,
-            paymentType: paymentMethod.value.type,
-            isRecurring: isGrowthPlan ? false : !sub.pricing.downpayment,
-            passOnFees: sub.location.locationState?.settings?.passOnFees ?? false,
+            additionalFees,
         });
 
         const lineItems = [{
             name: planName,
             description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
             quantity: 1,
-            price: billedAmount,
+            price: chargeDetails.unitCost,
             discount: discountAmount,
-        }];
+        }, ...chargeDetails.additionalFeeLines];
 
         const [invoice] = await db.insert(memberInvoices).values({
             memberId: sub.memberId,

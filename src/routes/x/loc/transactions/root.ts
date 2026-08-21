@@ -12,6 +12,7 @@ import {
     transactions,
 } from "@subtrees/schemas";
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
+import { getRefundAmounts } from "@/utils/refunds";
 
 
 function getRefundPlanIds(txMeta: Record<string, unknown>, invoiceMemberPlanId: string | null) {
@@ -290,6 +291,25 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 			return status(400, { error: "Cash transactions cannot be refunded through Stripe" });
 		}
 
+		const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
+		const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
+		let refundAmount = refundAmounts.refundableAmount;
+		if (amountType === "partial") {
+			if (typeof amount !== "number" || amount <= 0) {
+				return status(400, { error: "Valid amount is required for partial refunds" });
+			}
+			if (amount > refundAmounts.refundableAmount) {
+				return status(400, {
+					error: "Refund amount cannot exceed refundable amount",
+					maximumRefundableAmount: refundAmounts.refundableAmount,
+				});
+			}
+			refundAmount = amount;
+		}
+		if (refundAmount <= 0) {
+			return status(400, { error: "This transaction has no refundable amount" });
+		}
+
 		if (txMeta.gatewayService === "square") {
 			const squarePaymentId = typeof txMeta.squarePaymentId === "string"
 				? txMeta.squarePaymentId
@@ -308,17 +328,6 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
 			if (!squareIntegration || !squareIntegration.accessToken) {
 				return status(404, { error: "Square integration not found" });
-			}
-
-			let refundAmount = transaction.total;
-			if (amountType === "partial") {
-				if (typeof amount !== "number" || amount <= 0) {
-					return status(400, { error: "Valid amount is required for partial refunds" });
-				}
-				if (amount > transaction.total) {
-					return status(400, { error: "Refund amount cannot exceed transaction total" });
-				}
-				refundAmount = amount;
 			}
 
 			const square = new SquarePaymentGateway(squareIntegration.accessToken);
@@ -343,6 +352,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 						refund: {
 							id: refund.id,
 							amount: refundAmount,
+							nonRefundableAmount: refundAmounts.nonRefundableAmount,
 							reason: reason || null,
 							note: note || null,
 							refundedAt: new Date().toISOString(),
@@ -356,7 +366,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 					});
 					if (invoice) {
 						await tx.update(memberInvoices).set({
-							...(amountType === "full" ? { status: "void", paid: false } : {}),
+							...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
 							updated: new Date(),
 						}).where(eq(memberInvoices.id, transaction.invoice.id));
 					}
@@ -396,6 +406,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 				transactionId: tid,
 				refundId: refund.id,
 				amount: refundAmount,
+				nonRefundableAmount: refundAmounts.nonRefundableAmount,
 				message: "Square refund processed successfully",
 			});
 		}
@@ -417,14 +428,6 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             return status(400, { error: "No payment intent found for transaction" });
         }
 
-        let refundAmount = transaction.total;
-        if (amountType === "partial") {
-            if (typeof amount !== "number" || amount <= 0) {
-                return status(400, { error: "Valid amount is required for partial refunds" });
-            }
-            refundAmount = Math.min(amount, transaction.total);
-        }
-
 		const stripeGateway = new StripePaymentGateway(integration.accessToken ?? "");
 		const refund = await stripeGateway.createRefund(paymentIntentId, refundAmount, transaction.currency);
 
@@ -438,6 +441,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                     refund: {
                         id: refund.id,
                         amount: refundAmount,
+						nonRefundableAmount: refundAmounts.nonRefundableAmount,
                         reason: reason || null,
                         note: note || null,
                         refundedAt: new Date().toISOString(),
@@ -452,7 +456,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
                 if (invoice) {
                     await tx.update(memberInvoices).set({
-                        ...(amountType === "full" ? { status: "void", paid: false } : {}),
+                        ...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
                         updated: new Date(),
                         metadata: {
                             ...(invoice.metadata || {}),
@@ -515,6 +519,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             transactionId: tid,
             refundId: refund.id,
             amount: refundAmount,
+			nonRefundableAmount: refundAmounts.nonRefundableAmount,
             message: "Refund processed successfully",
         });
     }, {
@@ -570,13 +575,24 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             });
         }
 
-        let refundAmount = transaction.total;
-        if (amountType === "partial") {
-            if (typeof amount !== "number" || amount <= 0) {
-                return status(400, { error: "Valid amount is required for partial refunds" });
-            }
-            refundAmount = Math.min(amount, transaction.total);
-        }
+		const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
+		const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
+		let refundAmount = refundAmounts.refundableAmount;
+		if (amountType === "partial") {
+			if (typeof amount !== "number" || amount <= 0) {
+				return status(400, { error: "Valid amount is required for partial refunds" });
+			}
+			if (amount > refundAmounts.refundableAmount) {
+				return status(400, {
+					error: "Refund amount cannot exceed refundable amount",
+					maximumRefundableAmount: refundAmounts.refundableAmount,
+				});
+			}
+			refundAmount = amount;
+		}
+		if (refundAmount <= 0) {
+			return status(400, { error: "This transaction has no refundable amount" });
+		}
 
         const manualRefundId = `cash_manual_${Date.now()}`;
 
@@ -590,6 +606,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                     refund: {
                         id: manualRefundId,
                         amount: refundAmount,
+						nonRefundableAmount: refundAmounts.nonRefundableAmount,
                         reason: reason || null,
                         note: note || null,
                         source: "cash_manual",
@@ -606,7 +623,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
                 if (invoice) {
                     await tx.update(memberInvoices).set({
-                        ...(amountType === "full" ? { status: "void", paid: false } : {}),
+                        ...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
                         updated: new Date(),
                         metadata: {
                             ...(invoice.metadata || {}),
@@ -673,6 +690,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             transactionId: tid,
             refundId: manualRefundId,
             amount: refundAmount,
+			nonRefundableAmount: refundAmounts.nonRefundableAmount,
             message: "Cash refund recorded successfully",
         });
     }, {

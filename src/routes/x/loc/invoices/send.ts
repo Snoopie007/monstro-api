@@ -80,6 +80,12 @@ export async function sendInvoiceRoutes(app: Elysia) {
         if (invoice.status !== "draft") {
             return status(400, { error: "Invoice must be draft to send" });
         }
+        const linkedTransaction = invoice.transactionId
+            ? await db.query.transactions.findFirst({
+                where: (transaction, { eq }) => eq(transaction.id, invoice.transactionId!),
+                columns: { feeAmount: true },
+            })
+            : undefined;
         const ml = await db.query.memberLocations.findFirst({
             where: (ml, { eq, and }) => and(eq(ml.locationId, lid), eq(ml.memberId, invoice?.memberId)),
             columns: {
@@ -92,6 +98,10 @@ export async function sendInvoiceRoutes(app: Elysia) {
         const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
         const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
+        const additionalFeeTax = (invoice.items || []).reduce(
+            (total, item) => item.feeId ? total + (item.tax || 0) : total,
+            0,
+        );
 
         if (shouldAutoCharge) {
             const integration = invoice.location?.integrations?.find((candidate) => {
@@ -119,19 +129,20 @@ export async function sendInvoiceRoutes(app: Elysia) {
 
                 const square = new SquarePaymentGateway(integration.accessToken);
                 const chargeDetails = calculateChargeDetails({
-                    amount: invoice.total,
+                    amount: invoice.subTotal,
                     discount: 0,
                     taxRate: 0,
+                    taxAmount: invoice.tax,
                     usagePercent: invoice.location?.locationState?.usagePercent ?? 0,
-                    paymentType: "card",
-                    isRecurring: false,
-                    passOnFees: false,
+                    platformFeeBase: invoice.subTotal + Math.max(0, invoice.tax - additionalFeeTax),
+                    additionalFees: [],
                 });
+                const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;
 
                 try {
                     const payment = await square.createCharge(ml.gatewayCustomerId, selectedPaymentMethodId, {
-                        total: chargeDetails.total,
-                        feesAmount: chargeDetails.feesAmount,
+                        total: invoice.total,
+                        feesAmount: platformFeeAmount,
                         currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
                         referenceId: invoice.id,
                         squareLocationId,
@@ -151,7 +162,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         subTotal: invoice.subTotal,
                         tax: invoice.tax,
                         currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
-                        feeAmount: chargeDetails.feesAmount,
+                        feeAmount: platformFeeAmount,
                         failedCode: null,
                         failedReason: null,
                         metadata: {
@@ -215,7 +226,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         subTotal: invoice.subTotal,
                         tax: invoice.tax,
                         currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
-                        feeAmount: chargeDetails.feesAmount,
+                        feeAmount: platformFeeAmount,
                         failedCode: failure.code,
                         failedReason: failure.detail,
                         metadata: {
@@ -306,20 +317,21 @@ export async function sendInvoiceRoutes(app: Elysia) {
             };
 
             const chargeDetails = calculateChargeDetails({
-                amount: invoice.total,
+                amount: invoice.subTotal,
                 discount: 0,
                 taxRate: 0,
+                taxAmount: invoice.tax,
                 usagePercent: invoice.location?.locationState?.usagePercent ?? 0,
-                paymentType: selectedPaymentMethod.type,
-                isRecurring: false,
-                passOnFees: false,
+                platformFeeBase: invoice.subTotal + Math.max(0, invoice.tax - additionalFeeTax),
+                additionalFees: [],
             });
+            const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;
 
             const { id: paymentIntentId } = await stripe.createCharge(ml.gatewayCustomerId, selectedPaymentMethod.id, {
-                total: chargeDetails.total,
-                unitCost: chargeDetails.unitCost,
-                tax: chargeDetails.tax,
-                feesAmount: chargeDetails.feesAmount,
+                total: invoice.total,
+                unitCost: invoice.subTotal,
+                tax: invoice.tax,
+                feesAmount: platformFeeAmount,
                 description: invoice.description || `Invoice ${invoice.id}`,
                 metadata: {
                     lid,
