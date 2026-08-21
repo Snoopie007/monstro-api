@@ -118,42 +118,39 @@ export function calculateChargeDetails(
 		additionalFees,
 	} = props;
 
-	const price = Math.max(0, amount - (discount || 0));
+	const subTotal = Math.max(0, amount - (discount || 0));
+	const tax = taxAmount ?? Math.floor((subTotal * (taxRate || 0)) / 100);
 
-	const tax = taxAmount ?? Math.floor((price * (taxRate || 0)) / 100);
+	// Monstro's platform fee is vendor-side and never part of the member total.
+	const platformBase = platformFeeBase ?? subTotal + tax;
+	const feesAmount = usagePercent > 0
+		? Math.floor((platformBase * usagePercent) / 100)
+		: 0;
 
-	// feesAmount is Monstro's vendor-side platform fee. It is sent to the
-	// gateway separately and must never be added to the member-facing total.
-	const resolvedPlatformFeeBase = platformFeeBase ?? price + tax;
-
-	let feesAmount = 0;
-	if (usagePercent > 0) {
-		feesAmount = Math.floor((resolvedPlatformFeeBase * usagePercent) / 100);
-	}
-
-	const additionalFeeLines = additionalFees.flatMap<InvoiceItem>((fee) => {
-		const feeAmount = fee.type === "fixed"
+	const additionalFeeLines: InvoiceItem[] = [];
+	let additionalFeeTotal = 0;
+	for (const fee of additionalFees) {
+		const lineAmount = fee.type === "fixed"
 			? fee.amount
-			: Math.floor((price * fee.amount) / 10000);
-		if (feeAmount <= 0) return [];
-		return [{
+			: Math.floor((subTotal * fee.amount) / 10000);
+		if (lineAmount <= 0) continue;
+
+		additionalFeeTotal += lineAmount;
+		additionalFeeLines.push({
 			kind: "additional_fee",
 			sourceFeeId: fee.id,
 			name: fee.label,
 			quantity: 1,
-			price: feeAmount,
-		}];
-	});
-	const additionalFeeTotal = additionalFeeLines.reduce(
-		(total, line) => total + line.price * line.quantity,
-		0,
-	);
-	const total = price + tax + additionalFeeTotal;
+			price: lineAmount,
+		});
+	}
+
+	const total = subTotal + tax + additionalFeeTotal;
 
 	return {
 		total,
-		subTotal: price,
-		unitCost: price,
+		subTotal,
+		unitCost: subTotal,
 		tax,
 		feesAmount,
 		additionalFeeTotal,

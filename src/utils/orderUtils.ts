@@ -9,11 +9,10 @@ type OrderItems = {
 
 type OrderTotalResult = {
     total: number;
-    feesAmount: number;
+    platformFeeAmount: number;
     tax: number;
     subtotal: number;
     discount: number;
-    processingFee: number;
     additionalFeeTotal: number;
     additionalFeeLines: InvoiceItem[];
     lineItems: OrderLineItem[];
@@ -75,10 +74,9 @@ export function calculateOrderTotals(
         total: chargeDetails.total,
         lineItems: itemsWithTax,
         discount,
-        feesAmount: chargeDetails.feesAmount,
+        platformFeeAmount: chargeDetails.feesAmount,
         tax,
         subtotal,
-        processingFee: 0,
         additionalFeeTotal: chargeDetails.additionalFeeTotal,
         additionalFeeLines: chargeDetails.additionalFeeLines,
     };

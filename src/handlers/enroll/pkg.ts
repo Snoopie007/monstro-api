@@ -183,7 +183,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
     const productName = `${pricing.plan.name}/${pricing.name}`;
     const description = `Payment for ${productName}`;
-    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "package" });
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "package");
     const chargeDetails = calculateChargeDetails({
         amount: pricing.price,
         discount,

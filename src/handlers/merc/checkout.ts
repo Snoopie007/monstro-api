@@ -100,14 +100,13 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         }
     }
 
-    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "order" });
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "order");
     const {
         total,
         discount,
-        feesAmount,
+        platformFeeAmount,
         tax,
         subtotal,
-        processingFee,
         lineItems,
         additionalFeeTotal,
         additionalFeeLines,
@@ -126,7 +125,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             feesAmount: additionalFeeTotal,
             tax,
             subtotal,
-            processingFee,
+            processingFee: 0,
             additionalFeeTotal,
             additionalFeeLines,
             lineItems,
@@ -163,7 +162,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         authorizeReferenceId,
         paymentType,
         total,
-        feesAmount,
+        feesAmount: platformFeeAmount,
         currency,
         description,
         referenceId: orderId,
@@ -186,7 +185,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     total,
                     subTotal: subtotal,
                     tax,
-                    feeAmount: feesAmount,
+                    feeAmount: platformFeeAmount,
                     items: transactionItems,
                     currency,
                     status: "paid",
@@ -234,7 +233,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     tax,
                     total,
                     items: lineItems,
-                    processingFee,
+                    processingFee: 0,
                     gatewayPaymentId: charge.paymentIntentId,
                 }).returning();
                 if (!order) throw new Error("Failed to create order");
@@ -254,7 +253,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                 total,
                 subTotal: subtotal,
                 tax,
-                feeAmount: feesAmount,
+                feeAmount: platformFeeAmount,
                 items: transactionItems,
                 currency,
                 status: "failed",

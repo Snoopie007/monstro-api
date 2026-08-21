@@ -3,7 +3,6 @@ import { Elysia } from "elysia";
 
 let accessAllowed = true;
 let existingFee: Record<string, unknown> | undefined;
-let lastSortOrder = 2;
 const insertedValues: Array<Record<string, unknown>> = [];
 const updatedValues: Array<Record<string, unknown>> = [];
 let deleted = true;
@@ -17,7 +16,6 @@ const sampleFee = {
 	amount: 500,
 	checkoutTypes: ["package"],
 	active: true,
-	sortOrder: 0,
 	created: new Date("2026-08-20T00:00:00Z"),
 	updated: new Date("2026-08-20T00:00:00Z"),
 };
@@ -32,15 +30,6 @@ const db = {
 	query: {
 		additionalFees: { findMany, findFirst },
 	},
-	select: mock(() => ({
-		from: mock(() => ({
-			where: mock(() => ({
-				orderBy: mock(() => ({
-					limit: mock(async () => [{ sortOrder: lastSortOrder }]),
-				})),
-			})),
-		})),
-	})),
 	insert: mock(() => ({
 		values: mock((values: Record<string, unknown>) => {
 			insertedValues.push(values);
@@ -75,7 +64,6 @@ describe("Additional fee management", () => {
 		mock.clearAllMocks();
 		accessAllowed = true;
 		existingFee = sampleFee;
-		lastSortOrder = 2;
 		deleted = true;
 		insertedValues.length = 0;
 		updatedValues.length = 0;
@@ -111,7 +99,6 @@ describe("Additional fee management", () => {
 			type: "percentage",
 			amount: 250,
 			checkoutTypes: ["package", "order"],
-			sortOrder: 3,
 		}));
 	});
 

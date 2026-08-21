@@ -52,7 +52,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
 
     const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const { currency } = locationState;
-    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "event" });
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "event");
     const chargeDetails = calculateChargeDetails({
         amount: ticket.price,
         taxRate: taxRates.find((r) => r.isDefault)?.percentage || 0,
@@ -61,6 +61,13 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     });
     const { total, feesAmount, tax, subTotal } = chargeDetails;
     const description = `${event.name} - ${ticket.name}`;
+    const items = [{
+        kind: "item" as const,
+        name: description,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        productId: ticket.id,
+    }, ...chargeDetails.additionalFeeLines];
     const registrationId = generateUUID("erg_");
     const metadata: Record<string, unknown> = {
         ...(gateway.service === "authorize" ? {
@@ -122,13 +129,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
                     paymentType,
                     chargeDate: now,
                     feeAmount: feesAmount,
-                    items: [{
-                        kind: "item",
-                        name: description,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        productId: ticket.id,
-                    }, ...chargeDetails.additionalFeeLines],
+                    items,
                     currency,
                     paymentIntentId: charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
@@ -174,13 +175,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
                 paymentType,
                 chargeDate: now,
                 feeAmount: feesAmount,
-                items: [{
-                    kind: "item",
-                    name: description,
-                    quantity: 1,
-                    price: chargeDetails.unitCost,
-                    productId: ticket.id,
-                }, ...chargeDetails.additionalFeeLines],
+                items,
                 currency,
                 paymentIntentId: charge.paymentIntentId,
                 failedReason: charge.failureReason,

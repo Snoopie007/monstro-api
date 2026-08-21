@@ -239,7 +239,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
         const planName = `${sub.pricing.plan?.name || "Plan"}/${sub.pricing.name}`;
         const billedAmount = sub.pricing.downpayment || sub.pricing.price;
-        const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "subscription" });
+        const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
         const chargeDetails = calculateChargeDetails({
             amount: billedAmount,
             discount: discountAmount,

@@ -190,10 +190,7 @@ export function migrateSubRoutes(app: Elysia) {
                 const productName = pricing.name;
                 const description = `Payment for ${pricing.name}`;
 
-                const additionalFees = await getAdditionalFeesForCheckout({
-                    locationId: lid,
-                    checkoutType: "subscription",
-                });
+                const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
                 const chargeDetails = calculateChargeDetails({
                     amount: pricing.price,
                     taxRate: taxRate?.percentage ?? 0,

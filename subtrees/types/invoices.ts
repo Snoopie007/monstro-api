@@ -9,23 +9,15 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     memberSubscription?: MemberSubscription;
 }
 
-type InvoiceItemBase = {
+export type InvoiceItem = {
     name: string;
     quantity: number;
     price: number;
     productId?: string;
     discount?: number;
     tax?: number;
+    kind?: "item" | "additional_fee";
+    sourceFeeId?: string;
 }
-
-export type InvoiceItem =
-    | (InvoiceItemBase & {
-        kind?: "item";
-        sourceFeeId?: never;
-    })
-    | (InvoiceItemBase & {
-        kind: "additional_fee";
-        sourceFeeId: string;
-    });
 
 export type NewInvoice = typeof memberInvoices.$inferInsert;

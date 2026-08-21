@@ -27,9 +27,8 @@ test("adds scoped fees without adding Monstro's platform fee to the member total
     [{ id: "fee-1", label: "Facility fee", type: "percentage", amount: 500 }],
   )).toMatchObject({
     subtotal: 1000,
-    feesAmount: 50,
+    platformFeeAmount: 50,
     additionalFeeTotal: 50,
-    processingFee: 0,
     total: 1050,
     additionalFeeLines: [{ kind: "additional_fee", sourceFeeId: "fee-1", price: 50 }],
   });

@@ -54,10 +54,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             });
 
             if (!existingDraft) {
-                const additionalFees = await getAdditionalFeesForCheckout({
-                    locationId: lid,
-                    checkoutType: "subscription",
-                });
+                const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
                 const chargeDetails = calculateChargeDetails({
                     amount: sub.pricing.price,
                     taxRate: 0,

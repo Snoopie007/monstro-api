@@ -66,7 +66,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
 
     const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const taxRate = taxRates.find((r) => r.isDefault)?.percentage || 0;
-    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "course" });
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "course");
     const chargeDetails = calculateChargeDetails({
         amount: coursePrice,
         taxRate,
@@ -76,6 +76,13 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
     const { total, feesAmount, tax, subTotal } = chargeDetails;
     const currency = locationState.currency;
     const description = `Payment for course enrollment ${courseTitle}`;
+    const items = [{
+        kind: "item" as const,
+        name: courseTitle,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        productId: courseId,
+    }, ...chargeDetails.additionalFeeLines];
     const metadata: Record<string, unknown> = {
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
@@ -119,13 +126,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                     paymentMethodId,
                     paymentType,
                     feeAmount: feesAmount,
-                    items: [{
-                        kind: "item",
-                        name: courseTitle,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        productId: courseId,
-                    }, ...chargeDetails.additionalFeeLines],
+                    items,
                     currency,
                     chargeDate: now,
                     paymentIntentId: charge.paymentIntentId,
@@ -178,13 +179,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                 paymentMethodId,
                 paymentType,
                 feeAmount: feesAmount,
-                items: [{
-                    kind: "item",
-                    name: courseTitle,
-                    quantity: 1,
-                    price: chargeDetails.unitCost,
-                    productId: courseId,
-                }, ...chargeDetails.additionalFeeLines],
+                items,
                 currency,
                 chargeDate: now,
                 paymentIntentId: charge.paymentIntentId,

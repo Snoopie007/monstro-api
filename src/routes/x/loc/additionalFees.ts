@@ -4,7 +4,7 @@ import {
 	additionalFeeCheckoutTypes,
 	additionalFees,
 } from "@subtrees/schemas";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Elysia, t, type Context } from "elysia";
 
 const checkoutTypeSchema = t.Union([
@@ -74,7 +74,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 		const { lid } = params as { lid: string };
 		const fees = await db.query.additionalFees.findMany({
 			where: eq(additionalFees.locationId, lid),
-			orderBy: [asc(additionalFees.sortOrder), asc(additionalFees.created), asc(additionalFees.id)],
+			orderBy: [asc(additionalFees.created), asc(additionalFees.id)],
 		});
 		return status(200, { fees });
 	})
@@ -89,13 +89,6 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 		const validationError = validateFee({ ...body, label, checkoutTypes });
 		if (validationError) return status(400, { error: validationError });
 
-		const [lastFee] = await db
-			.select({ sortOrder: additionalFees.sortOrder })
-			.from(additionalFees)
-			.where(eq(additionalFees.locationId, lid))
-			.orderBy(desc(additionalFees.sortOrder))
-			.limit(1);
-
 		const [fee] = await db.insert(additionalFees).values({
 			locationId: lid,
 			label,
@@ -104,7 +97,6 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			amount: body.amount,
 			checkoutTypes,
 			active: body.active ?? true,
-			sortOrder: (lastFee?.sortOrder ?? -1) + 1,
 		}).returning();
 
 		return status(201, { fee });

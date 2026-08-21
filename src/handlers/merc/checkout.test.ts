@@ -65,10 +65,9 @@ mock.module("@/utils", () => ({
     calculateOrderTotals: () => ({
         total: 1200,
         discount: 0,
-        feesAmount: 0,
+        platformFeeAmount: 0,
         tax: 0,
         subtotal: 1200,
-        processingFee: 0,
         additionalFeeTotal: 0,
         additionalFeeLines: [],
         lineItems: [{ variantId: "variant-1", productName: "Uniform", quantity: 1, unitCost: 1200, tax: 0 }],

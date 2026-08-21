@@ -232,7 +232,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         : 0;
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
     const discount = await fetchPromoDiscount(promoId ?? undefined, pricing, lid);
-    const additionalFees = await getAdditionalFeesForCheckout({ locationId: lid, checkoutType: "subscription" });
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
     const chargeDetails = calculateChargeDetails({
         amount: pricing.downpayment || pricing.price,
         discount,

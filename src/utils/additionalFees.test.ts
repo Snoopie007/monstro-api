@@ -10,7 +10,6 @@ const findMany = mock(async () => [
 		amount: 250,
 		checkoutTypes: ["package", "subscription"] as const,
 		active: true,
-		sortOrder: 0,
 		created: new Date("2026-01-01T00:00:00Z"),
 		updated: new Date("2026-01-01T00:00:00Z"),
 	},
@@ -23,7 +22,6 @@ const findMany = mock(async () => [
 		amount: 500,
 		checkoutTypes: ["order"] as const,
 		active: true,
-		sortOrder: 1,
 		created: new Date("2026-01-02T00:00:00Z"),
 		updated: new Date("2026-01-02T00:00:00Z"),
 	},
@@ -36,10 +34,7 @@ mock.module("@/db/db", () => ({
 const { getAdditionalFeesForCheckout } = await import("./additionalFees");
 
 test("returns only fees configured for the checkout type", async () => {
-	const fees = await getAdditionalFeesForCheckout({
-		locationId: "location_1",
-		checkoutType: "order",
-	});
+	const fees = await getAdditionalFeesForCheckout("location_1", "order");
 
 	expect(fees.map((fee) => fee.id)).toEqual(["fee_order"]);
 	expect(findMany).toHaveBeenCalledTimes(1);
