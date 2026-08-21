@@ -39,6 +39,7 @@ export const additionalFees = pgTable(
 		})
 			.array()
 			.notNull(),
+		taxable: boolean("taxable").notNull().default(false),
 		active: boolean("active").notNull().default(true),
 		created: timestamp("created_at", { withTimezone: true })
 			.notNull()
@@ -62,10 +63,6 @@ export const additionalFees = pgTable(
 			sql`${table.type} in ('fixed', 'percentage')`,
 		),
 		check("additional_fees_amount_check", sql`${table.amount} > 0`),
-		check(
-			"additional_fees_percentage_amount_check",
-			sql`${table.type} <> 'percentage' or ${table.amount} <= 10000`,
-		),
 		check(
 			"additional_fees_checkout_types_check",
 			sql`cardinality(${table.checkoutTypes}) > 0 and ${table.checkoutTypes} <@ array['package', 'subscription', 'course', 'event', 'order']::text[]`,
