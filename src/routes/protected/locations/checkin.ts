@@ -1,11 +1,8 @@
 import { db } from "@/db/db";
-import {
-    attendances, reservations,
-} from "@subtrees/schemas";
+import { attendances } from "@subtrees/schemas";
 import type { MemberSubscription, MemberPackage, Reservation } from "@subtrees/types";
 import { differenceInMinutes, isSameHour } from "date-fns";
 import { Elysia, t } from "elysia";
-import { sql } from "drizzle-orm";
 import { classQueue, rankQueue } from "@/queues";
 
 
@@ -37,12 +34,10 @@ export async function locationCheckin(app: Elysia) {
                     startOn: true,
                     endOn: true,
                 },
-                extras: {
-                    attendanceCount: sql<number>`(
-                        SELECT COUNT(*)::int 
-                        FROM ${attendances} 
-                        WHERE ${attendances.reservationId} = ${reservations.id}
-                    )`.as('attendance_count'),
+                with: {
+                    attendance: {
+                        columns: { id: true },
+                    },
                 },
             });
 
@@ -51,9 +46,9 @@ export async function locationCheckin(app: Elysia) {
                 return status(404, { error: "Reservation not found" });
             }
 
-            const { memberSubscriptionId, memberPackageId, attendanceCount, ...rest } = reservation;
+            const { memberSubscriptionId, memberPackageId, attendance, ...rest } = reservation;
 
-            if (reservation.attendanceCount > 0) {
+            if (attendance) {
                 return status(400, { error: "Already checked in for this session" });
             }
 

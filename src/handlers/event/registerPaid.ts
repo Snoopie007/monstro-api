@@ -1,11 +1,9 @@
 import { db } from "@/db/db";
 import {
-    authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
     getCheckoutContext,
     PaymentChargeError,
-    stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { transactions } from "@subtrees/schemas";
@@ -28,21 +26,8 @@ type HandlePaidEventRegistrationProps = LoadEventContextParams & {
 
 export async function handlePaidEventRegistration(props: HandlePaidEventRegistrationProps) {
     const { lid, mid, paymentMethodId, paymentType = "card", attemptId } = props;
-    const transactionId = stableCheckoutTransactionId("event", lid, mid, attemptId);
-    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
-    const existing = await db.query.transactions.findFirst({
-        where: (tx, { and, eq }) => and(eq(tx.id, transactionId), eq(tx.locationId, lid), eq(tx.memberId, mid)),
-    });
-    if (existing) {
-        if (existing.status === "pending") throw new EventRegistrationError(202, "Payment is pending; do not retry", "PAYMENT_PENDING");
-        if (existing.status === "failed") throw new EventRegistrationError(400, existing.failedReason || "Payment was declined", existing.failedCode || "PAYMENT_FAILED");
-        if (existing.status !== "paid") throw new EventRegistrationError(500, "Unexpected transaction status");
-        const registration = await db.query.eventRegistrations.findFirst({
-            where: (candidate, { eq }) => eq(candidate.transactionId, transactionId),
-        });
-        if (!registration) throw new EventRegistrationError(202, "Payment is paid and registration is being finalized", "FULFILLMENT_PENDING");
-        return registration;
-    }
+    const transactionId = generateUUID('txn_');
+
 
     const { event, ticket } = await loadEventRegistrationContext(props);
     if (ticket.pricingMethod === "free" || ticket.price <= 0) {
@@ -64,7 +49,6 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     const metadata: Record<string, unknown> = {
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
-            authorizeReferenceId,
         } : {}),
         gatewayService: gateway.service,
         checkoutKind: "event",
@@ -81,13 +65,11 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
             gatewayCustomerId,
             paymentMethodId,
             transactionId,
-            authorizeReferenceId,
             paymentType,
             total,
             feesAmount,
             currency,
             description: `Payment for event registration - ${registrationId}`,
-            referenceId: transactionId,
             note: `registrationId:${registrationId}|eventId:${event.id}|ticketId:${ticket.id}|mid:${mid}|lid:${lid}`,
             metadata: { locationId: lid, memberId: mid, registrationId, transactionId },
         });

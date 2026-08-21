@@ -1,9 +1,9 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import { chargeWallet } from "@/libs/wallet";
+import { Wallet } from "@/libs/wallet";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
 import { getCurrency } from "@/utils";
@@ -57,13 +57,14 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     });
                 }
 
-                const walletFee = Math.floor(invoice.total * 0.007);
+                const walletFee = Math.floor(invoice.total * 0.02);
                 if (walletFee > 0) {
-                    const charged = await chargeWallet({
-                        lid,
+
+                    const wallet = new Wallet(lid);
+                    const charged = await wallet.charge({
                         vendorId: location.vendorId,
                         amount: walletFee,
-                        description: `Membership renewal for ${sub.pricing?.name || "subscription"}`,
+                        description: `Membership renewal for subscription ${sub.id}`,
                     });
 
                     if (!charged) {

@@ -24,7 +24,6 @@ const EventRegisterBody = t.Object({
 
 export async function locationEventRoutes(app: Elysia) {
     app.get("/events", async ({ params, status }) => {
-
         const today = new Date();
         const { lid } = params;
 
@@ -51,7 +50,6 @@ export async function locationEventRoutes(app: Elysia) {
 
     app.get('/events/upcoming', async ({ params, status }) => {
         const { lid } = params;
-        const today = new Date();
         try {
             const event = await db.query.locationEvents.findFirst({
                 where: (locationEvents, { eq }) => eq(locationEvents.locationId, lid),

@@ -10,7 +10,7 @@ export const courseEnrollmentRoutes = new Elysia()
     .post("/:courseId/enrollments", async (ctx) => {
         const { params, body, status, vendorId, staffId } = ctx as typeof ctx & XAuthContext;
         const { lid, courseId } = params as { lid: string; courseId: string };
-        const { memberId, paymentMethodId, paymentType, attemptId } = body;
+        const { memberId, paymentMethodId, paymentType } = body;
 
         try {
             const { allowed } = await canAccessLocation(lid, vendorId, staffId);
@@ -33,9 +33,8 @@ export const courseEnrollmentRoutes = new Elysia()
                 where: and(eq(courseEnrollments.courseId, courseId), eq(courseEnrollments.memberId, memberId)),
                 columns: { id: true },
             });
-            if (duplicate && (course.price <= 0 || !attemptId)) throw new CourseEnrollError(409, "Member is already enrolled in this course", "DUPLICATE_ENROLLMENT");
+            if (duplicate && (course.price <= 0)) throw new CourseEnrollError(409, "Member is already enrolled in this course", "DUPLICATE_ENROLLMENT");
             if (course.price > 0 && !paymentMethodId) throw new CourseEnrollError(400, "Payment method ID is required");
-            if (course.price > 0 && !attemptId) throw new CourseEnrollError(400, "Attempt ID is required");
 
             const enrollment = course.price === 0
                 ? await handleCourseEnrollFree({ lid, mid: memberId, courseId })
@@ -47,7 +46,6 @@ export const courseEnrollmentRoutes = new Elysia()
                     paymentType: paymentType ?? "card",
                     courseTitle: course.title,
                     coursePrice: course.price,
-                    attemptId: attemptId!,
                 });
             if (!enrollment) throw new CourseEnrollError(400, "Failed to create enrollment");
 
@@ -60,6 +58,5 @@ export const courseEnrollmentRoutes = new Elysia()
             memberId: t.String(),
             paymentMethodId: t.Optional(t.String()),
             paymentType: t.Optional(t.Literal("card")),
-            attemptId: t.Optional(t.String()),
         }),
     });

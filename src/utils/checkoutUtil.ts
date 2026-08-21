@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import type { CheckoutContext } from "./getCheckoutContext";
 import type { PaymentType } from "@subtrees/types";
@@ -25,26 +25,16 @@ export class CheckoutPendingError extends Error {
 	}
 }
 
-export function stableCheckoutTransactionId(kind: "course" | "order" | "event" | "package" | "subscription", lid: string, mid: string, attemptId: string) {
-	const digest = createHash("sha256").update(`${kind}:${lid}:${mid}:${attemptId}`).digest("hex").slice(0, 32);
-	return `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-${digest.slice(16, 20)}-${digest.slice(20)}`;
-}
-
-export function authorizeReferenceIdForTransaction(transactionId: string) {
-	return createHash("sha256").update(transactionId).digest("hex").slice(0, 20);
-}
 
 export type ChargeWithGatewayInput = {
 	gateway: CheckoutContext["gateway"];
 	gatewayCustomerId: string;
 	paymentMethodId: string;
 	transactionId: string;
-	authorizeReferenceId: string;
 	total: number;
 	feesAmount: number;
 	currency: string;
 	description: string;
-	referenceId: string;
 	note: string;
 	metadata: Record<string, string>;
 	paymentType: PaymentType;
@@ -52,23 +42,23 @@ export type ChargeWithGatewayInput = {
 
 export type ChargeWithGatewayResult =
 	PaymentMethodDisplay & (
-	{
-		status: "approved";
-		paymentIntentId: string;
-		gatewayMetadata: Record<string, unknown>;
-	}
-	| {
-		status: "failed";
-		paymentIntentId?: string;
-		failureReason: string;
-		failureCode: string;
-		gatewayMetadata: Record<string, unknown>;
-	}
-	| {
-		status: "uncertain";
-		message: string;
-		gatewayMetadata: Record<string, unknown>;
-	});
+		{
+			status: "approved";
+			paymentIntentId: string;
+			gatewayMetadata: Record<string, unknown>;
+		}
+		| {
+			status: "failed";
+			paymentIntentId?: string;
+			failureReason: string;
+			failureCode: string;
+			gatewayMetadata: Record<string, unknown>;
+		}
+		| {
+			status: "uncertain";
+			message: string;
+			gatewayMetadata: Record<string, unknown>;
+		});
 
 type PaymentMethodDisplay = {
 	brand?: string;
@@ -113,12 +103,10 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		gatewayCustomerId,
 		paymentMethodId,
 		transactionId,
-		authorizeReferenceId,
 		total,
 		feesAmount,
 		currency,
 		description,
-		referenceId,
 		note,
 		metadata,
 		paymentType,
@@ -134,12 +122,11 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				total,
 				currency,
 				idempotencyKey: transactionId,
-				referenceId: authorizeReferenceId,
+				referenceId: transactionId,
 				orderDescription: description,
 			});
 			const gatewayMetadata = {
 				gatewayService: "authorize",
-				...(charge.transactionId ? { authorizeTransactionId: charge.transactionId } : {}),
 				authorizeResponseCode: charge.responseCode,
 				...(charge.responseMessage ? { authorizeResponseMessage: charge.responseMessage } : {}),
 				...(charge.avsResultCode ? { authorizeAvsResultCode: charge.avsResultCode } : {}),
@@ -156,7 +143,6 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				case "held":
 					return {
 						status: "failed",
-						...(charge.transactionId ? { paymentIntentId: charge.transactionId } : {}),
 						failureReason: charge.responseMessage ?? "Authorize.net held the transaction for review",
 						failureCode: "4",
 						paymentType: "card",
@@ -226,7 +212,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			total,
 			feesAmount,
 			currency: currency as Currency,
-			referenceId,
+			referenceId: transactionId,
 			squareLocationId,
 			note,
 			idempotencyKey: transactionId,

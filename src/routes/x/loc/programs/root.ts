@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { normalizeProgramDrafts, parseProgramImportFile } from "@/libs/ai/programs/import";
+import { normalizeProgramDrafts, parseProgramImportFile } from "@/libs/ai/ProgramImport";
 import { programSessions, programs } from "@subtrees/schemas";
 
 function isUploadFile(value: unknown): value is File {

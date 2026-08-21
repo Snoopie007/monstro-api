@@ -1,21 +1,19 @@
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
-import { memberContracts, memberInvoices, memberPackages, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberPackages, transactions } from "@subtrees/schemas";
 import {
-    authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
-    recoverEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
     calculateThresholdDate,
     getCheckoutContext,
-    stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { generateUUID } from "subtrees/utils";
 
 export type EnrollPkgInput = {
     lid: string;
@@ -32,89 +30,9 @@ export type EnrollPkgInput = {
 };
 
 export async function handleEnrollPackage(props: EnrollPkgInput) {
-    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit, quoteOnly = false } = props;
-    const transactionId = stableCheckoutTransactionId("package", lid, mid, attemptId);
-    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
-    const existing = await db.query.transactions.findFirst({
-        where: (row, { and, eq }) => and(eq(row.id, transactionId), eq(row.locationId, lid), eq(row.memberId, mid)),
-    });
-    if (existing) {
-        if (existing.status === "pending") throw new CheckoutError(202, "Payment is pending; do not retry");
-        if (existing.status === "failed") throw new CheckoutError(400, existing.failedReason || "Payment was declined");
-        if (existing.status !== "paid") throw new CheckoutError(500, "Unexpected transaction status");
-        const invoice = await db.query.memberInvoices.findFirst({
-            where: (row, { eq }) => eq(row.transactionId, transactionId),
-        });
-        if (!invoice) throw new CheckoutError(202, "Payment is paid and package is being finalized");
-        if (!invoice.memberPlanId) {
-            throw new CheckoutError(202, "Payment is paid and package is being finalized");
-        }
+    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit } = props;
+    const transactionId = generateUUID('txn_');
 
-        const [checkout, pricing] = await Promise.all([
-            getCheckoutContext({ lid, mid }),
-            db.query.memberPlanPricing.findFirst({
-                where: (row, { eq }) => eq(row.id, priceId),
-                with: { plan: true },
-            }),
-        ]);
-        if (
-            !pricing?.plan ||
-            pricing.plan.locationId !== lid ||
-            pricing.plan.archived ||
-            pricing.plan.type !== "one-time"
-        ) {
-            throw new CheckoutError(404, "Pricing not found");
-        }
-        const waiverId = checkout.ml.location.locationState.waiverId;
-        let recoverWaiverId = waiverId;
-        if (checkout.ml.signedWaiverId && waiverId) {
-            const signedWaiver = await db.query.memberContracts.findFirst({
-                where: (memberContract, { eq, and, isNotNull }) => and(
-                    eq(memberContract.id, checkout.ml.signedWaiverId!),
-                    eq(memberContract.memberId, mid),
-                    eq(memberContract.locationId, lid),
-                    eq(memberContract.templateId, waiverId),
-                    isNotNull(memberContract.signedOn),
-                ),
-                with: {
-                    contractTemplate: {
-                        columns: { locationId: true },
-                    },
-                },
-            });
-            if (signedWaiver?.contractTemplate?.locationId === lid) {
-                recoverWaiverId = null;
-            }
-        }
-        const templateIds = [
-            pricing.plan.contractId,
-            checkout.ml.location.locationState.waiverId,
-        ].filter((id): id is string => Boolean(id));
-        if (templateIds.length > 0) {
-            const templates = await Promise.all(templateIds.map((templateId) =>
-                db.query.contractTemplates.findFirst({
-                    where: (template, { eq, and }) => and(
-                        eq(template.id, templateId),
-                        eq(template.locationId, lid),
-                    ),
-                    columns: { id: true },
-                }),
-            ));
-            if (templates.some((template) => !template)) {
-                throw new CheckoutError(404, "Contract not found");
-            }
-        }
-        return {
-            ok: true,
-            unsignedDocs: await recoverEnrollUnsignedDocs({
-                mid,
-                lid,
-                memberPlanId: invoice.memberPlanId,
-                contractId: pricing.plan.contractId,
-                waiverId: recoverWaiverId,
-            }),
-        };
-    }
 
     const [checkout, pricing] = await Promise.all([
         getCheckoutContext({ lid, mid }),
@@ -191,16 +109,8 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         isRecurring: false,
         passOnFees: settings?.passOnFees || false,
     });
-    if (quoteOnly) {
-        return {
-            baseAmount: pricing.price,
-            discount,
-            tax: chargeDetails.tax,
-            fees: chargeDetails.total - Math.max(0, pricing.price - discount) - chargeDetails.tax,
-            total: chargeDetails.total,
-            currency,
-        };
-    }
+
+
     const packageStart = startDate ? new Date(startDate) : new Date();
     if (Number.isNaN(packageStart.getTime())) throw new CheckoutError(400, "Invalid package start date");
     const endDate = expireDate
@@ -216,17 +126,8 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
     const metadata: Record<string, unknown> = {
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
-            authorizeReferenceId,
         } : {}),
-        gatewayService: gateway.service,
         checkoutKind: "package",
-        checkoutAttemptId: attemptId,
-        memberPlanPricingId: pricing.id,
-        productName,
-        discount,
-        packageClassLimit: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
-        packageStartAt: packageStart.toISOString(),
-        ...(endDate ? { packageExpireAt: endDate.toISOString() } : {}),
     };
 
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
@@ -234,14 +135,12 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         gatewayCustomerId,
         paymentMethodId,
         transactionId,
-        authorizeReferenceId,
         paymentType,
         total: chargeDetails.total,
         feesAmount: chargeDetails.feesAmount,
         currency,
         description,
-        referenceId: transactionId,
-        note: `transactionId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
+        note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
         metadata: { locationId: lid, memberId: mid, transactionId },
     });
 
@@ -250,7 +149,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             const now = new Date();
             let unsignedDocs: string[] = [];
             await db.transaction(async (tx) => {
-                const [created] = await tx.insert(transactions).values({
+                const [transaction] = await tx.insert(transactions).values({
                     id: transactionId,
                     memberId: mid,
                     locationId: lid,
@@ -275,7 +174,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                         last4: charge.last4,
                     }],
                 }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
-                if (!created) throw new CheckoutError(202, "Payment is being finalized; do not retry");
+                if (!transaction) throw new CheckoutError(202, "Payment is being finalized; do not retry");
 
                 const [pkg] = await tx.insert(memberPackages).values({
                     locationId: lid,

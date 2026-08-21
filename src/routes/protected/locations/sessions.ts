@@ -108,20 +108,58 @@ export async function locationSessions(app: Elysia) {
             return status(500, { error: "Internal server error" });
         }
     }, SessionsProps)
-    app.get('/sessions/today', async ({ params, status, query }) => {
 
-        const { programIds } = query;
-        try {
+    app.group("/:sessionId", (app) => {
+        app.get("/reservations", async ({ params, query, status }) => {
+            const { sessionId } = params;
+            const { date } = query;
 
-            return status(200, { sessions: [] });
-        } catch (error) {
-            console.error(error);
-            return status(500, { error: "Internal server error" });
-        }
-    }, SessionsProps)
+            const startDate = new Date(date);
+            try {
+
+                const reservations = await db.query.reservations.findMany({
+                    where: (r, { eq, and, gte }) => and(
+                        eq(r.sessionId, sessionId),
+                        gte(r.startOn, startDate),
+                    ),
+                    with: {
+                        member: {
+                            columns: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true,
+                                phone: true,
+                            },
+                            with: {
+                                user: {
+                                    columns: {
+                                        id: true,
+                                        username: true,
+                                        image: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+
+
+                return status(200, reservations);
+            } catch (error) {
+                console.error(error);
+                return status(500, { error: "Failed to fetch reservations" });
+            }
+        }, {
+            params: t.Object({
+                sessionId: t.String(),
+            }),
+            query: t.Object({
+                date: t.String(),
+            }),
+        });
+        return app;
+    });
 
     return app;
 }
-
-
-
