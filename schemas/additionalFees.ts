@@ -40,7 +40,6 @@ export const additionalFees = pgTable(
 			.array()
 			.notNull(),
 		active: boolean("active").notNull().default(true),
-		sortOrder: integer("sort_order").notNull().default(0),
 		created: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),
@@ -49,10 +48,10 @@ export const additionalFees = pgTable(
 			.defaultNow(),
 	},
 	(table) => [
-		index("additional_fees_location_active_sort_idx").on(
+		index("additional_fees_location_active_created_idx").on(
 			table.locationId,
 			table.active,
-			table.sortOrder,
+			table.created,
 		),
 		check(
 			"additional_fees_label_check",
@@ -71,6 +70,5 @@ export const additionalFees = pgTable(
 			"additional_fees_checkout_types_check",
 			sql`cardinality(${table.checkoutTypes}) > 0 and ${table.checkoutTypes} <@ array['package', 'subscription', 'course', 'event', 'order']::text[]`,
 		),
-		check("additional_fees_sort_order_check", sql`${table.sortOrder} >= 0`),
 	],
 );
