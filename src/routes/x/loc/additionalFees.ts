@@ -26,6 +26,7 @@ const editableFeeFields = {
 	type: t.Optional(feeTypeSchema),
 	amount: t.Optional(t.Integer({ minimum: 1, maximum: 2_147_483_647 })),
 	checkoutTypes: t.Optional(t.Array(checkoutTypeSchema, { minItems: 1, maxItems: 5 })),
+	taxable: t.Optional(t.Boolean()),
 	active: t.Optional(t.Boolean()),
 };
 
@@ -44,20 +45,16 @@ function normalizeCheckoutTypes(
 
 function validateFee(input: {
 	label: string;
-	type: "fixed" | "percentage";
-	amount: number;
 	checkoutTypes: Array<(typeof additionalFeeCheckoutTypes)[number]>;
 }) {
 	if (!input.label.trim()) return "Fee name is required";
-	if (input.type === "percentage" && input.amount > 10_000) {
-		return "Percentage fees cannot exceed 100%";
-	}
 	if (normalizeCheckoutTypes(input.checkoutTypes).length === 0) {
 		return "Select at least one checkout type";
 	}
 	return null;
 }
 
+// TODO(permissions): Restrict fee mutations to vendor admins or staff with billing-settings permission.
 export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 	.resolve(async (ctx) => {
 		const { lid } = ctx.params as { lid: string };
@@ -96,6 +93,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			type: body.type,
 			amount: body.amount,
 			checkoutTypes,
+			taxable: body.taxable ?? false,
 			active: body.active ?? true,
 		}).returning();
 
@@ -107,6 +105,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			type: feeTypeSchema,
 			amount: t.Integer({ minimum: 1, maximum: 2_147_483_647 }),
 			checkoutTypes: t.Array(checkoutTypeSchema, { minItems: 1, maxItems: 5 }),
+			taxable: t.Optional(t.Boolean()),
 			active: t.Optional(t.Boolean()),
 		}),
 	})
@@ -138,6 +137,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 				? { description: body.description?.trim() || null }
 				: {}),
 			...(body.active !== undefined ? { active: body.active } : {}),
+			...(body.taxable !== undefined ? { taxable: body.taxable } : {}),
 			updated: new Date(),
 		}).where(
 			and(eq(additionalFees.id, feeId), eq(additionalFees.locationId, lid)),

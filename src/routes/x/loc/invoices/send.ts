@@ -98,6 +98,10 @@ export async function sendInvoiceRoutes(app: Elysia) {
         const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
         const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
+        const additionalFeeTax = (invoice.items || []).reduce(
+            (total, item) => item.kind === "additional_fee" ? total + (item.tax || 0) : total,
+            0,
+        );
 
         if (shouldAutoCharge) {
             const integration = invoice.location?.integrations?.find((candidate) => {
@@ -130,7 +134,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     taxRate: 0,
                     taxAmount: invoice.tax,
                     usagePercent: invoice.location?.locationState?.usagePercent ?? 0,
-                    platformFeeBase: invoice.subTotal + invoice.tax,
+                    platformFeeBase: invoice.subTotal + Math.max(0, invoice.tax - additionalFeeTax),
                     additionalFees: [],
                 });
                 const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;
@@ -318,7 +322,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 taxRate: 0,
                 taxAmount: invoice.tax,
                 usagePercent: invoice.location?.locationState?.usagePercent ?? 0,
-                platformFeeBase: invoice.subTotal + invoice.tax,
+                platformFeeBase: invoice.subTotal + Math.max(0, invoice.tax - additionalFeeTax),
                 additionalFees: [],
             });
             const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;

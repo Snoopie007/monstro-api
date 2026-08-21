@@ -4,25 +4,25 @@ mock.module("@/db/db", () => ({ db: {} }));
 
 const { calculateChargeDetails } = await import("./enrollUtils");
 
-test("calculates fixed and percentage additional fees from the discounted subtotal", () => {
+test("calculates fee amounts and taxable fee tax from the discounted subtotal", () => {
 	const result = calculateChargeDetails({
 		amount: 10000,
 		discount: 1000,
 		taxRate: 5,
 		usagePercent: 4,
 		additionalFees: [
-			{ id: "fee_fixed", label: "Facility fee", type: "fixed", amount: 250 },
-			{ id: "fee_percent", label: "Service fee", type: "percentage", amount: 350 },
+			{ id: "fee_fixed", label: "Facility fee", type: "fixed", amount: 250, taxable: true },
+			{ id: "fee_percent", label: "Service fee", type: "percentage", amount: 350, taxable: false },
 		],
 	});
 
 	expect(result).toEqual({
 		subTotal: 9000,
 		unitCost: 9000,
-		tax: 450,
+		tax: 462,
 		feesAmount: 378,
 		additionalFeeTotal: 565,
-		total: 10015,
+		total: 10027,
 		additionalFeeLines: [
 			{
 				kind: "additional_fee",
@@ -30,6 +30,7 @@ test("calculates fixed and percentage additional fees from the discounted subtot
 				name: "Facility fee",
 				quantity: 1,
 				price: 250,
+				tax: 12,
 			},
 			{
 				kind: "additional_fee",
@@ -45,19 +46,34 @@ test("calculates fixed and percentage additional fees from the discounted subtot
 test("additional fees do not increase the Monstro platform fee", () => {
 	const withoutAdditionalFees = calculateChargeDetails({
 		amount: 10000,
-		taxRate: 0,
+		taxRate: 10,
 		usagePercent: 5,
 		additionalFees: [],
 	});
 	const withAdditionalFees = calculateChargeDetails({
 		amount: 10000,
-		taxRate: 0,
+		taxRate: 10,
 		usagePercent: 5,
 		additionalFees: [
-			{ id: "fee_1", label: "Service fee", type: "fixed", amount: 500 },
+			{ id: "fee_1", label: "Service fee", type: "fixed", amount: 500, taxable: true },
 		],
 	});
 
 	expect(withAdditionalFees.feesAmount).toBe(withoutAdditionalFees.feesAmount);
-	expect(withAdditionalFees.total).toBe(withoutAdditionalFees.total + 500);
+	expect(withAdditionalFees.total).toBe(withoutAdditionalFees.total + 550);
+});
+
+test("does not add fees when the discounted subtotal is zero", () => {
+	const result = calculateChargeDetails({
+		amount: 1000,
+		discount: 1000,
+		taxRate: 10,
+		usagePercent: 5,
+		additionalFees: [
+			{ id: "fee_1", label: "Facility fee", type: "fixed", amount: 500, taxable: true },
+		],
+	});
+
+	expect(result.total).toBe(0);
+	expect(result.additionalFeeLines).toEqual([]);
 });

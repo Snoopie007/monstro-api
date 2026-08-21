@@ -22,7 +22,7 @@ export function calculateOrderTotals(
     variants: Array<Pick<MercVariant, "id" | "name" | "price" | "salePrice">>,
     taxRate: number,
     usagePercent: number,
-    additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount">>,
+    additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable">>,
     promoData?: Pick<Promo, "redemptionCount" | "maxRedemptions" | "type" | "value">,
 ): OrderTotalResult {
     let subtotal = 0;
@@ -63,7 +63,7 @@ export function calculateOrderTotals(
     const chargeDetails = calculateChargeDetails({
         amount: subtotal,
         discount,
-        taxRate: 0,
+        taxRate,
         taxAmount: tax,
         usagePercent,
         platformFeeBase: subtotal,
@@ -75,7 +75,7 @@ export function calculateOrderTotals(
         lineItems: itemsWithTax,
         discount,
         platformFeeAmount: chargeDetails.feesAmount,
-        tax,
+        tax: chargeDetails.tax,
         subtotal,
         additionalFeeTotal: chargeDetails.additionalFeeTotal,
         additionalFeeLines: chargeDetails.additionalFeeLines,

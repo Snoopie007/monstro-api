@@ -15,6 +15,7 @@ const sampleFee = {
 	type: "fixed",
 	amount: 500,
 	checkoutTypes: ["package"],
+	taxable: false,
 	active: true,
 	created: new Date("2026-08-20T00:00:00Z"),
 	updated: new Date("2026-08-20T00:00:00Z"),
@@ -88,6 +89,7 @@ describe("Additional fee management", () => {
 				type: "percentage",
 				amount: 250,
 				checkoutTypes: ["order", "package", "order"],
+				taxable: true,
 			}),
 		});
 
@@ -99,31 +101,31 @@ describe("Additional fee management", () => {
 			type: "percentage",
 			amount: 250,
 			checkoutTypes: ["package", "order"],
+			taxable: true,
 		}));
 	});
 
-	test("rejects percentage fees above 100%", async () => {
+	test("allows percentage fees above the frontend warning threshold", async () => {
 		const response = await request("/", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify({
-				label: "Too Much",
+				label: "Large fee",
 				type: "percentage",
-				amount: 10_001,
+				amount: 15_000,
 				checkoutTypes: ["subscription"],
 			}),
 		});
 
-		expect(response.status).toBe(400);
-		expect(await response.json()).toEqual({ error: "Percentage fees cannot exceed 100%" });
-		expect(insertedValues).toHaveLength(0);
+		expect(response.status).toBe(201);
+		expect(insertedValues[0]).toEqual(expect.objectContaining({ amount: 15_000 }));
 	});
 
 	test("updates editable fields while retaining existing values", async () => {
 		const response = await request("/fee-1", {
 			method: "PATCH",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ active: false }),
+			body: JSON.stringify({ active: false, taxable: true }),
 		});
 
 		expect(response.status).toBe(200);
@@ -133,6 +135,7 @@ describe("Additional fee management", () => {
 			amount: sampleFee.amount,
 			checkoutTypes: sampleFee.checkoutTypes,
 			active: false,
+			taxable: true,
 		}));
 	});
 

@@ -22,14 +22,15 @@ test("adds scoped fees without adding Monstro's platform fee to the member total
   expect(calculateOrderTotals(
     [{ variantId: "variant-1", quantity: 1 }],
     [{ id: "variant-1", name: "Gloves", price: 1000, salePrice: null }],
-    0,
+    10,
     5,
-    [{ id: "fee-1", label: "Facility fee", type: "percentage", amount: 500 }],
+    [{ id: "fee-1", label: "Facility fee", type: "percentage", amount: 500, taxable: true }],
   )).toMatchObject({
     subtotal: 1000,
     platformFeeAmount: 50,
     additionalFeeTotal: 50,
-    total: 1050,
-    additionalFeeLines: [{ kind: "additional_fee", sourceFeeId: "fee-1", price: 50 }],
+    tax: 105,
+    total: 1155,
+    additionalFeeLines: [{ kind: "additional_fee", sourceFeeId: "fee-1", price: 50, tax: 5 }],
   });
 });

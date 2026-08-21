@@ -102,7 +102,7 @@ export type CalculateChargeDetailsProps = {
 	taxAmount?: number;
 	usagePercent: number;
 	platformFeeBase?: number;
-	additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount">>;
+	additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable">>;
 };
 
 export function calculateChargeDetails(
@@ -119,32 +119,39 @@ export function calculateChargeDetails(
 	} = props;
 
 	const subTotal = Math.max(0, amount - (discount || 0));
-	const tax = taxAmount ?? Math.floor((subTotal * (taxRate || 0)) / 100);
+	const productTax = taxAmount ?? Math.floor((subTotal * (taxRate || 0)) / 100);
 
 	// Monstro's platform fee is vendor-side and never part of the member total.
-	const platformBase = platformFeeBase ?? subTotal + tax;
+	const platformBase = platformFeeBase ?? subTotal + productTax;
 	const feesAmount = usagePercent > 0
 		? Math.floor((platformBase * usagePercent) / 100)
 		: 0;
 
 	const additionalFeeLines: InvoiceItem[] = [];
 	let additionalFeeTotal = 0;
-	for (const fee of additionalFees) {
+	let additionalFeeTax = 0;
+	for (const fee of subTotal > 0 ? additionalFees : []) {
 		const lineAmount = fee.type === "fixed"
 			? fee.amount
 			: Math.floor((subTotal * fee.amount) / 10000);
 		if (lineAmount <= 0) continue;
 
+		const lineTax = fee.taxable
+			? Math.floor((lineAmount * (taxRate || 0)) / 100)
+			: 0;
 		additionalFeeTotal += lineAmount;
+		additionalFeeTax += lineTax;
 		additionalFeeLines.push({
 			kind: "additional_fee",
 			sourceFeeId: fee.id,
 			name: fee.label,
 			quantity: 1,
 			price: lineAmount,
+			...(fee.taxable ? { tax: lineTax } : {}),
 		});
 	}
 
+	const tax = productTax + additionalFeeTax;
 	const total = subTotal + tax + additionalFeeTotal;
 
 	return {
