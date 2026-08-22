@@ -1,5 +1,6 @@
 export * from "./accounts";
 export * from "./achievements";
+export * from "./AdditionalFees";
 export * from "./attendances";
 export * from "./chat";
 export * from "./contracts";
@@ -24,6 +25,7 @@ export * from "./rank";
 export * from "./reservations";
 export * from "./rewards";
 export * from "./sessions";
+export * from "./sites";
 export * from "./staffs";
 export * from "./SupportAssistants";
 export * from "./SupportBotEnums";

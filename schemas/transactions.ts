@@ -7,7 +7,7 @@ import {
 	text,
 	timestamp,
 } from "drizzle-orm/pg-core";
-import type { TransactionActivity, TransactionMetadata } from "../types";
+import type { InvoiceItem, TransactionActivity, TransactionMetadata } from "../types";
 import type { Currency } from "../types/currency";
 import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
@@ -16,6 +16,7 @@ import { members } from "./members";
 export const transactions = pgTable("transactions", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('txn_')`),
 	description: text("description"),
+	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
 	feeAmount: integer("fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
