@@ -77,6 +77,7 @@ import {
 	courseLessonCompletions, courseLessons, courses,
 	courseLessonAttachments,
 } from "./courses";
+import { additionalFees } from "./AdditionalFees";
 
 // ============================================================================
 // USER RELATIONS
@@ -344,6 +345,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		fields: [locations.id],
 		references: [wallets.locationId],
 	}),
+	additionalFees: many(additionalFees),
 	taxRates: many(taxRates),
 	products: many(products),
 	orders: many(orders),
@@ -392,6 +394,13 @@ export const walletLedgerRelations = relations(walletLedgers, ({ one }) => ({
 		fields: [walletLedgers.walletId],
 		references: [wallets.id],
 		relationName: "ledgers",
+	}),
+}));
+
+export const additionalFeeRelations = relations(additionalFees, ({ one }) => ({
+	location: one(locations, {
+		fields: [additionalFees.locationId],
+		references: [locations.id],
 	}),
 }));
 
