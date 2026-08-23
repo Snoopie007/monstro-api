@@ -39,11 +39,7 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
                     return status(404, { error: 'Location not found' });
                 }
 
-                const defaultTaxRate = location.taxRates.find((taxRate) => taxRate.isDefault) ?? location.taxRates[0];
-                return status(200, {
-                    ...location,
-                    taxRate: defaultTaxRate,
-                });
+                return status(200, location);
             } catch (error) {
                 console.error(error);
                 return status(500, { error: 'Internal server error' });
