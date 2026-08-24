@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { calculateChargeDetails } from "@/utils";
+import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
@@ -13,6 +13,7 @@ type InvoiceChargeMetadata = {
     collectionMethod?: "send_invoice" | "charge_automatically";
     paymentMethodId?: string;
     gatewayService?: "stripe" | "square";
+    platformFeeAmount?: number;
 };
 
 function squareLocationIdFromMetadata(metadata: unknown) {
@@ -104,14 +105,16 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 (total, item) => item.feeId ? total + (item.tax || 0) : total,
                 0,
             );
-            const platformFeeAmount = linkedTransaction?.feeAmount ?? calculateChargeDetails({
-                amount: invoice.subTotal,
-                discount: 0,
-                taxRate: 0,
-                taxAmount: Math.max(0, invoice.tax - additionalFeeTax),
-                planId: invoice.location?.locationState?.planId ?? 0,
-                additionalFees: [],
-            }).feesAmount;
+            const platformFeeAmount = linkedTransaction?.feeAmount
+                ?? invoiceMetadata?.platformFeeAmount
+                ?? calculateChargeDetails({
+                    amount: invoice.subTotal,
+                    discount: 0,
+                    taxRate: 0,
+                    taxAmount: Math.max(0, invoice.tax - additionalFeeTax),
+                    planId: invoice.location?.locationState?.planId ?? 0,
+                    additionalFees: [],
+                }).feesAmount;
             const integration = invoice.location?.integrations?.find((candidate) => {
                 if (invoiceMetadata?.gatewayService) return candidate.service === invoiceMetadata.gatewayService;
                 return candidate.id === invoice.location?.locationState?.paymentGatewayId;

@@ -1,6 +1,6 @@
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberPackages, promos, transactions } from "@subtrees/schemas";
 import {
     calculateChargeDetails,
     chargeWithGateway,
@@ -11,16 +11,19 @@ import {
     calculateThresholdDate,
     getAdditionalFeesForCheckout,
     getCheckoutContext,
+    getMemberCheckoutContext,
+    addMembertoGroup,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { generateUUID } from "subtrees/utils";
+import { eq, sql } from "drizzle-orm";
 
 export type EnrollPkgInput = {
     lid: string;
     mid: string;
     priceId: string;
-    paymentMethodId: string;
+    paymentMethodId?: string;
     paymentType: PaymentType;
     promoId?: string | null;
     attemptId: string;
@@ -34,9 +37,14 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
     const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit, quoteOnly = false } = props;
     const transactionId = generateUUID('txn_');
 
-
     const [checkout, pricing] = await Promise.all([
-        getCheckoutContext({ lid, mid }),
+        paymentType === "cash"
+            ? getMemberCheckoutContext({ lid, mid }).then((context) => ({
+                ...context,
+                gateway: null,
+                gatewayCustomerId: null,
+            }))
+            : getCheckoutContext({ lid, mid }),
         db.query.memberPlanPricing.findFirst({
             where: (row, { eq }) => eq(row.id, priceId),
             with: { plan: true },
@@ -51,7 +59,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         throw new CheckoutError(404, "Pricing not found");
     }
 
-    const { ml, gateway, taxRates, gatewayCustomerId } = checkout;
+    const { ml, taxRates, gateway, gatewayCustomerId } = checkout;
     const locationState = ml.location.locationState;
     const contractId = pricing.plan.contractId;
     const waiverId = locationState.waiverId;
@@ -137,7 +145,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             : undefined;
     if (endDate && Number.isNaN(endDate.getTime())) throw new CheckoutError(400, "Invalid package expiration date");
     const metadata: Record<string, unknown> = {
-        ...(gateway.service === "authorize" ? {
+        ...(gateway?.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
         } : {}),
         checkoutKind: "package",
@@ -148,19 +156,32 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         price: chargeDetails.unitCost,
         discount: chargeDetails.productDiscount,
     }, ...chargeDetails.additionalFeeLines];
-    const charge: ChargeWithGatewayResult = await chargeWithGateway({
-        gateway,
-        gatewayCustomerId,
-        paymentMethodId,
-        transactionId,
-        paymentType,
-        total: chargeDetails.total,
-        feesAmount: chargeDetails.feesAmount,
-        currency,
-        description,
-        note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
-        metadata: { locationId: lid, memberId: mid, transactionId },
-    });
+    let charge: ChargeWithGatewayResult;
+    if (paymentType === "cash") {
+        charge = {
+            status: "approved",
+            paymentIntentId: `cash_${transactionId}`,
+            paymentType: "cash",
+            gatewayMetadata: { manualPayment: true },
+        };
+    } else {
+        if (!gateway || !gatewayCustomerId || !paymentMethodId) {
+            throw new CheckoutError(400, "Payment method is required");
+        }
+        charge = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            transactionId,
+            paymentType,
+            total: chargeDetails.total,
+            feesAmount: chargeDetails.feesAmount,
+            currency,
+            description,
+            note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
+            metadata: { locationId: lid, memberId: mid, transactionId },
+        });
+    }
 
     switch (charge.status) {
         case "approved": {
@@ -183,7 +204,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     paymentType,
                     currency,
                     chargeDate: now,
-                    paymentIntentId: charge.paymentIntentId,
+                    paymentIntentId: paymentType === "cash" ? null : charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
                     activities: [{
                         at: now.toISOString(),
@@ -200,6 +221,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     memberId: mid,
                     totalClassLimit: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
                     memberPlanPricingId: pricing.id,
+                    promoId: promoId ?? null,
                     paymentType,
                     startDate: packageStart,
                     expireDate: endDate,
@@ -223,6 +245,12 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 }).returning({ id: memberInvoices.id });
                 if (!invoice) throw new Error("Failed to create invoice");
 
+                if (promoId) {
+                    await tx.update(promos).set({
+                        redemptionCount: sql`${promos.redemptionCount} + 1`,
+                    }).where(eq(promos.id, promoId));
+                }
+
                 unsignedDocs = await createEnrollUnsignedDocs(tx, {
                     mid,
                     lid,
@@ -236,6 +264,10 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);
             }).catch((error) => console.error("Error triggering purchase:", error));
+            if (pricing.plan.groupId && ml.member.userId) {
+                addMembertoGroup(pricing.plan.groupId, ml.member.userId)
+                    .catch((error) => console.error("Error adding package member to group:", error));
+            }
             return { ok: true, unsignedDocs };
         }
         case "failed": {

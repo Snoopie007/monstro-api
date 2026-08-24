@@ -180,7 +180,13 @@ test("previews subscription invoices with their applied fee lines", async () => 
             }),
         },
     ));
-    const result = await response.json();
+    const result = await response.json() as {
+        preview: {
+            amount_due: number;
+            formatted_lines: Array<{ description: string }>;
+        };
+        summary: { additional_fee_cents: number };
+    };
 
     expect(response.status).toBe(200);
     expect(result.preview.amount_due).toBe(12_000);

@@ -284,6 +284,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 subscriptionId: sub.id,
                 collectionMethod: "charge_automatically",
                 gatewayService,
+                platformFeeAmount: chargeDetails.feesAmount,
             },
         }).returning({
             id: memberInvoices.id,
@@ -371,6 +372,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         collectionMethod: "charge_automatically",
                         paymentIntentId,
                         gatewayService,
+                        platformFeeAmount: chargeDetails.feesAmount,
                         ...(chargeDetails.total === 0 ? { noCharge: true } : {}),
                         ...(gatewayService === "square" ? {
                             paymentMethodId: paymentMethod.value.id,

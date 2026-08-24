@@ -88,6 +88,49 @@ test("accepts the legacy mobile package enrollment body", async () => {
     });
 });
 
+test("accepts a cash package without a gateway payment method", async () => {
+    const response = await packageApp.handle(new Request("http://localhost/location-1/pkg/", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+            mid: "member-1",
+            priceId: "pricing-1",
+            paymentType: "cash",
+            attemptId: "attempt-1",
+        }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(packageInput).toEqual({
+        lid: "location-1",
+        mid: "member-1",
+        priceId: "pricing-1",
+        paymentMethodId: undefined,
+        paymentType: "cash",
+        promoId: undefined,
+        attemptId: "attempt-1",
+        startDate: undefined,
+        expireDate: undefined,
+        totalClassLimit: undefined,
+    });
+});
+
+test("rejects a paid package without a payment method", async () => {
+    const response = await packageApp.handle(new Request("http://localhost/location-1/pkg/", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+            mid: "member-1",
+            priceId: "pricing-1",
+            paymentType: "card",
+        }),
+    }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Payment method is required" });
+    expect(handleEnrollPackage).not.toHaveBeenCalled();
+});
+
 test("accepts the legacy mobile enrollment body", async () => {
     const response = await app.handle(new Request("http://localhost/location-1/sub/", {
         method: "POST",

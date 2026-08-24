@@ -1,10 +1,10 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { removeRenewalJobs } from "@/queues/subscriptions";
-import { memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { getRefundAmounts } from "@/utils/refunds";
 
 export async function cancelSubscriptionRoutes(app: Elysia) {
@@ -39,13 +39,19 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                         metadata: transactions.metadata,
                     })
                     .from(transactions)
+                    .leftJoin(memberInvoices, eq(memberInvoices.transactionId, transactions.id))
                     .where(and(
                         eq(transactions.locationId, lid),
                         eq(transactions.memberId, sub.memberId),
                         eq(transactions.type, "inbound"),
                         eq(transactions.status, "paid"),
                         eq(transactions.refunded, false),
-                        sql`${transactions.metadata}->>'memberSubscriptionId' = ${sid}`
+                        or(
+                            eq(memberInvoices.memberPlanId, sid),
+                            sql`${transactions.metadata}->>'memberSubscriptionId' = ${sid}`,
+                            sql`${transactions.metadata}->>'subscriptionId' = ${sid}`,
+                            sql`${transactions.metadata}->>'memberPlanId' = ${sid}`,
+                        ),
                     ))
                     .orderBy(desc(transactions.chargeDate), desc(transactions.created))
                     .limit(1);
