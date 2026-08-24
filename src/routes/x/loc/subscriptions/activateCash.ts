@@ -5,7 +5,7 @@ import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { and, eq, sql } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
-import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
+import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
@@ -65,35 +65,24 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             });
 
             if (!existingDraft) {
-                const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
-                const taxRate = sub.location.taxRates.find((rate) => rate.isDefault)
-                    ?? sub.location.taxRates[0];
-                const chargeDetails = calculateChargeDetails({
-                    amount: sub.pricing.price,
+                const quote = await buildSubscriptionInvoiceQuote({
+                    locationId: lid,
+                    subscriptionId: sid,
+                    subscriptionMetadata: sub.metadata,
+                    pricing: sub.pricing,
+                    location: sub.location,
                     discount,
-                    taxRate: taxRate?.percentage ?? 0,
-                    planId: sub.location.locationState?.planId ?? 0,
-                    additionalFees,
                 });
-                const lineItems = [{
-                    name: sub.pricing.name,
-                    description: "Subscription billing period",
-                    quantity: 1,
-                    price: chargeDetails.unitCost,
-                    discount: chargeDetails.productDiscount,
-                }, ...chargeDetails.additionalFeeLines];
-
-                const currency = getCurrency(sub.location.country);
                 const [invoice] = await db.insert(memberInvoices).values({
                     memberId: sub.memberId,
                     locationId: lid,
                     memberPlanId: sid,
-                    description: `${sub.pricing.name} - Billing Period`,
-                    items: lineItems,
-                    subTotal: chargeDetails.subTotal,
-                    total: chargeDetails.total,
-                    tax: chargeDetails.tax,
-                    currency: currency || "usd",
+                    description: quote.invoiceDescription,
+                    items: quote.items,
+                    subTotal: quote.subTotal,
+                    total: quote.total,
+                    tax: quote.tax,
+                    currency: quote.currency,
                     status: "draft",
                     dueDate: new Date(sub.currentPeriodEnd),
                     paymentType: "cash",
@@ -103,7 +92,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     metadata: {
                         type: "from-subscription",
                         subscriptionId: sid,
-                        platformFeeAmount: chargeDetails.feesAmount,
+                        platformFeeAmount: quote.platformFeeAmount,
                     },
                 }).returning();
 
@@ -111,16 +100,16 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     const [transaction] = await db.insert(transactions).values({
                         memberId: sub.memberId,
                         locationId: lid,
-                        description: `${sub.pricing.name} - Recurring Payment`,
+                        description: quote.transactionDescription,
                         type: "inbound",
                         status: "failed",
                         paymentType: "cash",
-                        total: chargeDetails.total,
-                        subTotal: chargeDetails.subTotal,
-                        tax: chargeDetails.tax,
-                        feeAmount: chargeDetails.feesAmount,
-                        items: lineItems,
-                        currency: currency || "usd",
+                        total: quote.total,
+                        subTotal: quote.subTotal,
+                        tax: quote.tax,
+                        feeAmount: quote.platformFeeAmount,
+                        items: quote.items,
+                        currency: quote.currency,
                     }).returning({ id: transactions.id });
                     assert(transaction);
                     await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));

@@ -6,7 +6,7 @@ import { t } from "elysia";
 import { eq } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
-import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
+import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
 import type { Currency } from "@subtrees/types/currency";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
@@ -168,7 +168,6 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 eq(inv.status, "draft")
                             ),
                         });
-                        const currency = getCurrency(location.country);
                         if (!existingDraft) {
                             const promo = sub.metadata?.promo as {
                                 discount?: {
@@ -191,32 +190,25 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                     value: promo.discount.value ?? promo.discount.amount,
                                 }
                                 : undefined;
-                            const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription", "renewal");
-                            const taxRate = location.taxRates.find((rate) => rate.isDefault) ?? location.taxRates[0];
-                            const chargeDetails = calculateChargeDetails({
-                                amount: sub.pricing.price,
+                            const quote = await buildSubscriptionInvoiceQuote({
+                                locationId: lid,
+                                subscriptionId: sub.id,
+                                subscriptionMetadata: sub.metadata,
+                                pricing: sub.pricing,
+                                location,
+                                billingPhase: "renewal",
                                 discount,
-                                taxRate: taxRate?.percentage ?? 0,
-                                planId: location.locationState?.planId ?? 0,
-                                additionalFees,
                             });
-                            const lineItems = [{
-                                name: `${sub.pricing.name}`,
-                                description: "Subscription renewal",
-                                quantity: 1,
-                                price: chargeDetails.unitCost,
-                                discount: chargeDetails.productDiscount,
-                            }, ...chargeDetails.additionalFeeLines];
                             const [nextInvoice] = await tx.insert(memberInvoices).values({
                                 memberId: sub.memberId,
                                 locationId: sub.locationId,
                                 memberPlanId: sub.id,
-                                description: `${sub.pricing.name} - Billing Period`,
-                                items: lineItems,
-                                subTotal: chargeDetails.subTotal,
-                                total: chargeDetails.total,
-                                tax: chargeDetails.tax,
-                                currency: (currency || "USD") as Currency,
+                                description: quote.invoiceDescription,
+                                items: quote.items,
+                                subTotal: quote.subTotal,
+                                total: quote.total,
+                                tax: quote.tax,
+                                currency: quote.currency as Currency,
                                 status: "draft",
                                 dueDate: new Date(nextEnd),
                                 paymentType: "cash",
@@ -226,7 +218,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 metadata: {
                                     type: "from-subscription",
                                     subscriptionId: sub.id,
-                                    platformFeeAmount: chargeDetails.feesAmount,
+                                    platformFeeAmount: quote.platformFeeAmount,
                                 },
                             }).returning();
 
@@ -237,16 +229,16 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                             const [transaction] = await tx.insert(transactions).values({
                                 memberId: sub.memberId,
                                 locationId: sub.locationId,
-                                description: `${sub.pricing.name} - Recurring Payment`,
+                                description: quote.transactionDescription,
                                 type: "inbound",
                                 status: PENDING_TRANSACTION_STATUS,
                                 paymentType: "cash",
-                                total: chargeDetails.total,
-                                subTotal: chargeDetails.subTotal,
-                                tax: chargeDetails.tax,
-                                feeAmount: chargeDetails.feesAmount,
-                                items: lineItems,
-                                currency: (currency || "USD") as Currency,
+                                total: quote.total,
+                                subTotal: quote.subTotal,
+                                tax: quote.tax,
+                                feeAmount: quote.platformFeeAmount,
+                                items: quote.items,
+                                currency: quote.currency as Currency,
                             }).returning({ id: transactions.id });
                             assert(transaction);
                             await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, nextInvoice.id));
