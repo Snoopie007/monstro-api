@@ -98,12 +98,20 @@ export async function sendInvoiceRoutes(app: Elysia) {
         const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
         const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
         const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
-        const additionalFeeTax = (invoice.items || []).reduce(
-            (total, item) => item.feeId ? total + (item.tax || 0) : total,
-            0,
-        );
 
         if (shouldAutoCharge) {
+            const additionalFeeTax = (invoice.items || []).reduce(
+                (total, item) => item.feeId ? total + (item.tax || 0) : total,
+                0,
+            );
+            const platformFeeAmount = linkedTransaction?.feeAmount ?? calculateChargeDetails({
+                amount: invoice.subTotal,
+                discount: 0,
+                taxRate: 0,
+                taxAmount: Math.max(0, invoice.tax - additionalFeeTax),
+                planId: invoice.location?.locationState?.planId ?? 0,
+                additionalFees: [],
+            }).feesAmount;
             const integration = invoice.location?.integrations?.find((candidate) => {
                 if (invoiceMetadata?.gatewayService) return candidate.service === invoiceMetadata.gatewayService;
                 return candidate.id === invoice.location?.locationState?.paymentGatewayId;
@@ -128,15 +136,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 }
 
                 const square = new SquarePaymentGateway(integration.accessToken);
-                const chargeDetails = calculateChargeDetails({
-                    amount: invoice.subTotal,
-                    discount: 0,
-                    taxRate: 0,
-                    taxAmount: Math.max(0, invoice.tax - additionalFeeTax),
-                    planId: invoice.location?.locationState?.planId ?? 0,
-                    additionalFees: [],
-                });
-                const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;
 
                 try {
                     const payment = await square.createCharge(ml.gatewayCustomerId, selectedPaymentMethodId, {
@@ -314,16 +313,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 id: paymentMethod.id,
                 type: paymentMethod.type,
             };
-
-            const chargeDetails = calculateChargeDetails({
-                amount: invoice.subTotal,
-                discount: 0,
-                taxRate: 0,
-                taxAmount: Math.max(0, invoice.tax - additionalFeeTax),
-                planId: invoice.location?.locationState?.planId ?? 0,
-                additionalFees: [],
-            });
-            const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;
 
             const { id: paymentIntentId } = await stripe.createCharge(ml.gatewayCustomerId, selectedPaymentMethod.id, {
                 total: invoice.total,

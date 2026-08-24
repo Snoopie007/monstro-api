@@ -100,6 +100,8 @@ export type CalculateChargeDetailsProps = {
 	amount: number;
 	discount?: CheckoutDiscount | number;
 	taxRate: number;
+	/** Existing invoice flows pass stored product tax here so fee changes do not
+	 * recalculate it. New checkouts omit it and use taxRate. */
 	taxAmount?: number;
 	planId: number;
 	additionalFees: Array<Pick<AdditionalFee, "id" | "label" | "type" | "amount" | "taxable" | "refundable">>;
