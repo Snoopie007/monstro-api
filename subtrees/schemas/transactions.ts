@@ -1,18 +1,17 @@
+import { sql } from "drizzle-orm";
 import {
+	boolean,
 	integer,
+	jsonb,
+	pgTable,
 	text,
 	timestamp,
-	pgTable,
-	jsonb,
-	boolean,
 } from "drizzle-orm/pg-core";
-import { locations } from "./locations";
-import { sql } from "drizzle-orm";
-import { members } from "./members";
-import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionActivity, TransactionMetadata } from "../types";
+import type { InvoiceItem, TransactionActivity, TransactionMetadata } from "../types";
 import type { Currency } from "../types/currency";
-import type { InvoiceItem } from "../types/invoices";
+import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
+import { locations } from "./locations";
+import { members } from "./members";
 
 export const transactions = pgTable("transactions", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('txn_')`),

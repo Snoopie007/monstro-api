@@ -50,6 +50,21 @@ export function asString(value: unknown): string {
     return "";
 }
 
+export function parseTime(input: string) {
+    const raw = input.trim().toLowerCase().replace(/\s+/g, "");
+    const mer = raw.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/);
+    if (mer) {
+        let hour = Number(mer[1]);
+        const minute = Number(mer[2] || 0);
+        if (mer[3] === "pm" && hour < 12) hour += 12;
+        if (mer[3] === "am" && hour === 12) hour = 0;
+        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    }
+    const clock = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!clock) return "";
+    return `${String(Number(clock[1])).padStart(2, "0")}:${clock[2]}`;
+}
+
 export function argString(args: ToolArgs, ...keys: string[]) {
     for (const key of keys) {
         const value = asString(args[key]);
@@ -184,6 +199,10 @@ export function mergeResumeArgs(paused: PausedTask, message: string): ToolArgs {
                 next.program = text;
                 delete next.programId;
             }
+            return next;
+        }
+        if (paused.name === "cancel_session" && argString(next, "memberId", "mid")) {
+            next.program = text;
             return next;
         }
         if (argString(next, "memberId", "mid") && !asString(next.program) && !asString(next.programId)) {

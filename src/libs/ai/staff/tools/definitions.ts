@@ -74,15 +74,17 @@ export const TOOLS_DEFINITIONS = [
         type: "function",
         function: {
             name: "cancel_session",
-            description: "Start or continue cancelling one member session. Call this immediately when the user selects Cancel Session. Pass name, memberId, reservationId, and refundClassCredit whenever they are known.",
+            description: "Start or continue cancelling one member session. Call this immediately when the user selects Cancel Session or asks to cancel a class. Pass name, memberId, program, time, reservationId, and refundClassCredit whenever they are known.",
             parameters: {
                 type: "object",
                 additionalProperties: false,
                 properties: {
                     name: { type: "string", description: "Member first and last name when the user typed a name" },
                     memberId: { type: "string", description: "Member id from a clarify chip, e.g. mbr_..." },
-                    reservationId: { type: "string", description: "Reservation id from the session chip, or refund:/keep: from the confirm chip" },
-                    refundClassCredit: { type: "boolean", description: "True to add 1 classCredits back to the member subscription" },
+                    program: { type: "string", description: "Class name the user typed, e.g. Crossfit. Match against reservation programName. Never an id." },
+                    time: { type: "string", description: "Class time when the user named one, e.g. 5PM or 17:00. Omit when they did not." },
+                    reservationId: { type: "string", description: "Reservation id from a session chip, or refund:/keep: from the confirm chip" },
+                    refundClassCredit: { type: "boolean", description: "True to refund a package class or a term-plan class credit" },
                 },
             },
         },

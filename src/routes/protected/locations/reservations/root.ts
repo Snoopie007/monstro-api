@@ -4,7 +4,7 @@ import type {
     Reservation
 } from "subtrees/types";
 import {
-    memberPackages, memberSubscriptions,
+    attendances, memberPackages, memberSubscriptions,
     reservations
 } from "subtrees/schemas";
 import { eq, sql } from "drizzle-orm";
@@ -234,9 +234,52 @@ export async function locationReservations(app: Elysia) {
                 return status(500, { error: err });
             }
         }, ReservationsProps)
+        app.patch('/:rid/resume', async ({ body, params, status }) => {
+            const { rid } = params;
+            try {
+                const reservation = await db.query.reservations.findFirst({
+                    where: (reservations, { eq, and, or }) => and(
+                        eq(reservations.id, rid),
+                        or(
+                            eq(reservations.status, "cancelled_by_member"),
+                            eq(reservations.status, "cancelled_by_vendor"),
+                            eq(reservations.status, "cancelled_by_holiday"),
+                        )
+                    ),
+
+                })
+                if (!reservation) {
+                    return status(404, { error: "Reservation not found" })
+                }
+
+                const hasPassed = differenceInMilliseconds(reservation.startOn, new Date()) > 0;
+                if (hasPassed) {
+                    return status(200, { success: false, message: "Reservation has already passed" })
+                }
+
+
+                // check if session is full
+
+
+                await db.update(reservations).set({
+                    status: "confirmed",
+                    updated: new Date(),
+                }).where(eq(reservations.id, reservation.id));
+                return status(200, { success: true })
+            } catch (err) {
+                console.error(err);
+                return status(500, { error: err });
+            }
+        }, {
+            params: t.Object({
+                lid: t.String(),
+                rid: t.String(),
+            })
+        })
         app.delete('/:rid', async ({ body, params, status }) => {
             const { rid } = params;
             const refundCredit = body?.refundCredit;
+            const byStaff = body?.byStaff;
             try {
                 const reservation = await db.query.reservations.findFirst({
                     where: (reservations, { eq }) => eq(reservations.id, rid),
@@ -254,8 +297,17 @@ export async function locationReservations(app: Elysia) {
                     return status(200, { success: false, message: "Reservation is already attended" })
                 }
 
+                const now = new Date();
                 await db.transaction(async (tx) => {
-                    await tx.delete(reservations).where(eq(reservations.id, reservation.id))
+
+                    await tx.update(reservations).set({
+                        status: byStaff ? "cancelled_by_vendor" : "cancelled_by_member",
+                        cancelledAt: now,
+                        cancelledReason: byStaff ? "Cancelled by staff" : "Cancelled by member",
+                        updated: now,
+                    }).where(eq(reservations.id, reservation.id));
+
+
                     if (refundCredit) {
                         if (reservation.memberPackageId) {
                             // Prevent decrementing below 0
@@ -332,7 +384,8 @@ export async function locationReservations(app: Elysia) {
                 rid: t.String(),
             }),
             body: t.Optional(t.Object({
-                refundCredit: t.Boolean(),
+                byStaff: t.Optional(t.Boolean()),
+                refundCredit: t.Optional(t.Boolean()),
             })),
         })
 
