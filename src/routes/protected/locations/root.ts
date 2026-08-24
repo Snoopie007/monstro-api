@@ -39,6 +39,7 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
                     return status(404, { error: 'Location not found' });
                 }
 
+
                 return status(200, location);
             } catch (error) {
                 console.error(error);
