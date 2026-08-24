@@ -69,6 +69,7 @@ let additionalFeeLines: Array<{
     price: number;
     tax: number;
 }> = [];
+let configuredAdditionalFees: Array<{ id: string; description: string | null }> = [];
 mock.module("@/utils", () => ({
     calculateOrderTotals: () => ({
         total: 1200,
@@ -83,7 +84,7 @@ mock.module("@/utils", () => ({
     chargeWithGateway,
     CheckoutError,
     CheckoutPendingError: CheckoutError,
-    getAdditionalFeesForCheckout: mock(async () => []),
+    getAdditionalFeesForCheckout: mock(async () => configuredAdditionalFees),
     getCheckoutContext: mock(async () => ({
         gatewayCustomerId: "customer-1",
         locationState: { planId: 2, currency: "USD" },
@@ -101,11 +102,13 @@ beforeEach(() => {
     inserted.length = 0;
     additionalFeeTotal = 0;
     additionalFeeLines = [];
+    configuredAdditionalFees = [];
     chargeWithGateway.mockClear();
 });
 
-test("returns public additional fee labels and amounts for checkout quotes", async () => {
+test("returns public additional fee details for checkout quotes", async () => {
     additionalFeeTotal = 125;
+    configuredAdditionalFees = [{ id: "fee-internal", description: "Supports facility upkeep." }];
     additionalFeeLines = [{
         feeId: "fee-internal",
         refundable: false,
@@ -127,7 +130,7 @@ test("returns public additional fee labels and amounts for checkout quotes", asy
 
     expect(quote).toEqual(expect.objectContaining({
         feesAmount: 125,
-        additionalFees: [{ label: "Facility fee", amount: 125 }],
+        additionalFees: [{ label: "Facility fee", amount: 125, description: "Supports facility upkeep." }],
     }));
     expect(quote).not.toHaveProperty("additionalFeeLines");
     expect(chargeWithGateway).not.toHaveBeenCalled();

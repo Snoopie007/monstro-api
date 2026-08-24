@@ -172,10 +172,14 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             discount: chargeDetails.discount,
             tax: chargeDetails.tax,
             fees: chargeDetails.additionalFeeTotal,
-            additionalFees: chargeDetails.additionalFeeLines.map((fee) => ({
-                label: fee.name,
-                amount: fee.price - (fee.discount ?? 0),
-            })),
+            additionalFees: chargeDetails.additionalFeeLines.map((fee) => {
+                const description = additionalFees.find((configuredFee) => configuredFee.id === fee.feeId)?.description?.trim();
+                return {
+                    label: fee.name,
+                    amount: fee.price - (fee.discount ?? 0),
+                    ...(description ? { description } : {}),
+                };
+            }),
             total: chargeDetails.total,
             currency,
         };

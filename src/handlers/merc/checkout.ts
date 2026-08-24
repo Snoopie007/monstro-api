@@ -109,10 +109,14 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             tax,
             subtotal,
             processingFee: 0,
-            additionalFees: additionalFeeLines.map((fee) => ({
-                label: fee.name,
-                amount: fee.price - (fee.discount ?? 0),
-            })),
+            additionalFees: additionalFeeLines.map((fee) => {
+                const description = additionalFees.find((configuredFee) => configuredFee.id === fee.feeId)?.description?.trim();
+                return {
+                    label: fee.name,
+                    amount: fee.price - (fee.discount ?? 0),
+                    ...(description ? { description } : {}),
+                };
+            }),
         };
     }
     const currency = locationState.currency;
