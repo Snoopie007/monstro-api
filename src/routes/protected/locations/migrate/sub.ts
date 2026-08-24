@@ -164,6 +164,7 @@ export function migrateSubRoutes(app: Elysia) {
                     paymentType: paymentType,
                     status: 'incomplete',
                     gatewayPaymentId: paymentMethodId,
+                    metadata: { additionalFeesStartAtRenewal: true },
                 }).returning();
 
                 await tx.update(memberLocations).set({
@@ -190,11 +191,11 @@ export function migrateSubRoutes(app: Elysia) {
                 const productName = pricing.name;
                 const description = `Payment for ${pricing.name}`;
 
-                const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
+                const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription", "renewal");
                 const chargeDetails = calculateChargeDetails({
                     amount: pricing.price,
                     taxRate: taxRate?.percentage ?? 0,
-                    usagePercent: locationState.usagePercent || 0,
+                    planId: locationState.planId,
                     additionalFees,
                 });
 

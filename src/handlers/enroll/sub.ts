@@ -31,6 +31,7 @@ export type EnrollSubProps = {
     paymentMethodId: string;
     paymentType: PaymentType;
     promoId?: string | null;
+    attemptId?: string;
     startDate?: string;
     endDate?: string;
     trialDays?: number;
@@ -91,7 +92,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         }
     }
 
-    const { usagePercent, currency } = locationState;
+    const { planId, currency } = locationState;
     const signedWaiverId = ml.signedWaiverId;
     if (signedWaiverId) {
         if (!waiverId) {
@@ -160,7 +161,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         amount: pricing.downpayment || pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
-        usagePercent: usagePercent || 0,
+        planId,
         additionalFees,
     });
     // TODO: Reconcile quoteOnly with the Sites GET /api/enroll proxy before changing this early return.
@@ -168,10 +169,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         const baseAmount = pricing.downpayment || pricing.price;
         return {
             baseAmount,
-            discount,
+            discount: chargeDetails.discount,
             tax: chargeDetails.tax,
             fees: chargeDetails.additionalFeeTotal,
-            additionalFeeLines: chargeDetails.additionalFeeLines,
+            additionalFees: chargeDetails.additionalFeeLines.map((fee) => ({
+                label: fee.name,
+                amount: fee.price - (fee.discount ?? 0),
+            })),
             total: chargeDetails.total,
             currency,
         };
@@ -192,7 +196,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         name: productName,
         quantity: 1,
         price: chargeDetails.unitCost,
-        discount,
+        discount: chargeDetails.productDiscount,
     }, ...chargeDetails.additionalFeeLines];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
@@ -296,6 +300,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             const member = ml.member;
             const nextBillingDate = new Date(subscription.currentPeriodEnd);
             if (["month", "year"].includes(pricing.interval)) {
+                const promoDuration = discount?.duration === "once"
+                    ? 1
+                    : discount?.duration === "repeating"
+                        ? discount.durationInMonths ?? 1
+                        : Number.MAX_SAFE_INTEGER;
+                const remainingPromoPayments = Math.max(0, promoDuration - 1);
                 const payload: SubscriptionJobData = {
                     sid: subscription.id,
                     lid,
@@ -316,9 +326,11 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         interval: pricing.interval,
                         intervalThreshold: pricing.intervalThreshold,
                     },
-                    discount: discount > 0 ? {
-                        amount: discount,
-                        duration: pricing.intervalThreshold,
+                    discount: discount && remainingPromoPayments > 0 ? {
+                        amount: chargeDetails.discount,
+                        type: discount.type,
+                        value: discount.value,
+                        duration: remainingPromoPayments,
                     } : undefined,
                 };
                 const renewal = pricing.intervalThreshold === 1

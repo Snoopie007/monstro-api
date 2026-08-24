@@ -132,9 +132,8 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     amount: invoice.subTotal,
                     discount: 0,
                     taxRate: 0,
-                    taxAmount: invoice.tax,
-                    usagePercent: invoice.location?.locationState?.usagePercent ?? 0,
-                    platformFeeBase: invoice.subTotal + Math.max(0, invoice.tax - additionalFeeTax),
+                    taxAmount: Math.max(0, invoice.tax - additionalFeeTax),
+                    planId: invoice.location?.locationState?.planId ?? 0,
                     additionalFees: [],
                 });
                 const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;
@@ -320,9 +319,8 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 amount: invoice.subTotal,
                 discount: 0,
                 taxRate: 0,
-                taxAmount: invoice.tax,
-                usagePercent: invoice.location?.locationState?.usagePercent ?? 0,
-                platformFeeBase: invoice.subTotal + Math.max(0, invoice.tax - additionalFeeTax),
+                taxAmount: Math.max(0, invoice.tax - additionalFeeTax),
+                planId: invoice.location?.locationState?.planId ?? 0,
                 additionalFees: [],
             });
             const platformFeeAmount = linkedTransaction?.feeAmount ?? chargeDetails.feesAmount;

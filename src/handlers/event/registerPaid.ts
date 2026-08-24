@@ -41,7 +41,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     const chargeDetails = calculateChargeDetails({
         amount: ticket.price,
         taxRate: taxRates.find((r) => r.isDefault)?.percentage || 0,
-        usagePercent: locationState.usagePercent || 0,
+        planId: locationState.planId,
         additionalFees,
     });
     const { total, feesAmount, tax, subTotal } = chargeDetails;

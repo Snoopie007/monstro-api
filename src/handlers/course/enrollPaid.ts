@@ -49,7 +49,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
     const chargeDetails = calculateChargeDetails({
         amount: coursePrice,
         taxRate,
-        usagePercent: locationState.usagePercent || 0,
+        planId: locationState.planId,
         additionalFees,
     });
     const { total, feesAmount, tax, subTotal } = chargeDetails;

@@ -71,7 +71,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         }
     }
 
-    const { usagePercent, currency } = locationState;
+    const { planId, currency } = locationState;
     const signedWaiverId = ml.signedWaiverId;
     if (signedWaiverId) {
         if (!waiverId) {
@@ -106,17 +106,20 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         amount: pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
-        usagePercent: usagePercent || 0,
+        planId,
         additionalFees,
     });
     // TODO: Reconcile quoteOnly with the Sites GET /api/enroll proxy before changing this early return.
     if (quoteOnly) {
         return {
             baseAmount: pricing.price,
-            discount,
+            discount: chargeDetails.discount,
             tax: chargeDetails.tax,
             fees: chargeDetails.additionalFeeTotal,
-            additionalFeeLines: chargeDetails.additionalFeeLines,
+            additionalFees: chargeDetails.additionalFeeLines.map((fee) => ({
+                label: fee.name,
+                amount: fee.price - (fee.discount ?? 0),
+            })),
             total: chargeDetails.total,
             currency,
         };
@@ -143,7 +146,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         name: productName,
         quantity: 1,
         price: chargeDetails.unitCost,
-        discount,
+        discount: chargeDetails.productDiscount,
     }, ...chargeDetails.additionalFeeLines];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,

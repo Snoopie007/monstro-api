@@ -60,6 +60,15 @@ const chargeWithGateway = mock(async () => ({
     paymentType: "card" as const,
     gatewayMetadata: {},
 }));
+let additionalFeeTotal = 0;
+let additionalFeeLines: Array<{
+    feeId: string;
+    refundable: boolean;
+    name: string;
+    quantity: number;
+    price: number;
+    tax: number;
+}> = [];
 mock.module("@/utils", () => ({
     calculateOrderTotals: () => ({
         total: 1200,
@@ -67,8 +76,8 @@ mock.module("@/utils", () => ({
         platformFeeAmount: 0,
         tax: 0,
         subtotal: 1200,
-        additionalFeeTotal: 0,
-        additionalFeeLines: [],
+        additionalFeeTotal,
+        additionalFeeLines,
         lineItems: [{ variantId: "variant-1", productName: "Uniform", quantity: 1, unitCost: 1200, tax: 0 }],
     }),
     chargeWithGateway,
@@ -77,7 +86,7 @@ mock.module("@/utils", () => ({
     getAdditionalFeesForCheckout: mock(async () => []),
     getCheckoutContext: mock(async () => ({
         gatewayCustomerId: "customer-1",
-        locationState: { usagePercent: 0, currency: "USD" },
+        locationState: { planId: 2, currency: "USD" },
         taxRates: [],
         gateway: { service: "stripe", integrationId: "integration-1" },
     })),
@@ -90,7 +99,38 @@ beforeEach(() => {
     steps.length = 0;
     stockUpdates.length = 0;
     inserted.length = 0;
+    additionalFeeTotal = 0;
+    additionalFeeLines = [];
     chargeWithGateway.mockClear();
+});
+
+test("returns public additional fee labels and amounts for checkout quotes", async () => {
+    additionalFeeTotal = 125;
+    additionalFeeLines = [{
+        feeId: "fee-internal",
+        refundable: false,
+        name: "Facility fee",
+        quantity: 1,
+        price: 125,
+        tax: 10,
+    }];
+
+    const quote = await handleMercCheckout({
+        lid: "location-1",
+        mid: "member-1",
+        items: [{ variantId: "variant-1", quantity: 1 }],
+        paymentMethodId: "quote",
+        paymentType: "card",
+        attemptId: "quote",
+        quoteOnly: true,
+    });
+
+    expect(quote).toEqual(expect.objectContaining({
+        feesAmount: 125,
+        additionalFees: [{ label: "Facility fee", amount: 125 }],
+    }));
+    expect(quote).not.toHaveProperty("additionalFeeLines");
+    expect(chargeWithGateway).not.toHaveBeenCalled();
 });
 
 test("decrements inventory in the paid order transaction", async () => {

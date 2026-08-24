@@ -18,6 +18,34 @@ afterEach(() => {
 });
 
 describe("chargeWithGateway Authorize.net", () => {
+    test("does not contact a gateway for a zero-dollar checkout", async () => {
+        let called = false;
+        globalThis.fetch = Object.assign(async () => {
+            called = true;
+            return new Response();
+        }, { preconnect: originalFetch.preconnect });
+
+        const result = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId: "customer-1",
+            paymentMethodId: "card-1",
+            transactionId: "00000000-0000-4000-8000-000000000000",
+            total: 0,
+            feesAmount: 0,
+            currency: "USD",
+            description: "Free checkout",
+            note: "no charge",
+            metadata: {},
+            paymentType: "card",
+        });
+
+        expect(called).toBe(false);
+        expect(result).toMatchObject({
+            status: "approved",
+            gatewayMetadata: { noCharge: true },
+        });
+    });
+
     test("returns approved metadata and preserves the business description", async () => {
         process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
         let body: Record<string, any> | undefined;

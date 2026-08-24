@@ -4,6 +4,7 @@ import type { AdditionalFee, AdditionalFeeCheckoutType } from "@subtrees/types";
 export async function getAdditionalFeesForCheckout(
 	locationId: string,
 	checkoutType: AdditionalFeeCheckoutType,
+	billingPhase: "initial" | "renewal" = "initial",
 ): Promise<AdditionalFee[]> {
 	const fees = await db.query.additionalFees.findMany({
 		where: (fee, { and, eq }) => and(
@@ -16,5 +17,8 @@ export async function getAdditionalFeesForCheckout(
 		],
 	});
 
-	return fees.filter((fee) => fee.checkoutTypes.includes(checkoutType));
+	return fees.filter((fee) =>
+		fee.checkoutTypes.includes(checkoutType)
+		&& !(checkoutType === "subscription" && billingPhase === "renewal" && fee.initialChargeOnly),
+	);
 }

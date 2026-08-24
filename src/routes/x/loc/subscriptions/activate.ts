@@ -139,7 +139,12 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             discount?: PromoDiscount;
             applied?: boolean;
         } | undefined);
-        const discountAmount = promoMeta?.discount?.amount || 0;
+        const discount = promoMeta?.discount
+            ? {
+                type: promoMeta.discount.type ?? "fixed_amount",
+                value: promoMeta.discount.value ?? promoMeta.discount.amount,
+            }
+            : undefined;
         const location = sub.location;
         const currency = getCurrency(location.country);
 
@@ -242,9 +247,9 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
         const chargeDetails = calculateChargeDetails({
             amount: billedAmount,
-            discount: discountAmount,
+            discount,
             taxRate: taxRate?.percentage ?? 0,
-            usagePercent: sub.location.locationState?.usagePercent ?? 0,
+            planId: sub.location.locationState?.planId ?? 0,
             additionalFees,
         });
 
@@ -253,7 +258,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
             quantity: 1,
             price: chargeDetails.unitCost,
-            discount: discountAmount,
+            discount: chargeDetails.productDiscount,
         }, ...chargeDetails.additionalFeeLines];
 
         const [invoice] = await db.insert(memberInvoices).values({
@@ -295,7 +300,9 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         let squarePayment: SquarePaymentResult | undefined;
 
         try {
-            if (gatewayService === "stripe") {
+            if (chargeDetails.total === 0) {
+                paymentIntentId = `free_${invoice.id}`;
+            } else if (gatewayService === "stripe") {
                 const stripe = new StripePaymentGateway(integration.accessToken);
                 const paymentResult = await withTimeout(
                     stripe.createCharge(memberLocation.gatewayCustomerId!, paymentMethod.value.id, {
@@ -350,11 +357,12 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             return status(502, { error: message });
         }
 
+        const finalizedImmediately = gatewayService === "square" || chargeDetails.total === 0;
         try {
             await db.transaction(async (tx) => {
                 await tx.update(memberInvoices).set({
-                    status: gatewayService === "square" ? "paid" : "sent",
-                    ...(gatewayService === "square" ? { paid: true, receiptUrl: squarePayment?.receiptUrl ?? null } : {}),
+                    status: finalizedImmediately ? "paid" : "sent",
+                    ...(finalizedImmediately ? { paid: true, receiptUrl: squarePayment?.receiptUrl ?? null } : {}),
                     sentAt: new Date(),
                     updated: new Date(),
                     metadata: {
@@ -363,6 +371,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         collectionMethod: "charge_automatically",
                         paymentIntentId,
                         gatewayService,
+                        ...(chargeDetails.total === 0 ? { noCharge: true } : {}),
                         ...(gatewayService === "square" ? {
                             paymentMethodId: paymentMethod.value.id,
                             squarePaymentId: squarePayment?.id,
@@ -374,7 +383,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
 
                 await tx.update(memberSubscriptions).set({
                     gatewayPaymentId: paymentMethod.value.id,
-                    ...(gatewayService === "square" ? { status: "active" } : {}),
+                    ...(finalizedImmediately ? { status: "active" } : {}),
                     metadata: {
                         ...(sub.metadata || {}),
                         hasPaidDownpayment: !!sub.pricing.downpayment,
@@ -389,7 +398,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     },
                 }).where(eq(memberSubscriptions.id, sub.id));
 
-                if (gatewayService === "square") {
+                if (finalizedImmediately) {
                     const txValues = {
                         memberId: sub.memberId,
                         locationId: lid,
@@ -408,6 +417,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                             memberPlanId: sub.id,
                             memberSubscriptionId: sub.id,
                             gatewayService,
+                            ...(chargeDetails.total === 0 ? { noCharge: true } : {}),
                             squarePaymentId: squarePayment?.id,
                             chargeId: squarePayment?.id,
                             squarePaymentStatus: squarePayment?.status,
@@ -465,6 +475,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             currency,
             taxRate: taxRate?.percentage || 0,
             promoMeta,
+            discountAlreadyApplied: true,
         });
 
         try {
@@ -573,6 +584,7 @@ function buildRenewalPayload({
     currency,
     taxRate,
     promoMeta,
+    discountAlreadyApplied = false,
 }: {
     sub: NonNullable<Awaited<ReturnType<typeof db.query.memberSubscriptions.findFirst>>> & {
         member: { firstName: string; lastName: string | null; email: string };
@@ -589,7 +601,11 @@ function buildRenewalPayload({
     currency: string;
     taxRate: number;
     promoMeta: { discount?: PromoDiscount } | undefined;
+    discountAlreadyApplied?: boolean;
 }): SubscriptionJobData {
+    const remainingDiscountPayments = promoMeta?.discount
+        ? Math.max(0, promoMeta.discount.duration - (discountAlreadyApplied ? 1 : 0))
+        : 0;
     return {
         sid: sub.id,
         lid,
@@ -611,6 +627,13 @@ function buildRenewalPayload({
             interval: sub.pricing.interval as "day" | "week" | "month" | "year",
             intervalThreshold: sub.pricing.intervalThreshold!,
         },
-        ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
+        ...(promoMeta?.discount && remainingDiscountPayments > 0
+            ? {
+                discount: {
+                    ...promoMeta.discount,
+                    duration: remainingDiscountPayments,
+                },
+            }
+            : {}),
     };
 }

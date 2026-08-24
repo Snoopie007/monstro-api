@@ -17,6 +17,7 @@ const sampleFee = {
 	checkoutTypes: ["package"],
 	taxable: false,
 	refundable: true,
+	initialChargeOnly: false,
 	active: true,
 	created: new Date("2026-08-20T00:00:00Z"),
 	updated: new Date("2026-08-20T00:00:00Z"),
@@ -105,6 +106,27 @@ describe("Additional fee management", () => {
 			checkoutTypes: ["package", "order"],
 			taxable: true,
 			refundable: false,
+			initialChargeOnly: false,
+		}));
+	});
+
+	test("creates an initial-payment-only subscription fee", async () => {
+		const response = await request("/", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				label: "Signup fee",
+				type: "fixed",
+				amount: 500,
+				checkoutTypes: ["subscription"],
+				initialChargeOnly: true,
+			}),
+		});
+
+		expect(response.status).toBe(201);
+		expect(insertedValues[0]).toEqual(expect.objectContaining({
+			checkoutTypes: ["subscription"],
+			initialChargeOnly: true,
 		}));
 	});
 

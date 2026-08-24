@@ -28,6 +28,7 @@ const editableFeeFields = {
 	checkoutTypes: t.Optional(t.Array(checkoutTypeSchema, { minItems: 1, maxItems: 5 })),
 	taxable: t.Optional(t.Boolean()),
 	refundable: t.Optional(t.Boolean()),
+	initialChargeOnly: t.Optional(t.Boolean()),
 	active: t.Optional(t.Boolean()),
 };
 
@@ -96,6 +97,8 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			checkoutTypes,
 			taxable: body.taxable ?? false,
 			refundable: body.refundable ?? true,
+			initialChargeOnly: checkoutTypes.includes("subscription")
+				&& (body.initialChargeOnly ?? false),
 			active: body.active ?? true,
 		}).returning();
 
@@ -109,6 +112,7 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			checkoutTypes: t.Array(checkoutTypeSchema, { minItems: 1, maxItems: 5 }),
 			taxable: t.Optional(t.Boolean()),
 			refundable: t.Optional(t.Boolean()),
+			initialChargeOnly: t.Optional(t.Boolean()),
 			active: t.Optional(t.Boolean()),
 		}),
 	})
@@ -142,6 +146,8 @@ export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 			...(body.active !== undefined ? { active: body.active } : {}),
 			...(body.taxable !== undefined ? { taxable: body.taxable } : {}),
 			...(body.refundable !== undefined ? { refundable: body.refundable } : {}),
+			initialChargeOnly: checkoutTypes.includes("subscription")
+				&& (body.initialChargeOnly ?? existing.initialChargeOnly),
 			updated: new Date(),
 		}).where(
 			and(eq(additionalFees.id, feeId), eq(additionalFees.locationId, lid)),

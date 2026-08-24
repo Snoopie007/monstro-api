@@ -1,9 +1,9 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, promos, transactions } from "@subtrees/schemas";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
 import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
 
@@ -44,6 +44,17 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         }
 
         const isTrialing = !!(sub.trialEnd && isFuture(sub.trialEnd));
+        const promoMeta = sub.metadata?.promo as {
+            id?: string;
+            applied?: boolean;
+            discount?: { amount: number; type?: "fixed_amount" | "percentage"; value?: number };
+        } | undefined;
+        const discount = promoMeta?.discount
+            ? {
+                type: promoMeta.discount.type ?? "fixed_amount",
+                value: promoMeta.discount.value ?? promoMeta.discount.amount,
+            }
+            : undefined;
 
         if (!isTrialing) {
             const existingDraft = await db.query.memberInvoices.findFirst({
@@ -55,10 +66,13 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
 
             if (!existingDraft) {
                 const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
+                const taxRate = sub.location.taxRates.find((rate) => rate.isDefault)
+                    ?? sub.location.taxRates[0];
                 const chargeDetails = calculateChargeDetails({
                     amount: sub.pricing.price,
-                    taxRate: 0,
-                    usagePercent: sub.location.locationState?.usagePercent ?? 0,
+                    discount,
+                    taxRate: taxRate?.percentage ?? 0,
+                    planId: sub.location.locationState?.planId ?? 0,
                     additionalFees,
                 });
                 const lineItems = [{
@@ -66,6 +80,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     description: "Subscription billing period",
                     quantity: 1,
                     price: chargeDetails.unitCost,
+                    discount: chargeDetails.productDiscount,
                 }, ...chargeDetails.additionalFeeLines];
 
                 const currency = getCurrency(sub.location.country);
@@ -88,6 +103,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     metadata: {
                         type: "from-subscription",
                         subscriptionId: sid,
+                        platformFeeAmount: chargeDetails.feesAmount,
                     },
                 }).returning();
 
@@ -115,6 +131,12 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         await db.transaction(async (tx) => {
             await tx.update(memberSubscriptions).set({
                 status: isTrialing ? "trialing" : "active",
+                ...(!isTrialing && promoMeta ? {
+                    metadata: {
+                        ...(sub.metadata || {}),
+                        promo: { ...promoMeta, applied: true },
+                    },
+                } : {}),
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sid));
 
@@ -126,6 +148,13 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     eq(memberLocations.memberId, sub.memberId),
                     eq(memberLocations.locationId, lid),
                 ));
+
+                if (promoMeta?.id && !promoMeta.applied) {
+                    await tx.update(promos).set({
+                        redemptionCount: sql`${promos.redemptionCount} + 1`,
+                        updated: new Date(),
+                    }).where(eq(promos.id, promoMeta.id));
+                }
             }
         });
 

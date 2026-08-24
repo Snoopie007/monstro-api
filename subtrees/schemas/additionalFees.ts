@@ -41,6 +41,7 @@ export const additionalFees = pgTable(
 			.notNull(),
 		taxable: boolean("taxable").notNull().default(false),
 		refundable: boolean("refundable").notNull().default(true),
+		initialChargeOnly: boolean("initial_charge_only").notNull().default(false),
 		active: boolean("active").notNull().default(true),
 		created: timestamp("created_at", { withTimezone: true })
 			.notNull()

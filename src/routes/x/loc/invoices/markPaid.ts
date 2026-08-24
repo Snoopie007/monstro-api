@@ -6,7 +6,7 @@ import { t } from "elysia";
 import { eq } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
-import { getCurrency } from "@/utils";
+import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
 import type { Currency } from "@subtrees/types/currency";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
@@ -34,53 +34,63 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 vendorId: true,
                 country: true,
             },
+            with: {
+                locationState: {
+                    columns: { planId: true },
+                },
+                taxRates: {
+                    columns: { percentage: true, isDefault: true },
+                },
+            },
         });
 
         if (!location) {
             return status(404, { error: "Location not found" });
         }
 
-        if (invoice.memberPlanId) {
-            const sub = await db.query.memberSubscriptions.findFirst({
+        const sub = invoice.memberPlanId
+            ? await db.query.memberSubscriptions.findFirst({
                 where: (s, { eq }) => eq(s.id, invoice.memberPlanId!),
                 with: {
                     pricing: true,
                 },
-            });
+            })
+            : undefined;
 
-            if (sub?.paymentType === "cash") {
+        if (sub?.paymentType === "cash") {
+            const platformFeeAmount = typeof invoice.metadata?.platformFeeAmount === "number"
+                ? Math.max(0, Math.floor(invoice.metadata.platformFeeAmount))
+                : 0;
 
-                if (!location?.vendorId) {
+            if (platformFeeAmount > 0) {
+                if (!location.vendorId) {
                     return status(422, {
                         error: "Location vendor is required to process cash renewal",
                         code: "MISSING_VENDOR",
                     });
                 }
 
-                const walletFee = Math.floor(invoice.total * 0.02);
-                if (walletFee > 0) {
+                const wallet = new Wallet(lid);
+                const charged = await wallet.charge({
+                    vendorId: location.vendorId,
+                    amount: platformFeeAmount,
+                    description: `Membership renewal for subscription ${sub.id}, invoice ${invoice.id}`,
+                    deduplicate: true,
+                });
 
-                    const wallet = new Wallet(lid);
-                    const charged = await wallet.charge({
-                        vendorId: location.vendorId,
-                        amount: walletFee,
-                        description: `Membership renewal for subscription ${sub.id}`,
+                if (!charged) {
+                    return status(402, {
+                        error: "Insufficient wallet balance to process cash renewal",
+                        code: "WALLET_CHARGE_FAILED",
                     });
-
-                    if (!charged) {
-                        return status(402, {
-                            error: "Insufficient wallet balance to process cash renewal",
-                            code: "WALLET_CHARGE_FAILED",
-                        });
-                    }
                 }
-
-                walletChargeMetadata = {
-                    walletFee,
-                    walletChargeSource: "cash_subscription_mark_paid",
-                    walletChargedAt: new Date().toISOString(),
-                };
             }
+
+            walletChargeMetadata = {
+                walletFee: platformFeeAmount,
+                walletChargeSource: "cash_subscription_mark_paid",
+                walletChargedAt: new Date().toISOString(),
+            };
         }
 
         await db.transaction(async (tx) => {
@@ -103,6 +113,9 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 await tx.update(transactions).set({
                     status: "paid",
                     paymentType: normalizedPaymentType,
+                    feeAmount: typeof invoice.metadata?.platformFeeAmount === "number"
+                        ? invoice.metadata.platformFeeAmount
+                        : existingTransaction.feeAmount,
                     chargeDate: paidDate ? new Date(paidDate) : new Date(),
                     metadata: paymentMetadata,
                     updated: new Date(),
@@ -118,6 +131,9 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                     total: invoice.total,
                     subTotal: invoice.subTotal,
                     tax: invoice.tax,
+                    feeAmount: typeof invoice.metadata?.platformFeeAmount === "number"
+                        ? invoice.metadata.platformFeeAmount
+                        : 0,
                     currency: (invoice.currency || "USD") as Currency,
                     chargeDate: paidDate ? new Date(paidDate) : new Date(),
                     metadata: paymentMetadata,
@@ -133,13 +149,6 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 updated: new Date(),
             }).where(eq(memberInvoices.id, iid));
             if (invoice.memberPlanId) {
-                const sub = await tx.query.memberSubscriptions.findFirst({
-                    where: (s, { eq }) => eq(s.id, invoice.memberPlanId!),
-                    with: {
-                        pricing: true,
-                    },
-                });
-
                 if (sub && sub.pricing) {
                     const nextStart = new Date(sub.currentPeriodEnd);
                     const nextEnd = addInterval(nextStart, sub.pricing.interval || "month", sub.pricing.intervalThreshold || 1);
@@ -161,22 +170,52 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                         });
                         const currency = getCurrency(location.country);
                         if (!existingDraft) {
+                            const promo = sub.metadata?.promo as {
+                                discount?: {
+                                    amount: number;
+                                    duration: number;
+                                    type?: "fixed_amount" | "percentage";
+                                    value?: number;
+                                };
+                            } | undefined;
+                            const paidInvoices = await tx.query.memberInvoices.findMany({
+                                where: (candidate, { and, eq }) => and(
+                                    eq(candidate.memberPlanId, sub.id),
+                                    eq(candidate.paid, true),
+                                ),
+                                columns: { id: true },
+                            });
+                            const discount = promo?.discount && paidInvoices.length < promo.discount.duration
+                                ? {
+                                    type: promo.discount.type ?? "fixed_amount",
+                                    value: promo.discount.value ?? promo.discount.amount,
+                                }
+                                : undefined;
+                            const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription", "renewal");
+                            const taxRate = location.taxRates.find((rate) => rate.isDefault) ?? location.taxRates[0];
+                            const chargeDetails = calculateChargeDetails({
+                                amount: sub.pricing.price,
+                                discount,
+                                taxRate: taxRate?.percentage ?? 0,
+                                planId: location.locationState?.planId ?? 0,
+                                additionalFees,
+                            });
                             const lineItems = [{
                                 name: `${sub.pricing.name}`,
                                 description: "Subscription renewal",
                                 quantity: 1,
-                                price: sub.pricing.price,
-                                discount: 0,
-                            }];
+                                price: chargeDetails.unitCost,
+                                discount: chargeDetails.productDiscount,
+                            }, ...chargeDetails.additionalFeeLines];
                             const [nextInvoice] = await tx.insert(memberInvoices).values({
                                 memberId: sub.memberId,
                                 locationId: sub.locationId,
                                 memberPlanId: sub.id,
                                 description: `${sub.pricing.name} - Billing Period`,
                                 items: lineItems,
-                                subTotal: sub.pricing.price,
-                                total: sub.pricing.price,
-                                tax: 0,
+                                subTotal: chargeDetails.subTotal,
+                                total: chargeDetails.total,
+                                tax: chargeDetails.tax,
                                 currency: (currency || "USD") as Currency,
                                 status: "draft",
                                 dueDate: new Date(nextEnd),
@@ -187,6 +226,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 metadata: {
                                     type: "from-subscription",
                                     subscriptionId: sub.id,
+                                    platformFeeAmount: chargeDetails.feesAmount,
                                 },
                             }).returning();
 
@@ -201,9 +241,11 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 type: "inbound",
                                 status: PENDING_TRANSACTION_STATUS,
                                 paymentType: "cash",
-                                total: sub.pricing.price,
-                                subTotal: sub.pricing.price,
-                                tax: 0,
+                                total: chargeDetails.total,
+                                subTotal: chargeDetails.subTotal,
+                                tax: chargeDetails.tax,
+                                feeAmount: chargeDetails.feesAmount,
+                                items: lineItems,
                                 currency: (currency || "USD") as Currency,
                             }).returning({ id: transactions.id });
                             assert(transaction);

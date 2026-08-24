@@ -59,6 +59,8 @@ export type ChargeDetails = {
   subTotal: number;
   unitCost: number;
   tax: number;
+  discount: number;
+  productDiscount: number;
   /** Monstro's vendor-side platform fee; never part of the member-facing total. */
   feesAmount: number;
   additionalFeeTotal: number;

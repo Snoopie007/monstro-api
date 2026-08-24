@@ -10,6 +10,8 @@ const findMany = mock(async () => [
 		amount: 250,
 		checkoutTypes: ["package", "subscription"] as const,
 		taxable: false,
+		refundable: true,
+		initialChargeOnly: true,
 		active: true,
 		created: new Date("2026-01-01T00:00:00Z"),
 		updated: new Date("2026-01-01T00:00:00Z"),
@@ -23,6 +25,8 @@ const findMany = mock(async () => [
 		amount: 500,
 		checkoutTypes: ["order"] as const,
 		taxable: true,
+		refundable: true,
+		initialChargeOnly: false,
 		active: true,
 		created: new Date("2026-01-02T00:00:00Z"),
 		updated: new Date("2026-01-02T00:00:00Z"),
@@ -40,4 +44,12 @@ test("returns only fees configured for the checkout type", async () => {
 
 	expect(fees.map((fee) => fee.id)).toEqual(["fee_order"]);
 	expect(findMany).toHaveBeenCalledTimes(1);
+});
+
+test("excludes initial-only fees from subscription renewals", async () => {
+	const initialFees = await getAdditionalFeesForCheckout("location_1", "subscription", "initial");
+	const renewalFees = await getAdditionalFeesForCheckout("location_1", "subscription", "renewal");
+
+	expect(initialFees.map((fee) => fee.id)).toEqual(["fee_package"]);
+	expect(renewalFees).toEqual([]);
 });

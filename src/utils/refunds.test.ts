@@ -20,4 +20,13 @@ describe("getRefundAmounts", () => {
 
 		expect(result).toEqual({ refundableAmount: 800, nonRefundableAmount: 0 });
 	});
+
+	test("retains only the discounted amount of a non-refundable fee", () => {
+		const result = getRefundAmounts(900, [
+			{ name: "Membership", quantity: 1, price: 800, discount: 100 },
+			{ feeId: "fee-retained", refundable: false, name: "Signup fee", quantity: 1, price: 300, discount: 120, tax: 20 },
+		]);
+
+		expect(result).toEqual({ refundableAmount: 700, nonRefundableAmount: 200 });
+	});
 });

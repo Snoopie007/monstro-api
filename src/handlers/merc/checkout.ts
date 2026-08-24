@@ -97,7 +97,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         items,
         variants,
         taxRates.find((r) => r.isDefault)?.percentage || 0,
-        locationState.usagePercent || 0,
+        locationState.planId,
         additionalFees,
         promoData,
     );
@@ -109,9 +109,10 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             tax,
             subtotal,
             processingFee: 0,
-            additionalFeeTotal,
-            additionalFeeLines,
-            lineItems,
+            additionalFees: additionalFeeLines.map((fee) => ({
+                label: fee.name,
+                amount: fee.price - (fee.discount ?? 0),
+            })),
         };
     }
     const currency = locationState.currency;
@@ -131,6 +132,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
             quantity: item.quantity,
             price: item.unitCost,
             productId: item.variantId,
+            discount: item.discount,
             tax: item.tax,
         })),
         ...additionalFeeLines,
