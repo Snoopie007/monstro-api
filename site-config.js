@@ -2915,13 +2915,27 @@ var EnrollResponseSchema = z35.object({
   ok: z35.literal(true),
   unsignedDocs: z35.array(z35.string().min(1))
 }).strict();
+var CheckoutAdditionalFeeSchema = z35.object({
+  label: z35.string().min(1),
+  amount: z35.number().int().nonnegative()
+}).strict();
 var EnrollQuoteSchema = z35.object({
   baseAmount: z35.number().int().nonnegative(),
   discount: z35.number().int().nonnegative(),
   tax: z35.number().int().nonnegative(),
   fees: z35.number().int().nonnegative(),
+  additionalFees: z35.array(CheckoutAdditionalFeeSchema).default([]),
   total: z35.number().int().nonnegative(),
   currency: z35.string().min(1)
+}).strict();
+var ShopCheckoutQuoteSchema = z35.object({
+  subtotal: z35.number().int().nonnegative(),
+  discount: z35.number().int().nonnegative(),
+  tax: z35.number().int().nonnegative(),
+  feesAmount: z35.number().int().nonnegative(),
+  processingFee: z35.number().int().nonnegative(),
+  additionalFees: z35.array(CheckoutAdditionalFeeSchema).default([]),
+  total: z35.number().int().nonnegative()
 }).strict();
 var PaymentMethodSchema = z35.discriminatedUnion("type", [
   z35.object({
@@ -3319,6 +3333,7 @@ export {
   SiteCacheInvalidationSchema,
   SiteBuiltinPageSchema,
   SiteAssetSrcSchema,
+  ShopCheckoutQuoteSchema,
   SectionIdentifierSchema,
   SectionHeadingSchema,
   SectionBaseSchema,
@@ -3385,6 +3400,7 @@ export {
   DocumentSignatureRequestSchema,
   ContactFormSectionSchema,
   CompareSectionSchema,
+  CheckoutAdditionalFeeSchema,
   BuiltinPageIdSchema,
   BottomCtaSectionSchema,
   BottomCtaFormSectionSchema,
