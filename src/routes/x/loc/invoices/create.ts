@@ -3,14 +3,14 @@ import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, eq } from "drizzle-orm";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, transactions } from "@subtrees/schemas";
 import {
     calcTotals,
     createInvoiceBody,
     PENDING_TRANSACTION_PAYMENT_TYPE,
     PENDING_TRANSACTION_STATUS,
 } from "./shared";
-import { getCurrency } from "@/utils";
+import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
 
 export async function createInvoiceRoutes(app: Elysia) {
     return app.post("/", async ({ body, params, status }) => {
@@ -60,8 +60,9 @@ export async function createInvoiceRoutes(app: Elysia) {
                 where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid), eq(s.memberId, memberId)),
                 with: {
                     location: {
-                        columns: {
-                            country: true,
+                        with: {
+                            locationState: true,
+                            taxRates: true,
                         },
                     },
                     pricing: {
@@ -76,26 +77,24 @@ export async function createInvoiceRoutes(app: Elysia) {
                 return status(404, { error: "Subscription not found" });
             }
 
-            const lineItems = [{
-                name: `${sub.pricing.plan?.name || "Plan"}${sub.pricing.name ? ` - ${sub.pricing.name}` : ""}`,
-                description: sub.pricing.plan?.description || "",
-                quantity: 1,
-                price: sub.pricing.price,
+            const quote = await buildSubscriptionInvoiceQuote({
+                locationId: lid,
+                subscriptionId: sub.id,
+                subscriptionMetadata: sub.metadata,
+                pricing: sub.pricing,
+                location: sub.location,
                 discount,
-            }];
-
-            const { subtotal, total } = calcTotals(lineItems, tax, discount);
-            const currency = getCurrency(sub.location.country);
+            });
             const [invoice] = await db.insert(memberInvoices).values({
                 memberId,
                 locationId: lid,
                 memberPlanId: sub.id,
-                description: description || `${sub.pricing.plan?.name || "Subscription"} billing period`,
-                items: lineItems,
-                subTotal: subtotal,
-                total,
-                tax,
-                currency: currency || "usd",
+                description: description || quote.invoiceDescription,
+                items: quote.items,
+                subTotal: quote.subTotal,
+                total: quote.total,
+                tax: quote.tax,
+                currency: quote.currency,
                 status: "draft",
                 dueDate: dueDate ? new Date(dueDate) : new Date(sub.currentPeriodEnd),
                 paymentType: sub.paymentType,
@@ -106,6 +105,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                     type: "from-subscription",
                     subscriptionId: sub.id,
                     collectionMethod,
+                    platformFeeAmount: quote.platformFeeAmount,
                 },
             }).returning();
 
@@ -122,14 +122,16 @@ export async function createInvoiceRoutes(app: Elysia) {
                 const [transaction] = await db.insert(transactions).values({
                     memberId,
                     locationId: lid,
-                    description: description || `${sub.pricing.plan?.name || "Subscription"} payment`,
+                    description: description || quote.transactionDescription,
                     type: "inbound",
                     status: PENDING_TRANSACTION_STATUS,
                     paymentType: PENDING_TRANSACTION_PAYMENT_TYPE,
-                    total,
-                    subTotal: subtotal,
-                    tax,
-                    currency: currency || "usd",
+                    total: quote.total,
+                    subTotal: quote.subTotal,
+                    tax: quote.tax,
+                    feeAmount: quote.platformFeeAmount,
+                    items: quote.items,
+                    currency: quote.currency,
                     metadata: {
                         intendedPaymentType: sub.paymentType,
                         collectionMethod,

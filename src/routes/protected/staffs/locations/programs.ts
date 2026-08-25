@@ -197,4 +197,3 @@ export const slProgramRoutes = new Elysia({ prefix: "/programs" })
         });
         return app;
     });
-

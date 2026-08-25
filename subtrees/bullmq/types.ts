@@ -53,6 +53,8 @@ const PricingSchema = z.object({
 export const DiscountSchema = z.object({
     amount: z.coerce.number(),
     duration: z.coerce.number(),
+    type: z.enum(["fixed_amount", "percentage"]).optional(),
+    value: z.coerce.number().optional(),
 })
 
 export const SubscriptionJobSchema = z.object({

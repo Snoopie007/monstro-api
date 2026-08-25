@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { VendorStripePayments } from "./stripe";
 import { wallets, walletLedgers } from "@subtrees/schemas";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const RESERVATION_OFFSET = 0.1;
 
@@ -46,6 +46,7 @@ type ChargeProps = {
     vendorId: string;
     amount: number;
     description: string;
+    deduplicate?: boolean;
 };
 
 async function findStripeCustomer(lid: string, vendorId?: string): Promise<string | null> {
@@ -69,7 +70,7 @@ async function findStripeCustomer(lid: string, vendorId?: string): Promise<strin
 export class Wallet {
     constructor(private readonly lid: string) { }
 
-    async charge({ vendorId, amount, description }: ChargeProps): Promise<boolean> {
+    async charge({ vendorId, amount, description, deduplicate }: ChargeProps): Promise<boolean> {
         const chargeAmount = Math.max(0, Math.floor(amount));
         if (!chargeAmount) return true;
 
@@ -85,6 +86,17 @@ export class Wallet {
             });
             if (!current) return false;
 
+            if (deduplicate) {
+                const existing = await db.query.walletLedgers.findFirst({
+                    where: (row, { and, eq }) => and(
+                        eq(row.walletId, current.id),
+                        eq(row.description, description),
+                    ),
+                    columns: { id: true },
+                });
+                if (existing) return true;
+            }
+
             if (needsRecharge(current.balance, current.rechargeThreshold)) {
                 const recharged = await this.recharge(current.rechargeAmount, vendorId);
                 if (!recharged) return false;
@@ -93,6 +105,16 @@ export class Wallet {
             return await db.transaction(async (tx) => {
                 const wallet = await this.lock(tx);
                 if (!wallet) return false;
+                if (deduplicate) {
+                    const existing = await tx.query.walletLedgers.findFirst({
+                        where: and(
+                            eq(walletLedgers.walletId, wallet.id),
+                            eq(walletLedgers.description, description),
+                        ),
+                        columns: { id: true },
+                    });
+                    if (existing) return true;
+                }
                 if (wallet.balance < chargeAmount) return false;
 
                 const newBalance = wallet.balance - chargeAmount;
@@ -360,4 +382,3 @@ export class Wallet {
         };
     }
 }
-

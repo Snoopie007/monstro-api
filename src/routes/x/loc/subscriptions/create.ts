@@ -120,6 +120,8 @@ export async function createSubscriptionRoutes(app: Elysia) {
                 code: promo.code,
                 discount: {
                     amount,
+                    type: promo.type,
+                    value: promo.value,
                     duration: getDiscountDuration({
                         duration: promo.duration,
                         durationInMonths: promo.durationInMonths,

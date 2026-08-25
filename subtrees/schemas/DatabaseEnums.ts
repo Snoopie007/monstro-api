@@ -47,15 +47,6 @@ export const ExceptionInitiatorEnum = pgEnum("exception_initiator", [
 export const PromoTypeEnum = pgEnum("promo_type", ["percentage", "fixed_amount"]);
 export const PromoDurationEnum = pgEnum("promo_duration", ["once", "repeating", "forever"]);
 
-export const FeeTypeEnum = pgEnum("fee_type", ["fixed", "percentage"]);
-export const FeeCheckoutTypeEnum = pgEnum("fee_checkout_type", [
-  "package",
-  "subscription",
-  "course",
-  "event",
-  "order",
-]);
-
 export const RankRequirementTypeEnum = pgEnum("rank_requirement_type", [
   "manual",
   "attendance_count",

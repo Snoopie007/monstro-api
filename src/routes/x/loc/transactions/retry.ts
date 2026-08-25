@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
 import { paymentQueue } from "@/queues/payments";
+import { RetrySubPaymentSchema } from "@subtrees/bullmq";
 import type Elysia from "elysia";
 import { and, eq } from "drizzle-orm";
 import {
@@ -16,6 +17,7 @@ export async function retryTransactionRoutes(app: Elysia) {
         const tx = await db.query.transactions.findFirst({
             where: (t, { and, eq }) => and(eq(t.id, tid), eq(t.locationId, lid)),
             columns: { id: true, type: true, status: true, paymentIntentId: true, metadata: true },
+            with: { invoice: { columns: { id: true } } },
         });
 
         if (!tx) {
@@ -62,6 +64,13 @@ export async function retryTransactionRoutes(app: Elysia) {
             });
         }
 
+        if (!tx.invoice) {
+            return status(400, {
+                error: "No invoice found for this failed subscription payment",
+                code: "INVOICE_NOT_FOUND",
+            });
+        }
+
         const paymentIntentId = resolveGatewayPaymentId({
             paymentIntentId: tx.paymentIntentId,
             metadata: tx.metadata,
@@ -75,12 +84,13 @@ export async function retryTransactionRoutes(app: Elysia) {
         }
 
         const jobId = `manual-retry-${tx.id}`;
-        const job = await paymentQueue.add("retry:sub", {
-            paymentIntentId,
+        const data = RetrySubPaymentSchema.parse({
+            invoiceId: tx.invoice.id,
             attempts: 0,
             subId: sub.id,
             lid,
-        }, { jobId });
+        });
+        const job = await paymentQueue.add("retry:sub", data, { jobId });
 
         return status(200, {
             enqueued: true,

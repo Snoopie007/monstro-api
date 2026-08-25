@@ -1,11 +1,11 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, promos, transactions } from "@subtrees/schemas";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
-import { getCurrency } from "@/utils";
+import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
@@ -25,6 +25,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                 location: {
                     with: {
                         taxRates: true,
+                        locationState: true,
                     },
                     columns: {
                         country: true,
@@ -43,6 +44,17 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         }
 
         const isTrialing = !!(sub.trialEnd && isFuture(sub.trialEnd));
+        const promoMeta = sub.metadata?.promo as {
+            id?: string;
+            applied?: boolean;
+            discount?: { amount: number; type?: "fixed_amount" | "percentage"; value?: number };
+        } | undefined;
+        const discount = promoMeta?.discount
+            ? {
+                type: promoMeta.discount.type ?? "fixed_amount",
+                value: promoMeta.discount.value ?? promoMeta.discount.amount,
+            }
+            : undefined;
 
         if (!isTrialing) {
             const existingDraft = await db.query.memberInvoices.findFirst({
@@ -53,24 +65,24 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             });
 
             if (!existingDraft) {
-                const lineItems = [{
-                    name: sub.pricing.name,
-                    description: "Subscription billing period",
-                    quantity: 1,
-                    price: sub.pricing.price,
-                }];
-
-                const currency = getCurrency(sub.location.country);
+                const quote = await buildSubscriptionInvoiceQuote({
+                    locationId: lid,
+                    subscriptionId: sid,
+                    subscriptionMetadata: sub.metadata,
+                    pricing: sub.pricing,
+                    location: sub.location,
+                    discount,
+                });
                 const [invoice] = await db.insert(memberInvoices).values({
                     memberId: sub.memberId,
                     locationId: lid,
                     memberPlanId: sid,
-                    description: `${sub.pricing.name} - Billing Period`,
-                    items: lineItems,
-                    subTotal: sub.pricing.price,
-                    total: sub.pricing.price,
-                    tax: 0,
-                    currency: currency || "usd",
+                    description: quote.invoiceDescription,
+                    items: quote.items,
+                    subTotal: quote.subTotal,
+                    total: quote.total,
+                    tax: quote.tax,
+                    currency: quote.currency,
                     status: "draft",
                     dueDate: new Date(sub.currentPeriodEnd),
                     paymentType: "cash",
@@ -80,6 +92,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     metadata: {
                         type: "from-subscription",
                         subscriptionId: sid,
+                        platformFeeAmount: quote.platformFeeAmount,
                     },
                 }).returning();
 
@@ -87,14 +100,16 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     const [transaction] = await db.insert(transactions).values({
                         memberId: sub.memberId,
                         locationId: lid,
-                        description: `${sub.pricing.name} - Recurring Payment`,
+                        description: quote.transactionDescription,
                         type: "inbound",
                         status: "failed",
                         paymentType: "cash",
-                        total: sub.pricing.price,
-                        subTotal: sub.pricing.price,
-                        tax: 0,
-                        currency: currency || "usd",
+                        total: quote.total,
+                        subTotal: quote.subTotal,
+                        tax: quote.tax,
+                        feeAmount: quote.platformFeeAmount,
+                        items: quote.items,
+                        currency: quote.currency,
                     }).returning({ id: transactions.id });
                     assert(transaction);
                     await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
@@ -105,6 +120,12 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         await db.transaction(async (tx) => {
             await tx.update(memberSubscriptions).set({
                 status: isTrialing ? "trialing" : "active",
+                ...(!isTrialing && promoMeta ? {
+                    metadata: {
+                        ...(sub.metadata || {}),
+                        promo: { ...promoMeta, applied: true },
+                    },
+                } : {}),
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sid));
 
@@ -116,6 +137,13 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     eq(memberLocations.memberId, sub.memberId),
                     eq(memberLocations.locationId, lid),
                 ));
+
+                if (promoMeta?.id && !promoMeta.applied) {
+                    await tx.update(promos).set({
+                        redemptionCount: sql`${promos.redemptionCount} + 1`,
+                        updated: new Date(),
+                    }).where(eq(promos.id, promoMeta.id));
+                }
             }
         });
 

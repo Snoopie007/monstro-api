@@ -16,7 +16,7 @@ type CheckoutGateway =
 	| { service: "authorize"; integrationId: string; apiKey: string; secretKey: string; accountId: string; metadata: IntegrationMetadata };
 
 
-export async function getCheckoutContext({
+export async function getMemberCheckoutContext({
 	lid,
 	mid,
 }: {
@@ -61,13 +61,22 @@ export async function getCheckoutContext({
 		throw new CheckoutError(400, "Member location not found");
 	}
 
-	const { gatewayCustomerId, location } = memberLocation;
+	const { location } = memberLocation;
+	const { locationState, taxRates } = location;
+	return { ml: memberLocation, locationState, taxRates };
+}
+
+export async function getCheckoutContext(input: {
+	lid: string;
+	mid: string;
+}) {
+	const { ml: memberLocation, locationState, taxRates } = await getMemberCheckoutContext(input);
+	const { gatewayCustomerId } = memberLocation;
 
 	if (!gatewayCustomerId) {
 		throw new CheckoutError(400, "Gateway customer not found");
 	}
 
-	const { locationState, taxRates } = location;
 	const { paymentGatewayId } = locationState;
 	if (!paymentGatewayId) {
 		throw new CheckoutError(400, "No payment gateway set");

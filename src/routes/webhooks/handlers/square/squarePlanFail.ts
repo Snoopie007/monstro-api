@@ -48,6 +48,7 @@ export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
             total: amount,
             subTotal: invoice.subTotal,
             tax: invoice.tax,
+            items: invoice.items || [],
             type: "inbound" as const,
             status: "failed" as const,
             paymentMethodId: paymentMethodId ?? null,

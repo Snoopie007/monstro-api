@@ -112,6 +112,15 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		paymentType,
 	} = input;
 
+	if (total === 0) {
+		return {
+			status: "approved",
+			paymentIntentId: `free_${transactionId}`,
+			paymentType,
+			gatewayMetadata: { noCharge: true },
+		};
+	}
+
 	if (gateway.service === "authorize") {
 		if (paymentType !== "card") {
 			throw new PaymentChargeError("Authorize.net only supports saved card payments here");

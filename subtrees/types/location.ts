@@ -9,7 +9,7 @@ import type {
 } from ".";
 import { locations } from "../schemas/locations";
 import { locationState } from "../schemas/locationState";
-import type { AdditionalFee } from "./AdditionalFees";
+import type { AdditionalFee } from "./additionalFees";
 import type { MemberPlan } from "./member";
 import type { Vendor } from "./vendor";
 

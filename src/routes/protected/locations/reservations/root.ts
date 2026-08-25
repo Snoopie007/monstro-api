@@ -313,7 +313,7 @@ export async function locationReservations(app: Elysia) {
                             // Prevent decrementing below 0
                             await tx.execute(sql`
                                 UPDATE ${memberPackages}
-                                SET total_class_attended = CASE 
+                                SET total_class_attended = CASE
                                     WHEN total_class_attended > 0 THEN total_class_attended - 1
                                     ELSE 0
                                 END
@@ -357,8 +357,8 @@ export async function locationReservations(app: Elysia) {
                                 if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
                                     // Make sure not to exceed the original classCredits limit
                                     await tx.execute(sql` UPDATE ${memberSubscriptions}
-                                        SET class_credits = 
-                                            CASE 
+                                        SET class_credits =
+                                            CASE
                                                 WHEN class_credits < ${limit} THEN class_credits + 1
                                                 ELSE class_credits
                                             END
@@ -393,7 +393,6 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-
 
 
 

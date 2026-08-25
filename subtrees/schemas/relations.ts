@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 
 // Import all table definitions
 import { accounts } from "./accounts";
+import { additionalFees } from "./additionalFees";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
@@ -77,7 +78,6 @@ import {
 	courseLessonCompletions, courseLessons, courses,
 	courseLessonAttachments,
 } from "./courses";
-import { additionalFees } from "./AdditionalFees";
 
 // ============================================================================
 // USER RELATIONS
@@ -324,6 +324,7 @@ export const memberCustomFieldsRelations = relations(memberCustomFields, ({ one 
 // ============================================================================
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
+	additionalFees: many(additionalFees),
 	memberLocations: many(memberLocations),
 	integrations: many(integrations),
 	programs: many(programs),
@@ -345,7 +346,6 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		fields: [locations.id],
 		references: [wallets.locationId],
 	}),
-	additionalFees: many(additionalFees),
 	taxRates: many(taxRates),
 	products: many(products),
 	orders: many(orders),
@@ -353,6 +353,13 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	ranks: many(ranks),
 	locationEvents: many(locationEvents),
 	courses: many(courses),
+}));
+
+export const additionalFeesRelations = relations(additionalFees, ({ one }) => ({
+	location: one(locations, {
+		fields: [additionalFees.locationId],
+		references: [locations.id],
+	}),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -394,13 +401,6 @@ export const walletLedgerRelations = relations(walletLedgers, ({ one }) => ({
 		fields: [walletLedgers.walletId],
 		references: [wallets.id],
 		relationName: "ledgers",
-	}),
-}));
-
-export const additionalFeeRelations = relations(additionalFees, ({ one }) => ({
-	location: one(locations, {
-		fields: [additionalFees.locationId],
-		references: [locations.id],
 	}),
 }));
 

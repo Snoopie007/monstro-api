@@ -1,4 +1,5 @@
 export * from "./enrollUtils";
+export * from "./additionalFees";
 export * from "./getCheckoutContext";
 export * from "./checkoutUtil";
 export * from "./orderUtils";

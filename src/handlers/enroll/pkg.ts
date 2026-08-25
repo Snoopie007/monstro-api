@@ -1,6 +1,6 @@
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberPackages, promos, transactions } from "@subtrees/schemas";
 import {
     calculateChargeDetails,
     chargeWithGateway,
@@ -9,17 +9,21 @@ import {
     triggerPurchase,
     fetchPromoDiscount,
     calculateThresholdDate,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
+    getMemberCheckoutContext,
+    addMembertoGroup,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { generateUUID } from "subtrees/utils";
+import { eq, sql } from "drizzle-orm";
 
 export type EnrollPkgInput = {
     lid: string;
     mid: string;
     priceId: string;
-    paymentMethodId: string;
+    paymentMethodId?: string;
     paymentType: PaymentType;
     promoId?: string | null;
     attemptId: string;
@@ -30,12 +34,17 @@ export type EnrollPkgInput = {
 };
 
 export async function handleEnrollPackage(props: EnrollPkgInput) {
-    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit } = props;
+    const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit, quoteOnly = false } = props;
     const transactionId = generateUUID('txn_');
 
-
     const [checkout, pricing] = await Promise.all([
-        getCheckoutContext({ lid, mid }),
+        paymentType === "cash"
+            ? getMemberCheckoutContext({ lid, mid }).then((context) => ({
+                ...context,
+                gateway: null,
+                gatewayCustomerId: null,
+            }))
+            : getCheckoutContext({ lid, mid }),
         db.query.memberPlanPricing.findFirst({
             where: (row, { eq }) => eq(row.id, priceId),
             with: { plan: true },
@@ -50,7 +59,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         throw new CheckoutError(404, "Pricing not found");
     }
 
-    const { ml, gateway, taxRates, gatewayCustomerId } = checkout;
+    const { ml, taxRates, gateway, gatewayCustomerId } = checkout;
     const locationState = ml.location.locationState;
     const contractId = pricing.plan.contractId;
     const waiverId = locationState.waiverId;
@@ -70,7 +79,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         }
     }
 
-    const { settings, usagePercent, currency } = locationState;
+    const { planId, currency } = locationState;
     const signedWaiverId = ml.signedWaiverId;
     if (signedWaiverId) {
         if (!waiverId) {
@@ -100,17 +109,33 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
     const productName = `${pricing.plan.name}/${pricing.name}`;
     const description = `Payment for ${productName}`;
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "package");
     const chargeDetails = calculateChargeDetails({
         amount: pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
-        usagePercent: usagePercent || 0,
-        paymentType,
-        isRecurring: false,
-        passOnFees: settings?.passOnFees || false,
+        planId,
+        additionalFees,
     });
-
-
+    // TODO: Reconcile quoteOnly with the Sites GET /api/enroll proxy before changing this early return.
+    if (quoteOnly) {
+        return {
+            baseAmount: pricing.price,
+            discount: chargeDetails.discount,
+            tax: chargeDetails.tax,
+            fees: chargeDetails.additionalFeeTotal,
+            additionalFees: chargeDetails.additionalFeeLines.map((fee) => {
+                const description = additionalFees.find((configuredFee) => configuredFee.id === fee.feeId)?.description?.trim();
+                return {
+                    label: fee.name,
+                    amount: fee.price - (fee.discount ?? 0),
+                    ...(description ? { description } : {}),
+                };
+            }),
+            total: chargeDetails.total,
+            currency,
+        };
+    }
     const packageStart = startDate ? new Date(startDate) : new Date();
     if (Number.isNaN(packageStart.getTime())) throw new CheckoutError(400, "Invalid package start date");
     const endDate = expireDate
@@ -124,25 +149,43 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             : undefined;
     if (endDate && Number.isNaN(endDate.getTime())) throw new CheckoutError(400, "Invalid package expiration date");
     const metadata: Record<string, unknown> = {
-        ...(gateway.service === "authorize" ? {
+        ...(gateway?.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
         } : {}),
         checkoutKind: "package",
     };
-
-    const charge: ChargeWithGatewayResult = await chargeWithGateway({
-        gateway,
-        gatewayCustomerId,
-        paymentMethodId,
-        transactionId,
-        paymentType,
-        total: chargeDetails.total,
-        feesAmount: chargeDetails.feesAmount,
-        currency,
-        description,
-        note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
-        metadata: { locationId: lid, memberId: mid, transactionId },
-    });
+    const items = [{
+        name: productName,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        discount: chargeDetails.productDiscount,
+    }, ...chargeDetails.additionalFeeLines];
+    let charge: ChargeWithGatewayResult;
+    if (paymentType === "cash") {
+        charge = {
+            status: "approved",
+            paymentIntentId: `cash_${transactionId}`,
+            paymentType: "cash",
+            gatewayMetadata: { manualPayment: true },
+        };
+    } else {
+        if (!gateway || !gatewayCustomerId || !paymentMethodId) {
+            throw new CheckoutError(400, "Payment method is required");
+        }
+        charge = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            transactionId,
+            paymentType,
+            total: chargeDetails.total,
+            feesAmount: chargeDetails.feesAmount,
+            currency,
+            description,
+            note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
+            metadata: { locationId: lid, memberId: mid, transactionId },
+        });
+    }
 
     switch (charge.status) {
         case "approved": {
@@ -157,6 +200,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     subTotal: chargeDetails.subTotal,
                     tax: chargeDetails.tax,
                     feeAmount: chargeDetails.feesAmount,
+                    items,
                     description,
                     type: "inbound",
                     status: "paid",
@@ -164,7 +208,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     paymentType,
                     currency,
                     chargeDate: now,
-                    paymentIntentId: charge.paymentIntentId,
+                    paymentIntentId: paymentType === "cash" ? null : charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
                     activities: [{
                         at: now.toISOString(),
@@ -181,6 +225,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     memberId: mid,
                     totalClassLimit: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
                     memberPlanPricingId: pricing.id,
+                    promoId: promoId ?? null,
                     paymentType,
                     startDate: packageStart,
                     expireDate: endDate,
@@ -191,12 +236,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 const [invoice] = await tx.insert(memberInvoices).values({
                     ...chargeDetails,
                     description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
+                    items,
                     memberId: mid,
                     locationId: lid,
                     memberPlanId: pkg.id,
@@ -208,6 +248,12 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     paid: true,
                 }).returning({ id: memberInvoices.id });
                 if (!invoice) throw new Error("Failed to create invoice");
+
+                if (promoId) {
+                    await tx.update(promos).set({
+                        redemptionCount: sql`${promos.redemptionCount} + 1`,
+                    }).where(eq(promos.id, promoId));
+                }
 
                 unsignedDocs = await createEnrollUnsignedDocs(tx, {
                     mid,
@@ -222,6 +268,10 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);
             }).catch((error) => console.error("Error triggering purchase:", error));
+            if (pricing.plan.groupId && ml.member.userId) {
+                addMembertoGroup(pricing.plan.groupId, ml.member.userId)
+                    .catch((error) => console.error("Error adding package member to group:", error));
+            }
             return { ok: true, unsignedDocs };
         }
         case "failed": {
@@ -234,6 +284,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 subTotal: chargeDetails.subTotal,
                 tax: chargeDetails.tax,
                 feeAmount: chargeDetails.feesAmount,
+                items,
                 description,
                 type: "inbound",
                 status: "failed",

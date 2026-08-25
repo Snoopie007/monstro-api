@@ -9,6 +9,7 @@ import {
     recoverEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
     type ChargeWithGatewayResult,
 } from "@/utils";
@@ -30,6 +31,7 @@ export type EnrollSubProps = {
     paymentMethodId: string;
     paymentType: PaymentType;
     promoId?: string | null;
+    attemptId?: string;
     startDate?: string;
     endDate?: string;
     trialDays?: number;
@@ -90,7 +92,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         }
     }
 
-    const { usagePercent, settings, currency } = locationState;
+    const { planId, currency } = locationState;
     const signedWaiverId = ml.signedWaiverId;
     if (signedWaiverId) {
         if (!waiverId) {
@@ -154,18 +156,34 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
 
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
     const discount = await fetchPromoDiscount(promoId ?? undefined, pricing, lid);
-    const noGrowthPlan = [1, 2].includes(locationState.planId);
-
-
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
     const chargeDetails = calculateChargeDetails({
         amount: pricing.downpayment || pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
-        usagePercent: usagePercent || 0,
-        paymentType,
-        isRecurring: noGrowthPlan,
-        passOnFees: settings?.passOnFees || false,
+        planId,
+        additionalFees,
     });
+    // TODO: Reconcile quoteOnly with the Sites GET /api/enroll proxy before changing this early return.
+    if (quoteOnly) {
+        const baseAmount = pricing.downpayment || pricing.price;
+        return {
+            baseAmount,
+            discount: chargeDetails.discount,
+            tax: chargeDetails.tax,
+            fees: chargeDetails.additionalFeeTotal,
+            additionalFees: chargeDetails.additionalFeeLines.map((fee) => {
+                const description = additionalFees.find((configuredFee) => configuredFee.id === fee.feeId)?.description?.trim();
+                return {
+                    label: fee.name,
+                    amount: fee.price - (fee.discount ?? 0),
+                    ...(description ? { description } : {}),
+                };
+            }),
+            total: chargeDetails.total,
+            currency,
+        };
+    }
     const productName = pricing.name;
     const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
 
@@ -177,9 +195,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         } : {}),
         checkoutKind: "subscription",
     };
-
     const transactionId = generateUUID('txn_');
-
+    const items = [{
+        name: productName,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        discount: chargeDetails.productDiscount,
+    }, ...chargeDetails.additionalFeeLines];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
@@ -205,6 +227,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     subTotal: chargeDetails.subTotal,
                     tax: chargeDetails.tax,
                     feeAmount: chargeDetails.feesAmount,
+                    items,
                     description,
                     currency,
                     locationId: lid,
@@ -251,12 +274,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
 
                 const [invoice] = await tx.insert(memberInvoices).values({
                     description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
+                    items,
                     status: "paid",
                     paid: true,
                     memberPlanId: result.id,
@@ -286,6 +304,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             const member = ml.member;
             const nextBillingDate = new Date(subscription.currentPeriodEnd);
             if (["month", "year"].includes(pricing.interval)) {
+                const promoDuration = discount?.duration === "once"
+                    ? 1
+                    : discount?.duration === "repeating"
+                        ? discount.durationInMonths ?? 1
+                        : Number.MAX_SAFE_INTEGER;
+                const remainingPromoPayments = Math.max(0, promoDuration - 1);
                 const payload: SubscriptionJobData = {
                     sid: subscription.id,
                     lid,
@@ -306,9 +330,11 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         interval: pricing.interval,
                         intervalThreshold: pricing.intervalThreshold,
                     },
-                    discount: discount > 0 ? {
-                        amount: discount,
-                        duration: pricing.intervalThreshold,
+                    discount: discount && remainingPromoPayments > 0 ? {
+                        amount: chargeDetails.discount,
+                        type: discount.type,
+                        value: discount.value,
+                        duration: remainingPromoPayments,
                     } : undefined,
                 };
                 const renewal = pricing.intervalThreshold === 1
@@ -332,7 +358,11 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             const now = new Date();
             await db.insert(transactions).values({
                 id: transactionId,
-                ...chargeDetails,
+                total: chargeDetails.total,
+                subTotal: chargeDetails.subTotal,
+                tax: chargeDetails.tax,
+                feeAmount: chargeDetails.feesAmount,
+                items,
                 description,
                 currency,
                 locationId: lid,
