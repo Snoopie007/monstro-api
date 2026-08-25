@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 
 // Import all table definitions
 import { accounts } from "./accounts";
+import { additionalFees } from "./additionalFees";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
@@ -41,7 +42,7 @@ import { taxRates } from "./tax";
 import { transactions } from "./transactions";
 import { userNotifications, users } from "./users";
 import { supportPlans, vendors } from "./vendors";
-import { wallets, walletUsages } from "./wallets";
+import { wallets, walletLedgers } from "./wallets";
 
 // Chat tables
 import {
@@ -323,6 +324,7 @@ export const memberCustomFieldsRelations = relations(memberCustomFields, ({ one 
 // ============================================================================
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
+	additionalFees: many(additionalFees),
 	memberLocations: many(memberLocations),
 	integrations: many(integrations),
 	programs: many(programs),
@@ -351,6 +353,13 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	ranks: many(ranks),
 	locationEvents: many(locationEvents),
 	courses: many(courses),
+}));
+
+export const additionalFeesRelations = relations(additionalFees, ({ one }) => ({
+	location: one(locations, {
+		fields: [additionalFees.locationId],
+		references: [locations.id],
+	}),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -384,7 +393,15 @@ export const walletRelations = relations(wallets, ({ one, many }) => ({
 		fields: [wallets.locationId],
 		references: [locations.id],
 	}),
-	usages: many(walletUsages, { relationName: "usages" }),
+	ledgers: many(walletLedgers, { relationName: "ledgers" }),
+}));
+
+export const walletLedgerRelations = relations(walletLedgers, ({ one }) => ({
+	wallet: one(wallets, {
+		fields: [walletLedgers.walletId],
+		references: [wallets.id],
+		relationName: "ledgers",
+	}),
 }));
 
 // ============================================================================

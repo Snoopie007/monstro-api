@@ -9,12 +9,14 @@ import type {
 } from ".";
 import { locations } from "../schemas/locations";
 import { locationState } from "../schemas/locationState";
+import type { AdditionalFee } from "./additionalFees";
 import type { MemberPlan } from "./member";
 import type { Vendor } from "./vendor";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
   programs?: Program[];
+  additionalFees?: AdditionalFee[];
   memberInvoices?: MemberInvoice[];
   memberSubscriptions?: MemberSubscription[];
   transactions?: Transaction[];
@@ -111,7 +113,6 @@ export type LocationOnboardingSettings = {
 
 export type LocationSettings = {
   theme: 'default';
-  passOnFees: boolean;
   processingMethods: PaymentType[];
   holidays?: HolidaySettings;
   onboarding?: LocationOnboardingSettings;
