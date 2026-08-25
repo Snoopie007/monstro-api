@@ -1,18 +1,4 @@
-
-
-
-
-export interface SupportTool {
-    name: string;
-    description: string;
-    parameters?: Record<string, any>;
-    category?: string;
-}
-
-
-
-
-// Default tool definitions for support bots
+import type { SupportTool } from "./types";
 export const DEFAULT_SUPPORT_TOOLS: SupportTool[] = [
 
     // {

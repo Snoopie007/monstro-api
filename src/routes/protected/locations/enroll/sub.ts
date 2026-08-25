@@ -38,7 +38,6 @@ export function subEnrollRoutes(app: Elysia) {
                     paymentMethodId,
                     paymentType,
                     promoId,
-                    attemptId: body.attemptId ?? randomUUID(),
                     startDate: body.startDate,
                     endDate: body.endDate,
                     trialDays: body.trialDays,

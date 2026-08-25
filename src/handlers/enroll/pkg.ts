@@ -1,27 +1,29 @@
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
-import { memberContracts, memberInvoices, memberPackages, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberPackages, promos, transactions } from "@subtrees/schemas";
 import {
-    authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
-    recoverEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
     calculateThresholdDate,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
-    stableCheckoutTransactionId,
+    getMemberCheckoutContext,
+    addMembertoGroup,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { generateUUID } from "subtrees/utils";
+import { eq, sql } from "drizzle-orm";
 
 export type EnrollPkgInput = {
     lid: string;
     mid: string;
     priceId: string;
-    paymentMethodId: string;
+    paymentMethodId?: string;
     paymentType: PaymentType;
     promoId?: string | null;
     attemptId: string;
@@ -33,91 +35,16 @@ export type EnrollPkgInput = {
 
 export async function handleEnrollPackage(props: EnrollPkgInput) {
     const { lid, mid, priceId, paymentMethodId, paymentType, promoId, attemptId, startDate, expireDate, totalClassLimit, quoteOnly = false } = props;
-    const transactionId = stableCheckoutTransactionId("package", lid, mid, attemptId);
-    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
-    const existing = await db.query.transactions.findFirst({
-        where: (row, { and, eq }) => and(eq(row.id, transactionId), eq(row.locationId, lid), eq(row.memberId, mid)),
-    });
-    if (existing) {
-        if (existing.status === "pending") throw new CheckoutError(202, "Payment is pending; do not retry");
-        if (existing.status === "failed") throw new CheckoutError(400, existing.failedReason || "Payment was declined");
-        if (existing.status !== "paid") throw new CheckoutError(500, "Unexpected transaction status");
-        const invoice = await db.query.memberInvoices.findFirst({
-            where: (row, { eq }) => eq(row.transactionId, transactionId),
-        });
-        if (!invoice) throw new CheckoutError(202, "Payment is paid and package is being finalized");
-        if (!invoice.memberPlanId) {
-            throw new CheckoutError(202, "Payment is paid and package is being finalized");
-        }
-
-        const [checkout, pricing] = await Promise.all([
-            getCheckoutContext({ lid, mid }),
-            db.query.memberPlanPricing.findFirst({
-                where: (row, { eq }) => eq(row.id, priceId),
-                with: { plan: true },
-            }),
-        ]);
-        if (
-            !pricing?.plan ||
-            pricing.plan.locationId !== lid ||
-            pricing.plan.archived ||
-            pricing.plan.type !== "one-time"
-        ) {
-            throw new CheckoutError(404, "Pricing not found");
-        }
-        const waiverId = checkout.ml.location.locationState.waiverId;
-        let recoverWaiverId = waiverId;
-        if (checkout.ml.signedWaiverId && waiverId) {
-            const signedWaiver = await db.query.memberContracts.findFirst({
-                where: (memberContract, { eq, and, isNotNull }) => and(
-                    eq(memberContract.id, checkout.ml.signedWaiverId!),
-                    eq(memberContract.memberId, mid),
-                    eq(memberContract.locationId, lid),
-                    eq(memberContract.templateId, waiverId),
-                    isNotNull(memberContract.signedOn),
-                ),
-                with: {
-                    contractTemplate: {
-                        columns: { locationId: true },
-                    },
-                },
-            });
-            if (signedWaiver?.contractTemplate?.locationId === lid) {
-                recoverWaiverId = null;
-            }
-        }
-        const templateIds = [
-            pricing.plan.contractId,
-            checkout.ml.location.locationState.waiverId,
-        ].filter((id): id is string => Boolean(id));
-        if (templateIds.length > 0) {
-            const templates = await Promise.all(templateIds.map((templateId) =>
-                db.query.contractTemplates.findFirst({
-                    where: (template, { eq, and }) => and(
-                        eq(template.id, templateId),
-                        eq(template.locationId, lid),
-                    ),
-                    columns: { id: true },
-                }),
-            ));
-            if (templates.some((template) => !template)) {
-                throw new CheckoutError(404, "Contract not found");
-            }
-        }
-        return {
-            ok: true,
-            unsignedDocs: await recoverEnrollUnsignedDocs({
-                mid,
-                lid,
-                memberPlanId: invoice.memberPlanId,
-                contractId: pricing.plan.contractId,
-                waiverId: recoverWaiverId,
-            }),
-        };
-    }
+    const transactionId = generateUUID('txn_');
 
     const [checkout, pricing] = await Promise.all([
-        getCheckoutContext({ lid, mid }),
+        paymentType === "cash"
+            ? getMemberCheckoutContext({ lid, mid }).then((context) => ({
+                ...context,
+                gateway: null,
+                gatewayCustomerId: null,
+            }))
+            : getCheckoutContext({ lid, mid }),
         db.query.memberPlanPricing.findFirst({
             where: (row, { eq }) => eq(row.id, priceId),
             with: { plan: true },
@@ -132,7 +59,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         throw new CheckoutError(404, "Pricing not found");
     }
 
-    const { ml, gateway, taxRates, gatewayCustomerId } = checkout;
+    const { ml, taxRates, gateway, gatewayCustomerId } = checkout;
     const locationState = ml.location.locationState;
     const contractId = pricing.plan.contractId;
     const waiverId = locationState.waiverId;
@@ -152,7 +79,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         }
     }
 
-    const { settings, usagePercent, currency } = locationState;
+    const { planId, currency } = locationState;
     const signedWaiverId = ml.signedWaiverId;
     if (signedWaiverId) {
         if (!waiverId) {
@@ -182,21 +109,29 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
     const productName = `${pricing.plan.name}/${pricing.name}`;
     const description = `Payment for ${productName}`;
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "package");
     const chargeDetails = calculateChargeDetails({
         amount: pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
-        usagePercent: usagePercent || 0,
-        paymentType,
-        isRecurring: false,
-        passOnFees: settings?.passOnFees || false,
+        planId,
+        additionalFees,
     });
+    // TODO: Reconcile quoteOnly with the Sites GET /api/enroll proxy before changing this early return.
     if (quoteOnly) {
         return {
             baseAmount: pricing.price,
-            discount,
+            discount: chargeDetails.discount,
             tax: chargeDetails.tax,
-            fees: chargeDetails.total - Math.max(0, pricing.price - discount) - chargeDetails.tax,
+            fees: chargeDetails.additionalFeeTotal,
+            additionalFees: chargeDetails.additionalFeeLines.map((fee) => {
+                const description = additionalFees.find((configuredFee) => configuredFee.id === fee.feeId)?.description?.trim();
+                return {
+                    label: fee.name,
+                    amount: fee.price - (fee.discount ?? 0),
+                    ...(description ? { description } : {}),
+                };
+            }),
             total: chargeDetails.total,
             currency,
         };
@@ -214,43 +149,50 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             : undefined;
     if (endDate && Number.isNaN(endDate.getTime())) throw new CheckoutError(400, "Invalid package expiration date");
     const metadata: Record<string, unknown> = {
-        ...(gateway.service === "authorize" ? {
+        ...(gateway?.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
-            authorizeReferenceId,
         } : {}),
-        gatewayService: gateway.service,
         checkoutKind: "package",
-        checkoutAttemptId: attemptId,
-        memberPlanPricingId: pricing.id,
-        productName,
-        discount,
-        packageClassLimit: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
-        packageStartAt: packageStart.toISOString(),
-        ...(endDate ? { packageExpireAt: endDate.toISOString() } : {}),
     };
-
-    const charge: ChargeWithGatewayResult = await chargeWithGateway({
-        gateway,
-        gatewayCustomerId,
-        paymentMethodId,
-        transactionId,
-        authorizeReferenceId,
-        paymentType,
-        total: chargeDetails.total,
-        feesAmount: chargeDetails.feesAmount,
-        currency,
-        description,
-        referenceId: transactionId,
-        note: `transactionId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
-        metadata: { locationId: lid, memberId: mid, transactionId },
-    });
+    const items = [{
+        name: productName,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        discount: chargeDetails.productDiscount,
+    }, ...chargeDetails.additionalFeeLines];
+    let charge: ChargeWithGatewayResult;
+    if (paymentType === "cash") {
+        charge = {
+            status: "approved",
+            paymentIntentId: `cash_${transactionId}`,
+            paymentType: "cash",
+            gatewayMetadata: { manualPayment: true },
+        };
+    } else {
+        if (!gateway || !gatewayCustomerId || !paymentMethodId) {
+            throw new CheckoutError(400, "Payment method is required");
+        }
+        charge = await chargeWithGateway({
+            gateway,
+            gatewayCustomerId,
+            paymentMethodId,
+            transactionId,
+            paymentType,
+            total: chargeDetails.total,
+            feesAmount: chargeDetails.feesAmount,
+            currency,
+            description,
+            note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
+            metadata: { locationId: lid, memberId: mid, transactionId },
+        });
+    }
 
     switch (charge.status) {
         case "approved": {
             const now = new Date();
             let unsignedDocs: string[] = [];
             await db.transaction(async (tx) => {
-                const [created] = await tx.insert(transactions).values({
+                const [transaction] = await tx.insert(transactions).values({
                     id: transactionId,
                     memberId: mid,
                     locationId: lid,
@@ -258,6 +200,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     subTotal: chargeDetails.subTotal,
                     tax: chargeDetails.tax,
                     feeAmount: chargeDetails.feesAmount,
+                    items,
                     description,
                     type: "inbound",
                     status: "paid",
@@ -265,7 +208,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     paymentType,
                     currency,
                     chargeDate: now,
-                    paymentIntentId: charge.paymentIntentId,
+                    paymentIntentId: paymentType === "cash" ? null : charge.paymentIntentId,
                     metadata: { ...metadata, ...charge.gatewayMetadata },
                     activities: [{
                         at: now.toISOString(),
@@ -275,13 +218,14 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                         last4: charge.last4,
                     }],
                 }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
-                if (!created) throw new CheckoutError(202, "Payment is being finalized; do not retry");
+                if (!transaction) throw new CheckoutError(202, "Payment is being finalized; do not retry");
 
                 const [pkg] = await tx.insert(memberPackages).values({
                     locationId: lid,
                     memberId: mid,
                     totalClassLimit: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
                     memberPlanPricingId: pricing.id,
+                    promoId: promoId ?? null,
                     paymentType,
                     startDate: packageStart,
                     expireDate: endDate,
@@ -292,12 +236,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 const [invoice] = await tx.insert(memberInvoices).values({
                     ...chargeDetails,
                     description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
+                    items,
                     memberId: mid,
                     locationId: lid,
                     memberPlanId: pkg.id,
@@ -309,6 +248,12 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     paid: true,
                 }).returning({ id: memberInvoices.id });
                 if (!invoice) throw new Error("Failed to create invoice");
+
+                if (promoId) {
+                    await tx.update(promos).set({
+                        redemptionCount: sql`${promos.redemptionCount} + 1`,
+                    }).where(eq(promos.id, promoId));
+                }
 
                 unsignedDocs = await createEnrollUnsignedDocs(tx, {
                     mid,
@@ -323,6 +268,10 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);
             }).catch((error) => console.error("Error triggering purchase:", error));
+            if (pricing.plan.groupId && ml.member.userId) {
+                addMembertoGroup(pricing.plan.groupId, ml.member.userId)
+                    .catch((error) => console.error("Error adding package member to group:", error));
+            }
             return { ok: true, unsignedDocs };
         }
         case "failed": {
@@ -335,6 +284,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 subTotal: chargeDetails.subTotal,
                 tax: chargeDetails.tax,
                 feeAmount: chargeDetails.feesAmount,
+                items,
                 description,
                 type: "inbound",
                 status: "failed",

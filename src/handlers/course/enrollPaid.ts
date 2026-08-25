@@ -1,15 +1,15 @@
 import { db } from "@/db/db";
 import {
-    authorizeReferenceIdForTransaction,
     calculateChargeDetails,
     chargeWithGateway,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
-    stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { courseEnrollments, transactions } from "@subtrees/schemas";
 import type { PaymentType } from "@subtrees/types";
 import { CourseEnrollError } from "./errors";
+import { generateUUID } from "subtrees/utils";
 
 type CourseEnrollParams = {
     lid: string;
@@ -19,7 +19,6 @@ type CourseEnrollParams = {
     courseTitle: string;
     coursePrice: number;
     paymentType: PaymentType;
-    attemptId: string;
 };
 
 export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
@@ -31,30 +30,11 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
         courseTitle,
         coursePrice,
         paymentType,
-        attemptId,
     } = params;
-    const transactionId = stableCheckoutTransactionId("course", lid, mid, attemptId);
-    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
+    const transactionId = generateUUID('txn_');
+    const enrollmentId = generateUUID('cen_');
 
-    const existing = await db.query.transactions.findFirst({
-        where: (tx, { and, eq }) => and(eq(tx.id, transactionId), eq(tx.locationId, lid), eq(tx.memberId, mid)),
-    });
-    if (existing) {
-        if (existing.status === "pending") {
-            throw new CourseEnrollError(202, "Payment is pending; do not retry", "PAYMENT_PENDING");
-        }
-        if (existing.status === "failed") {
-            throw new CourseEnrollError(400, existing.failedReason || "Payment was declined", existing.failedCode || "PAYMENT_FAILED");
-        }
-        if (existing.status !== "paid") {
-            throw new CourseEnrollError(500, "Unexpected transaction status");
-        }
-        const enrollment = await db.query.courseEnrollments.findFirst({
-            where: (enrollment, { eq }) => eq(enrollment.transactionId, existing.id),
-        });
-        if (!enrollment) throw new CourseEnrollError(202, "Payment is paid and enrollment is being finalized", "FULFILLMENT_PENDING");
-        return enrollment;
-    }
+
     const duplicate = await db.query.courseEnrollments.findFirst({
         where: (enrollment, { and, eq }) => and(
             eq(enrollment.courseId, courseId),
@@ -65,40 +45,40 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
 
     const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const taxRate = taxRates.find((r) => r.isDefault)?.percentage || 0;
-    const { total, feesAmount, tax, subTotal } = calculateChargeDetails({
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "course");
+    const chargeDetails = calculateChargeDetails({
         amount: coursePrice,
         taxRate,
-        passOnFees: locationState.settings?.passOnFees || false,
-        usagePercent: locationState.usagePercent || 0,
-        paymentType,
-        isRecurring: false,
+        planId: locationState.planId,
+        additionalFees,
     });
+    const { total, feesAmount, tax, subTotal } = chargeDetails;
     const currency = locationState.currency;
     const description = `Payment for course enrollment ${courseTitle}`;
+    const items = [{
+        name: courseTitle,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        productId: courseId,
+    }, ...chargeDetails.additionalFeeLines];
     const metadata: Record<string, unknown> = {
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
-            authorizeReferenceId,
         } : {}),
-        gatewayService: gateway.service,
         checkoutKind: "course",
-        checkoutAttemptId: attemptId,
         courseId,
     };
-
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
         paymentMethodId,
         transactionId,
-        authorizeReferenceId,
         paymentType,
         total,
         feesAmount,
         currency,
         description,
-        referenceId: transactionId,
-        note: `enrollmentId:${transactionId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
+        note: `enrollmentId:${enrollmentId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
         metadata: { memberId: mid, locationId: lid, transactionId },
     });
 
@@ -119,6 +99,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                     paymentMethodId,
                     paymentType,
                     feeAmount: feesAmount,
+                    items,
                     currency,
                     chargeDate: now,
                     paymentIntentId: charge.paymentIntentId,
@@ -139,6 +120,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                     throw new CourseEnrollError(202, "Payment is being finalized; do not retry", "FULFILLMENT_PENDING");
                 }
                 const [enrollment] = await tx.insert(courseEnrollments).values({
+                    id: enrollmentId,
                     memberId: mid,
                     locationId: lid,
                     courseId,
@@ -171,6 +153,7 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
                 paymentMethodId,
                 paymentType,
                 feeAmount: feesAmount,
+                items,
                 currency,
                 chargeDate: now,
                 paymentIntentId: charge.paymentIntentId,

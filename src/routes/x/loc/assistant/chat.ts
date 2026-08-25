@@ -1,5 +1,5 @@
 import { estimateAssistantTurnCost, runAssistantTurnStream } from "@/libs/ai/assistant";
-import { refundAIBudgetAtomic, reserveAIBudgetAtomic, settleAIBudgetAtomic } from "@/libs/wallet";
+import { Wallet } from "@/libs/wallet";
 import type { Context, Elysia } from "elysia";
 import { t } from "elysia";
 
@@ -19,25 +19,24 @@ export function assistantChatRoute(app: Elysia) {
         return status(401, { message: "Unauthorized", code: "UNAUTHORIZED" });
       }
 
+      const wallet = new Wallet(lid);
       const operationId = crypto.randomUUID();
       const reservedAmount = estimateAssistantTurnCost(message, history || []);
-      const reserveResult = await reserveAIBudgetAtomic({
-        lid,
-        operationId,
+      const reserveResult = await wallet.reserveAtomic({
         amount: reservedAmount,
         description: "assistant_chat",
+        id: operationId,
       });
 
       if (!reserveResult.ok) {
-        if (reserveResult.reason === "INSUFFICIENT_FUNDS") {
+        const code = reserveResult.reason || "BUDGET_RESERVE_FAILED";
+        if (code === "RECHARGE_FAILED" || code === "RESERVE_EXCEEDS_THRESHOLD" || code === "INSUFFICIENT_FUNDS") {
           return status(402, {
             message: "Insufficient wallet funds for assistant request",
-            code: "INSUFFICIENT_FUNDS",
-            available: reserveResult.available || 0,
-            required: reservedAmount,
+            code,
           });
         }
-        return status(500, { message: "Unable to reserve assistant budget", code: reserveResult.reason || "BUDGET_RESERVE_FAILED" });
+        return status(500, { message: "Unable to reserve assistant budget", code });
       }
 
       const encoder = new TextEncoder();
@@ -47,55 +46,37 @@ export function assistantChatRoute(app: Elysia) {
 
       const stream = new ReadableStream<Uint8Array>({
         async start(controller) {
-          let finalizationState: "pending" | "settled" | "refunded" = "pending";
+          let finalizationState: "pending" | "settled" | "voided" = "pending";
 
-          const refundReservedBudget = async () => {
+          const voidReservedHold = async () => {
             if (finalizationState !== "pending") return;
-            const refundResult = await refundAIBudgetAtomic({
-              lid,
-              operationId,
-              reservedAmount,
-              reason: "assistant_chat_failed",
-            });
-            if (refundResult.ok) {
-              finalizationState = "refunded";
+            const voidResult = await wallet.voidAtomic({ ledgerId: operationId });
+            if (voidResult.ok) {
+              finalizationState = "voided";
             }
           };
 
           const settleReservedBudget = async (actualAmount: number) => {
             if (finalizationState !== "pending") return;
-            const settleResult = await settleAIBudgetAtomic({
-              lid,
-              operationId,
-              reservedAmount,
+            const settleResult = await wallet.settleAtomic({
+              ledgerId: operationId,
               actualAmount,
-              description: "assistant_chat",
             });
-            if (settleResult.ok || typeof settleResult.shortfall === "number") {
-              if (typeof settleResult.shortfall === "number" && settleResult.shortfall > 0) {
-                console.warn("Assistant wallet shortfall during settlement", {
-                  lid,
-                  operationId,
-                  reservedAmount,
-                  actualAmount,
-                  shortfall: settleResult.shortfall,
-                });
-              }
+            if (settleResult.ok) {
               finalizationState = "settled";
               return;
             }
-
-            await refundReservedBudget();
+            await voidReservedHold();
           };
 
           const abortSignal = ctx.request?.signal;
           const onAbort = () => {
-            void refundReservedBudget();
+            void voidReservedHold();
           };
 
           if (abortSignal) {
             if (abortSignal.aborted) {
-              await refundReservedBudget();
+              await voidReservedHold();
               controller.close();
               return;
             }
@@ -111,13 +92,13 @@ export function assistantChatRoute(app: Elysia) {
               threadId,
               history,
               onCompleted: ({ cost }) => settleReservedBudget(cost),
-              onFailed: refundReservedBudget,
+              onFailed: voidReservedHold,
             })) {
               const payload = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
               controller.enqueue(encoder.encode(payload));
             }
           } catch (error) {
-            await refundReservedBudget();
+            await voidReservedHold();
             const message = error instanceof Error ? error.message : "Failed to process assistant turn";
             const payload = `event: error\ndata: ${JSON.stringify({ type: "error", message, ts: Date.now() })}\n\n`;
             controller.enqueue(encoder.encode(payload));

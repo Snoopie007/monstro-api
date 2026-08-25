@@ -1,18 +1,18 @@
 import { db } from "@/db/db";
 import type { Promo } from "@subtrees/types";
 import {
-    authorizeReferenceIdForTransaction,
     calculateOrderTotals,
     chargeWithGateway,
     CheckoutError,
     CheckoutPendingError,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
     PaymentChargeError,
-    stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { orders, products, productVariants, transactions } from "@subtrees/schemas";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { generateUUID } from "subtrees/utils";
 
 export type MercCheckoutItem = {
     variantId: string;
@@ -31,31 +31,15 @@ export type MercCheckoutInput = {
 };
 
 export async function handleMercCheckout(input: MercCheckoutInput) {
-    const { lid, mid, items, paymentMethodId, promoId, paymentType = "card", attemptId, quoteOnly = false } = input;
+    const { lid, mid, items, paymentMethodId,
+        promoId, paymentType = "card", attemptId, quoteOnly = false } = input;
     if (!items.length || items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1)) {
         throw new CheckoutError(400, "Invalid items");
     }
 
-    const transactionId = stableCheckoutTransactionId("order", lid, mid, attemptId);
-    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
-    const orderId = `ord_${transactionId.replaceAll("-", "")}`;
-    const existingTransaction = await db.query.transactions.findFirst({
-        where: (tx, { and, eq }) => and(eq(tx.id, transactionId), eq(tx.locationId, lid), eq(tx.memberId, mid)),
-    });
-    if (existingTransaction) {
-        const order = await db.query.orders.findFirst({
-            where: (candidate, { eq }) => eq(candidate.transactionId, transactionId),
-        });
-        if (existingTransaction.status === "paid" && order) return order;
-        if (existingTransaction.status === "pending") throw new CheckoutPendingError(transactionId);
-        if (existingTransaction.status === "failed") {
-            throw new PaymentChargeError(
-                existingTransaction.failedReason || "Payment was declined",
-                existingTransaction.failedCode || "PAYMENT_FAILED",
-            );
-        }
-        throw new Error("Order payment is not complete");
-    }
+    const transactionId = generateUUID('txn_');
+    const orderId = generateUUID('ord_');
+
 
     const { gatewayCustomerId, locationState, taxRates, gateway } = await getCheckoutContext({ lid, mid });
     const variants = await db.select({
@@ -99,17 +83,41 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         }
     }
 
-    const passOnFees = locationState.settings?.passOnFees || false;
-    const { total, discount, feesAmount, tax, subtotal, processingFee, lineItems } = calculateOrderTotals(
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "order");
+    const {
+        total,
+        discount,
+        platformFeeAmount,
+        tax,
+        subtotal,
+        lineItems,
+        additionalFeeTotal,
+        additionalFeeLines,
+    } = calculateOrderTotals(
         items,
         variants,
         taxRates.find((r) => r.isDefault)?.percentage || 0,
-        passOnFees,
-        locationState.usagePercent || 0,
+        locationState.planId,
+        additionalFees,
         promoData,
     );
     if (quoteOnly) {
-        return { total, discount, feesAmount, tax, subtotal, processingFee: passOnFees ? processingFee : 0, lineItems };
+        return {
+            total,
+            discount,
+            feesAmount: additionalFeeTotal,
+            tax,
+            subtotal,
+            processingFee: 0,
+            additionalFees: additionalFeeLines.map((fee) => {
+                const description = additionalFees.find((configuredFee) => configuredFee.id === fee.feeId)?.description?.trim();
+                return {
+                    label: fee.name,
+                    amount: fee.price - (fee.discount ?? 0),
+                    ...(description ? { description } : {}),
+                };
+            }),
+        };
     }
     const currency = locationState.currency;
     const description = `Payment for order ${orderId}`;
@@ -117,25 +125,32 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         gatewayService: gateway.service,
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
-            authorizeReferenceId,
         } : {}),
         checkoutKind: "order",
         checkoutAttemptId: attemptId,
         orderId,
     };
-
+    const transactionItems = [
+        ...lineItems.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: item.unitCost,
+            productId: item.variantId,
+            discount: item.discount,
+            tax: item.tax,
+        })),
+        ...additionalFeeLines,
+    ];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
         paymentMethodId,
         transactionId,
-        authorizeReferenceId,
         paymentType,
         total,
-        feesAmount,
+        feesAmount: platformFeeAmount,
         currency,
         description,
-        referenceId: orderId,
         note: `orderId:${orderId}|mid:${mid}|locationId:${lid}`,
         metadata: { memberId: mid, locationId: lid, orderId, transactionId },
     });
@@ -155,7 +170,8 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     total,
                     subTotal: subtotal,
                     tax,
-                    feeAmount: feesAmount,
+                    feeAmount: platformFeeAmount,
+                    items: transactionItems,
                     currency,
                     status: "paid",
                     chargeDate: now,
@@ -202,7 +218,7 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     tax,
                     total,
                     items: lineItems,
-                    processingFee,
+                    processingFee: 0,
                     gatewayPaymentId: charge.paymentIntentId,
                 }).returning();
                 if (!order) throw new Error("Failed to create order");
@@ -222,7 +238,8 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                 total,
                 subTotal: subtotal,
                 tax,
-                feeAmount: feesAmount,
+                feeAmount: platformFeeAmount,
+                items: transactionItems,
                 currency,
                 status: "failed",
                 chargeDate: now,

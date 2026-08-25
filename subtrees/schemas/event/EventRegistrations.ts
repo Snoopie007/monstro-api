@@ -4,8 +4,8 @@ import type { EventRegistrationStatus } from "../../types/DatabaseEnums";
 import { locations } from "../locations";
 import { members } from "../members";
 import { transactions } from "../transactions";
-import { locationEvents } from "./LocationEvents";
 import { eventTickets } from "./EventTickets";
+import { locationEvents } from "./LocationEvents";
 
 export const eventRegistrations = pgTable("event_registrations", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('erg_')`),

@@ -7,7 +7,7 @@ const EnrollPkgProps = {
         lid: t.String(),
     }),
     body: t.Object({
-        paymentMethodId: t.String(),
+        paymentMethodId: t.Optional(t.String()),
         priceId: t.String(),
         mid: t.String(),
         attemptId: t.Optional(t.String()),
@@ -15,6 +15,7 @@ const EnrollPkgProps = {
         paymentType: t.Union([
             t.Literal("card"),
             t.Literal("us_bank_account"),
+            t.Literal("cash"),
         ]),
         promoId: t.Optional(t.String()),
         startDate: t.Optional(t.String()),
@@ -36,6 +37,9 @@ export function pkgEnrollRoutes(app: Elysia) {
             } = body;
 
             try {
+                if (paymentType !== "cash" && !paymentMethodId) {
+                    return status(400, { error: "Payment method is required" });
+                }
                 const result = await handleEnrollPackage({
                     lid,
                     mid,

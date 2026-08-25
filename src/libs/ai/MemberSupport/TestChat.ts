@@ -1,11 +1,11 @@
 import type { SupportConversation, SupportAssistant, MemberLocation } from "@subtrees/types";
-import { ToolFunctions } from "./FNHandler";
+import { ToolFunctions } from ".";
 import { BaseMessage, ToolMessage, trimMessages } from "@langchain/core/messages";
 import type { ChatOpenAI } from "@langchain/openai";
 import type { ChatAnthropic } from "@langchain/anthropic";
 import type { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { UpstashRedisChatMessageHistory } from "@langchain/community/stores/message/upstash_redis";
-import { DEFAULT_SUPPORT_TOOLS } from "./Tools";
+import { DEFAULT_SUPPORT_TOOLS } from "./tools/definitions";
 import {
 	ChatPromptTemplate,
 	MessagesPlaceholder,

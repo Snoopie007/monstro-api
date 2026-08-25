@@ -54,12 +54,14 @@ export async function fetchPromoDiscount(
     pricing: MemberPlanPricing,
     locationId: string,
 ) {
-    if (!promoId) return 0;
+    if (!promoId) return undefined;
     const promo = await fetchEligiblePromo({ promoId, pricing, locationId });
-    if (!promo) return 0;
+    if (!promo) return undefined;
 
-    if (promo.type === "fixed_amount") {
-        return Math.round(promo.value);
-    }
-    return Math.round(pricing.price * (promo.value / 100));
+    return {
+        type: promo.type,
+        value: promo.value,
+        duration: promo.duration,
+        durationInMonths: promo.durationInMonths,
+    };
 }

@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
 import { paymentQueue } from "@/queues/payments";
-import { transactions } from "@subtrees/schemas";
+import { RetrySubPaymentSchema } from "@subtrees/bullmq";
+import { memberInvoices, transactions } from "@subtrees/schemas";
 import type Elysia from "elysia";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { RETRYABLE_SUBSCRIPTION_STATUSES, resolveGatewayPaymentId, resolveGatewayService } from "./shared";
@@ -35,10 +36,12 @@ export async function retrySubscriptionPaymentRoutes(app: Elysia) {
         const [failedTransaction] = await db
             .select({
                 id: transactions.id,
+                invoiceId: memberInvoices.id,
                 paymentIntentId: transactions.paymentIntentId,
                 metadata: transactions.metadata,
             })
             .from(transactions)
+            .leftJoin(memberInvoices, eq(memberInvoices.transactionId, transactions.id))
             .where(and(
                 eq(transactions.locationId, lid),
                 eq(transactions.status, "failed"),
@@ -52,6 +55,13 @@ export async function retrySubscriptionPaymentRoutes(app: Elysia) {
             return status(400, {
                 error: "No failed transaction found for this subscription",
                 code: "FAILED_TRANSACTION_NOT_FOUND",
+            });
+        }
+
+        if (!failedTransaction.invoiceId) {
+            return status(400, {
+                error: "No invoice found for this failed subscription payment",
+                code: "INVOICE_NOT_FOUND",
             });
         }
 
@@ -69,12 +79,13 @@ export async function retrySubscriptionPaymentRoutes(app: Elysia) {
         }
 
         const jobId = `manual-retry-${failedTransaction.id}`;
-        const job = await paymentQueue.add("retry:sub", {
-            paymentIntentId,
+        const data = RetrySubPaymentSchema.parse({
+            invoiceId: failedTransaction.invoiceId,
             attempts: 0,
             subId: sid,
             lid,
-        }, { jobId });
+        });
+        const job = await paymentQueue.add("retry:sub", data, { jobId });
 
         return status(200, {
             enqueued: true,

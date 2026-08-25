@@ -6,14 +6,31 @@ test("uses inventory pricing, quantity, and unlimited promos for order totals", 
     [{ variantId: "variant-1", quantity: 2 }],
     [{ id: "variant-1", name: "Gloves", price: 1000, salePrice: 800 }],
     10,
-    false,
     0,
+    [],
     { redemptionCount: 0, maxRedemptions: null, type: "percentage", value: 10 },
   )).toMatchObject({
     subtotal: 1600,
     discount: 160,
-    tax: 160,
-    total: 1600,
-    lineItems: [{ variantId: "variant-1", quantity: 2, unitCost: 800, tax: 160 }],
+    tax: 144,
+    total: 1584,
+    lineItems: [{ variantId: "variant-1", quantity: 2, unitCost: 800, discount: 160, tax: 144 }],
+  });
+});
+
+test("adds scoped fees without adding Monstro's platform fee to the member total", () => {
+  expect(calculateOrderTotals(
+    [{ variantId: "variant-1", quantity: 1 }],
+    [{ id: "variant-1", name: "Gloves", price: 1000, salePrice: null }],
+    10,
+    1,
+    [{ id: "fee-1", label: "Facility fee", type: "percentage", amount: 500, taxable: true, refundable: false }],
+  )).toMatchObject({
+    subtotal: 1000,
+    platformFeeAmount: 22,
+    additionalFeeTotal: 50,
+    tax: 105,
+    total: 1155,
+    additionalFeeLines: [{ feeId: "fee-1", refundable: false, price: 50, tax: 5 }],
   });
 });
