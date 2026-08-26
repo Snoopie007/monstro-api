@@ -3,6 +3,7 @@ export * from "./additionalFees";
 export * from "./achievements";
 export * from "./attendances";
 export * from "./chat";
+export * from "./closures";
 export * from "./contracts";
 export * from "./courses";
 export * from "./DatabaseEnums";

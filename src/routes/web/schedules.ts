@@ -1,8 +1,7 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
 import { addMinutes, startOfWeek } from "date-fns";
-import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
-import { findBlockedHoliday } from "@/libs/holidays";
+import { findOverlappingLocationClosure } from "@/libs/locationClosures";
 import { fromZonedTime } from 'date-fns-tz';
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 type MappedSession = {
@@ -65,7 +64,9 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
         return { kind: "ok", weekStart, weekEnd, sessions: [] };
     }
 
-    const holidays = location.locationState?.settings.holidays;
+    const closures = await db.query.locationClosures.findMany({
+        where: (closure, { eq }) => eq(closure.locationId, lid),
+    });
     const mappedSessions: MappedSession[] = [];
     programs.forEach((program) => {
         program.sessions.forEach((session) => {
@@ -82,10 +83,12 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
             const utcStartTime = fromZonedTime(startTime, location.timezone);
             const utcEndTime = fromZonedTime(endTime, location.timezone);
 
-            const blockedHoliday = findBlockedHoliday(
-                sessionDate,
-                holidays?.blockedHolidays ?? [],
-                COMMON_HOLIDAYS);
+            const matchingClosure = findOverlappingLocationClosure(
+                closures,
+                utcStartTime,
+                utcEndTime,
+                location.timezone,
+            );
 
             mappedSessions.push({
                 id: `${program.id}-${session.id}`,
@@ -94,9 +97,9 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
                 maxAge: program.maxAge,
                 utcStartTime,
                 utcEndTime,
-                isHoliday: blockedHoliday !== null,
-                isBlocked: blockedHoliday !== null,
-                holidayName: blockedHoliday?.name ?? undefined,
+                isHoliday: Boolean(matchingClosure),
+                isBlocked: Boolean(matchingClosure),
+                holidayName: matchingClosure?.reason,
                 day: sessionDate,
                 description: program.description ?? "",
             });

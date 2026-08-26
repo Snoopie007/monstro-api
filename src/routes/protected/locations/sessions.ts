@@ -3,8 +3,7 @@ import type { ExtendedProgramSession } from "@subtrees/types";
 import { addDays, addMinutes } from "date-fns";
 import { Elysia, t } from "elysia";
 import { fromZonedTime } from 'date-fns-tz';
-import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
-import { findBlockedHoliday } from "@/libs/holidays";
+import { findOverlappingLocationClosure } from "@/libs/locationClosures";
 const SessionsProps = {
     params: t.Object({
         lid: t.String(),
@@ -34,9 +33,6 @@ export async function locationSessions(app: Elysia) {
                 columns: {
                     timezone: true,
                 },
-                with: {
-                    locationState: true,
-                },
             });
             if (!location) {
                 return status(404, { error: "Location not found" });
@@ -59,9 +55,9 @@ export async function locationSessions(app: Elysia) {
                 ),
             });
 
-
-
-            const holidays = location.locationState?.settings.holidays;
+            const closures = await db.query.locationClosures.findMany({
+                where: (closure, { eq }) => eq(closure.locationId, lid),
+            });
             const sessions: ExtendedProgramSession[] = [];
 
             programs.forEach((program) => {
@@ -81,10 +77,12 @@ export async function locationSessions(app: Elysia) {
                     const utcStartTime = fromZonedTime(startTime, location.timezone);
                     const utcEndTime = fromZonedTime(endTime, location.timezone);
 
-                    const blockedHoliday = findBlockedHoliday(
-                        sessionDate,
-                        holidays?.blockedHolidays ?? [],
-                        COMMON_HOLIDAYS);
+                    const matchingClosure = findOverlappingLocationClosure(
+                        closures,
+                        utcStartTime,
+                        utcEndTime,
+                        location.timezone,
+                    );
 
                     const r = reservations.filter((r) => r.sessionId === session.id);
                     sessions.push({
@@ -93,7 +91,7 @@ export async function locationSessions(app: Elysia) {
                         program: program,
                         startTime,
                         endTime,
-                        holidayName: blockedHoliday?.name ?? undefined,
+                        holidayName: matchingClosure?.reason,
                         availability: program.capacity - r.length,
                         utcStartTime,
                         utcEndTime,
