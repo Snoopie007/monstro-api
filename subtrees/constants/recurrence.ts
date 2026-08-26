@@ -1,3 +1,14 @@
+/**
+ * Parsed form of the holiday pattern `<day>:<weekday>:<month>`.
+ *
+ * Months use JavaScript's zero-based numbering, where January is `0` and
+ * December is `11`. A weekday is either `day` for a fixed calendar date or a
+ * number from `0` Sunday through `6` Saturday. For weekday patterns, `day` is
+ * the occurrence within the month or `L` for the last matching weekday.
+ *
+ * Examples: `25:day:11` is December 25, `4:4:10` is the fourth Thursday in
+ * November, and `L:1:4` is the last Monday in May.
+ */
 export type ParsedRecurrencePattern = {
 	month: number;
 	day: number;
@@ -36,6 +47,7 @@ function weekdayValue(value: string, pattern: string) {
 	return weekday;
 }
 
+/** Validates a stored holiday pattern and converts its parts to numbers. */
 export function parseRecurrencePattern(pattern: string): ParsedRecurrencePattern {
 	const parts = pattern.split(":");
 	if (parts.length !== 3) {
@@ -62,6 +74,12 @@ function lastWeekday(year: number, month: number, weekday: number) {
 	return monthEnd.getUTCDate() - daysBack;
 }
 
+/**
+ * Resolves one yearly pattern to a `YYYY-MM-DD` calendar key.
+ *
+ * UTC is used only for calendar arithmetic. The result is not a UTC instant.
+ * Callers convert local midnight for this date with the location timezone.
+ */
 export function recurrenceDateKey(pattern: string, year: number) {
 	const parsed = parseRecurrencePattern(pattern);
 	let day = parsed.day;
@@ -80,6 +98,7 @@ export function recurrenceDateKey(pattern: string, year: number) {
 	return date.toISOString().slice(0, 10);
 }
 
+/** Adds whole calendar days to a `YYYY-MM-DD` key without using the host timezone. */
 export function shiftDateKey(dateKey: string, days: number) {
 	const date = new Date(`${dateKey}T00:00:00.000Z`);
 	if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== dateKey) {
@@ -90,6 +109,7 @@ export function shiftDateKey(dateKey: string, days: number) {
 	return date.toISOString().slice(0, 10);
 }
 
+/** Returns every yearly occurrence inside the inclusive date-key range. */
 export function recurrenceDateKeys(
 	pattern: string,
 	startDateKey: string,
@@ -107,6 +127,7 @@ export function recurrenceDateKeys(
 	return dates;
 }
 
+/** Checks whether a date key is the occurrence of a pattern in that year. */
 export function dateKeyMatchesRecurrence(dateKey: string, pattern: string) {
 	return recurrenceDateKey(pattern, Number(dateKey.slice(0, 4))) === dateKey;
 }
