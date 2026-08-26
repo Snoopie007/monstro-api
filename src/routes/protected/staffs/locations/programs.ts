@@ -1,6 +1,5 @@
 import { db } from "@/db/db";
-import { findBlockedHoliday } from "@/libs/holidays";
-import { COMMON_HOLIDAYS } from "@subtrees/constants/data";
+import { findOverlappingLocationClosure } from "@/libs/locationClosures";
 import { memberPlanPricing, planPrograms } from "@subtrees/schemas";
 import { addDays, addMinutes, endOfDay, startOfWeek } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";
@@ -36,9 +35,6 @@ export const slProgramRoutes = new Elysia({ prefix: "/programs" })
                 columns: {
                     id: true,
                     timezone: true,
-                },
-                with: {
-                    locationState: true,
                 },
             });
             if (!location) {
@@ -77,7 +73,9 @@ export const slProgramRoutes = new Elysia({ prefix: "/programs" })
                 },
             });
 
-            const holidays = location.locationState?.settings.holidays;
+            const closures = await db.query.locationClosures.findMany({
+                where: (closure, { eq: eqCol }) => eqCol(closure.locationId, lid),
+            });
 
             const result = programs.map((program) => {
                 const sessions = program.sessions.map((session) => {
@@ -93,10 +91,11 @@ export const slProgramRoutes = new Elysia({ prefix: "/programs" })
                     const utcStartTime = fromZonedTime(startTime, location.timezone);
                     const utcEndTime = fromZonedTime(endTime, location.timezone);
 
-                    const blockedHoliday = findBlockedHoliday(
-                        sessionDate,
-                        holidays?.blockedHolidays ?? [],
-                        COMMON_HOLIDAYS,
+                    const matchingClosure = findOverlappingLocationClosure(
+                        closures,
+                        utcStartTime,
+                        utcEndTime,
+                        location.timezone,
                     );
 
                     const matchingReservations = reservations.filter((reservation) =>
@@ -110,7 +109,7 @@ export const slProgramRoutes = new Elysia({ prefix: "/programs" })
                         endTime,
                         utcStartTime,
                         utcEndTime,
-                        holidayName: blockedHoliday?.name ?? undefined,
+                        holidayName: matchingClosure?.reason,
                         reservations: matchingReservations,
                         availability: Math.max(program.capacity - matchingReservations.length, 0),
                     };
