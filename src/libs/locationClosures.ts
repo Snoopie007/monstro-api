@@ -10,6 +10,12 @@ export type LocationClosureRow = {
 	reason: string;
 };
 
+/**
+ * Checks a one-time closure against a requested session window.
+ *
+ * The comparison treats both windows as `[start, end)`. A session may start
+ * when a closure ends, or end when a closure starts, without being blocked.
+ */
 function concreteClosureOverlaps(
 	closure: LocationClosureRow,
 	startsAt: Date,
@@ -19,6 +25,14 @@ function concreteClosureOverlaps(
 	return closure.startsAt < endsAt && closure.endsAt > startsAt;
 }
 
+/**
+ * Expands a yearly recurrence pattern only for the local years touched by the
+ * requested window, then checks the resulting all-day closure.
+ *
+ * Local midnights are converted to UTC after the date is resolved. This keeps
+ * the closure on the location's calendar date when daylight-saving offsets
+ * change.
+ */
 function recurringClosureOverlaps(
 	pattern: string,
 	timezone: string,
@@ -41,6 +55,14 @@ function recurringClosureOverlaps(
 	return false;
 }
 
+/**
+ * Finds the closure that affects a scheduled session window.
+ *
+ * The public schedule route uses the result to mark the session as blocked. The
+ * location-session and staff-program routes use its reason as the holiday name
+ * shown with the session. One-time closures are checked first so their specific
+ * reason wins when they overlap a recurring holiday.
+ */
 export function findOverlappingLocationClosure(
 	closures: LocationClosureRow[],
 	startsAt: Date,
