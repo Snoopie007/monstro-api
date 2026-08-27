@@ -1,12 +1,12 @@
 // @bun
 // src/config.ts
-import { z as z34 } from "zod";
+import { z as z35 } from "zod";
 
 // src/collections.ts
-import { z as z30 } from "zod";
+import { z as z31 } from "zod";
 
 // src/sections/index.ts
-import { z as z29 } from "zod";
+import { z as z30 } from "zod";
 
 // src/sections/about.ts
 import { z as z3 } from "zod";
@@ -118,6 +118,33 @@ function isIframeUrlAllowed(value, policy) {
     return IFRAME_HOSTS[policy].some((allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`));
   } catch {
     return false;
+  }
+}
+var VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{6,}$/;
+function toVideoEmbedUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      return null;
+    }
+    const hostname = url.hostname.toLowerCase();
+    if (hostname === "youtu.be" || hostname.endsWith(".youtu.be")) {
+      const id2 = url.pathname.split("/").filter(Boolean)[0];
+      return id2 && VIDEO_ID_PATTERN.test(id2) ? `https://www.youtube-nocookie.com/embed/${id2}` : null;
+    }
+    if (hostname === "youtube.com" || hostname.endsWith(".youtube.com") || hostname === "youtube-nocookie.com" || hostname.endsWith(".youtube-nocookie.com")) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      const id2 = parts[0] === "watch" ? url.searchParams.get("v") : ["embed", "shorts", "live"].includes(parts[0] ?? "") ? parts[1] : url.searchParams.get("v");
+      return id2 && VIDEO_ID_PATTERN.test(id2) ? `https://www.youtube-nocookie.com/embed/${id2}` : null;
+    }
+    if (hostname === "vimeo.com" || hostname.endsWith(".vimeo.com")) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      const id2 = parts[0] === "video" ? parts[1] : parts[0];
+      return id2 && /^\d+$/.test(id2) ? `https://player.vimeo.com/video/${id2}` : null;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 var SiteImageSchema = z2.object({
@@ -577,14 +604,40 @@ var GallerySectionSchema = MediaSectionBaseSchema.extend({
   }).strict()
 }).strict();
 
-// src/sections/hero.ts
+// src/sections/gfo-offer.ts
 import { z as z13 } from "zod";
-var HeroSectionSchema = MediaSectionBaseSchema.extend({
-  type: z13.literal("hero"),
+var GfoVideoSchema = z13.object({
+  src: HttpsUrlSchema,
+  title: z13.string().min(1)
+}).strict().superRefine((video, issue) => {
+  if (!toVideoEmbedUrl(video.src)) {
+    issue.addIssue({
+      code: "custom",
+      message: "Video must be an embeddable YouTube or Vimeo URL",
+      path: ["src"]
+    });
+  }
+});
+var GfoOfferSectionSchema = SectionBaseSchema.extend({
+  type: z13.literal("gfo_offer"),
   props: z13.object({
-    eyebrow: z13.string().optional(),
+    notice: z13.string().min(1),
     title: z13.string().min(1),
     description: z13.string().min(1),
+    video: GfoVideoSchema.optional(),
+    countdownDays: z13.number().int().min(1).max(365).default(30),
+    cta: SiteLinkSchema
+  }).strict()
+}).strict();
+
+// src/sections/hero.ts
+import { z as z14 } from "zod";
+var HeroSectionSchema = MediaSectionBaseSchema.extend({
+  type: z14.literal("hero"),
+  props: z14.object({
+    eyebrow: z14.string().optional(),
+    title: z14.string().min(1),
+    description: z14.string().min(1),
     image: SiteImageSchema.optional(),
     primaryCta: SiteLinkSchema.optional(),
     secondaryCta: SiteLinkSchema.optional()
@@ -592,27 +645,27 @@ var HeroSectionSchema = MediaSectionBaseSchema.extend({
 }).strict();
 
 // src/sections/how-to-start.ts
-import { z as z14 } from "zod";
+import { z as z15 } from "zod";
 var HowToStartSectionSchema = SectionBaseSchema.extend({
-  type: z14.literal("how_to_start"),
+  type: z15.literal("how_to_start"),
   props: SectionHeadingSchema.extend({
-    steps: z14.array(z14.object({
-      title: z14.string().min(1),
-      description: z14.string().min(1)
+    steps: z15.array(z15.object({
+      title: z15.string().min(1),
+      description: z15.string().min(1)
     }).strict()).min(1)
   }).strict()
 }).strict();
 
 // src/sections/iframe-embed.ts
-import { z as z15 } from "zod";
+import { z as z16 } from "zod";
 var IframeEmbedSectionSchema = SectionBaseSchema.extend({
-  type: z15.literal("iframe_embed"),
-  props: z15.object({
-    title: z15.string().min(1),
-    description: z15.string().optional(),
+  type: z16.literal("iframe_embed"),
+  props: z16.object({
+    title: z16.string().min(1),
+    description: z16.string().optional(),
     src: HttpsUrlSchema,
-    height: z15.number().int().min(240).max(1200).default(640),
-    policy: z15.enum(["video", "form", "scheduler", "map"])
+    height: z16.number().int().min(240).max(1200).default(640),
+    policy: z16.enum(["video", "form", "scheduler", "map"])
   }).strict().superRefine((embed, issue) => {
     if (!isIframeUrlAllowed(embed.src, embed.policy)) {
       issue.addIssue({
@@ -625,123 +678,123 @@ var IframeEmbedSectionSchema = SectionBaseSchema.extend({
 }).strict();
 
 // src/sections/not-sure.ts
-import { z as z16 } from "zod";
+import { z as z17 } from "zod";
 var NotSureSectionSchema = SectionBaseSchema.extend({
-  type: z16.literal("not_sure"),
+  type: z17.literal("not_sure"),
   props: SectionHeadingSchema.extend({
     cta: SiteLinkSchema
   }).strict()
 }).strict();
 
 // src/sections/plans.ts
-import { z as z17 } from "zod";
+import { z as z18 } from "zod";
 var PlansSectionSchema = SectionBaseSchema.extend({
-  type: z17.literal("plans"),
-  props: z17.object({
-    title: z17.string().min(1).default("Membership plans"),
-    locationIds: z17.array(z17.string().min(1)).min(1),
-    showLocationName: z17.boolean().default(true),
-    display: z17.enum(["grouped", "tabs"]).default("grouped")
+  type: z18.literal("plans"),
+  props: z18.object({
+    title: z18.string().min(1).default("Membership plans"),
+    locationIds: z18.array(z18.string().min(1)).min(1),
+    showLocationName: z18.boolean().default(true),
+    display: z18.enum(["grouped", "tabs"]).default("grouped")
   }).strict()
 }).strict();
 var PlansSectionPropsSchema = PlansSectionSchema.shape.props;
 
 // src/sections/schedules.ts
-import { z as z18 } from "zod";
+import { z as z19 } from "zod";
 var SchedulesSectionSchema = SectionBaseSchema.extend({
-  type: z18.literal("schedules"),
-  props: z18.object({
-    title: z18.string().min(1).default("Class schedule"),
-    locationIds: z18.array(z18.string().min(1)).min(1),
-    showLocationName: z18.boolean().default(true),
-    display: z18.enum(["tabs", "combined"]).default("tabs")
+  type: z19.literal("schedules"),
+  props: z19.object({
+    title: z19.string().min(1).default("Class schedule"),
+    locationIds: z19.array(z19.string().min(1)).min(1),
+    showLocationName: z19.boolean().default(true),
+    display: z19.enum(["tabs", "combined"]).default("tabs")
   }).strict()
 }).strict();
 var SchedulesSectionPropsSchema = SchedulesSectionSchema.shape.props;
 
 // src/sections/pricing-form.ts
-import { z as z19 } from "zod";
+import { z as z20 } from "zod";
 var PricingFormSectionSchema = MediaSectionBaseSchema.extend({
-  type: z19.literal("pricing_form_section"),
+  type: z20.literal("pricing_form_section"),
   props: SectionHeadingSchema.extend({
-    eyebrow: z19.string().optional(),
+    eyebrow: z20.string().optional(),
     source: FormPlacementSchema
   }).strict()
 }).strict();
 
 // src/sections/program-detail.ts
-import { z as z20 } from "zod";
+import { z as z21 } from "zod";
 var ProgramDetailSectionSchema = MediaSectionBaseSchema.extend({
-  type: z20.literal("program_detail"),
-  props: z20.object({
-    programId: z20.string().min(1)
+  type: z21.literal("program_detail"),
+  props: z21.object({
+    programId: z21.string().min(1)
   }).strict()
 }).strict();
 
 // src/sections/programs.ts
-import { z as z21 } from "zod";
+import { z as z22 } from "zod";
 var ProgramsSectionSchema = MediaSectionBaseSchema.extend({
-  type: z21.literal("programs"),
-  props: z21.object({
-    eyebrow: z21.string().optional(),
-    title: z21.string().min(1),
-    source: z21.literal("all-visible").optional(),
+  type: z22.literal("programs"),
+  props: z22.object({
+    eyebrow: z22.string().optional(),
+    title: z22.string().min(1),
+    source: z22.literal("all-visible").optional(),
     programIds: OrderedIdsSchema
   }).strict()
 }).strict();
 
 // src/sections/rich-text.ts
-import { z as z22 } from "zod";
+import { z as z23 } from "zod";
 var RichTextSectionSchema = SectionBaseSchema.extend({
-  type: z22.literal("rich_text"),
-  props: z22.object({
-    eyebrow: z22.string().optional(),
-    title: z22.string().min(1),
-    body: z22.array(z22.string().min(1)).min(1)
+  type: z23.literal("rich_text"),
+  props: z23.object({
+    eyebrow: z23.string().optional(),
+    title: z23.string().min(1),
+    body: z23.array(z23.string().min(1)).min(1)
   }).strict()
 }).strict();
 
 // src/sections/sandboxed-embed.ts
-import { z as z23 } from "zod";
+import { z as z24 } from "zod";
 var SandboxedEmbedSectionSchema = SectionBaseSchema.extend({
-  type: z23.literal("sandboxed_embed"),
-  props: z23.object({
-    title: z23.string().trim().min(1).max(200),
-    description: z23.string().trim().min(1).max(1000).optional(),
-    embedId: z23.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-    height: z23.number().int().min(240).max(1200).default(640)
+  type: z24.literal("sandboxed_embed"),
+  props: z24.object({
+    title: z24.string().trim().min(1).max(200),
+    description: z24.string().trim().min(1).max(1000).optional(),
+    embedId: z24.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    height: z24.number().int().min(240).max(1200).default(640)
   }).strict()
 }).strict();
 
 // src/sections/team.ts
-import { z as z24 } from "zod";
+import { z as z25 } from "zod";
 var TeamSectionSchema = MediaSectionBaseSchema.extend({
-  type: z24.literal("team"),
-  props: z24.object({
-    title: z24.string().min(1),
-    source: z24.literal("all-visible").optional(),
+  type: z25.literal("team"),
+  props: z25.object({
+    title: z25.string().min(1),
+    source: z25.literal("all-visible").optional(),
     teamIds: OrderedIdsSchema
   }).strict()
 }).strict();
 
 // src/sections/testimonials.ts
-import { z as z25 } from "zod";
+import { z as z26 } from "zod";
 var TestimonialsSectionSchema = MediaSectionBaseSchema.extend({
-  type: z25.literal("testimonials"),
+  type: z26.literal("testimonials"),
   props: SectionHeadingSchema.extend({
-    source: z25.literal("all-visible").optional(),
+    source: z26.literal("all-visible").optional(),
     testimonialIds: OrderedIdsSchema
   }).strict()
 }).strict();
 
 // src/sections/text-iframe.ts
-import { z as z26 } from "zod";
+import { z as z27 } from "zod";
 var TextIframeSectionSchema = SectionBaseSchema.extend({
-  type: z26.literal("text_iframe"),
+  type: z27.literal("text_iframe"),
   props: SectionHeadingSchema.extend({
     src: HttpsUrlSchema,
-    height: z26.number().int().min(240).max(1200).default(640),
-    policy: z26.enum(["video", "form", "scheduler", "map"])
+    height: z27.number().int().min(240).max(1200).default(640),
+    policy: z27.enum(["video", "form", "scheduler", "map"])
   }).strict().superRefine((embed, issue) => {
     if (!isIframeUrlAllowed(embed.src, embed.policy)) {
       issue.addIssue({
@@ -754,31 +807,31 @@ var TextIframeSectionSchema = SectionBaseSchema.extend({
 }).strict();
 
 // src/sections/three-box.ts
-import { z as z27 } from "zod";
+import { z as z28 } from "zod";
 var ThreeBoxSectionSchema = SectionBaseSchema.extend({
-  type: z27.literal("three_box"),
-  props: z27.object({
-    title: z27.string().min(1),
-    boxes: z27.array(z27.object({
-      title: z27.string().min(1),
-      description: z27.string().min(1)
+  type: z28.literal("three_box"),
+  props: z28.object({
+    title: z28.string().min(1),
+    boxes: z28.array(z28.object({
+      title: z28.string().min(1),
+      description: z28.string().min(1)
     }).strict()).min(1)
   }).strict()
 }).strict();
 
 // src/sections/top-review.ts
-import { z as z28 } from "zod";
+import { z as z29 } from "zod";
 var TopReviewSectionSchema = MediaSectionBaseSchema.extend({
-  type: z28.literal("top_review"),
-  props: z28.object({
-    reviewCount: z28.number().int().nonnegative(),
-    averageRating: z28.number().min(0).max(5),
-    totalCustomers: z28.number().int().nonnegative(),
-    reviews: z28.array(z28.object({
+  type: z29.literal("top_review"),
+  props: z29.object({
+    reviewCount: z29.number().int().nonnegative(),
+    averageRating: z29.number().min(0).max(5),
+    totalCustomers: z29.number().int().nonnegative(),
+    reviews: z29.array(z29.object({
       id: SectionIdentifierSchema.optional(),
-      name: z28.string().min(1),
-      title: z28.string().min(1),
-      review: z28.string().min(1),
+      name: z29.string().min(1),
+      title: z29.string().min(1),
+      review: z29.string().min(1),
       image: SiteImageSchema.optional()
     }).strict()).min(1).transform((reviews) => reviews.map((review, index) => ({
       ...review,
@@ -826,7 +879,7 @@ function sectionSupportsImageTarget(section, target) {
       return false;
   }
 }
-var SiteSectionUnionSchema = z29.discriminatedUnion("type", [
+var SiteSectionUnionSchema = z30.discriminatedUnion("type", [
   HeroSectionSchema,
   RichTextSectionSchema,
   FormSectionSchema,
@@ -837,6 +890,7 @@ var SiteSectionUnionSchema = z29.discriminatedUnion("type", [
   AboutSectionSchema,
   ProgramsSectionSchema,
   GallerySectionSchema,
+  GfoOfferSectionSchema,
   SchedulesSectionSchema,
   PlansSectionSchema,
   TeamSectionSchema,
@@ -869,28 +923,28 @@ var SiteSectionSchema = SiteSectionUnionSchema.superRefine((section, issue) => {
 });
 
 // src/collections.ts
-var SlugSchema = z30.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
-var OrderedContentSchema = z30.object({
-  id: z30.string().min(1),
-  visible: z30.boolean().default(true),
-  order: z30.number().int().optional()
+var SlugSchema = z31.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+var OrderedContentSchema = z31.object({
+  id: z31.string().min(1),
+  visible: z31.boolean().default(true),
+  order: z31.number().int().optional()
 });
 var SiteProgramSchema = OrderedContentSchema.extend({
   slug: SlugSchema,
-  name: z30.string().min(1),
-  description: z30.string().min(1),
+  name: z31.string().min(1),
+  description: z31.string().min(1),
   image: SiteImageSchema.optional(),
-  showLearnMore: z30.boolean().default(true),
-  detail: z30.object({
-    title: z30.string().min(1),
-    ageRange: z30.string().min(1),
-    ageMinimum: z30.number().int().nonnegative().optional(),
-    ageMaximum: z30.number().int().nonnegative().optional(),
-    previousRequirement: z30.string().min(1),
-    description: z30.string().min(1),
+  showLearnMore: z31.boolean().default(true),
+  detail: z31.object({
+    title: z31.string().min(1),
+    ageRange: z31.string().min(1),
+    ageMinimum: z31.number().int().nonnegative().optional(),
+    ageMaximum: z31.number().int().nonnegative().optional(),
+    previousRequirement: z31.string().min(1),
+    description: z31.string().min(1),
     image: SiteImageSchema.optional(),
-    challengeHeading: z30.string().min(1),
-    challenges: z30.array(z30.string().min(1)).min(1)
+    challengeHeading: z31.string().min(1),
+    challenges: z31.array(z31.string().min(1)).min(1)
   }).strict().refine((detail) => detail.ageMinimum === undefined || detail.ageMaximum === undefined || detail.ageMinimum <= detail.ageMaximum, "Program minimum age cannot exceed maximum age").optional()
 }).strict().superRefine((program, issue) => {
   if (program.showLearnMore && !program.detail) {
@@ -902,44 +956,44 @@ var SiteProgramSchema = OrderedContentSchema.extend({
   }
 });
 var SiteTeamMemberSchema = OrderedContentSchema.extend({
-  name: z30.string().min(1),
-  description: z30.string().min(1),
-  role: z30.string().min(1).optional(),
-  isFounder: z30.boolean().optional(),
+  name: z31.string().min(1),
+  description: z31.string().min(1),
+  role: z31.string().min(1).optional(),
+  isFounder: z31.boolean().optional(),
   image: SiteImageSchema.optional()
 }).strict();
 var SiteTestimonialSchema = OrderedContentSchema.extend({
-  name: z30.string().min(1),
-  location: z30.string().min(1),
-  text: z30.string().min(1),
+  name: z31.string().min(1),
+  location: z31.string().min(1),
+  text: z31.string().min(1),
   avatar: SiteImageSchema.optional()
 }).strict();
 var SiteFaqSchema = OrderedContentSchema.extend({
-  question: z30.string().min(1),
-  answer: z30.string().min(1)
+  question: z31.string().min(1),
+  answer: z31.string().min(1)
 }).strict();
-var SiteContentSchema = z30.object({
-  programs: z30.array(SiteProgramSchema).default([]),
-  teams: z30.array(SiteTeamMemberSchema).default([]),
-  testimonials: z30.array(SiteTestimonialSchema).default([]),
-  faqs: z30.array(SiteFaqSchema).default([])
+var SiteContentSchema = z31.object({
+  programs: z31.array(SiteProgramSchema).default([]),
+  teams: z31.array(SiteTeamMemberSchema).default([]),
+  testimonials: z31.array(SiteTestimonialSchema).default([]),
+  faqs: z31.array(SiteFaqSchema).default([])
 }).strict();
 
 // src/context.ts
-import { z as z32 } from "zod";
+import { z as z33 } from "zod";
 
 // src/locations.ts
-import { z as z31 } from "zod";
-var SiteLocationSlugSchema = z31.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Location must be a stable slug");
-var SitePostalAddressSchema = z31.object({
-  streetAddress: z31.string().min(1).optional(),
-  addressLocality: z31.string().min(1).optional(),
-  addressRegion: z31.string().min(1).optional(),
-  postalCode: z31.string().min(1).optional(),
-  addressCountry: z31.string().min(2)
+import { z as z32 } from "zod";
+var SiteLocationSlugSchema = z32.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Location must be a stable slug");
+var SitePostalAddressSchema = z32.object({
+  streetAddress: z32.string().min(1).optional(),
+  addressLocality: z32.string().min(1).optional(),
+  addressRegion: z32.string().min(1).optional(),
+  postalCode: z32.string().min(1).optional(),
+  addressCountry: z32.string().min(2)
 }).strict();
-var SiteOpeningHoursSchema = z31.object({
-  dayOfWeek: z31.array(z31.enum([
+var SiteOpeningHoursSchema = z32.object({
+  dayOfWeek: z32.array(z32.enum([
     "Monday",
     "Tuesday",
     "Wednesday",
@@ -948,56 +1002,56 @@ var SiteOpeningHoursSchema = z31.object({
     "Saturday",
     "Sunday"
   ])).min(1),
-  opens: z31.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
-  closes: z31.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
+  opens: z32.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+  closes: z32.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 }).strict();
-var SiteLocationSchema = z31.object({
-  id: z31.string().min(1).max(128),
-  name: z31.string().min(1),
+var SiteLocationSchema = z32.object({
+  id: z32.string().min(1).max(128),
+  name: z32.string().min(1),
   slug: SiteLocationSlugSchema,
-  googlePlaceId: z31.string().trim().min(1).max(256).optional(),
-  address: z31.string().min(1).optional(),
+  googlePlaceId: z32.string().trim().min(1).max(256).optional(),
+  address: z32.string().min(1).optional(),
   postalAddress: SitePostalAddressSchema.optional(),
-  phone: z31.string().min(1).optional(),
-  email: z31.string().min(1).optional(),
-  timezone: z31.string().min(1),
-  paymentGateway: z31.enum(["square", "stripe", "authorize"]).nullable().optional(),
-  currency: z31.string().length(3).optional(),
-  coordinates: z31.object({
-    latitude: z31.number().min(-90).max(90),
-    longitude: z31.number().min(-180).max(180)
+  phone: z32.string().min(1).optional(),
+  email: z32.string().min(1).optional(),
+  timezone: z32.string().min(1),
+  paymentGateway: z32.enum(["square", "stripe", "authorize"]).nullable().optional(),
+  currency: z32.string().length(3).optional(),
+  coordinates: z32.object({
+    latitude: z32.number().min(-90).max(90),
+    longitude: z32.number().min(-180).max(180)
   }).strict().optional(),
-  openingHours: z31.array(SiteOpeningHoursSchema).optional(),
-  rating: z31.number().min(0).max(5).optional(),
-  reviewCount: z31.number().int().nonnegative().optional()
+  openingHours: z32.array(SiteOpeningHoursSchema).optional(),
+  rating: z32.number().min(0).max(5).optional(),
+  reviewCount: z32.number().int().nonnegative().optional()
 }).strict();
 var RenderedSiteLocationSchema = SiteLocationSchema.extend({
-  mapQuery: z31.string().min(1).max(500).optional(),
-  hoursDescription: z31.string().min(1).max(2000).optional()
+  mapQuery: z32.string().min(1).max(500).optional(),
+  hoursDescription: z32.string().min(1).max(2000).optional()
 }).strict();
-var SiteLocationOverrideSchema = z31.object({
-  name: z31.string().trim().max(200).optional(),
-  mapQuery: z31.string().trim().max(500).optional(),
-  address: z31.object({
-    streetAddress: z31.string().trim().max(500).optional(),
-    addressLocality: z31.string().trim().max(200).optional(),
-    addressRegion: z31.string().trim().max(200).optional(),
-    postalCode: z31.string().trim().max(50).optional(),
-    addressCountry: z31.string().trim().max(100).optional()
+var SiteLocationOverrideSchema = z32.object({
+  name: z32.string().trim().max(200).optional(),
+  mapQuery: z32.string().trim().max(500).optional(),
+  address: z32.object({
+    streetAddress: z32.string().trim().max(500).optional(),
+    addressLocality: z32.string().trim().max(200).optional(),
+    addressRegion: z32.string().trim().max(200).optional(),
+    postalCode: z32.string().trim().max(50).optional(),
+    addressCountry: z32.string().trim().max(100).optional()
   }).strict().optional(),
-  phone: z31.string().trim().max(100).optional(),
-  email: z31.string().trim().max(320).optional(),
-  hoursDescription: z31.string().trim().max(2000).optional()
+  phone: z32.string().trim().max(100).optional(),
+  email: z32.string().trim().max(320).optional(),
+  hoursDescription: z32.string().trim().max(2000).optional()
 }).strict();
-var SiteLocationConnectionSchema = z31.object({
-  locationId: z31.string().min(1).max(128),
-  isPrimary: z31.boolean(),
-  displayOrder: z31.number().int().nonnegative(),
+var SiteLocationConnectionSchema = z32.object({
+  locationId: z32.string().min(1).max(128),
+  isPrimary: z32.boolean(),
+  displayOrder: z32.number().int().nonnegative(),
   override: SiteLocationOverrideSchema.optional()
 }).strict();
-var SiteLocationLeadRoutingSchema = z31.object({
-  ghlLocationId: z31.string().trim().max(255),
-  privateIntegrationToken: z31.string().trim().max(4096)
+var SiteLocationLeadRoutingSchema = z32.object({
+  ghlLocationId: z32.string().trim().max(255),
+  privateIntegrationToken: z32.string().trim().max(4096)
 }).strict();
 var StoredSiteLocationConnectionSchema = SiteLocationConnectionSchema.extend({
   leadRouting: SiteLocationLeadRoutingSchema
@@ -1079,24 +1133,24 @@ function resolveSelectedLocation(locations, primaryLocationId, requestedSlug) {
 }
 
 // src/context.ts
-var SiteCapabilitiesSchema = z32.object({
-  blog: z32.boolean(),
-  commerce: z32.boolean(),
-  schedules: z32.boolean(),
-  downloads: z32.boolean(),
-  memberAuth: z32.boolean()
+var SiteCapabilitiesSchema = z33.object({
+  blog: z33.boolean(),
+  commerce: z33.boolean(),
+  schedules: z33.boolean(),
+  downloads: z33.boolean(),
+  memberAuth: z33.boolean()
 }).strict();
-var TenantContextObjectSchema = z32.object({
-  siteId: z32.string().min(1).max(128),
-  vendorId: z32.string().min(1).max(128),
-  primaryLocationId: z32.string().min(1).max(128),
-  allowedLocationIds: z32.array(z32.string().min(1).max(128)).min(1),
-  locations: z32.array(SiteLocationSchema).min(1),
-  domain: z32.string().min(1).max(253),
-  domainSource: z32.enum(["custom", "wildcard"]),
-  canonicalDomain: z32.string().min(1).max(253).nullable(),
-  isCanonicalDomain: z32.boolean(),
-  publishedRevisionId: z32.string().min(1).max(128),
+var TenantContextObjectSchema = z33.object({
+  siteId: z33.string().min(1).max(128),
+  vendorId: z33.string().min(1).max(128),
+  primaryLocationId: z33.string().min(1).max(128),
+  allowedLocationIds: z33.array(z33.string().min(1).max(128)).min(1),
+  locations: z33.array(SiteLocationSchema).min(1),
+  domain: z33.string().min(1).max(253),
+  domainSource: z33.enum(["custom", "wildcard"]),
+  canonicalDomain: z33.string().min(1).max(253).nullable(),
+  isCanonicalDomain: z33.boolean(),
+  publishedRevisionId: z33.string().min(1).max(128),
   capabilities: SiteCapabilitiesSchema
 }).strict();
 function validateTenantContext(context, issue) {
@@ -1140,46 +1194,46 @@ function validateTenantContext(context, issue) {
 }
 var TenantContextSchema = TenantContextObjectSchema.superRefine(validateTenantContext);
 var RenderedTenantContextSchema = TenantContextObjectSchema.extend({
-  locations: z32.array(RenderedSiteLocationSchema).min(1)
+  locations: z33.array(RenderedSiteLocationSchema).min(1)
 }).strict().superRefine(validateTenantContext);
 
 // src/scripts-and-embeds.ts
-import { z as z33 } from "zod";
+import { z as z34 } from "zod";
 var MAX_SITE_CUSTOM_EMBED_BYTES = 75000;
 var MAX_SITE_SANDBOXED_EMBED_BYTES = 75000;
-var SiteScriptPurposeSchema = z33.enum([
+var SiteScriptPurposeSchema = z34.enum([
   "functional",
   "analytics",
   "marketing"
 ]);
-var SiteScriptPlacementSchema = z33.enum([
+var SiteScriptPlacementSchema = z34.enum([
   "head",
   "body_start",
   "body_end"
 ]);
-var SiteScriptEntryBaseSchema = z33.object({
-  id: z33.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  name: z33.string().trim().min(1).max(120),
-  enabled: z33.boolean(),
+var SiteScriptEntryBaseSchema = z34.object({
+  id: z34.string().trim().min(1).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  name: z34.string().trim().min(1).max(120),
+  enabled: z34.boolean(),
   purpose: SiteScriptPurposeSchema
 });
 var SiteGtmEntrySchema = SiteScriptEntryBaseSchema.extend({
-  kind: z33.literal("gtm"),
-  containerId: z33.string().trim().regex(/^GTM-[A-Z0-9]+$/i)
+  kind: z34.literal("gtm"),
+  containerId: z34.string().trim().regex(/^GTM-[A-Z0-9]+$/i)
 }).strict();
 var SiteGoogleTagEntrySchema = SiteScriptEntryBaseSchema.extend({
-  kind: z33.literal("google_tag"),
-  tagId: z33.string().trim().regex(/^(?:GT|G|AW|DC)-[A-Z0-9]+$/i)
+  kind: z34.literal("google_tag"),
+  tagId: z34.string().trim().regex(/^(?:GT|G|AW|DC)-[A-Z0-9]+$/i)
 }).strict();
 var SiteMetaPixelEntrySchema = SiteScriptEntryBaseSchema.extend({
-  kind: z33.literal("meta_pixel"),
-  pixelId: z33.string().trim().regex(/^\d{5,32}$/)
+  kind: z34.literal("meta_pixel"),
+  pixelId: z34.string().trim().regex(/^\d{5,32}$/)
 }).strict();
 var SiteTikTokPixelEntrySchema = SiteScriptEntryBaseSchema.extend({
-  kind: z33.literal("tiktok_pixel"),
-  pixelId: z33.string().trim().regex(/^[A-Z0-9]{10,32}$/i)
+  kind: z34.literal("tiktok_pixel"),
+  pixelId: z34.string().trim().regex(/^[A-Z0-9]{10,32}$/i)
 }).strict();
-var ReferrerPolicySchema = z33.enum([
+var ReferrerPolicySchema = z34.enum([
   "no-referrer",
   "no-referrer-when-downgrade",
   "origin",
@@ -1189,14 +1243,14 @@ var ReferrerPolicySchema = z33.enum([
   "strict-origin-when-cross-origin",
   "unsafe-url"
 ]);
-var SiteCustomScriptAttributesSchema = z33.object({
-  async: z33.boolean().optional(),
-  defer: z33.boolean().optional(),
-  crossOrigin: z33.enum(["anonymous", "use-credentials"]).optional(),
-  integrity: z33.string().trim().min(1).max(1024).optional(),
-  module: z33.boolean().optional(),
+var SiteCustomScriptAttributesSchema = z34.object({
+  async: z34.boolean().optional(),
+  defer: z34.boolean().optional(),
+  crossOrigin: z34.enum(["anonymous", "use-credentials"]).optional(),
+  integrity: z34.string().trim().min(1).max(1024).optional(),
+  module: z34.boolean().optional(),
   referrerPolicy: ReferrerPolicySchema.optional(),
-  data: z33.record(z33.string().regex(/^[a-z0-9_.:-]+$/i), z33.string().max(4096)).optional()
+  data: z34.record(z34.string().regex(/^[a-z0-9_.:-]+$/i), z34.string().max(4096)).optional()
 }).strict();
 function isAllowedScriptUrl(value) {
   if (/^\/(?!\/)/.test(value))
@@ -1208,21 +1262,21 @@ function isAllowedScriptUrl(value) {
     return false;
   }
 }
-var SiteCustomExternalScriptPartSchema = z33.object({
-  type: z33.literal("external_script"),
-  src: z33.string().trim().max(4096).refine(isAllowedScriptUrl, "External scripts require a same-origin path or credential-free HTTPS URL"),
+var SiteCustomExternalScriptPartSchema = z34.object({
+  type: z34.literal("external_script"),
+  src: z34.string().trim().max(4096).refine(isAllowedScriptUrl, "External scripts require a same-origin path or credential-free HTTPS URL"),
   attributes: SiteCustomScriptAttributesSchema.default({})
 }).strict();
-var SiteCustomInlineScriptPartSchema = z33.object({
-  type: z33.literal("inline_script"),
-  code: z33.string().min(1).max(50000).refine((value) => !/\bdocument\s*\.\s*write(?:ln)?\s*\(/i.test(value), "document.write is not supported"),
-  module: z33.boolean().optional()
+var SiteCustomInlineScriptPartSchema = z34.object({
+  type: z34.literal("inline_script"),
+  code: z34.string().min(1).max(50000).refine((value) => !/\bdocument\s*\.\s*write(?:ln)?\s*\(/i.test(value), "document.write is not supported"),
+  module: z34.boolean().optional()
 }).strict();
-var SiteCustomMarkupPartSchema = z33.object({
-  type: z33.literal("markup"),
-  html: z33.string().min(1).max(75000).refine((value) => !/<\/?script\b/i.test(value), "Markup parts cannot contain script tags")
+var SiteCustomMarkupPartSchema = z34.object({
+  type: z34.literal("markup"),
+  html: z34.string().min(1).max(75000).refine((value) => !/<\/?script\b/i.test(value), "Markup parts cannot contain script tags")
 }).strict();
-var SiteCustomEmbedPartSchema = z33.discriminatedUnion("type", [
+var SiteCustomEmbedPartSchema = z34.discriminatedUnion("type", [
   SiteCustomExternalScriptPartSchema,
   SiteCustomInlineScriptPartSchema,
   SiteCustomMarkupPartSchema
@@ -1243,9 +1297,9 @@ function siteCustomEmbedPartsByteLength(parts) {
   return bytes;
 }
 var SiteCustomEmbedEntrySchema = SiteScriptEntryBaseSchema.extend({
-  kind: z33.literal("custom"),
+  kind: z34.literal("custom"),
   placement: SiteScriptPlacementSchema,
-  parts: z33.array(SiteCustomEmbedPartSchema).min(1).max(40)
+  parts: z34.array(SiteCustomEmbedPartSchema).min(1).max(40)
 }).strict().superRefine((entry, issue) => {
   if (siteCustomEmbedPartsByteLength(entry.parts) > MAX_SITE_CUSTOM_EMBED_BYTES) {
     issue.addIssue({
@@ -1278,8 +1332,8 @@ function utf8ByteLength(value) {
   return bytes;
 }
 var SiteSandboxedEmbedEntrySchema = SiteScriptEntryBaseSchema.extend({
-  kind: z33.literal("sandboxed_embed"),
-  source: z33.string().max(MAX_SITE_SANDBOXED_EMBED_BYTES).refine((value) => value.trim().length > 0, "Sandboxed embed source is required")
+  kind: z34.literal("sandboxed_embed"),
+  source: z34.string().max(MAX_SITE_SANDBOXED_EMBED_BYTES).refine((value) => value.trim().length > 0, "Sandboxed embed source is required")
 }).strict().superRefine((entry, issue) => {
   if (utf8ByteLength(entry.source) > MAX_SITE_SANDBOXED_EMBED_BYTES) {
     issue.addIssue({
@@ -1289,7 +1343,7 @@ var SiteSandboxedEmbedEntrySchema = SiteScriptEntryBaseSchema.extend({
     });
   }
 });
-var SiteScriptEntrySchema = z33.discriminatedUnion("kind", [
+var SiteScriptEntrySchema = z34.discriminatedUnion("kind", [
   SiteGtmEntrySchema,
   SiteGoogleTagEntrySchema,
   SiteMetaPixelEntrySchema,
@@ -1311,9 +1365,9 @@ function providerIdentity(entry) {
       return null;
   }
 }
-var SiteScriptsAndEmbedsSchema = z33.object({
-  enabled: z33.boolean().default(true),
-  entries: z33.array(SiteScriptEntrySchema).max(20).default([])
+var SiteScriptsAndEmbedsSchema = z34.object({
+  enabled: z34.boolean().default(true),
+  entries: z34.array(SiteScriptEntrySchema).max(20).default([])
 }).strict().superRefine((config, issue) => {
   const entryIds = new Set;
   const providerIds = new Set;
@@ -1404,77 +1458,77 @@ function normalizeSiteConfigV2(input) {
     pages
   };
 }
-var NavigationItemSchema = z34.lazy(() => z34.discriminatedUnion("type", [
-  z34.object({
-    type: z34.literal("link"),
-    id: z34.string().min(1),
-    label: z34.string().min(1),
+var NavigationItemSchema = z35.lazy(() => z35.discriminatedUnion("type", [
+  z35.object({
+    type: z35.literal("link"),
+    id: z35.string().min(1),
+    label: z35.string().min(1),
     href: SiteHrefSchema,
-    external: z34.boolean(),
-    visible: z34.boolean()
+    external: z35.boolean(),
+    visible: z35.boolean()
   }).strict(),
-  z34.object({
-    type: z34.literal("group"),
-    id: z34.string().min(1),
-    label: z34.string().min(1),
-    visible: z34.boolean(),
-    items: z34.array(NavigationItemSchema).min(1)
+  z35.object({
+    type: z35.literal("group"),
+    id: z35.string().min(1),
+    label: z35.string().min(1),
+    visible: z35.boolean(),
+    items: z35.array(NavigationItemSchema).min(1)
   }).strict()
 ]));
-var SiteHeaderActionSchema = z34.discriminatedUnion("kind", [
-  z34.object({
-    kind: z34.literal("link"),
-    label: z34.string().min(1).max(100),
+var SiteHeaderActionSchema = z35.discriminatedUnion("kind", [
+  z35.object({
+    kind: z35.literal("link"),
+    label: z35.string().min(1).max(100),
     href: SiteHrefSchema,
-    external: z34.boolean()
+    external: z35.boolean()
   }).strict(),
-  z34.object({ kind: z34.literal("hidden") }).strict()
+  z35.object({ kind: z35.literal("hidden") }).strict()
 ]);
-var HexColorSchema = z34.string().regex(/^#[0-9a-f]{6}$/i);
-var PagePathSchema = z34.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
-var SiteThemeSchema = z34.object({
-  colors: z34.object({
+var HexColorSchema = z35.string().regex(/^#[0-9a-f]{6}$/i);
+var PagePathSchema = z35.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
+var SiteThemeSchema = z35.object({
+  colors: z35.object({
     primary: HexColorSchema,
     background: HexColorSchema,
     foreground: HexColorSchema,
     muted: HexColorSchema,
     accent: HexColorSchema
   }).strict(),
-  typography: z34.object({
-    heading: z34.enum(["sans", "serif"]),
-    body: z34.enum(["sans", "serif"])
+  typography: z35.object({
+    heading: z35.enum(["sans", "serif"]),
+    body: z35.enum(["sans", "serif"])
   }).strict(),
-  radius: z34.enum(["none", "small", "medium", "large"])
+  radius: z35.enum(["none", "small", "medium", "large"])
 }).strict();
-var SitePageHeaderSchema = z34.object({
-  mode: z34.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
-  contrast: z34.enum(["auto", "light", "dark"]).default("auto")
+var SitePageHeaderSchema = z35.object({
+  mode: z35.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
+  contrast: z35.enum(["auto", "light", "dark"]).default("auto")
 }).strict();
-var SitePageBaseSchema = z34.object({
-  id: z34.string().min(1),
+var SitePageBaseSchema = z35.object({
+  id: z35.string().min(1),
   path: PagePathSchema,
-  visible: z34.boolean(),
-  metadata: z34.object({
-    title: z34.string().min(1),
-    description: z34.string().optional(),
+  visible: z35.boolean(),
+  metadata: z35.object({
+    title: z35.string().min(1),
+    description: z35.string().optional(),
     openGraphImage: SiteImageSchema.optional(),
-    indexable: z34.boolean().optional()
+    indexable: z35.boolean().optional()
   }).strict(),
   header: SitePageHeaderSchema.optional()
 });
 var SiteSectionsPageSchema = SitePageBaseSchema.extend({
-  kind: z34.literal("sections").default("sections"),
-  sections: z34.array(SiteSectionSchema).min(1)
+  kind: z35.literal("sections").default("sections"),
+  sections: z35.array(SiteSectionSchema).min(1)
 }).strict();
-var SitePageTemplateSchema = z34.object({
-  schemaVersion: z34.literal(2),
-  page: z34.object({
-    metadata: z34.object({
-      description: z34.string().optional(),
+var SitePageTemplateSchema = z35.object({
+  schemaVersion: z35.literal(2),
+  page: z35.object({
+    metadata: z35.object({
+      description: z35.string().optional(),
       openGraphImage: SiteImageSchema.optional(),
-      indexable: z34.boolean().optional()
+      indexable: z35.boolean().optional()
     }).strict(),
-    sections: z34.array(SiteSectionSchema).min(1)
+    sections: z35.array(SiteSectionSchema).min(1)
   }).strict()
 }).strict();
 function replacePageTemplateTokens(value, businessName) {
@@ -1493,7 +1547,7 @@ function replacePageTemplateTokens(value, businessName) {
 function materializeSitePageTemplate(input, businessName) {
   return SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(replacePageTemplateTokens(input, businessName)));
 }
-var BuiltinPageIdSchema = z34.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
+var BuiltinPageIdSchema = z35.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
 var BUILTIN_PAGE_PATHS = {
   "/schedules": "schedules",
   "/blog": "blog",
@@ -1502,11 +1556,11 @@ var BUILTIN_PAGE_PATHS = {
   "/shop/plans": "shop-plans"
 };
 var SiteBuiltinPageSchema = SitePageBaseSchema.extend({
-  kind: z34.literal("builtin"),
+  kind: z35.literal("builtin"),
   id: BuiltinPageIdSchema,
-  path: z34.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
+  path: z35.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
 }).strict().refine((page) => BUILTIN_PAGE_PATHS[page.path] === page.id, "Builtin page ID and path must match");
-var SitePageSchema = z34.union([
+var SitePageSchema = z35.union([
   SiteSectionsPageSchema,
   SiteBuiltinPageSchema
 ]);
@@ -1525,37 +1579,37 @@ function getNativeFormPlacement(section) {
   const placement = getFormPlacement(section);
   return placement?.kind === "native" ? placement : null;
 }
-var PublicSiteConfigObjectSchema = z34.object({
-  schemaVersion: z34.union([z34.literal(2), z34.literal(3)]),
-  locale: z34.string().min(2),
-  business: z34.object({
-    name: z34.string().min(1),
-    tagline: z34.string().min(1),
+var PublicSiteConfigObjectSchema = z35.object({
+  schemaVersion: z35.union([z35.literal(2), z35.literal(3)]),
+  locale: z35.string().min(2),
+  business: z35.object({
+    name: z35.string().min(1),
+    tagline: z35.string().min(1),
     logo: SiteImageSchema.optional(),
-    structuredDataType: z34.enum([
+    structuredDataType: z35.enum([
       "LocalBusiness",
       "SportsActivityLocation",
       "EducationalOrganization",
       "Organization"
     ])
   }).strict(),
-  metadata: z34.object({
-    defaultTitle: z34.string().min(1),
-    titleTemplate: z34.string().min(1),
-    defaultDescription: z34.string().min(1),
+  metadata: z35.object({
+    defaultTitle: z35.string().min(1),
+    titleTemplate: z35.string().min(1),
+    defaultDescription: z35.string().min(1),
     openGraphImage: SiteImageSchema.optional(),
-    googleSiteVerification: z34.string().min(1).optional()
+    googleSiteVerification: z35.string().min(1).optional()
   }).strict(),
   theme: SiteThemeSchema,
   headerAction: SiteHeaderActionSchema.optional(),
-  navigation: z34.array(NavigationItemSchema),
-  footer: z34.object({
-    credit: z34.string(),
-    links: z34.array(NavigationItemSchema),
-    locationsTitle: z34.string().min(1).default("Our Locations"),
-    hiddenLocationIds: z34.array(z34.string().min(1).max(128)).default([])
+  navigation: z35.array(NavigationItemSchema),
+  footer: z35.object({
+    credit: z35.string(),
+    links: z35.array(NavigationItemSchema),
+    locationsTitle: z35.string().min(1).default("Our Locations"),
+    hiddenLocationIds: z35.array(z35.string().min(1).max(128)).default([])
   }).strict(),
-  locationConnections: z34.array(SiteLocationConnectionSchema).min(1).optional(),
+  locationConnections: z35.array(SiteLocationConnectionSchema).min(1).optional(),
   locationOverride: SiteLocationOverrideSchema.optional(),
   content: SiteContentSchema.default({
     programs: [],
@@ -1563,8 +1617,8 @@ var PublicSiteConfigObjectSchema = z34.object({
     testimonials: [],
     faqs: []
   }),
-  pages: z34.array(SitePageSchema).min(1),
-  forms: z34.array(SiteFormSchema),
+  pages: z35.array(SitePageSchema).min(1),
+  forms: z35.array(SiteFormSchema),
   capabilities: SiteCapabilitiesSchema,
   scriptsAndEmbeds: SiteScriptsAndEmbedsSchema.default({
     enabled: true,
@@ -1853,8 +1907,8 @@ function publicConfigInput(config) {
   };
 }
 var StoredSiteConfigObjectSchema = PublicSiteConfigObjectSchema.omit({ schemaVersion: true, locationConnections: true, locationOverride: true }).extend({
-  schemaVersion: z34.literal(3),
-  locationConnections: z34.array(StoredSiteLocationConnectionSchema).min(1)
+  schemaVersion: z35.literal(3),
+  locationConnections: z35.array(StoredSiteLocationConnectionSchema).min(1)
 }).strict();
 var StoredSiteConfigSchema = StoredSiteConfigObjectSchema.superRefine((config, issue) => {
   const parsedPublic = PublicSiteConfigSchema.safeParse(publicConfigInput(config));
@@ -2728,7 +2782,49 @@ function staticPages(value, draft, preset, preserveStarterKit) {
     if (pageSections.length === 0 && source.kind === "builtin" && !nativePages.has(id2)) {
       const title = typeof metadata?.title === "string" ? metadata.title : id2;
       const description = typeof metadata?.description === "string" ? metadata.description : `Learn more about ${title}.`;
-      if (id2 === "contact") {
+      if (id2 === "gfo") {
+        const props = record(normalizeValue(source.props, draft, preserveStarterKit)) ?? {};
+        const configuredVideo = typeof props.videoSrc === "string" ? props.videoSrc.trim() : "";
+        const sourceUrl = /^[A-Za-z0-9_-]{11}$/.test(configuredVideo) ? `https://www.youtube-nocookie.com/embed/${configuredVideo}` : configuredVideo;
+        const videoSrc = sourceUrl ? toVideoEmbedUrl(sourceUrl) : null;
+        const configuredHref = typeof props.claimOfferHref === "string" ? props.claimOfferHref : "/get-started";
+        const href = SiteHrefSchema.safeParse(configuredHref).success ? configuredHref : "/get-started";
+        pageSections = [
+          {
+            id: "gfo-offer",
+            type: "gfo_offer",
+            visible: true,
+            props: {
+              notice: typeof props.notice === "string" && props.notice.trim() ? props.notice : "Thanks for reaching out. Explore this special offer while our team follows up.",
+              title: typeof props.title === "string" && props.title.trim() ? props.title : title,
+              description: typeof props.description === "string" && props.description.trim() ? props.description : description,
+              ...videoSrc ? {
+                video: {
+                  src: videoSrc,
+                  title: typeof props.videoTitle === "string" && props.videoTitle.trim() ? props.videoTitle : "GFO promotional video"
+                }
+              } : {},
+              countdownDays: 30,
+              cta: {
+                label: typeof props.claimOfferLabel === "string" && props.claimOfferLabel.trim() ? props.claimOfferLabel : "Claim Offer",
+                href,
+                external: href.startsWith("https://"),
+                variant: "primary"
+              }
+            }
+          },
+          {
+            id: "gfo-testimonials",
+            type: "testimonials",
+            visible: true,
+            props: {
+              title: "Why families choose us",
+              description: "Hear from students and families in our community.",
+              source: "all-visible"
+            }
+          }
+        ];
+      } else if (id2 === "contact") {
         const formSource = fixedPageForm(draft, "contact");
         if (!formSource)
           return [];
@@ -3036,239 +3132,239 @@ function legacyDraftToPublicSiteConfig(input, preset, options = {}) {
   return PublicSiteConfigSchema.parse(fallback);
 }
 // src/live-data.ts
-import { z as z35 } from "zod";
-var JsonValueSchema = z35.lazy(() => z35.union([
-  z35.string(),
-  z35.number(),
-  z35.boolean(),
-  z35.null(),
-  z35.array(JsonValueSchema),
-  z35.record(z35.string(), JsonValueSchema)
+import { z as z36 } from "zod";
+var JsonValueSchema = z36.lazy(() => z36.union([
+  z36.string(),
+  z36.number(),
+  z36.boolean(),
+  z36.null(),
+  z36.array(JsonValueSchema),
+  z36.record(z36.string(), JsonValueSchema)
 ]));
-var SiteDateSchema = z35.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD").refine((value) => {
+var SiteDateSchema = z36.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD").refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }, "Date must be a valid calendar date");
-var LocationListSchema = z35.string().min(1).transform((value) => value.split(",").map((item) => item.trim())).pipe(z35.array(SiteLocationSlugSchema).min(1));
-var ScheduleQuerySchema = z35.object({
+var LocationListSchema = z36.string().min(1).transform((value) => value.split(",").map((item) => item.trim())).pipe(z36.array(SiteLocationSlugSchema).min(1));
+var ScheduleQuerySchema = z36.object({
   date: SiteDateSchema,
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var PlansQuerySchema = z35.object({
+var PlansQuerySchema = z36.object({
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var DocumentSignatureRequestSchema = z35.object({ signature: z35.string().min(1) }).strict();
-var EnrollRequestSchema = z35.object({
-  locationId: z35.string().min(1).optional(),
-  attemptId: z35.string().min(1),
-  priceId: z35.string().min(1),
-  planType: z35.enum(["recurring", "one-time"]).optional(),
-  paymentType: z35.string().min(1),
-  paymentMethodId: z35.string().min(1),
-  promoId: z35.string().min(1).nullable().optional()
+var DocumentSignatureRequestSchema = z36.object({ signature: z36.string().min(1) }).strict();
+var EnrollRequestSchema = z36.object({
+  locationId: z36.string().min(1).optional(),
+  attemptId: z36.string().min(1),
+  priceId: z36.string().min(1),
+  planType: z36.enum(["recurring", "one-time"]).optional(),
+  paymentType: z36.string().min(1),
+  paymentMethodId: z36.string().min(1),
+  promoId: z36.string().min(1).nullable().optional()
 }).strict();
-var EnrollQuoteRequestSchema = z35.object({
-  priceId: z35.string().min(1),
-  planType: z35.enum(["recurring", "one-time"]),
-  paymentType: z35.enum(["card", "us_bank_account"]),
-  promoId: z35.string().min(1).nullable().optional()
+var EnrollQuoteRequestSchema = z36.object({
+  priceId: z36.string().min(1),
+  planType: z36.enum(["recurring", "one-time"]),
+  paymentType: z36.enum(["card", "us_bank_account"]),
+  promoId: z36.string().min(1).nullable().optional()
 }).strict();
-var PaymentAddressSchema = z35.object({
-  line1: z35.string(),
-  line2: z35.string().optional(),
-  city: z35.string(),
-  state: z35.string(),
-  postalCode: z35.string(),
-  country: z35.string()
+var PaymentAddressSchema = z36.object({
+  line1: z36.string(),
+  line2: z36.string().optional(),
+  city: z36.string(),
+  state: z36.string(),
+  postalCode: z36.string(),
+  country: z36.string()
 }).strict();
-var EnrollResponseSchema = z35.object({
-  ok: z35.literal(true),
-  unsignedDocs: z35.array(z35.string().min(1))
+var EnrollResponseSchema = z36.object({
+  ok: z36.literal(true),
+  unsignedDocs: z36.array(z36.string().min(1))
 }).strict();
-var CheckoutAdditionalFeeSchema = z35.object({
-  label: z35.string().min(1),
-  amount: z35.number().int().nonnegative(),
-  description: z35.string().min(1).optional()
+var CheckoutAdditionalFeeSchema = z36.object({
+  label: z36.string().min(1),
+  amount: z36.number().int().nonnegative(),
+  description: z36.string().min(1).optional()
 }).strict();
-var EnrollQuoteSchema = z35.object({
-  baseAmount: z35.number().int().nonnegative(),
-  discount: z35.number().int().nonnegative(),
-  tax: z35.number().int().nonnegative(),
-  fees: z35.number().int().nonnegative(),
-  additionalFees: z35.array(CheckoutAdditionalFeeSchema).default([]),
-  total: z35.number().int().nonnegative(),
-  currency: z35.string().min(1)
+var EnrollQuoteSchema = z36.object({
+  baseAmount: z36.number().int().nonnegative(),
+  discount: z36.number().int().nonnegative(),
+  tax: z36.number().int().nonnegative(),
+  fees: z36.number().int().nonnegative(),
+  additionalFees: z36.array(CheckoutAdditionalFeeSchema).default([]),
+  total: z36.number().int().nonnegative(),
+  currency: z36.string().min(1)
 }).strict();
-var ShopCheckoutQuoteSchema = z35.object({
-  subtotal: z35.number().int().nonnegative(),
-  discount: z35.number().int().nonnegative(),
-  tax: z35.number().int().nonnegative(),
-  feesAmount: z35.number().int().nonnegative(),
-  processingFee: z35.number().int().nonnegative(),
-  additionalFees: z35.array(CheckoutAdditionalFeeSchema).default([]),
-  total: z35.number().int().nonnegative()
+var ShopCheckoutQuoteSchema = z36.object({
+  subtotal: z36.number().int().nonnegative(),
+  discount: z36.number().int().nonnegative(),
+  tax: z36.number().int().nonnegative(),
+  feesAmount: z36.number().int().nonnegative(),
+  processingFee: z36.number().int().nonnegative(),
+  additionalFees: z36.array(CheckoutAdditionalFeeSchema).default([]),
+  total: z36.number().int().nonnegative()
 }).strict();
-var PaymentMethodSchema = z35.discriminatedUnion("type", [
-  z35.object({
-    id: z35.string().min(1),
-    source: z35.enum(["stripe", "square", "authorize"]),
-    type: z35.literal("card"),
-    isDefault: z35.boolean(),
+var PaymentMethodSchema = z36.discriminatedUnion("type", [
+  z36.object({
+    id: z36.string().min(1),
+    source: z36.enum(["stripe", "square", "authorize"]),
+    type: z36.literal("card"),
+    isDefault: z36.boolean(),
     address: PaymentAddressSchema.optional(),
-    card: z35.object({
-      brand: z35.string().min(1),
-      last4: z35.string().nullable().optional(),
-      expMonth: z35.number().nullable(),
-      expYear: z35.number().nullable()
+    card: z36.object({
+      brand: z36.string().min(1),
+      last4: z36.string().nullable().optional(),
+      expMonth: z36.number().nullable(),
+      expYear: z36.number().nullable()
     }).strict()
   }).strict(),
-  z35.object({
-    id: z35.string().min(1),
-    source: z35.enum(["stripe", "square", "authorize"]),
-    type: z35.literal("us_bank_account"),
-    isDefault: z35.boolean(),
-    usBankAccount: z35.object({
-      bankName: z35.string().nullable(),
-      last4: z35.string().nullable(),
-      accountType: z35.string().nullable()
+  z36.object({
+    id: z36.string().min(1),
+    source: z36.enum(["stripe", "square", "authorize"]),
+    type: z36.literal("us_bank_account"),
+    isDefault: z36.boolean(),
+    usBankAccount: z36.object({
+      bankName: z36.string().nullable(),
+      last4: z36.string().nullable(),
+      accountType: z36.string().nullable()
     }).strict()
   }).strict()
 ]);
-var PaymentMethodsApiResponseSchema = z35.array(PaymentMethodSchema);
-var ScheduleSessionSchema = z35.object({
-  id: z35.string().min(1),
-  name: z35.string(),
-  minAge: z35.number(),
-  maxAge: z35.number(),
-  utcStartTime: z35.string().datetime(),
-  utcEndTime: z35.string().datetime(),
-  day: z35.string().datetime(),
-  isHoliday: z35.boolean(),
-  isBlocked: z35.boolean(),
-  holidayName: z35.string().optional(),
-  description: z35.string()
+var PaymentMethodsApiResponseSchema = z36.array(PaymentMethodSchema);
+var ScheduleSessionSchema = z36.object({
+  id: z36.string().min(1),
+  name: z36.string(),
+  minAge: z36.number(),
+  maxAge: z36.number(),
+  utcStartTime: z36.string().datetime(),
+  utcEndTime: z36.string().datetime(),
+  day: z36.string().datetime(),
+  isHoliday: z36.boolean(),
+  isBlocked: z36.boolean(),
+  holidayName: z36.string().optional(),
+  description: z36.string()
 }).strict();
-var ScheduleApiResponseSchema = z35.object({ sessions: z35.array(ScheduleSessionSchema) }).strict();
-var PlanProgramSchema = z35.object({
-  id: z35.string().min(1),
-  name: z35.string(),
-  minAge: z35.number(),
-  maxAge: z35.number(),
-  icon: z35.string().nullable().optional(),
-  description: z35.string().nullable()
+var ScheduleApiResponseSchema = z36.object({ sessions: z36.array(ScheduleSessionSchema) }).strict();
+var PlanProgramSchema = z36.object({
+  id: z36.string().min(1),
+  name: z36.string(),
+  minAge: z36.number(),
+  maxAge: z36.number(),
+  icon: z36.string().nullable().optional(),
+  description: z36.string().nullable()
 }).strict();
-var PlanPricingSchema = z35.object({
-  id: z35.string().min(1),
-  memberPlanId: z35.string().min(1),
-  name: z35.string(),
-  price: z35.number(),
-  interval: z35.string().nullable().optional(),
-  intervalThreshold: z35.number().nullable().optional(),
-  expireInterval: z35.string().nullable().optional(),
-  expireThreshold: z35.number().nullable().optional(),
-  downpayment: z35.number().nullable().optional(),
-  created: z35.string().datetime().optional(),
-  updated: z35.string().datetime().nullable().optional()
+var PlanPricingSchema = z36.object({
+  id: z36.string().min(1),
+  memberPlanId: z36.string().min(1),
+  name: z36.string(),
+  price: z36.number(),
+  interval: z36.string().nullable().optional(),
+  intervalThreshold: z36.number().nullable().optional(),
+  expireInterval: z36.string().nullable().optional(),
+  expireThreshold: z36.number().nullable().optional(),
+  downpayment: z36.number().nullable().optional(),
+  created: z36.string().datetime().optional(),
+  updated: z36.string().datetime().nullable().optional()
 }).strict();
-var SitePlanSchema = z35.object({
-  id: z35.string().min(1),
-  name: z35.string(),
-  description: z35.string().nullable(),
-  family: z35.boolean(),
-  familyMemberLimit: z35.number(),
-  editable: z35.boolean(),
-  archived: z35.boolean(),
-  contractId: z35.string().nullable(),
+var SitePlanSchema = z36.object({
+  id: z36.string().min(1),
+  name: z36.string(),
+  description: z36.string().nullable(),
+  family: z36.boolean(),
+  familyMemberLimit: z36.number(),
+  editable: z36.boolean(),
+  archived: z36.boolean(),
+  contractId: z36.string().nullable(),
   billingAnchorConfig: JsonValueSchema,
   marketingDetails: JsonValueSchema,
-  type: z35.enum(["one-time", "recurring"]),
-  totalClassLimit: z35.number().nullable(),
-  classLimitInterval: z35.string().nullable(),
-  allowProration: z35.boolean(),
-  classLimitThreshold: z35.number().nullable(),
-  makeUpCredits: z35.number(),
-  groupId: z35.string().nullable(),
-  locationId: z35.string(),
-  created: z35.string().datetime(),
-  updated: z35.string().datetime().nullable(),
-  programs: z35.array(PlanProgramSchema),
-  startingPrice: z35.number(),
-  pricings: z35.array(PlanPricingSchema),
-  ageRange: z35.object({ min: z35.number(), max: z35.number() }).strict()
+  type: z36.enum(["one-time", "recurring"]),
+  totalClassLimit: z36.number().nullable(),
+  classLimitInterval: z36.string().nullable(),
+  allowProration: z36.boolean(),
+  classLimitThreshold: z36.number().nullable(),
+  makeUpCredits: z36.number(),
+  groupId: z36.string().nullable(),
+  locationId: z36.string(),
+  created: z36.string().datetime(),
+  updated: z36.string().datetime().nullable(),
+  programs: z36.array(PlanProgramSchema),
+  startingPrice: z36.number(),
+  pricings: z36.array(PlanPricingSchema),
+  ageRange: z36.object({ min: z36.number(), max: z36.number() }).strict()
 }).strict();
-var PlanContractSchema = z35.object({
-  id: z35.string().min(1),
-  title: z35.string(),
-  requireSignature: z35.boolean()
+var PlanContractSchema = z36.object({
+  id: z36.string().min(1),
+  title: z36.string(),
+  requireSignature: z36.boolean()
 }).strict();
 var ApiPlanProgramSchema = PlanProgramSchema.extend({
-  capacity: z35.number()
+  capacity: z36.number()
 }).strict();
 var ApiSitePlanSchema = SitePlanSchema.extend({
   contract: PlanContractSchema.nullable(),
-  programs: z35.array(ApiPlanProgramSchema)
+  programs: z36.array(ApiPlanProgramSchema)
 }).strict().transform(({ contract: _contract, programs: programs2, ...plan }) => ({
   ...plan,
   programs: programs2.map(({ capacity: _capacity, ...program }) => program)
 }));
-var PlansApiResponseSchema = z35.array(ApiSitePlanSchema);
-var BlogPostSummarySchema = z35.object({
-  id: z35.string().min(1),
-  title: z35.string().min(1),
-  slug: z35.string().min(1),
-  featuredImageUrl: z35.string().nullable(),
-  publishedAt: z35.string().datetime().nullable(),
-  updatedAt: z35.string().datetime().nullable()
+var PlansApiResponseSchema = z36.array(ApiSitePlanSchema);
+var BlogPostSummarySchema = z36.object({
+  id: z36.string().min(1),
+  title: z36.string().min(1),
+  slug: z36.string().min(1),
+  featuredImageUrl: z36.string().nullable(),
+  publishedAt: z36.string().datetime().nullable(),
+  updatedAt: z36.string().datetime().nullable()
 }).strict();
 var BlogPostSchema = BlogPostSummarySchema.extend({
-  mdx: z35.string(),
-  metaTitle: z35.string().nullable(),
-  metaDescription: z35.string().nullable(),
-  authorName: z35.string().min(1).nullable()
+  mdx: z36.string(),
+  metaTitle: z36.string().nullable(),
+  metaDescription: z36.string().nullable(),
+  authorName: z36.string().min(1).nullable()
 }).strict();
-var BlogPostsApiResponseSchema = z35.object({
-  posts: z35.array(BlogPostSummarySchema),
-  total: z35.number().int().nonnegative()
+var BlogPostsApiResponseSchema = z36.object({
+  posts: z36.array(BlogPostSummarySchema),
+  total: z36.number().int().nonnegative()
 }).strict();
-var ProductVariantSchema = z35.object({
-  id: z35.string().min(1),
-  productId: z35.string().min(1),
-  name: z35.string().min(1),
-  sku: z35.string().min(1),
-  color: z35.string().nullable(),
-  size: z35.string().nullable(),
-  price: z35.number().int().nonnegative(),
-  salePrice: z35.number().int().nonnegative().nullable(),
-  stock: z35.number().int(),
-  active: z35.boolean()
+var ProductVariantSchema = z36.object({
+  id: z36.string().min(1),
+  productId: z36.string().min(1),
+  name: z36.string().min(1),
+  sku: z36.string().min(1),
+  color: z36.string().nullable(),
+  size: z36.string().nullable(),
+  price: z36.number().int().nonnegative(),
+  salePrice: z36.number().int().nonnegative().nullable(),
+  stock: z36.number().int(),
+  active: z36.boolean()
 }).strict();
-var ProductImageSchema = z35.object({
-  id: z35.string().min(1),
-  productId: z35.string().min(1),
-  imageUrl: z35.string().min(1),
-  sortOrder: z35.number().int()
+var ProductImageSchema = z36.object({
+  id: z36.string().min(1),
+  productId: z36.string().min(1),
+  imageUrl: z36.string().min(1),
+  sortOrder: z36.number().int()
 }).strict();
-var SiteProductSchema = z35.object({
-  id: z35.string().min(1),
-  slug: z35.string().min(1),
-  name: z35.string().min(1),
-  category: z35.string().nullable(),
-  subCategory: z35.string().nullable(),
-  description: z35.string().nullable(),
-  brand: z35.string().nullable(),
-  active: z35.boolean(),
-  currency: z35.string().length(3).nullable(),
-  createdAt: z35.string().datetime(),
-  updatedAt: z35.string().datetime().nullable(),
-  variants: z35.array(ProductVariantSchema),
-  images: z35.array(ProductImageSchema)
+var SiteProductSchema = z36.object({
+  id: z36.string().min(1),
+  slug: z36.string().min(1),
+  name: z36.string().min(1),
+  category: z36.string().nullable(),
+  subCategory: z36.string().nullable(),
+  description: z36.string().nullable(),
+  brand: z36.string().nullable(),
+  active: z36.boolean(),
+  currency: z36.string().length(3).nullable(),
+  createdAt: z36.string().datetime(),
+  updatedAt: z36.string().datetime().nullable(),
+  variants: z36.array(ProductVariantSchema),
+  images: z36.array(ProductImageSchema)
 }).strict();
-var ProductsApiResponseSchema = z35.array(SiteProductSchema);
-var LocationFailureSchema = z35.object({
+var ProductsApiResponseSchema = z36.array(SiteProductSchema);
+var LocationFailureSchema = z36.object({
   location: SiteLocationSchema,
-  message: z35.string().min(1)
+  message: z36.string().min(1)
 }).strict();
 function scheduleQueryKey(siteId, date, locationIds) {
   return ["schedules", siteId, date, ...locationIds];
@@ -3307,6 +3403,7 @@ var SITE_SECTION_TEMPLATES = [
   { key: "sandboxed-embed", type: "sandboxed_embed", name: "Sandboxed HTML", description: "Third-party HTML and scripts isolated from the site in a sandboxed frame." },
   { key: "about", type: "about", name: "About", description: "Business story, supporting image, and key points." },
   { key: "gallery", type: "gallery", name: "Gallery", description: "A visual gallery with a heading and description." },
+  { key: "gfo-page-sections", type: "gfo_offer", name: "GFO Page Sections", description: "The GFO offer header, optional video, countdown, and claim-offer action." },
   { key: "team", type: "team", name: "Team", description: "Visible instructors or team members from site content." },
   { key: "testimonials", type: "testimonials", name: "Testimonials", description: "Visible customer testimonials and social proof." },
   { key: "faqs", type: "faqs", name: "FAQs", description: "Visible frequently asked questions from site content." },
@@ -3318,14 +3415,14 @@ function getSiteSectionTemplate(key) {
   return SITE_SECTION_TEMPLATES.find((template) => template.key === key);
 }
 // src/runtime.ts
-import { z as z36 } from "zod";
-var RuntimeSitePayloadSchema = z36.object({
+import { z as z37 } from "zod";
+var RuntimeSitePayloadSchema = z37.object({
   context: TenantContextSchema,
-  revision: z36.object({
-    id: z36.string().min(1).max(128),
-    schemaVersion: z36.number().int().positive(),
-    config: z36.unknown(),
-    publishedAt: z36.string().datetime().nullable()
+  revision: z37.object({
+    id: z37.string().min(1).max(128),
+    schemaVersion: z37.number().int().positive(),
+    config: z37.unknown(),
+    publishedAt: z37.string().datetime().nullable()
   }).strict()
 }).strict();
 function parseRuntimeSite(input) {
@@ -3369,10 +3466,10 @@ function parseRuntimeSite(input) {
     }
   };
 }
-var SiteCacheInvalidationSchema = z36.object({
-  siteId: z36.string().min(1).max(128),
-  revisionId: z36.string().min(1).max(128),
-  domains: z36.array(z36.string().min(1).max(253)).min(1).max(100)
+var SiteCacheInvalidationSchema = z37.object({
+  siteId: z37.string().min(1).max(128),
+  revisionId: z37.string().min(1).max(128),
+  domains: z37.array(z37.string().min(1).max(253)).min(1).max(100)
 }).strict();
 // src/stored-config.ts
 function record2(value) {
@@ -3418,6 +3515,7 @@ export {
   withStoredLocationConnections,
   withLocationSlug,
   validateFormValues,
+  toVideoEmbedUrl,
   toPublicSiteConfig,
   toGhlFormContact,
   storedSiteConfigFromStored,
@@ -3559,6 +3657,7 @@ export {
   HowToStartSectionSchema,
   HeroSectionSchema,
   GymdeskExternalWidgetSettingsSchema,
+  GfoOfferSectionSchema,
   GallerySectionSchema,
   GYMDESK_WIDGET_SCRIPT_URL,
   GLOBAL_SITE_EDITOR_TARGETS,
