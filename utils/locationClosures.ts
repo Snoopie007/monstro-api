@@ -1,14 +1,6 @@
-import { recurrenceDateKey, shiftDateKey } from "../constants/recurrence";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-
-export type LocationClosureRow = {
-	id: string;
-	startsAt: Date | null;
-	endsAt: Date | null;
-	recurrencePattern: string | null;
-	allDay: boolean;
-	reason: string;
-};
+import { recurrenceDateKey, shiftDateKey } from "../constants/recurrence";
+import { type LocationClosure } from "../types";
 
 /**
  * Checks a one-time closure against a requested session window.
@@ -17,7 +9,7 @@ export type LocationClosureRow = {
  * when a closure ends, or end when a closure starts, without being blocked.
  */
 function concreteClosureOverlaps(
-	closure: LocationClosureRow,
+	closure: LocationClosure,
 	startsAt: Date,
 	endsAt: Date,
 ) {
@@ -64,7 +56,7 @@ function recurringClosureOverlaps(
  * reason wins when they overlap a recurring holiday.
  */
 export function findOverlappingLocationClosure(
-	closures: LocationClosureRow[],
+	closures: LocationClosure[],
 	startsAt: Date,
 	endsAt: Date,
 	timezone: string,
