@@ -7,9 +7,9 @@ import {
     attendances, memberPackages, memberSubscriptions,
     reservations
 } from "subtrees/schemas";
-import { eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 
-import { differenceInMilliseconds } from "date-fns";
+import { differenceInMilliseconds, differenceInMinutes } from "date-fns";
 import { toZonedTime } from 'date-fns-tz';
 import { checkSubClassCredits, getSessionState } from "./utils";
 import { triggerFirstBooking } from "@/utils/triggers";
@@ -128,13 +128,6 @@ export async function locationReservations(app: Elysia) {
                                 phone: true,
                                 timezone: true,
                             },
-                            with: {
-                                locationState: {
-                                    columns: {
-                                        planId: true,
-                                    }
-                                }
-                            }
                         }
                     },
                     columns: {
@@ -180,6 +173,7 @@ export async function locationReservations(app: Elysia) {
                     return status(200, { success: false, message: error });
                 }
 
+                const sessionDuration = differenceInMinutes(utcEndTime, utcStartTime);
                 const reservation = await db.transaction(async (tx) => {
                     // Explicitly cast to Reservation[] (or whatever Drizzle returns)
                     const inserted = await tx.insert(reservations).values({
@@ -187,6 +181,7 @@ export async function locationReservations(app: Elysia) {
                         locationId: lid,
                         programName: session.programName,
                         sessionId: session.id,
+                        sessionDuration: sessionDuration,
                         startOn: utcStartTime,
                         endOn: utcEndTime,
                         programId: programId,
@@ -234,160 +229,223 @@ export async function locationReservations(app: Elysia) {
                 return status(500, { error: err });
             }
         }, ReservationsProps)
-        app.patch('/:rid/resume', async ({ body, params, status }) => {
-            const { rid } = params;
-            try {
-                const reservation = await db.query.reservations.findFirst({
-                    where: (reservations, { eq, and, or }) => and(
-                        eq(reservations.id, rid),
-                        or(
-                            eq(reservations.status, "cancelled_by_member"),
-                            eq(reservations.status, "cancelled_by_vendor"),
-                            eq(reservations.status, "cancelled_by_holiday"),
-                        )
-                    ),
 
+        app.group('/:rid', (app) => {
+            app.get('/', async ({ params, status }) => {
+                const { rid } = params;
+                try {
+                    const reservation = await db.query.reservations.findFirst({
+                        where: (reservations, { eq }) => eq(reservations.id, rid),
+                        with: {
+                            attendance: true,
+                        }
+                    })
+
+                    if (!reservation) {
+                        return status(404, { error: "Reservation not found" })
+                    }
+                    return status(200, { success: true, data: reservation });
+                } catch (err) {
+                    console.error(err);
+                    return status(500, { error: err });
+                }
+            }, {
+                params: t.Object({
+                    lid: t.String(),
+                    rid: t.String(),
                 })
-                if (!reservation) {
-                    return status(404, { error: "Reservation not found" })
-                }
-
-                const hasPassed = differenceInMilliseconds(reservation.startOn, new Date()) > 0;
-                if (hasPassed) {
-                    return status(200, { success: false, message: "Reservation has already passed" })
-                }
-
-
-                // check if session is full
-
-
-                await db.update(reservations).set({
-                    status: "confirmed",
-                    updated: new Date(),
-                }).where(eq(reservations.id, reservation.id));
-                return status(200, { success: true })
-            } catch (err) {
-                console.error(err);
-                return status(500, { error: err });
-            }
-        }, {
-            params: t.Object({
-                lid: t.String(),
-                rid: t.String(),
             })
-        })
-        app.delete('/:rid', async ({ body, params, status }) => {
-            const { rid } = params;
-            const refundCredit = body?.refundCredit;
-            const byStaff = body?.byStaff;
-            try {
-                const reservation = await db.query.reservations.findFirst({
-                    where: (reservations, { eq }) => eq(reservations.id, rid),
-                    with: {
-                        attendance: true,
+            app.patch('/resume', async ({ params, status }) => {
+                const { rid } = params;
+                try {
+                    const reservation = await db.query.reservations.findFirst({
+                        where: (reservations, { eq, and, or }) => and(
+                            eq(reservations.id, rid),
+                            or(
+                                eq(reservations.status, "cancelled_by_member"),
+                                eq(reservations.status, "cancelled_by_vendor"),
+                                eq(reservations.status, "cancelled_by_holiday"),
+                            )
+                        ),
+                        with: {
+                            attendance: {
+                                columns: {
+                                    id: true,
+                                },
+                            },
+                            program: {
+                                columns: {
+                                    capacity: true,
+                                },
+                            },
+                        }
+
+                    })
+                    if (!reservation) {
+                        return status(404, { error: "Reservation not found" })
+                    }
+                    if (reservation.attendance) {
+                        return status(200, { success: false, message: "Reservation is already attended" })
                     }
 
-                })
+                    const hasPassed = differenceInMilliseconds(reservation.startOn, new Date()) <= 0;
+                    if (hasPassed) {
+                        return status(200, { success: false, message: "Reservation has already passed" })
+                    }
 
-                if (!reservation) {
-                    return status(404, { error: "Reservation not found" })
-                }
+                    if (reservation.sessionId) {
+                        const [occupancy] = await db
+                            .select({ reservedCount: count() })
+                            .from(reservations)
+                            .where(and(
+                                eq(reservations.sessionId, reservation.sessionId),
+                                eq(reservations.startOn, reservation.startOn),
+                                eq(reservations.status, "confirmed"),
+                            ));
 
-                if (reservation.attendance) {
-                    return status(200, { success: false, message: "Reservation is already attended" })
-                }
+                        const reservedCount = Number(occupancy?.reservedCount ?? 0);
+                        const capacity = reservation.program?.capacity ?? 0;
+                        if (capacity > 0 && reservedCount >= capacity) {
+                            return status(200, { success: false, message: "Session is full" });
+                        }
+                    }
 
-                const now = new Date();
-                await db.transaction(async (tx) => {
-
-                    await tx.update(reservations).set({
-                        status: byStaff ? "cancelled_by_vendor" : "cancelled_by_member",
-                        cancelledAt: now,
-                        cancelledReason: byStaff ? "Cancelled by staff" : "Cancelled by member",
-                        updated: now,
+                    await db.update(reservations).set({
+                        status: "confirmed",
+                        updated: new Date(),
                     }).where(eq(reservations.id, reservation.id));
+                    return status(200, { success: true })
+                } catch (err) {
+                    console.error(err);
+                    return status(500, { error: err });
+                }
+            }, {
+                params: t.Object({
+                    lid: t.String(),
+                    rid: t.String(),
+                })
+            })
+            app.delete('/', async ({ body, params, status }) => {
+                const { rid } = params;
+                const refundCredit = body?.refundCredit;
+                const byStaff = body?.byStaff;
+                try {
+                    const reservation = await db.query.reservations.findFirst({
+                        where: (reservations, { eq }) => eq(reservations.id, rid),
+                        with: {
+                            attendance: {
+                                columns: {
+                                    id: true,
+                                },
+                            },
+                        }
+
+                    })
+
+                    if (!reservation) {
+                        return status(404, { error: "Reservation not found" })
+                    }
+
+                    if (reservation.attendance) {
+                        return status(200, { success: false, message: "Reservation is already attended" })
+                    }
+
+                    const now = new Date();
+                    await db.transaction(async (tx) => {
+
+                        await tx.update(reservations).set({
+                            status: byStaff ? "cancelled_by_vendor" : "cancelled_by_member",
+                            cancelledAt: now,
+                            cancelledReason: byStaff ? "Cancelled by staff" : "Cancelled by member",
+                            updated: now,
+                        }).where(eq(reservations.id, reservation.id));
 
 
-                    if (refundCredit) {
-                        if (reservation.memberPackageId) {
-                            // Prevent decrementing below 0
-                            await tx.execute(sql`
-                                UPDATE ${memberPackages}
-                                SET total_class_attended = CASE
-                                    WHEN total_class_attended > 0 THEN total_class_attended - 1
-                                    ELSE 0
-                                END
-                                WHERE id = ${reservation.memberPackageId!}
-                            `);
-                        } else {
-                            /*
-                              Handle refunding class credits for term-based subscriptions:
-                              For example, if a user subscribes for a total number of classes over a term (e.g., 100 classes paid monthly),
-                              and cancels after attending some classes (e.g., attended 50 and cancels), refund any unused class credits.
-                            */
+                        if (refundCredit) {
+                            if (reservation.memberPackageId) {
+                                // Prevent decrementing below 0
+                                await tx.execute(sql`
+                                    UPDATE ${memberPackages}
+                                    SET total_class_attended = CASE 
+                                        WHEN total_class_attended > 0 THEN total_class_attended - 1
+                                        ELSE 0
+                                    END
+                                    WHERE id = ${reservation.memberPackageId!}
+                                `);
+                            } else {
+                                /*
+                                  Handle refunding class credits for term-based subscriptions:
+                                  For example, if a user subscribes for a total number of classes over a term (e.g., 100 classes paid monthly),
+                                  and cancels after attending some classes (e.g., attended 50 and cancels), refund any unused class credits.
+                                */
 
-                            const sub = await tx.query.memberSubscriptions.findFirst({
+                                const sub = await tx.query.memberSubscriptions.findFirst({
 
-                                where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, reservation.memberSubscriptionId!),
-                                with: {
-                                    pricing: {
-                                        columns: {
-                                            id: true,
-                                        },
-                                        with: {
-                                            plan: {
-                                                columns: {
-                                                    id: true,
-                                                    classLimitInterval: true,
-                                                    totalClassLimit: true,
+                                    where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, reservation.memberSubscriptionId!),
+                                    with: {
+                                        pricing: {
+                                            columns: {
+                                                id: true,
+                                            },
+                                            with: {
+                                                plan: {
+                                                    columns: {
+                                                        id: true,
+                                                        classLimitInterval: true,
+                                                        totalClassLimit: true,
+                                                    },
                                                 },
                                             },
                                         },
                                     },
-                                },
-                            })
-                            if (!sub) {
-                                throw new Error("Member subscription not found");
-                            }
-                            const { pricing } = sub;
-
-                            if (pricing.plan && pricing.plan.classLimitInterval) {
-                                const limit = pricing.plan.totalClassLimit;
-
-                                if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
-                                    // Make sure not to exceed the original classCredits limit
-                                    await tx.execute(sql` UPDATE ${memberSubscriptions}
-                                        SET class_credits =
-                                            CASE
-                                                WHEN class_credits < ${limit} THEN class_credits + 1
-                                                ELSE class_credits
-                                            END
-                                        WHERE id = ${reservation.memberSubscriptionId!}
-                                    `);
+                                })
+                                if (!sub) {
+                                    throw new Error("Member subscription not found");
                                 }
+                                const { pricing } = sub;
+
+                                if (pricing.plan && pricing.plan.classLimitInterval) {
+                                    const limit = pricing.plan.totalClassLimit;
+
+                                    if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
+                                        // Make sure not to exceed the original classCredits limit
+                                        await tx.execute(sql` UPDATE ${memberSubscriptions}
+                                            SET class_credits = 
+                                                CASE 
+                                                    WHEN class_credits < ${limit} THEN class_credits + 1
+                                                    ELSE class_credits
+                                                END
+                                            WHERE id = ${reservation.memberSubscriptionId!}
+                                        `);
+                                    }
+                                }
+
                             }
-
                         }
-                    }
-                });
+                    });
 
 
 
-                return status(200, { success: true })
-            } catch (error) {
-                console.error(error)
-                return status(500, { error: "Internal server error" })
-            }
-        }, {
-            params: t.Object({
-                lid: t.String(),
-                rid: t.String(),
-            }),
-            body: t.Optional(t.Object({
-                byStaff: t.Optional(t.Boolean()),
-                refundCredit: t.Optional(t.Boolean()),
-            })),
+                    return status(200, { success: true })
+                } catch (error) {
+                    console.error(error)
+                    return status(500, { error: "Internal server error" })
+                }
+            }, {
+                params: t.Object({
+                    lid: t.String(),
+                    rid: t.String(),
+                }),
+                body: t.Optional(t.Object({
+                    byStaff: t.Optional(t.Boolean()),
+                    refundCredit: t.Optional(t.Boolean()),
+                })),
+            })
+
+            return app;
         })
+
+
 
         return app;
     })

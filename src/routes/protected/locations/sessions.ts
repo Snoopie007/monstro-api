@@ -1,9 +1,12 @@
 import { db } from "@/db/db";
+import { findOverlappingLocationClosure } from "@subtrees/utils";
+import { reservations } from "@subtrees/schemas";
 import type { ExtendedProgramSession } from "@subtrees/types";
-import { addDays, addMinutes } from "date-fns";
+import { addDays, addMinutes, format, startOfWeek } from "date-fns";
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
+import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
-import { fromZonedTime } from 'date-fns-tz';
-import { findOverlappingLocationClosure } from "@/libs/locationClosures";
+
 const SessionsProps = {
     params: t.Object({
         lid: t.String(),
@@ -11,6 +14,15 @@ const SessionsProps = {
     query: t.Object({
         programIds: t.String(),
         date: t.String(),
+    }),
+};
+
+const SessionsCountProps = {
+    params: t.Object({
+        lid: t.String(),
+    }),
+    query: t.Object({
+        fromDate: t.Optional(t.String()),
     }),
 };
 export async function locationSessions(app: Elysia) {
@@ -56,7 +68,13 @@ export async function locationSessions(app: Elysia) {
             });
 
             const closures = await db.query.locationClosures.findMany({
-                where: (closure, { eq }) => eq(closure.locationId, lid),
+                where: (closure, { eq, and, or, gte, isNotNull }) => and(
+                    eq(closure.locationId, lid),
+                    or(
+                        isNotNull(closure.recurrencePattern),
+                        gte(closure.startsAt, startDate),
+                    ),
+                ),
             });
             const sessions: ExtendedProgramSession[] = [];
 
@@ -107,6 +125,56 @@ export async function locationSessions(app: Elysia) {
         }
     }, SessionsProps)
 
+    app.get('/sessions/counts', async ({ params, query, status }) => {
+        const { lid } = params;
+        const { fromDate } = query;
+        const anchor = fromDate ? new Date(fromDate) : new Date();
+
+        if (Number.isNaN(anchor.getTime())) {
+            return status(400, { error: "Invalid request" });
+        }
+
+        try {
+            const location = await db.query.locations.findFirst({
+                where: (locations, { eq }) => eq(locations.id, lid),
+                columns: { timezone: true },
+            });
+            if (!location) {
+                return status(404, { error: "Location not found" });
+            }
+
+            const weekStart = fromZonedTime(
+                startOfWeek(toZonedTime(anchor, location.timezone), { weekStartsOn: 0 }),
+                location.timezone,
+            );
+
+            const rows = await db
+                .select({
+                    sessionId: reservations.sessionId,
+                    startOn: reservations.startOn,
+                    reservedCount: sql<number>`count(*)::int`,
+                })
+                .from(reservations)
+                .where(
+                    and(
+                        eq(reservations.locationId, lid),
+                        eq(reservations.status, "confirmed"),
+                        isNotNull(reservations.sessionId),
+                        gte(reservations.startOn, weekStart),
+                    ),
+                )
+                .groupBy(reservations.sessionId, reservations.startOn);
+
+            return status(200, rows.map((row) => ({
+                sessionId: row.sessionId,
+                date: format(toZonedTime(row.startOn, location.timezone), "yyyy-MM-dd"),
+                reservedCount: row.reservedCount,
+            })));
+        } catch (error) {
+            console.error(error);
+            return status(500, { error: "Internal server error" });
+        }
+    }, SessionsCountProps)
     app.group("/:sessionId", (app) => {
         app.get("/reservations", async ({ params, query, status }) => {
             const { sessionId } = params;

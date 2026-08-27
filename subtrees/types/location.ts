@@ -8,10 +8,15 @@ import type {
   Wallet,
 } from ".";
 import { locations } from "../schemas/locations";
+import { locationClosures } from "../schemas/closures";
 import { locationState } from "../schemas/locationState";
 import type { AdditionalFee } from "./additionalFees";
 import type { MemberPlan } from "./member";
 import type { Vendor } from "./vendor";
+
+export type LocationClosure = typeof locationClosures.$inferSelect & {
+  location?: Location;
+};
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
@@ -24,6 +29,7 @@ export type Location = typeof locations.$inferSelect & {
   memberPlans?: MemberPlan[];
   taxRates?: TaxRate[];
   taxRate?: TaxRate;
+  locationClosures?: LocationClosure[];
   vendor?: Vendor;
 };
 
@@ -33,14 +39,14 @@ export type LocationState = typeof locationState.$inferSelect & {
 }
 
 
-export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
+// export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
 
-export type HolidaySettings = {
-  blockedHolidays: number[];
-  defaultBehavior: HolidayBehavior;
-  advanceBlockDays: number;
-  autoNotifyMembers: boolean;
-};
+// export type HolidaySettings = {
+//   blockedHolidays: number[];
+//   defaultBehavior: HolidayBehavior;
+//   advanceBlockDays: number;
+//   autoNotifyMembers: boolean;
+// };
 
 export type OnboardingChecklist = {
   importMembers: boolean;
@@ -114,6 +120,6 @@ export type LocationOnboardingSettings = {
 export type LocationSettings = {
   theme: 'default';
   processingMethods: PaymentType[];
-  holidays?: HolidaySettings;
+  // holidays?: HolidaySettings;
   onboarding?: LocationOnboardingSettings;
 }

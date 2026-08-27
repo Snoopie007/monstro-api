@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { sendNotifications } from "@/libs/expo";
 import { SquarePaymentGateway } from "@/libs/PaymentGateway";
 import { SquareError, type CreatePaymentResponse } from "square";
-
+import { GoogleAdsApi, enums } from 'google-ads-api';
 const TEST_PUSH_TOKENS = [
     "ExponentPushToken[mRfnnIAg7baHwm4QgUH6Ay]",
     "ExponentPushToken[bBsoSMHiFy9hnQCXUJsqOq]",
@@ -63,5 +63,34 @@ export function testRoutes(app: Elysia) {
                 }
                 console.error(e);
             }
-        });
+        })
+        .post("/test/google", async ({ body, set, status }) => {
+
+            const google = new GoogleAdsApi({
+                client_id: process.env.AUTH_GOOGLE_ID!,
+                client_secret: process.env.AUTH_GOOGLE_SECRET!,
+                developer_token: process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
+            });
+
+
+
+
+            try {
+
+
+
+                const refreshToken = process.env.AUTH_GOOGLE_REFRESH_TOKEN!;
+                const res = await google.listAccessibleCustomers(refreshToken);
+                console.log(res);
+
+
+                return status(200, { ok: true });
+            } catch (error) {
+                console.error(error);
+                return status(500, { ok: false });
+            }
+
+
+
+        })
 }

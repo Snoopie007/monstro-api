@@ -18,6 +18,12 @@ export async function getLocationById(lid: string) {
                     usagePercent: true,
                 },
             },
+            locationClosures: {
+                where: (closure, { or, isNotNull, gte }) => or(
+                    isNotNull(closure.recurrencePattern),
+                    gte(closure.startsAt, new Date()),
+                ),
+            },
             additionalFees: {
                 where: (af, { eq }) => eq(af.active, true),
             }

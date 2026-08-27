@@ -19,7 +19,7 @@ import { locationMercs } from "./mercs";
 import { locationCourses } from "./courses";
 import { locationEventRoutes } from "./events";
 import { getLocationById } from "@/handlers/location";
-
+import { db } from "@/db/db";
 
 const LocationGetProps = {
     params: t.Object({
@@ -39,8 +39,35 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
                     return status(404, { error: 'Location not found' });
                 }
 
+                // Fetch staff to inject into programs and sessions
+                // const staff = await db.query.staffsLocations.findMany({
+                //     where: (staffLocations, { eq }) => eq(staffLocations.locationId, location.id),
+                //     with: {
+                //         staff: {
+                //             user: {
+                //                 columns: {
+                //                     id: true,
+                //                     name: true,
+                //                     email: true,
+                //                     phone: true,
+                //                 },
+                //             },
+                //         },
+                //     },
+                // });
 
-                return status(200, location);
+                const programs = await db.query.programs.findMany({
+                    where: (programs, { eq }) => eq(programs.locationId, location.id),
+                    with: {
+                        sessions: true,
+                    },
+                });
+
+
+                return status(200, {
+                    ...location,
+                    programs,
+                });
             } catch (error) {
                 console.error(error);
                 return status(500, { error: 'Internal server error' });

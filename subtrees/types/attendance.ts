@@ -1,8 +1,5 @@
 import { attendances } from "../schemas/attendances";
-import {
-  reservationExceptions,
-  reservations,
-} from "../schemas/reservations";
+import { reservations } from "../schemas/reservations";
 import type { Member, MemberPackage, MemberSubscription } from "./member";
 import type { ProgramSession } from "./program";
 
@@ -35,7 +32,6 @@ export type Reservation = ReservationBase &
     recurringId?: string;
     session?: ProgramSession | null;
     member?: Member;
-    exceptions?: ReservationException[];
     memberSubscription?: MemberSubscription | null;
     memberPackage?: MemberPackage | null;
     attendance?: Attendance;
@@ -64,11 +60,5 @@ export type CheckinOption = {
   endOn: Date;
   session: ProgramSession;
   attendance?: Attendance | null;
-};
-
-
-// Unified exception type - supports both recurring and single reservations
-export type ReservationException = typeof reservationExceptions.$inferSelect & {
-  reservation?: Reservation;
 };
 

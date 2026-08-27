@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
 import { addMinutes, startOfWeek } from "date-fns";
-import { findOverlappingLocationClosure } from "@/libs/locationClosures";
+import { findOverlappingLocationClosure } from "@subtrees/utils";
 import { fromZonedTime } from 'date-fns-tz';
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 type MappedSession = {

@@ -62,23 +62,6 @@ export async function locationCheckin(app: Elysia) {
             }
 
 
-            let memberPlan: MemberSubscription | MemberPackage | undefined = undefined;
-            if (memberSubscriptionId) {
-                memberPlan = await db.query.memberSubscriptions.findFirst({
-                    where: (ms, { eq }) => eq(ms.id, memberSubscriptionId),
-                });
-            }
-
-            if (memberPackageId) {
-                memberPlan = await db.query.memberPackages.findFirst({
-                    where: (mp, { eq }) => eq(mp.id, memberPackageId),
-                });
-            }
-
-            if (!memberPlan || memberPlan.status !== "active") {
-                return status(400, { error: "Member plan is not active" });
-            }
-
             const checkin = await db.insert(attendances).values({
                 ...rest,
                 locationId: lid,

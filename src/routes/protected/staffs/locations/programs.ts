@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { findOverlappingLocationClosure } from "@/libs/locationClosures";
+import { findOverlappingLocationClosure } from "@subtrees/utils";
 import { memberPlanPricing, planPrograms } from "@subtrees/schemas";
 import { addDays, addMinutes, endOfDay, startOfWeek } from "date-fns";
 import { fromZonedTime } from "date-fns-tz";

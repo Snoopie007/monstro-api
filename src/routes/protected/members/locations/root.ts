@@ -34,31 +34,21 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                 with: {
                     location: {
                         with: {
-                            locationState: true,
+                            locationState: {
+                                columns: {
+                                    locationId: true,
+                                    paymentGatewayId: true,
+                                    waiverId: true,
+                                    currency: true,
+                                    allowAppCheckIns: true,
+                                    settings: true,
+                                    usagePercent: true,
+                                }
+                            },
                         },
                     },
                 },
             })
-
-
-            // const migrations = await db.query.migrateMembers.findMany({
-            //     where: (migrateMembers, { eq, and }) => and(
-            //         eq(migrateMembers.memberId, mid),
-            //         eq(migrateMembers.status, "pending"),
-            //     ),
-            //     with: {
-            //         pricing: {
-            //             with: {
-            //                 plan: true,
-            //             },
-            //         },
-            //         location: {
-            //             with: {
-            //                 locationState: true,
-            //             },
-            //         },
-            //     },
-            // });
 
 
             return status(200, mls);
