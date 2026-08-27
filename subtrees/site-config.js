@@ -2442,19 +2442,7 @@ function createSitePreset(input) {
   });
 }
 
-// src/legacy.ts
-var LEGACY_MEDIA_SECTION_TYPES = new Set([
-  "hero",
-  "about",
-  "programs",
-  "gallery",
-  "team",
-  "testimonials",
-  "top_review",
-  "bottom_cta",
-  "pricing_form_section",
-  "program_detail"
-]);
+// src/legacy/values.ts
 var RETIRED_STARTER_KIT_COPY = new Map([
   ["Download Starter Kit", "Get Started"],
   ["If you are looking for the best Martial Arts School in Round Rock, then look no further. Download our starter kit today to get access to our exclusive offer!", "Explore our programs and find the right way to get started."],
@@ -2471,30 +2459,6 @@ var RETIRED_STARTER_KIT_COPY = new Map([
 function record(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
-function legacyLocationOverride(value) {
-  const location = record(value);
-  if (!location)
-    return;
-  const address = record(location.address);
-  const streetAddress = [address?.line1, address?.line2].filter((part) => typeof part === "string" && part.trim().length > 0).join(", ");
-  const addressOverride = address ? {
-    ...streetAddress ? { streetAddress } : {},
-    ...typeof address.city === "string" ? { addressLocality: address.city } : {},
-    ...typeof address.state === "string" ? { addressRegion: address.state } : {},
-    ...typeof address.zip === "string" ? { postalCode: address.zip } : {},
-    ...typeof address.country === "string" ? { addressCountry: address.country } : {}
-  } : undefined;
-  const candidate = {
-    ...typeof location.displayName === "string" ? { name: location.displayName } : typeof location.name === "string" ? { name: location.name } : {},
-    ...typeof location.mapQuery === "string" ? { mapQuery: location.mapQuery } : {},
-    ...addressOverride && Object.keys(addressOverride).length > 0 ? { address: addressOverride } : {},
-    ...typeof location.phone === "string" ? { phone: location.phone } : {},
-    ...typeof location.email === "string" ? { email: location.email } : {},
-    ...typeof location.officeHours === "string" ? { hoursDescription: location.officeHours } : {}
-  };
-  const parsed = SiteLocationOverrideSchema.safeParse(candidate);
-  return parsed.success ? parsed.data : undefined;
-}
 function contentSlug(value, fallback) {
   const slug = `${typeof value === "string" && value.trim() ? value : fallback ?? ""}`.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || "program";
@@ -2504,37 +2468,31 @@ function pagePath(draft, pageId) {
   const page = pages ? record(pages[pageId]) : null;
   return typeof page?.path === "string" ? page.path : `/${pageId}`;
 }
-function normalizeValue(value, draft, preserveStarterKit = false) {
-  if (value === null || value === undefined)
+function normalizeString(value, preserveStarterKit) {
+  return preserveStarterKit ? value : RETIRED_STARTER_KIT_COPY.get(value) ?? value;
+}
+function normalizeArray(value, draft, preserveStarterKit) {
+  return value.flatMap((item) => {
+    const normalized = normalizeValue(item, draft, preserveStarterKit);
+    return normalized === undefined ? [] : [normalized];
+  });
+}
+function normalizeImage(source) {
+  const image = SiteImageSchema.safeParse(source);
+  return image.success ? image.data : undefined;
+}
+function normalizePageLink(source, pageId, draft, preserveStarterKit) {
+  if (pageId === "starter-kit" && !preserveStarterKit)
     return;
-  if (typeof value === "string") {
-    return preserveStarterKit ? value : RETIRED_STARTER_KIT_COPY.get(value) ?? value;
-  }
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => {
-      const normalized2 = normalizeValue(item, draft, preserveStarterKit);
-      return normalized2 === undefined ? [] : [normalized2];
-    });
-  }
-  const source = record(value);
-  if (!source)
-    return value;
-  if (typeof source.src === "string" && typeof source.alt === "string") {
-    const image = SiteImageSchema.safeParse(source);
-    return image.success ? image.data : undefined;
-  }
-  if (typeof source.label === "string" && typeof source.pageId === "string") {
-    if (source.pageId === "starter-kit" && !preserveStarterKit)
-      return;
-    const path = pagePath(draft, source.pageId);
-    const anchor = typeof source.anchor === "string" ? `#${source.anchor}` : "";
-    return {
-      label: source.label,
-      href: `${path}${anchor}`,
-      external: false,
-      variant: source.variant === "outline" ? "secondary" : "primary"
-    };
-  }
+  const anchor = typeof source.anchor === "string" ? `#${source.anchor}` : "";
+  return {
+    label: source.label,
+    href: `${pagePath(draft, pageId)}${anchor}`,
+    external: false,
+    variant: source.variant === "outline" ? "secondary" : "primary"
+  };
+}
+function normalizeRecord(source, draft, preserveStarterKit) {
   const normalized = {};
   for (const [key, item] of Object.entries(source)) {
     const next = normalizeValue(item, draft, preserveStarterKit);
@@ -2547,160 +2505,33 @@ function normalizeValue(value, draft, preserveStarterKit = false) {
     normalized.variant = "secondary";
   return normalized;
 }
-function sectionProps(source, draft, preserveStarterKit) {
-  const props = record(normalizeValue(source.props, draft, preserveStarterKit)) ?? {};
-  if ((source.type === "form" || source.type === "contact_form_section" || source.type === "pricing_form_section") && typeof props.formId === "string") {
-    props.source = { kind: "native", formId: props.formId };
-    delete props.formId;
+function normalizeValue(value, draft, preserveStarterKit = false) {
+  if (value === null || value === undefined)
+    return;
+  if (typeof value === "string")
+    return normalizeString(value, preserveStarterKit);
+  if (Array.isArray(value))
+    return normalizeArray(value, draft, preserveStarterKit);
+  const source = record(value);
+  if (!source)
+    return value;
+  if (typeof source.src === "string" && typeof source.alt === "string") {
+    return normalizeImage(source);
   }
-  if (source.type === "text_iframe" && typeof props.src === "string" && typeof props.policy !== "string") {
-    props.policy = ["video", "form", "scheduler", "map"].find((policy) => isIframeUrlAllowed(props.src, policy));
+  if (typeof source.label === "string" && typeof source.pageId === "string") {
+    return normalizePageLink(source, source.pageId, draft, preserveStarterKit);
   }
-  if (source.type === "not_sure" && !record(props.cta)) {
-    const primary = record(record(record(draft.globals)?.ctas)?.primary);
-    const cta = record(normalizeValue(primary, draft, preserveStarterKit)) ?? {
-      label: "Get Started",
-      href: pagePath(draft, "get-started"),
-      external: false,
-      variant: "primary"
-    };
-    props.cta = {
-      ...cta,
-      ...typeof props.buttonLabel === "string" ? { label: props.buttonLabel } : {}
-    };
-    delete props.buttonLabel;
-  }
-  if (source.type === "bottom_cta" && !record(props.cta)) {
-    const hasContent = [props.title, props.description].some((value) => typeof value === "string" && value.trim()) || record(props.image);
-    if (hasContent) {
-      const primary = record(record(record(draft.globals)?.ctas)?.primary);
-      props.cta = record(normalizeValue(primary, draft, preserveStarterKit)) ?? {
-        label: "Get Started",
-        href: pagePath(draft, "get-started"),
-        external: false,
-        variant: "primary"
-      };
-    }
-  }
-  return props;
+  return normalizeRecord(source, draft, preserveStarterKit);
 }
-function legacySectionPresentation(source) {
-  if (typeof source.type !== "string" || !LEGACY_MEDIA_SECTION_TYPES.has(source.type))
-    return;
-  const media = record(source.classOverrides)?.media;
-  if (typeof media !== "string")
-    return;
-  let imageFit;
-  let imagePosition;
-  for (const token of media.split(/\s+/)) {
-    if (token === "object-cover")
-      imageFit = "cover";
-    if (token === "object-contain")
-      imageFit = "contain";
-    if (token === "object-fill")
-      imageFit = "fill";
-    if (token === "object-center")
-      imagePosition = "center";
-    if (token === "object-top")
-      imagePosition = "top";
-    if (token === "object-bottom")
-      imagePosition = "bottom";
-    if (token === "object-left")
-      imagePosition = "left";
-    if (token === "object-right")
-      imagePosition = "right";
-  }
-  if (!imageFit && !imagePosition)
-    return;
-  return {
-    ...imageFit ? { imageFit } : {},
-    ...imagePosition ? { imagePosition } : {}
-  };
+function color(value, fallback) {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 }
-function sections(value, draft, preset, preserveStarterKit) {
+
+// src/legacy/content.ts
+function programs2(value) {
   if (!Array.isArray(value))
     return [];
   return value.flatMap((item) => {
-    const source = record(item);
-    if (!source)
-      return [];
-    if (preset === "growth" && source.id === "home-bottom-cta" && source.type === "bottom_cta") {
-      const formSource = fixedPageForm(draft, "pricing");
-      if (!formSource)
-        return [];
-      const parsed2 = SiteSectionSchema.safeParse({
-        id: source.id,
-        type: "bottom_cta_form",
-        visible: source.visible ?? true,
-        ...typeof source.anchor === "string" ? { anchor: source.anchor } : {},
-        props: { source: formSource }
-      });
-      return parsed2.success ? [parsed2.data] : [];
-    }
-    const props = sectionProps(source, draft, preserveStarterKit);
-    const presentation = legacySectionPresentation(source);
-    const parsed = SiteSectionSchema.safeParse({
-      id: source.id,
-      type: source.type,
-      visible: source.visible ?? true,
-      ...typeof source.anchor === "string" ? { anchor: source.anchor } : {},
-      ...presentation ? { presentation } : {},
-      props
-    });
-    return parsed.success ? [parsed.data] : [];
-  });
-}
-function navigation(value, draft, siteContent, preserveStarterKit) {
-  if (!Array.isArray(value))
-    return [];
-  return value.flatMap((item) => {
-    const source = record(item);
-    if (!source)
-      return [];
-    if (!preserveStarterKit && (source.pageId === "starter-kit" || source.href === "/starter-kit"))
-      return [];
-    if (source.type === "collection" && source.collection === "programs") {
-      const candidate2 = {
-        type: "group",
-        id: typeof source.id === "string" ? source.id : "programs",
-        label: typeof source.label === "string" ? source.label : "Programs",
-        visible: source.visible !== false,
-        items: siteContent.programs.filter((program) => program.visible && program.showLearnMore).map((program) => ({
-          type: "link",
-          id: `program-${program.id}`,
-          label: program.name,
-          href: `/programs/${program.slug}`,
-          external: false,
-          visible: true
-        }))
-      };
-      const parsed2 = NavigationItemSchema.safeParse(candidate2);
-      return parsed2.success ? [parsed2.data] : [];
-    }
-    if (source.type === "collection")
-      return [];
-    const href = typeof source.href === "string" ? source.href : typeof source.pageId === "string" ? pagePath(draft, source.pageId) : "/";
-    const candidate = source.type === "group" ? {
-      type: "group",
-      id: source.id,
-      label: source.label,
-      visible: source.visible ?? true,
-      items: navigation(source.items, draft, siteContent, preserveStarterKit)
-    } : {
-      type: "link",
-      id: source.id,
-      label: source.label,
-      href: `${href}${typeof source.anchor === "string" ? `#${source.anchor}` : ""}`,
-      external: source.external === true || href.startsWith("https://"),
-      visible: source.visible ?? true
-    };
-    const parsed = NavigationItemSchema.safeParse(candidate);
-    return parsed.success ? [parsed.data] : [];
-  });
-}
-function content(value, preserveStarterKit) {
-  const source = record(normalizeValue(value, {}, preserveStarterKit)) ?? {};
-  const programs2 = Array.isArray(source.programs) ? source.programs.flatMap((item) => {
     const candidate = record(item);
     if (!candidate)
       return [];
@@ -2713,21 +2544,27 @@ function content(value, preserveStarterKit) {
     const { detail: _invalidDetail, ...withoutDetail } = candidate;
     const withoutDetailParsed = SiteProgramSchema.safeParse(withoutDetail);
     return withoutDetailParsed.success ? [withoutDetailParsed.data] : [];
-  }) : [];
-  const teams = Array.isArray(source.teams) ? source.teams.flatMap((item) => {
-    const parsed = SiteTeamMemberSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
-  }) : [];
-  const testimonials2 = Array.isArray(source.testimonials) ? source.testimonials.flatMap((item) => {
-    const parsed = SiteTestimonialSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
-  }) : [];
-  const faqs2 = Array.isArray(source.faqs) ? source.faqs.flatMap((item) => {
-    const parsed = SiteFaqSchema.safeParse(item);
-    return parsed.success ? [parsed.data] : [];
-  }) : [];
-  return { programs: programs2, teams, testimonials: testimonials2, faqs: faqs2 };
+  });
 }
+function validItems(value, schema) {
+  if (!Array.isArray(value))
+    return [];
+  return value.flatMap((item) => {
+    const parsed = schema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+function content(value, preserveStarterKit) {
+  const source = record(normalizeValue(value, {}, preserveStarterKit)) ?? {};
+  return {
+    programs: programs2(source.programs),
+    teams: validItems(source.teams, SiteTeamMemberSchema),
+    testimonials: validItems(source.testimonials, SiteTestimonialSchema),
+    faqs: validItems(source.faqs, SiteFaqSchema)
+  };
+}
+
+// src/legacy/forms.ts
 function nativeForms(draft, preserveStarterKit) {
   const legacyEditor = record(draft.legacyEditor);
   const source = Array.isArray(legacyEditor?.forms) ? legacyEditor.forms : draft.forms;
@@ -2746,6 +2583,362 @@ function fixedPageForm(draft, key) {
   const formId = typeof assignment?.formId === "string" ? assignment.formId : typeof legacyStarterKit?.formId === "string" ? legacyStarterKit.formId : key === "starterKit" ? "starter-kit-form" : null;
   return formId ? { kind: "native", formId } : null;
 }
+
+// src/legacy/location.ts
+function legacyAddress(value) {
+  const address = record(value);
+  if (!address)
+    return;
+  const streetAddress = [address.line1, address.line2].filter((part) => typeof part === "string" && part.trim().length > 0).join(", ");
+  return {
+    ...streetAddress ? { streetAddress } : {},
+    ...typeof address.city === "string" ? { addressLocality: address.city } : {},
+    ...typeof address.state === "string" ? { addressRegion: address.state } : {},
+    ...typeof address.zip === "string" ? { postalCode: address.zip } : {},
+    ...typeof address.country === "string" ? { addressCountry: address.country } : {}
+  };
+}
+function legacyLocationOverride(value) {
+  const location = record(value);
+  if (!location)
+    return;
+  const address = legacyAddress(location.address);
+  const candidate = {
+    ...typeof location.displayName === "string" ? { name: location.displayName } : typeof location.name === "string" ? { name: location.name } : {},
+    ...typeof location.mapQuery === "string" ? { mapQuery: location.mapQuery } : {},
+    ...address && Object.keys(address).length > 0 ? { address } : {},
+    ...typeof location.phone === "string" ? { phone: location.phone } : {},
+    ...typeof location.email === "string" ? { email: location.email } : {},
+    ...typeof location.officeHours === "string" ? { hoursDescription: location.officeHours } : {}
+  };
+  const parsed = SiteLocationOverrideSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : undefined;
+}
+
+// src/legacy/navigation.ts
+function programGroup(source, siteContent) {
+  const candidate = {
+    type: "group",
+    id: typeof source.id === "string" ? source.id : "programs",
+    label: typeof source.label === "string" ? source.label : "Programs",
+    visible: source.visible !== false,
+    items: siteContent.programs.filter((program) => program.visible && program.showLearnMore).map((program) => ({
+      type: "link",
+      id: `program-${program.id}`,
+      label: program.name,
+      href: `/programs/${program.slug}`,
+      external: false,
+      visible: true
+    }))
+  };
+  const parsed = NavigationItemSchema.safeParse(candidate);
+  return parsed.success ? [parsed.data] : [];
+}
+function navigationCandidate(source, draft, siteContent, preserveStarterKit) {
+  const href = typeof source.href === "string" ? source.href : typeof source.pageId === "string" ? pagePath(draft, source.pageId) : "/";
+  if (source.type === "group") {
+    return {
+      type: "group",
+      id: source.id,
+      label: source.label,
+      visible: source.visible ?? true,
+      items: navigation(source.items, draft, siteContent, preserveStarterKit)
+    };
+  }
+  return {
+    type: "link",
+    id: source.id,
+    label: source.label,
+    href: `${href}${typeof source.anchor === "string" ? `#${source.anchor}` : ""}`,
+    external: source.external === true || href.startsWith("https://"),
+    visible: source.visible ?? true
+  };
+}
+function mapNavigationItem(item, draft, siteContent, preserveStarterKit) {
+  const source = record(item);
+  if (!source)
+    return [];
+  if (!preserveStarterKit && (source.pageId === "starter-kit" || source.href === "/starter-kit")) {
+    return [];
+  }
+  if (source.type === "collection" && source.collection === "programs") {
+    return programGroup(source, siteContent);
+  }
+  if (source.type === "collection")
+    return [];
+  const parsed = NavigationItemSchema.safeParse(navigationCandidate(source, draft, siteContent, preserveStarterKit));
+  return parsed.success ? [parsed.data] : [];
+}
+function navigation(value, draft, siteContent, preserveStarterKit) {
+  if (!Array.isArray(value))
+    return [];
+  return value.flatMap((item) => mapNavigationItem(item, draft, siteContent, preserveStarterKit));
+}
+
+// src/legacy/builtin-pages.ts
+function text(value, fallback) {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+function gfoVideo(props) {
+  const configured = typeof props.videoSrc === "string" ? props.videoSrc.trim() : "";
+  const source = /^[A-Za-z0-9_-]{11}$/.test(configured) ? `https://www.youtube-nocookie.com/embed/${configured}` : configured;
+  const src = source ? toVideoEmbedUrl(source) : null;
+  if (!src)
+    return {};
+  return {
+    video: {
+      src,
+      title: text(props.videoTitle, "GFO promotional video")
+    }
+  };
+}
+function gfoHref(value) {
+  const configured = typeof value === "string" ? value : "/get-started";
+  return SiteHrefSchema.safeParse(configured).success ? configured : "/get-started";
+}
+function gfoSections(source, draft, preserveStarterKit, title, description) {
+  const props = record(normalizeValue(source.props, draft, preserveStarterKit)) ?? {};
+  const href = gfoHref(props.claimOfferHref);
+  return [
+    {
+      id: "gfo-offer",
+      type: "gfo_offer",
+      visible: true,
+      props: {
+        notice: text(props.notice, "Thanks for reaching out. Explore this special offer while our team follows up."),
+        title: text(props.title, title),
+        description: text(props.description, description),
+        ...gfoVideo(props),
+        countdownDays: 30,
+        cta: {
+          label: text(props.claimOfferLabel, "Claim Offer"),
+          href,
+          external: href.startsWith("https://"),
+          variant: "primary"
+        }
+      }
+    },
+    {
+      id: "gfo-testimonials",
+      type: "testimonials",
+      visible: true,
+      props: {
+        title: "Why families choose us",
+        description: "Hear from students and families in our community.",
+        source: "all-visible"
+      }
+    }
+  ];
+}
+function contactSections(draft) {
+  const source = fixedPageForm(draft, "contact");
+  if (!source)
+    return [];
+  const business = record(draft.business);
+  const location = record(draft.location);
+  const businessName = typeof business?.name === "string" ? business.name : "us";
+  return [{
+    id: "contact-form",
+    type: "contact_form_section",
+    visible: true,
+    props: {
+      eyebrow: "Got a Question?",
+      title: `Contact ${businessName}`,
+      description: "We\u2019re here to help and answer any question you might have. We look forward to hearing from you.",
+      source,
+      helpTitle: "How can we help you today?",
+      helpDescription: "Your feedback is important to us\u2014please let us know how we can help. Submit the form on this page and we will get back to you within 48 business hours.",
+      locationsTitle: "Our Locations",
+      hiddenLocationIds: [],
+      hoursTitle: "Our hours",
+      hoursDescription: typeof location?.officeHours === "string" ? location.officeHours : "We are open Monday through Friday from 9:00 AM to 5:00 PM."
+    }
+  }];
+}
+function formKey(id2) {
+  if (id2 === "pricing")
+    return "pricing";
+  return id2 === "starter-kit" ? "starterKit" : "getStarted";
+}
+function pricingSections(id2, draft) {
+  const source = fixedPageForm(draft, formKey(id2));
+  if (!source)
+    return [];
+  return [{
+    id: `${id2}-form`,
+    type: "pricing_form_section",
+    visible: true,
+    props: {
+      eyebrow: "Looking For Our Pricing?",
+      title: "Tell us what program you\u2019re looking for below",
+      description: "Fill out the form below, and one of our coaches will send you our pricing, class schedule, and exclusive promo information for our classes.",
+      source
+    }
+  }];
+}
+function richTextSections(id2, title, description) {
+  return [{
+    id: `${id2}-content`,
+    type: "rich_text",
+    visible: true,
+    props: { title, body: [description] }
+  }];
+}
+function builtinPageSections(id2, source, draft, preserveStarterKit, title, description) {
+  if (id2 === "gfo") {
+    return gfoSections(source, draft, preserveStarterKit, title, description);
+  }
+  if (id2 === "contact")
+    return contactSections(draft);
+  if (id2 === "pricing" || id2 === "get-started" || id2 === "starter-kit") {
+    return pricingSections(id2, draft);
+  }
+  return richTextSections(id2, title, description);
+}
+
+// src/legacy/sections.ts
+var LEGACY_MEDIA_SECTION_TYPES = new Set([
+  "hero",
+  "about",
+  "programs",
+  "gallery",
+  "team",
+  "testimonials",
+  "top_review",
+  "bottom_cta",
+  "pricing_form_section",
+  "program_detail"
+]);
+var IMAGE_FITS = {
+  "object-cover": "cover",
+  "object-contain": "contain",
+  "object-fill": "fill"
+};
+var IMAGE_POSITIONS = {
+  "object-center": "center",
+  "object-top": "top",
+  "object-bottom": "bottom",
+  "object-left": "left",
+  "object-right": "right"
+};
+function defaultCta(draft, preserveStarterKit) {
+  const primary = record(record(record(draft.globals)?.ctas)?.primary);
+  return record(normalizeValue(primary, draft, preserveStarterKit)) ?? {
+    label: "Get Started",
+    href: pagePath(draft, "get-started"),
+    external: false,
+    variant: "primary"
+  };
+}
+function normalizeFormSource(type, props) {
+  const isForm = type === "form" || type === "contact_form_section" || type === "pricing_form_section";
+  if (!isForm || typeof props.formId !== "string")
+    return;
+  props.source = { kind: "native", formId: props.formId };
+  delete props.formId;
+}
+function normalizeIframePolicy(type, props) {
+  if (type !== "text_iframe" || typeof props.src !== "string")
+    return;
+  if (typeof props.policy === "string")
+    return;
+  props.policy = ["video", "form", "scheduler", "map"].find((policy) => isIframeUrlAllowed(props.src, policy));
+}
+function normalizeNotSureCta(type, props, draft, preserveStarterKit) {
+  if (type !== "not_sure" || record(props.cta))
+    return;
+  props.cta = {
+    ...defaultCta(draft, preserveStarterKit),
+    ...typeof props.buttonLabel === "string" ? { label: props.buttonLabel } : {}
+  };
+  delete props.buttonLabel;
+}
+function normalizeBottomCta(type, props, draft, preserveStarterKit) {
+  if (type !== "bottom_cta" || record(props.cta))
+    return;
+  const hasText = [props.title, props.description].some((value) => typeof value === "string" && value.trim());
+  if (hasText || record(props.image)) {
+    props.cta = defaultCta(draft, preserveStarterKit);
+  }
+}
+function sectionProps(source, draft, preserveStarterKit) {
+  const props = record(normalizeValue(source.props, draft, preserveStarterKit)) ?? {};
+  normalizeFormSource(source.type, props);
+  normalizeIframePolicy(source.type, props);
+  normalizeNotSureCta(source.type, props, draft, preserveStarterKit);
+  normalizeBottomCta(source.type, props, draft, preserveStarterKit);
+  return props;
+}
+function legacySectionPresentation(source) {
+  if (typeof source.type !== "string")
+    return;
+  if (!LEGACY_MEDIA_SECTION_TYPES.has(source.type))
+    return;
+  const media = record(source.classOverrides)?.media;
+  if (typeof media !== "string")
+    return;
+  let imageFit;
+  let imagePosition;
+  for (const token of media.split(/\s+/)) {
+    imageFit = IMAGE_FITS[token] ?? imageFit;
+    imagePosition = IMAGE_POSITIONS[token] ?? imagePosition;
+  }
+  if (!imageFit && !imagePosition)
+    return;
+  return {
+    ...imageFit ? { imageFit } : {},
+    ...imagePosition ? { imagePosition } : {}
+  };
+}
+function parseSection(source, draft, preserveStarterKit) {
+  const presentation = legacySectionPresentation(source);
+  const parsed = SiteSectionSchema.safeParse({
+    id: source.id,
+    type: source.type,
+    visible: source.visible ?? true,
+    ...typeof source.anchor === "string" ? { anchor: source.anchor } : {},
+    ...presentation ? { presentation } : {},
+    props: sectionProps(source, draft, preserveStarterKit)
+  });
+  return parsed.success ? [parsed.data] : [];
+}
+function growthBottomCta(source, draft) {
+  if (source.id !== "home-bottom-cta" || source.type !== "bottom_cta")
+    return null;
+  const formSource = fixedPageForm(draft, "pricing");
+  if (!formSource)
+    return [];
+  const parsed = SiteSectionSchema.safeParse({
+    id: source.id,
+    type: "bottom_cta_form",
+    visible: source.visible ?? true,
+    ...typeof source.anchor === "string" ? { anchor: source.anchor } : {},
+    props: { source: formSource }
+  });
+  return parsed.success ? [parsed.data] : [];
+}
+function mapSection(item, draft, preset, preserveStarterKit) {
+  const source = record(item);
+  if (!source)
+    return [];
+  const growthSection = preset === "growth" ? growthBottomCta(source, draft) : null;
+  return growthSection ?? parseSection(source, draft, preserveStarterKit);
+}
+function sections(value, draft, preset, preserveStarterKit) {
+  if (!Array.isArray(value))
+    return [];
+  return value.flatMap((item) => mapSection(item, draft, preset, preserveStarterKit));
+}
+
+// src/legacy/pages.ts
+var NATIVE_PAGE_IDS = new Set([
+  "home",
+  "schedules",
+  "blog",
+  "download",
+  "shop",
+  "shop-plans"
+]);
 function legacyPageMetadata(value, fallbackTitle) {
   const metadata = record(value);
   const openGraphImage = SiteImageSchema.safeParse(metadata?.openGraphImage ?? metadata?.image);
@@ -2755,179 +2948,104 @@ function legacyPageMetadata(value, fallbackTitle) {
     ...openGraphImage.success ? { openGraphImage: openGraphImage.data } : {}
   };
 }
+function nativePage(id2, source, path) {
+  const parsed = SiteBuiltinPageSchema.safeParse({
+    id: id2,
+    kind: "builtin",
+    path,
+    visible: source.visible !== false,
+    metadata: legacyPageMetadata(source.metadata, id2)
+  });
+  return parsed.success ? [parsed.data] : [];
+}
+function builtinSections(id2, source, draft, preserveStarterKit) {
+  const metadata = record(source.metadata);
+  const title = typeof metadata?.title === "string" ? metadata.title : id2;
+  const description = typeof metadata?.description === "string" ? metadata.description : `Learn more about ${title}.`;
+  return builtinPageSections(id2, source, draft, preserveStarterKit, title, description);
+}
+function mapStaticPage(id2, item, draft, preset, preserveStarterKit) {
+  if (id2 === "starter-kit" && !preserveStarterKit)
+    return [];
+  const source = record(item);
+  if (!source || typeof source.path !== "string" || source.path.includes("["))
+    return [];
+  let pageSections = sections(source.sections, draft, preset, preserveStarterKit);
+  const emptyBuiltin = pageSections.length === 0 && source.kind === "builtin";
+  if (emptyBuiltin && NATIVE_PAGE_IDS.has(id2))
+    return nativePage(id2, source, source.path);
+  if (emptyBuiltin) {
+    pageSections = builtinSections(id2, source, draft, preserveStarterKit);
+  }
+  if (pageSections.length === 0)
+    return [];
+  return [{
+    id: id2,
+    kind: "sections",
+    path: source.path,
+    visible: source.visible !== false,
+    metadata: legacyPageMetadata(source.metadata, id2),
+    sections: pageSections
+  }];
+}
 function staticPages(value, draft, preset, preserveStarterKit) {
   const pages = record(value);
   if (!pages)
     return [];
-  const nativePages = new Set(["home", "schedules", "blog", "download", "shop", "shop-plans"]);
-  return Object.entries(pages).flatMap(([id2, item]) => {
-    const source = record(item);
-    if (id2 === "starter-kit" && !preserveStarterKit)
-      return [];
-    const metadata = record(source?.metadata);
-    const path = source?.path;
-    if (!source || typeof path !== "string" || path.includes("["))
-      return [];
-    let pageSections = sections(source.sections, draft, preset, preserveStarterKit);
-    if (pageSections.length === 0 && source.kind === "builtin" && nativePages.has(id2)) {
-      const page = SiteBuiltinPageSchema.safeParse({
-        id: id2,
-        kind: "builtin",
-        path,
-        visible: source.visible !== false,
-        metadata: legacyPageMetadata(metadata, id2)
-      });
-      return page.success ? [page.data] : [];
-    }
-    if (pageSections.length === 0 && source.kind === "builtin" && !nativePages.has(id2)) {
-      const title = typeof metadata?.title === "string" ? metadata.title : id2;
-      const description = typeof metadata?.description === "string" ? metadata.description : `Learn more about ${title}.`;
-      if (id2 === "gfo") {
-        const props = record(normalizeValue(source.props, draft, preserveStarterKit)) ?? {};
-        const configuredVideo = typeof props.videoSrc === "string" ? props.videoSrc.trim() : "";
-        const sourceUrl = /^[A-Za-z0-9_-]{11}$/.test(configuredVideo) ? `https://www.youtube-nocookie.com/embed/${configuredVideo}` : configuredVideo;
-        const videoSrc = sourceUrl ? toVideoEmbedUrl(sourceUrl) : null;
-        const configuredHref = typeof props.claimOfferHref === "string" ? props.claimOfferHref : "/get-started";
-        const href = SiteHrefSchema.safeParse(configuredHref).success ? configuredHref : "/get-started";
-        pageSections = [
-          {
-            id: "gfo-offer",
-            type: "gfo_offer",
-            visible: true,
-            props: {
-              notice: typeof props.notice === "string" && props.notice.trim() ? props.notice : "Thanks for reaching out. Explore this special offer while our team follows up.",
-              title: typeof props.title === "string" && props.title.trim() ? props.title : title,
-              description: typeof props.description === "string" && props.description.trim() ? props.description : description,
-              ...videoSrc ? {
-                video: {
-                  src: videoSrc,
-                  title: typeof props.videoTitle === "string" && props.videoTitle.trim() ? props.videoTitle : "GFO promotional video"
-                }
-              } : {},
-              countdownDays: 30,
-              cta: {
-                label: typeof props.claimOfferLabel === "string" && props.claimOfferLabel.trim() ? props.claimOfferLabel : "Claim Offer",
-                href,
-                external: href.startsWith("https://"),
-                variant: "primary"
-              }
-            }
-          },
-          {
-            id: "gfo-testimonials",
-            type: "testimonials",
-            visible: true,
-            props: {
-              title: "Why families choose us",
-              description: "Hear from students and families in our community.",
-              source: "all-visible"
-            }
-          }
-        ];
-      } else if (id2 === "contact") {
-        const formSource = fixedPageForm(draft, "contact");
-        if (!formSource)
-          return [];
-        const business = record(draft.business);
-        const location = record(draft.location);
-        const businessName = typeof business?.name === "string" ? business.name : "us";
-        pageSections = [{
-          id: "contact-form",
-          type: "contact_form_section",
-          visible: true,
-          props: {
-            eyebrow: "Got a Question?",
-            title: `Contact ${businessName}`,
-            description: "We\u2019re here to help and answer any question you might have. We look forward to hearing from you.",
-            source: formSource,
-            helpTitle: "How can we help you today?",
-            helpDescription: "Your feedback is important to us\u2014please let us know how we can help. Submit the form on this page and we will get back to you within 48 business hours.",
-            locationsTitle: "Our Locations",
-            hiddenLocationIds: [],
-            hoursTitle: "Our hours",
-            hoursDescription: typeof location?.officeHours === "string" ? location.officeHours : "We are open Monday through Friday from 9:00 AM to 5:00 PM."
-          }
-        }];
-      } else if (id2 === "pricing" || id2 === "get-started" || id2 === "starter-kit") {
-        const formSource = fixedPageForm(draft, id2 === "pricing" ? "pricing" : id2 === "starter-kit" ? "starterKit" : "getStarted");
-        if (!formSource)
-          return [];
-        pageSections = [{
-          id: `${id2}-form`,
-          type: "pricing_form_section",
-          visible: true,
-          props: {
-            eyebrow: "Looking For Our Pricing?",
-            title: "Tell us what program you\u2019re looking for below",
-            description: "Fill out the form below, and one of our coaches will send you our pricing, class schedule, and exclusive promo information for our classes.",
-            source: formSource
-          }
-        }];
-      } else {
-        pageSections = [{
-          id: `${id2}-content`,
-          type: "rich_text",
-          visible: true,
-          props: { title, body: [description] }
-        }];
-      }
-    }
-    if (pageSections.length === 0)
-      return [];
-    return [{
-      id: id2,
-      kind: "sections",
-      path,
-      visible: source.visible !== false,
-      metadata: legacyPageMetadata(metadata, id2),
-      sections: pageSections
-    }];
+  return Object.entries(pages).flatMap(([id2, item]) => mapStaticPage(id2, item, draft, preset, preserveStarterKit));
+}
+
+// src/legacy/program-pages.ts
+function programTemplate(draft) {
+  const pages = record(draft.pages);
+  if (!pages)
+    return null;
+  return Object.values(pages).map(record).find((page) => page?.path === "/programs/[slug]" || page?.path === "/programs/[programId]") ?? null;
+}
+function programSection(item, program, draft, preserveStarterKit) {
+  const source = record(item);
+  if (!source)
+    return [];
+  const props = sectionProps(source, draft, preserveStarterKit);
+  if (source.type === "program_detail")
+    props.programId = program.id;
+  const presentation = legacySectionPresentation(source);
+  const parsed = SiteSectionSchema.safeParse({
+    id: source.type === "program_detail" ? `program-${program.slug}-detail` : `program-${program.slug}-${String(source.id)}`,
+    type: source.type,
+    visible: source.visible ?? true,
+    ...typeof source.anchor === "string" ? { anchor: source.anchor } : {},
+    ...presentation ? { presentation } : {},
+    props
   });
+  return parsed.success ? [parsed.data] : [];
+}
+function programPage(program, templateSections, draft, preserveStarterKit) {
+  const mappedSections = templateSections.flatMap((item) => programSection(item, program, draft, preserveStarterKit));
+  return {
+    id: `program-${program.slug}`,
+    kind: "sections",
+    path: `/programs/${program.slug}`,
+    visible: true,
+    metadata: {
+      title: program.name,
+      description: program.description
+    },
+    sections: mappedSections.length > 0 ? mappedSections : [{
+      id: `program-${program.slug}-detail`,
+      type: "program_detail",
+      visible: true,
+      props: { programId: program.id }
+    }]
+  };
 }
 function programPages(siteContent, draft, preserveStarterKit) {
-  const pages = record(draft.pages);
-  const template = pages ? Object.values(pages).map(record).find((page) => page?.path === "/programs/[slug]" || page?.path === "/programs/[programId]") : null;
+  const template = programTemplate(draft);
   const templateSections = Array.isArray(template?.sections) ? template.sections : [];
-  return siteContent.programs.filter((program) => program.visible && program.showLearnMore && program.detail).map((program) => {
-    const mappedSections = templateSections.flatMap((item) => {
-      const source = record(item);
-      if (!source)
-        return [];
-      const props = sectionProps(source, draft, preserveStarterKit);
-      if (source.type === "program_detail")
-        props.programId = program.id;
-      const presentation = legacySectionPresentation(source);
-      const parsed = SiteSectionSchema.safeParse({
-        id: source.type === "program_detail" ? `program-${program.slug}-detail` : `program-${program.slug}-${String(source.id)}`,
-        type: source.type,
-        visible: source.visible ?? true,
-        ...typeof source.anchor === "string" ? { anchor: source.anchor } : {},
-        ...presentation ? { presentation } : {},
-        props
-      });
-      return parsed.success ? [parsed.data] : [];
-    });
-    return {
-      id: `program-${program.slug}`,
-      kind: "sections",
-      path: `/programs/${program.slug}`,
-      visible: true,
-      metadata: {
-        title: program.name,
-        description: program.description
-      },
-      sections: mappedSections.length > 0 ? mappedSections : [{
-        id: `program-${program.slug}-detail`,
-        type: "program_detail",
-        visible: true,
-        props: { programId: program.id }
-      }]
-    };
-  });
+  return siteContent.programs.filter((program) => program.visible && program.showLearnMore && program.detail).map((program) => programPage(program, templateSections, draft, preserveStarterKit));
 }
-function color(value, fallback) {
-  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
-}
+
+// src/legacy/starter-kit.ts
 function ensureStarterKitPage(pages, draft, forms) {
   if (pages.some((page) => page.id === "starter-kit" || page.path === "/starter-kit"))
     return;
@@ -2974,6 +3092,143 @@ function ensureStarterKitHeroLink(pages, draft) {
     variant: "secondary"
   };
 }
+
+// src/legacy/conversion.ts
+function footerColumns(footer) {
+  if (!Array.isArray(footer.columns))
+    return [];
+  return footer.columns.flatMap((item, index) => {
+    const column = record(item);
+    if (!column)
+      return [];
+    const label = typeof column.title === "string" ? column.title : "Explore";
+    const common = {
+      id: `footer-${contentSlug(label, index)}`,
+      label,
+      visible: true
+    };
+    if (column.source === "programs") {
+      return [{ type: "collection", collection: "programs", ...common }];
+    }
+    return [{ type: "group", items: column.items, ...common }];
+  });
+}
+function combinePages(mappedPages, mappedProgramPages, basePages) {
+  const staticPaths = new Set(mappedPages.map((page) => page.path));
+  const programPaths = new Set(mappedProgramPages.map((page) => page.path));
+  return [
+    ...mappedPages,
+    ...mappedProgramPages.filter((page) => !staticPaths.has(page.path)),
+    ...basePages.filter((page) => !staticPaths.has(page.path) && !programPaths.has(page.path))
+  ];
+}
+function configMetadata(metadata, businessName, base) {
+  const openGraphImage = SiteImageSchema.safeParse(metadata.openGraphImage);
+  return {
+    ...base.metadata,
+    defaultTitle: typeof metadata.defaultTitle === "string" ? metadata.defaultTitle : businessName,
+    titleTemplate: typeof metadata.titleTemplate === "string" ? metadata.titleTemplate : base.metadata.titleTemplate,
+    defaultDescription: typeof metadata.defaultDescription === "string" ? metadata.defaultDescription : base.metadata.defaultDescription,
+    ...openGraphImage.success ? { openGraphImage: openGraphImage.data } : {}
+  };
+}
+function configTheme(colors2, base) {
+  return {
+    ...base.theme,
+    colors: {
+      primary: color(colors2.primary, base.theme.colors.primary),
+      background: color(colors2.background, base.theme.colors.background),
+      foreground: color(colors2.foreground, base.theme.colors.foreground),
+      muted: color(colors2.muted, base.theme.colors.muted),
+      accent: color(colors2.accent, base.theme.colors.accent)
+    }
+  };
+}
+function configuredLocation(draft) {
+  const parsed = SiteLocationOverrideSchema.safeParse(draft.locationOverride);
+  return parsed.success ? parsed.data : legacyLocationOverride(draft.location);
+}
+function fallbackConfig(candidate, base, mappedPages, mappedProgramPages, locationOverride) {
+  const home = mappedPages.find((page) => page.id === "home");
+  return PublicSiteConfigSchema.parse({
+    ...base,
+    ...locationOverride ? { locationOverride } : {},
+    business: candidate.business,
+    metadata: candidate.metadata,
+    theme: candidate.theme,
+    content: candidate.content,
+    forms: candidate.forms,
+    pages: home ? [home, ...mappedProgramPages, ...base.pages.filter((page) => page.path !== "/")] : [...mappedProgramPages, ...base.pages]
+  });
+}
+function legacyDraftToPublicSiteConfig(input, preset, options = {}) {
+  const draft = record(input) ?? {};
+  const preserveStarterKit = options.starterKit === "preserve";
+  const business = record(draft.business) ?? {};
+  const metadata = record(draft.metadata) ?? {};
+  const colors2 = record(record(draft.theme)?.colors) ?? {};
+  const globals = record(draft.globals) ?? {};
+  const brand = record(globals.brand) ?? {};
+  const footer = record(globals.footer) ?? {};
+  const businessName = typeof business.name === "string" ? business.name : "Monstro Site";
+  const tagline = typeof business.tagline === "string" ? business.tagline : "Train with confidence.";
+  const base = createSitePreset({ preset, businessName, tagline });
+  const mappedContent = content(draft.content, preserveStarterKit);
+  const mappedPages = staticPages(draft.pages, draft, preset, preserveStarterKit);
+  const mappedNavigation = navigation(globals.navigation, draft, mappedContent, preserveStarterKit);
+  const mappedForms = nativeForms(draft, preserveStarterKit);
+  const mappedFooterLinks = navigation(footerColumns(footer), draft, mappedContent, preserveStarterKit);
+  const mappedProgramPages = programPages(mappedContent, draft, preserveStarterKit);
+  const logo = SiteImageSchema.safeParse(normalizeValue(brand.logo, draft, preserveStarterKit));
+  const locationOverride = configuredLocation(draft);
+  const candidatePages = combinePages(mappedPages, mappedProgramPages, base.pages);
+  if (preserveStarterKit) {
+    ensureStarterKitPage(candidatePages, draft, mappedForms);
+    ensureStarterKitHeroLink(candidatePages, draft);
+  }
+  const candidate = {
+    ...base,
+    ...locationOverride ? { locationOverride } : {},
+    business: {
+      ...base.business,
+      name: businessName,
+      tagline,
+      ...logo.success ? { logo: logo.data } : {}
+    },
+    metadata: configMetadata(metadata, businessName, base),
+    theme: configTheme(colors2, base),
+    navigation: mappedNavigation.length > 0 ? mappedNavigation : base.navigation,
+    footer: {
+      credit: typeof footer.credit === "string" ? footer.credit : base.footer.credit,
+      links: mappedFooterLinks
+    },
+    content: mappedContent,
+    forms: mappedForms,
+    pages: candidatePages
+  };
+  const parsed = PublicSiteConfigSchema.safeParse(candidate);
+  if (parsed.success)
+    return parsed.data;
+  return fallbackConfig(candidate, base, mappedPages, mappedProgramPages, locationOverride);
+}
+// src/legacy/stored.ts
+var SHARED_CONFIG_KEYS = [
+  "schemaVersion",
+  "locale",
+  "business",
+  "metadata",
+  "theme",
+  "navigation",
+  "footer",
+  "headerAction",
+  "locationConnections",
+  "locationOverride",
+  "content",
+  "pages",
+  "forms",
+  "capabilities",
+  "scriptsAndEmbeds"
+];
 function migrateDownloadPage(input) {
   const source = record(input);
   if (!source || !Array.isArray(source.pages))
@@ -2997,139 +3252,24 @@ function migrateDownloadPage(input) {
   };
   return { ...source, pages };
 }
+function sharedConfig(source) {
+  const migratedLocation = !("locationOverride" in source) ? legacyLocationOverride(source.location) : undefined;
+  const values = SHARED_CONFIG_KEYS.flatMap((key) => (key in source) ? [[key, source[key]]] : []);
+  const candidate = {
+    ...Object.fromEntries(values),
+    ...migratedLocation ? { locationOverride: migratedLocation } : {}
+  };
+  const parsed = PublicSiteConfigSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
+}
 function publicSiteConfigFromStored(input, preset, options = {}) {
   const normalized = normalizeSiteConfigV2(migrateDownloadPage(input));
   const parsed = PublicSiteConfigSchema.safeParse(normalized);
   if (parsed.success)
     return parsed.data;
   const source = record(normalized);
-  if (source) {
-    const migratedLocationOverride = !("locationOverride" in source) ? legacyLocationOverride(source.location) : undefined;
-    const candidate = {
-      ...Object.fromEntries([
-        "schemaVersion",
-        "locale",
-        "business",
-        "metadata",
-        "theme",
-        "navigation",
-        "footer",
-        "headerAction",
-        "locationConnections",
-        "locationOverride",
-        "content",
-        "pages",
-        "forms",
-        "capabilities",
-        "scriptsAndEmbeds"
-      ].flatMap((key) => (key in source) ? [[key, source[key]]] : [])),
-      ...migratedLocationOverride ? { locationOverride: migratedLocationOverride } : {}
-    };
-    const shared = PublicSiteConfigSchema.safeParse(candidate);
-    if (shared.success)
-      return shared.data;
-  }
-  return legacyDraftToPublicSiteConfig(normalized, preset, options);
-}
-function legacyDraftToPublicSiteConfig(input, preset, options = {}) {
-  const draft = record(input) ?? {};
-  const preserveStarterKit = options.starterKit === "preserve";
-  const business = record(draft.business) ?? {};
-  const metadata = record(draft.metadata) ?? {};
-  const theme = record(draft.theme) ?? {};
-  const colors2 = record(theme.colors) ?? {};
-  const globals = record(draft.globals) ?? {};
-  const brand = record(globals.brand) ?? {};
-  const footer = record(globals.footer) ?? {};
-  const businessName = typeof business.name === "string" ? business.name : "Monstro Site";
-  const tagline = typeof business.tagline === "string" ? business.tagline : "Train with confidence.";
-  const base = createSitePreset({ preset, businessName, tagline });
-  const mappedContent = content(draft.content, preserveStarterKit);
-  const mappedPages = staticPages(draft.pages, draft, preset, preserveStarterKit);
-  const mappedNavigation = navigation(globals.navigation, draft, mappedContent, preserveStarterKit);
-  const mappedForms = nativeForms(draft, preserveStarterKit);
-  const mappedFooterLinks = navigation(Array.isArray(footer.columns) ? footer.columns.flatMap((item, index) => {
-    const column = record(item);
-    if (!column)
-      return [];
-    const label = typeof column.title === "string" ? column.title : "Explore";
-    const id2 = `footer-${contentSlug(label, index)}`;
-    return column.source === "programs" ? [{
-      type: "collection",
-      collection: "programs",
-      id: id2,
-      label,
-      visible: true
-    }] : [{
-      type: "group",
-      id: id2,
-      label,
-      visible: true,
-      items: column.items
-    }];
-  }) : [], draft, mappedContent, preserveStarterKit);
-  const mappedProgramPages = programPages(mappedContent, draft, preserveStarterKit);
-  const logo = SiteImageSchema.safeParse(normalizeValue(brand.logo, draft, preserveStarterKit));
-  const locationOverride = SiteLocationOverrideSchema.safeParse(draft.locationOverride).success ? SiteLocationOverrideSchema.parse(draft.locationOverride) : legacyLocationOverride(draft.location);
-  const candidatePages = [
-    ...mappedPages,
-    ...mappedProgramPages.filter((page) => !mappedPages.some((mapped) => mapped.path === page.path)),
-    ...base.pages.filter((page) => !mappedPages.some((mapped) => mapped.path === page.path) && !mappedProgramPages.some((mapped) => mapped.path === page.path))
-  ];
-  if (preserveStarterKit) {
-    ensureStarterKitPage(candidatePages, draft, mappedForms);
-    ensureStarterKitHeroLink(candidatePages, draft);
-  }
-  const candidate = {
-    ...base,
-    ...locationOverride ? { locationOverride } : {},
-    business: {
-      ...base.business,
-      name: businessName,
-      tagline,
-      ...logo.success ? { logo: logo.data } : {}
-    },
-    metadata: {
-      ...base.metadata,
-      defaultTitle: typeof metadata.defaultTitle === "string" ? metadata.defaultTitle : businessName,
-      titleTemplate: typeof metadata.titleTemplate === "string" ? metadata.titleTemplate : base.metadata.titleTemplate,
-      defaultDescription: typeof metadata.defaultDescription === "string" ? metadata.defaultDescription : base.metadata.defaultDescription,
-      ...SiteImageSchema.safeParse(metadata.openGraphImage).success ? { openGraphImage: SiteImageSchema.parse(metadata.openGraphImage) } : {}
-    },
-    theme: {
-      ...base.theme,
-      colors: {
-        primary: color(colors2.primary, base.theme.colors.primary),
-        background: color(colors2.background, base.theme.colors.background),
-        foreground: color(colors2.foreground, base.theme.colors.foreground),
-        muted: color(colors2.muted, base.theme.colors.muted),
-        accent: color(colors2.accent, base.theme.colors.accent)
-      }
-    },
-    navigation: mappedNavigation.length > 0 ? mappedNavigation : base.navigation,
-    footer: {
-      credit: typeof footer.credit === "string" ? footer.credit : base.footer.credit,
-      links: mappedFooterLinks
-    },
-    content: mappedContent,
-    forms: mappedForms,
-    pages: candidatePages
-  };
-  const parsed = PublicSiteConfigSchema.safeParse(candidate);
-  if (parsed.success)
-    return parsed.data;
-  const home = mappedPages.find((page) => page.id === "home");
-  const fallback = {
-    ...base,
-    ...locationOverride ? { locationOverride } : {},
-    business: candidate.business,
-    metadata: candidate.metadata,
-    theme: candidate.theme,
-    content: candidate.content,
-    forms: mappedForms,
-    pages: home ? [home, ...mappedProgramPages, ...base.pages.filter((page) => page.path !== "/")] : [...mappedProgramPages, ...base.pages]
-  };
-  return PublicSiteConfigSchema.parse(fallback);
+  const shared = source ? sharedConfig(source) : null;
+  return shared ?? legacyDraftToPublicSiteConfig(normalized, preset, options);
 }
 // src/live-data.ts
 import { z as z36 } from "zod";
@@ -3305,9 +3445,9 @@ var ApiPlanProgramSchema = PlanProgramSchema.extend({
 var ApiSitePlanSchema = SitePlanSchema.extend({
   contract: PlanContractSchema.nullable(),
   programs: z36.array(ApiPlanProgramSchema)
-}).strict().transform(({ contract: _contract, programs: programs2, ...plan }) => ({
+}).strict().transform(({ contract: _contract, programs: programs3, ...plan }) => ({
   ...plan,
-  programs: programs2.map(({ capacity: _capacity, ...program }) => program)
+  programs: programs3.map(({ capacity: _capacity, ...program }) => program)
 }));
 var PlansApiResponseSchema = z36.array(ApiSitePlanSchema);
 var BlogPostSummarySchema = z36.object({
