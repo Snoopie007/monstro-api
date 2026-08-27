@@ -75,7 +75,12 @@ function sectionImageTargetKey(target) {
 // src/sections/video.ts
 var YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{6,}$/;
 var VIMEO_ID_PATTERN = /^\d+$/;
+var VEED_ID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+var YOUTUBE_SHORT_HOST_PATTERN = /^(?:.+\.)?youtu\.be$/;
+var YOUTUBE_HOST_PATTERN = /^(?:.+\.)?youtube(?:-nocookie)?\.com$/;
+var VIMEO_HOST_PATTERN = /^(?:.+\.)?vimeo\.com$/;
 var YOUTUBE_PATH_KINDS = new Set(["embed", "shorts", "live"]);
+var VEED_QUERY_PARAMS = ["watermark", "color", "sharing", "title"];
 function parseSafeUrl(value) {
   try {
     const url = new URL(value);
@@ -84,22 +89,37 @@ function parseSafeUrl(value) {
     return null;
   }
 }
+function veedEmbedUrl(url) {
+  const [kind, id2, extra] = url.pathname.split("/").filter(Boolean);
+  if (kind !== "embed" || !id2 || extra || !VEED_ID_PATTERN.test(id2))
+    return null;
+  const embed = new URL(`https://www.veed.io/embed/${id2}`);
+  for (const key of VEED_QUERY_PARAMS) {
+    const value = url.searchParams.get(key);
+    if (value !== null)
+      embed.searchParams.set(key, value);
+  }
+  return embed.toString();
+}
 function toVideoEmbedUrl(value) {
   const url = parseSafeUrl(value);
   if (!url)
     return null;
   const hostname = url.hostname.toLowerCase();
   const [kind, pathId] = url.pathname.split("/").filter(Boolean);
-  if (hostname === "youtu.be" || hostname.endsWith(".youtu.be")) {
+  if (YOUTUBE_SHORT_HOST_PATTERN.test(hostname)) {
     return kind && YOUTUBE_ID_PATTERN.test(kind) ? `https://www.youtube-nocookie.com/embed/${kind}` : null;
   }
-  if (hostname === "youtube.com" || hostname.endsWith(".youtube.com") || hostname === "youtube-nocookie.com" || hostname.endsWith(".youtube-nocookie.com")) {
+  if (YOUTUBE_HOST_PATTERN.test(hostname)) {
     const id2 = kind === "watch" ? url.searchParams.get("v") : YOUTUBE_PATH_KINDS.has(kind ?? "") ? pathId : url.searchParams.get("v");
     return id2 && YOUTUBE_ID_PATTERN.test(id2) ? `https://www.youtube-nocookie.com/embed/${id2}` : null;
   }
-  if (hostname === "vimeo.com" || hostname.endsWith(".vimeo.com")) {
+  if (VIMEO_HOST_PATTERN.test(hostname)) {
     const id2 = kind === "video" ? pathId : kind;
     return id2 && VIMEO_ID_PATTERN.test(id2) ? `https://player.vimeo.com/video/${id2}` : null;
+  }
+  if (hostname === "veed.io" || hostname === "www.veed.io") {
+    return veedEmbedUrl(url);
   }
   return null;
 }
@@ -130,7 +150,7 @@ var HttpsUrlSchema = z2.string().url().refine((value) => {
 }, "URL must use HTTPS without embedded credentials");
 var SectionIdentifierSchema = z2.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 var IFRAME_HOSTS = {
-  video: ["youtube.com", "youtube-nocookie.com", "vimeo.com"],
+  video: ["youtube.com", "youtube-nocookie.com", "vimeo.com", "veed.io"],
   form: [
     "forms.gle",
     "docs.google.com",
@@ -618,7 +638,7 @@ var GfoVideoSchema = z13.object({
   if (!toVideoEmbedUrl(video.src)) {
     issue.addIssue({
       code: "custom",
-      message: "Video must be an embeddable YouTube or Vimeo URL",
+      message: "Video must be an embeddable YouTube, Vimeo, or VEED URL",
       path: ["src"]
     });
   }
