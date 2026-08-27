@@ -12,7 +12,7 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { ExceptionInitiatorEnum, ReservationStatusEnum } from "./DatabaseEnums";
+import { ReservationStatusEnum } from "./DatabaseEnums";
 import { memberPackages, memberSubscriptions } from "./MemberEnrollment";
 import { locations } from "./locations";
 import { members } from "./members";
@@ -40,32 +40,12 @@ export const reservations = pgTable("reservations", {
 	cancelledReason: text("cancelled_reason"),
 	isMakeUpClass: boolean("is_make_up_class").notNull().default(false),
 	originalReservationId: text("original_reservation_id"),
-
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
 	index("idx_reservations_session_occurrence_active").on(t.sessionId, t.startOn).where(sql`${t.status} in ('confirmed', 'completed')`),
 	uniqueIndex("reservations_member_session_occurrence_active_uq").on(t.memberId, t.sessionId, t.startOn).where(sql`${t.status} in ('confirmed', 'completed')`),
 ]);
-
-// Unified reservation exceptions table - supports both recurring and single reservations
-// Also supports location-wide blocks (holidays, maintenance)
-export const reservationExceptions = pgTable("reservation_exceptions", {
-	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
-	// Can apply to specific reservations - nullable for flexibility
-	reservationId: text("reservation_id").references(() => reservations.id, { onDelete: "cascade" }),
-	// For location-wide blocking (holidays, maintenance)
-	locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
-	sessionId: text("session_id").references(() => programSessions.id, { onDelete: "cascade" }),
-	// Exception details
-	occurrenceDate: timestamp("occurrence_date", { withTimezone: true }).notNull(),
-	endDate: timestamp("end_date", { withTimezone: true }), // For multi-day blocks
-	initiator: ExceptionInitiatorEnum("initiator").notNull().default("member"),
-	reason: text("reason"),
-	// Track who created it
-	createdBy: text("created_by").references(() => staffs.id, { onDelete: "set null" }),
-	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
 
 export const memberAutoSchedule = pgTable("member_auto_schedule", {
 	sessionId: text("session_id").notNull().references(() => programSessions.id, { onDelete: "cascade" }),

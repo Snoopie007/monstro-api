@@ -51,5 +51,3 @@ export enum PromoType {
     FreeTrial = "free_trial"
 }
 export type PromoDuration = "once" | "repeating" | "forever";
-export type FeeType = "fixed" | "percentage";
-export type FeeCheckoutType = "package" | "subscription" | "course" | "event" | "order";

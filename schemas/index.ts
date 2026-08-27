@@ -1,8 +1,9 @@
 export * from "./accounts";
+export * from "./additionalFees";
 export * from "./achievements";
-export * from "./AdditionalFees";
 export * from "./attendances";
 export * from "./chat";
+export * from "./closures";
 export * from "./contracts";
 export * from "./courses";
 export * from "./DatabaseEnums";
@@ -24,6 +25,7 @@ export * from "./promos";
 export * from "./rank";
 export * from "./reservations";
 export * from "./rewards";
+export * from "./sessionExceptions";
 export * from "./sessions";
 export * from "./sites";
 export * from "./staffs";
@@ -45,4 +47,3 @@ export * from "./verifications";
 export * from "./relations";
 export * from "./wallets";
 export * from "./WebsiteContents";
-
