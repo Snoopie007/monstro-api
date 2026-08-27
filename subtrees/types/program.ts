@@ -1,9 +1,10 @@
 import { planPrograms, programs, programSessions } from "../schemas/programs";
 import { sessionExceptions } from "../schemas/sessionExceptions";
-import type { Staff } from "./staff";
 import type { Reservation } from "./attendance";
 import type { ProgramStatus } from "./DatabaseEnums";
+import type { LocationClosure } from "./location";
 import type { MemberPlan } from "./member";
+import type { Staff } from "./staff";
 
 export type Program = typeof programs.$inferSelect & {
   programPlans?: PlanProgram[];
@@ -35,6 +36,7 @@ export type ProgramSession = typeof programSessions.$inferSelect & {
 
 
 export type ExtendedProgramSession = ProgramSession & {
+  closure: LocationClosure | null;
   availability: number;
   isFull: boolean;
   isReserved: boolean;
