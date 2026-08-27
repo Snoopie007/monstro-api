@@ -84,46 +84,22 @@ function parseSafeUrl(value) {
     return null;
   }
 }
-function matchesHost(hostname, domain) {
-  return hostname === domain || hostname.endsWith(`.${domain}`);
-}
-function pathParts(url) {
-  return url.pathname.split("/").filter(Boolean);
-}
-function youtubeShortUrlId(url) {
-  return pathParts(url)[0];
-}
-function youtubePageId(url) {
-  const [kind, pathId] = pathParts(url);
-  if (kind === "watch")
-    return url.searchParams.get("v");
-  if (YOUTUBE_PATH_KINDS.has(kind ?? ""))
-    return pathId;
-  return url.searchParams.get("v");
-}
-function vimeoId(url) {
-  const [kind, pathId] = pathParts(url);
-  return kind === "video" ? pathId : kind;
-}
-function youtubeEmbedUrl(id2) {
-  return id2 && YOUTUBE_ID_PATTERN.test(id2) ? `https://www.youtube-nocookie.com/embed/${id2}` : null;
-}
-function vimeoEmbedUrl(id2) {
-  return id2 && VIMEO_ID_PATTERN.test(id2) ? `https://player.vimeo.com/video/${id2}` : null;
-}
 function toVideoEmbedUrl(value) {
   const url = parseSafeUrl(value);
   if (!url)
     return null;
   const hostname = url.hostname.toLowerCase();
-  if (matchesHost(hostname, "youtu.be")) {
-    return youtubeEmbedUrl(youtubeShortUrlId(url));
+  const [kind, pathId] = url.pathname.split("/").filter(Boolean);
+  if (hostname === "youtu.be" || hostname.endsWith(".youtu.be")) {
+    return kind && YOUTUBE_ID_PATTERN.test(kind) ? `https://www.youtube-nocookie.com/embed/${kind}` : null;
   }
-  if (matchesHost(hostname, "youtube.com") || matchesHost(hostname, "youtube-nocookie.com")) {
-    return youtubeEmbedUrl(youtubePageId(url));
+  if (hostname === "youtube.com" || hostname.endsWith(".youtube.com") || hostname === "youtube-nocookie.com" || hostname.endsWith(".youtube-nocookie.com")) {
+    const id2 = kind === "watch" ? url.searchParams.get("v") : YOUTUBE_PATH_KINDS.has(kind ?? "") ? pathId : url.searchParams.get("v");
+    return id2 && YOUTUBE_ID_PATTERN.test(id2) ? `https://www.youtube-nocookie.com/embed/${id2}` : null;
   }
-  if (matchesHost(hostname, "vimeo.com")) {
-    return vimeoEmbedUrl(vimeoId(url));
+  if (hostname === "vimeo.com" || hostname.endsWith(".vimeo.com")) {
+    const id2 = kind === "video" ? pathId : kind;
+    return id2 && VIMEO_ID_PATTERN.test(id2) ? `https://player.vimeo.com/video/${id2}` : null;
   }
   return null;
 }
@@ -2485,30 +2461,20 @@ var RETIRED_STARTER_KIT_COPY = new Map([
   ["Your Starter Kit Is On The Way", "Thanks for reaching out"],
   ["Your Starter Kit PDF is on the way to the email address you provided. Make sure to check your spam folder if you don't see it in your inbox.", "Thanks for reaching out. Explore this special offer while our team follows up."]
 ]);
-function record(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
-}
 function contentSlug(value, fallback) {
   const slug = `${typeof value === "string" && value.trim() ? value : fallback ?? ""}`.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || "program";
 }
 function pagePath(draft, pageId) {
-  const pages = record(draft.pages);
-  const page = pages ? record(pages[pageId]) : null;
+  const pages = draft.pages;
+  const page = pages?.[pageId];
   return typeof page?.path === "string" ? page.path : `/${pageId}`;
-}
-function normalizeString(value, preserveStarterKit) {
-  return preserveStarterKit ? value : RETIRED_STARTER_KIT_COPY.get(value) ?? value;
 }
 function normalizeArray(value, draft, preserveStarterKit) {
   return value.flatMap((item) => {
     const normalized = normalizeValue(item, draft, preserveStarterKit);
     return normalized === undefined ? [] : [normalized];
   });
-}
-function normalizeImage(source) {
-  const image = SiteImageSchema.safeParse(source);
-  return image.success ? image.data : undefined;
 }
 function normalizePageLink(source, pageId, draft, preserveStarterKit) {
   if (pageId === "starter-kit" && !preserveStarterKit)
@@ -2537,23 +2503,22 @@ function normalizeRecord(source, draft, preserveStarterKit) {
 function normalizeValue(value, draft, preserveStarterKit = false) {
   if (value === null || value === undefined)
     return;
-  if (typeof value === "string")
-    return normalizeString(value, preserveStarterKit);
+  if (typeof value === "string") {
+    return preserveStarterKit ? value : RETIRED_STARTER_KIT_COPY.get(value) ?? value;
+  }
   if (Array.isArray(value))
     return normalizeArray(value, draft, preserveStarterKit);
-  const source = record(value);
-  if (!source)
+  if (typeof value !== "object")
     return value;
+  const source = value;
   if (typeof source.src === "string" && typeof source.alt === "string") {
-    return normalizeImage(source);
+    const image = SiteImageSchema.safeParse(source);
+    return image.success ? image.data : undefined;
   }
   if (typeof source.label === "string" && typeof source.pageId === "string") {
     return normalizePageLink(source, source.pageId, draft, preserveStarterKit);
   }
   return normalizeRecord(source, draft, preserveStarterKit);
-}
-function color(value, fallback) {
-  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
 }
 
 // src/legacy/content.ts
@@ -2561,9 +2526,9 @@ function programs2(value) {
   if (!Array.isArray(value))
     return [];
   return value.flatMap((item) => {
-    const candidate = record(item);
-    if (!candidate)
+    if (!item || typeof item !== "object" || Array.isArray(item))
       return [];
+    const candidate = item;
     candidate.slug = contentSlug(candidate.slug, candidate.name ?? candidate.id);
     const parsed = SiteProgramSchema.safeParse(candidate);
     if (parsed.success)
@@ -2584,7 +2549,7 @@ function validItems(value, schema) {
   });
 }
 function content(value, preserveStarterKit) {
-  const source = record(normalizeValue(value, {}, preserveStarterKit)) ?? {};
+  const source = normalizeValue(value, {}, preserveStarterKit) ?? {};
   return {
     programs: programs2(source.programs),
     teams: validItems(source.teams, SiteTeamMemberSchema),
@@ -2595,29 +2560,31 @@ function content(value, preserveStarterKit) {
 
 // src/legacy/forms.ts
 function nativeForms(draft, preserveStarterKit) {
-  const legacyEditor = record(draft.legacyEditor);
+  const legacyEditor = draft.legacyEditor;
   const source = Array.isArray(legacyEditor?.forms) ? legacyEditor.forms : draft.forms;
   if (!Array.isArray(source))
     return [];
   return source.flatMap((form2) => {
-    if (!preserveStarterKit && record(form2)?.id === "starter-kit-form")
+    if (!preserveStarterKit && form2?.id === "starter-kit-form")
       return [];
     const parsed = NativeSiteFormSchema.safeParse(form2);
     return parsed.success ? [parsed.data] : [];
   });
 }
 function fixedPageForm(draft, key) {
-  const assignment = record(record(draft.fixedPageForms)?.[key]);
-  const legacyStarterKit = key === "starterKit" ? record(record(draft.globals)?.starterKit) : null;
+  const fixedPageForms = draft.fixedPageForms;
+  const assignment = fixedPageForms?.[key];
+  const globals = draft.globals;
+  const legacyStarterKit = key === "starterKit" ? globals?.starterKit : null;
   const formId = typeof assignment?.formId === "string" ? assignment.formId : typeof legacyStarterKit?.formId === "string" ? legacyStarterKit.formId : key === "starterKit" ? "starter-kit-form" : null;
   return formId ? { kind: "native", formId } : null;
 }
 
 // src/legacy/location.ts
 function legacyAddress(value) {
-  const address = record(value);
-  if (!address)
+  if (!value || typeof value !== "object" || Array.isArray(value))
     return;
+  const address = value;
   const streetAddress = [address.line1, address.line2].filter((part) => typeof part === "string" && part.trim().length > 0).join(", ");
   return {
     ...streetAddress ? { streetAddress } : {},
@@ -2628,9 +2595,9 @@ function legacyAddress(value) {
   };
 }
 function legacyLocationOverride(value) {
-  const location = record(value);
-  if (!location)
+  if (!value || typeof value !== "object" || Array.isArray(value))
     return;
+  const location = value;
   const address = legacyAddress(location.address);
   const candidate = {
     ...typeof location.displayName === "string" ? { name: location.displayName } : typeof location.name === "string" ? { name: location.name } : {},
@@ -2684,9 +2651,9 @@ function navigationCandidate(source, draft, siteContent, preserveStarterKit) {
   };
 }
 function mapNavigationItem(item, draft, siteContent, preserveStarterKit) {
-  const source = record(item);
-  if (!source)
+  if (!item || typeof item !== "object" || Array.isArray(item))
     return [];
+  const source = item;
   if (!preserveStarterKit && (source.pageId === "starter-kit" || source.href === "/starter-kit")) {
     return [];
   }
@@ -2705,9 +2672,6 @@ function navigation(value, draft, siteContent, preserveStarterKit) {
 }
 
 // src/legacy/builtin-pages.ts
-function text(value, fallback) {
-  return typeof value === "string" && value.trim() ? value : fallback;
-}
 function gfoVideo(props) {
   const configured = typeof props.videoSrc === "string" ? props.videoSrc.trim() : "";
   const source = /^[A-Za-z0-9_-]{11}$/.test(configured) ? `https://www.youtube-nocookie.com/embed/${configured}` : configured;
@@ -2717,30 +2681,27 @@ function gfoVideo(props) {
   return {
     video: {
       src,
-      title: text(props.videoTitle, "GFO promotional video")
+      title: typeof props.videoTitle === "string" && props.videoTitle.trim() ? props.videoTitle : "GFO promotional video"
     }
   };
 }
-function gfoHref(value) {
-  const configured = typeof value === "string" ? value : "/get-started";
-  return SiteHrefSchema.safeParse(configured).success ? configured : "/get-started";
-}
 function gfoSections(source, draft, preserveStarterKit, title, description) {
-  const props = record(normalizeValue(source.props, draft, preserveStarterKit)) ?? {};
-  const href = gfoHref(props.claimOfferHref);
+  const props = normalizeValue(source.props, draft, preserveStarterKit) ?? {};
+  const configuredHref = typeof props.claimOfferHref === "string" ? props.claimOfferHref : "/get-started";
+  const href = SiteHrefSchema.safeParse(configuredHref).success ? configuredHref : "/get-started";
   return [
     {
       id: "gfo-offer",
       type: "gfo_offer",
       visible: true,
       props: {
-        notice: text(props.notice, "Thanks for reaching out. Explore this special offer while our team follows up."),
-        title: text(props.title, title),
-        description: text(props.description, description),
+        notice: typeof props.notice === "string" && props.notice.trim() ? props.notice : "Thanks for reaching out. Explore this special offer while our team follows up.",
+        title: typeof props.title === "string" && props.title.trim() ? props.title : title,
+        description: typeof props.description === "string" && props.description.trim() ? props.description : description,
         ...gfoVideo(props),
         countdownDays: 30,
         cta: {
-          label: text(props.claimOfferLabel, "Claim Offer"),
+          label: typeof props.claimOfferLabel === "string" && props.claimOfferLabel.trim() ? props.claimOfferLabel : "Claim Offer",
           href,
           external: href.startsWith("https://"),
           variant: "primary"
@@ -2763,8 +2724,8 @@ function contactSections(draft) {
   const source = fixedPageForm(draft, "contact");
   if (!source)
     return [];
-  const business = record(draft.business);
-  const location = record(draft.location);
+  const business = draft.business;
+  const location = draft.location;
   const businessName = typeof business?.name === "string" ? business.name : "us";
   return [{
     id: "contact-form",
@@ -2784,13 +2745,8 @@ function contactSections(draft) {
     }
   }];
 }
-function formKey(id2) {
-  if (id2 === "pricing")
-    return "pricing";
-  return id2 === "starter-kit" ? "starterKit" : "getStarted";
-}
-function pricingSections(id2, draft) {
-  const source = fixedPageForm(draft, formKey(id2));
+function pricingSections(id2, draft, form2) {
+  const source = fixedPageForm(draft, form2);
   if (!source)
     return [];
   return [{
@@ -2805,24 +2761,24 @@ function pricingSections(id2, draft) {
     }
   }];
 }
-function richTextSections(id2, title, description) {
-  return [{
-    id: `${id2}-content`,
-    type: "rich_text",
-    visible: true,
-    props: { title, body: [description] }
-  }];
-}
 function builtinPageSections(id2, source, draft, preserveStarterKit, title, description) {
   if (id2 === "gfo") {
     return gfoSections(source, draft, preserveStarterKit, title, description);
   }
   if (id2 === "contact")
     return contactSections(draft);
-  if (id2 === "pricing" || id2 === "get-started" || id2 === "starter-kit") {
-    return pricingSections(id2, draft);
-  }
-  return richTextSections(id2, title, description);
+  if (id2 === "pricing")
+    return pricingSections(id2, draft, "pricing");
+  if (id2 === "get-started")
+    return pricingSections(id2, draft, "getStarted");
+  if (id2 === "starter-kit")
+    return pricingSections(id2, draft, "starterKit");
+  return [{
+    id: `${id2}-content`,
+    type: "rich_text",
+    visible: true,
+    props: { title, body: [description] }
+  }];
 }
 
 // src/legacy/sections.ts
@@ -2851,8 +2807,10 @@ var IMAGE_POSITIONS = {
   "object-right": "right"
 };
 function defaultCta(draft, preserveStarterKit) {
-  const primary = record(record(record(draft.globals)?.ctas)?.primary);
-  return record(normalizeValue(primary, draft, preserveStarterKit)) ?? {
+  const globals = draft.globals;
+  const ctas = globals?.ctas;
+  const primary = ctas?.primary;
+  return normalizeValue(primary, draft, preserveStarterKit) ?? {
     label: "Get Started",
     href: pagePath(draft, "get-started"),
     external: false,
@@ -2874,7 +2832,7 @@ function normalizeIframePolicy(type, props) {
   props.policy = ["video", "form", "scheduler", "map"].find((policy) => isIframeUrlAllowed(props.src, policy));
 }
 function normalizeNotSureCta(type, props, draft, preserveStarterKit) {
-  if (type !== "not_sure" || record(props.cta))
+  if (type !== "not_sure" || props.cta !== null && typeof props.cta === "object" && !Array.isArray(props.cta))
     return;
   props.cta = {
     ...defaultCta(draft, preserveStarterKit),
@@ -2883,15 +2841,15 @@ function normalizeNotSureCta(type, props, draft, preserveStarterKit) {
   delete props.buttonLabel;
 }
 function normalizeBottomCta(type, props, draft, preserveStarterKit) {
-  if (type !== "bottom_cta" || record(props.cta))
+  if (type !== "bottom_cta" || props.cta !== null && typeof props.cta === "object" && !Array.isArray(props.cta))
     return;
   const hasText = [props.title, props.description].some((value) => typeof value === "string" && value.trim());
-  if (hasText || record(props.image)) {
+  if (hasText || props.image !== null && typeof props.image === "object" && !Array.isArray(props.image)) {
     props.cta = defaultCta(draft, preserveStarterKit);
   }
 }
 function sectionProps(source, draft, preserveStarterKit) {
-  const props = record(normalizeValue(source.props, draft, preserveStarterKit)) ?? {};
+  const props = normalizeValue(source.props, draft, preserveStarterKit) ?? {};
   normalizeFormSource(source.type, props);
   normalizeIframePolicy(source.type, props);
   normalizeNotSureCta(source.type, props, draft, preserveStarterKit);
@@ -2903,7 +2861,8 @@ function legacySectionPresentation(source) {
     return;
   if (!LEGACY_MEDIA_SECTION_TYPES.has(source.type))
     return;
-  const media = record(source.classOverrides)?.media;
+  const classOverrides = source.classOverrides;
+  const media = classOverrides?.media;
   if (typeof media !== "string")
     return;
   let imageFit;
@@ -2947,9 +2906,9 @@ function growthBottomCta(source, draft) {
   return parsed.success ? [parsed.data] : [];
 }
 function mapSection(item, draft, preset, preserveStarterKit) {
-  const source = record(item);
-  if (!source)
+  if (!item || typeof item !== "object" || Array.isArray(item))
     return [];
+  const source = item;
   const growthSection = preset === "growth" ? growthBottomCta(source, draft) : null;
   return growthSection ?? parseSection(source, draft, preserveStarterKit);
 }
@@ -2969,7 +2928,7 @@ var NATIVE_PAGE_IDS = new Set([
   "shop-plans"
 ]);
 function legacyPageMetadata(value, fallbackTitle) {
-  const metadata = record(value);
+  const metadata = value;
   const openGraphImage = SiteImageSchema.safeParse(metadata?.openGraphImage ?? metadata?.image);
   return {
     title: typeof metadata?.title === "string" ? metadata.title : fallbackTitle,
@@ -2988,7 +2947,7 @@ function nativePage(id2, source, path) {
   return parsed.success ? [parsed.data] : [];
 }
 function builtinSections(id2, source, draft, preserveStarterKit) {
-  const metadata = record(source.metadata);
+  const metadata = source.metadata;
   const title = typeof metadata?.title === "string" ? metadata.title : id2;
   const description = typeof metadata?.description === "string" ? metadata.description : `Learn more about ${title}.`;
   return builtinPageSections(id2, source, draft, preserveStarterKit, title, description);
@@ -2996,8 +2955,10 @@ function builtinSections(id2, source, draft, preserveStarterKit) {
 function mapStaticPage(id2, item, draft, preset, preserveStarterKit) {
   if (id2 === "starter-kit" && !preserveStarterKit)
     return [];
-  const source = record(item);
-  if (!source || typeof source.path !== "string" || source.path.includes("["))
+  if (!item || typeof item !== "object" || Array.isArray(item))
+    return [];
+  const source = item;
+  if (typeof source.path !== "string" || source.path.includes("["))
     return [];
   let pageSections = sections(source.sections, draft, preset, preserveStarterKit);
   const emptyBuiltin = pageSections.length === 0 && source.kind === "builtin";
@@ -3018,23 +2979,29 @@ function mapStaticPage(id2, item, draft, preset, preserveStarterKit) {
   }];
 }
 function staticPages(value, draft, preset, preserveStarterKit) {
-  const pages = record(value);
-  if (!pages)
+  if (!value || typeof value !== "object" || Array.isArray(value))
     return [];
+  const pages = value;
   return Object.entries(pages).flatMap(([id2, item]) => mapStaticPage(id2, item, draft, preset, preserveStarterKit));
 }
 
 // src/legacy/program-pages.ts
 function programTemplate(draft) {
-  const pages = record(draft.pages);
-  if (!pages)
+  if (!draft.pages || typeof draft.pages !== "object" || Array.isArray(draft.pages)) {
     return null;
-  return Object.values(pages).map(record).find((page) => page?.path === "/programs/[slug]" || page?.path === "/programs/[programId]") ?? null;
+  }
+  const page = Object.values(draft.pages).find((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item))
+      return false;
+    const path = item.path;
+    return path === "/programs/[slug]" || path === "/programs/[programId]";
+  });
+  return page ?? null;
 }
 function programSection(item, program, draft, preserveStarterKit) {
-  const source = record(item);
-  if (!source)
+  if (!item || typeof item !== "object" || Array.isArray(item))
     return [];
+  const source = item;
   const props = sectionProps(source, draft, preserveStarterKit);
   if (source.type === "program_detail")
     props.programId = program.id;
@@ -3081,9 +3048,9 @@ function ensureStarterKitPage(pages, draft, forms) {
   const source = fixedPageForm(draft, "starterKit");
   if (!source || !forms.some((form2) => form2.id === source.formId))
     return;
-  const legacyPages = record(draft.pages);
-  const legacyPage = legacyPages ? record(legacyPages["starter-kit"]) : null;
-  const metadata = record(legacyPage?.metadata);
+  const legacyPages = draft.pages;
+  const legacyPage = legacyPages?.["starter-kit"];
+  const metadata = legacyPage?.metadata;
   const title = typeof metadata?.title === "string" ? metadata.title : "Download our free starter kit";
   const description = typeof metadata?.description === "string" ? metadata.description : "Tell us what you are looking for and we will send you the details.";
   pages.push({
@@ -3110,9 +3077,10 @@ function ensureStarterKitHeroLink(pages, draft) {
   const hero2 = home?.sections.find((section) => section.type === "hero");
   if (!hero2 || hero2.type !== "hero" || hero2.props.secondaryCta)
     return;
-  const globals = record(draft.globals);
-  const configured = record(record(globals?.ctas)?.starterKit);
-  const legacy = configured ?? record(globals?.starterKit);
+  const globals = draft.globals;
+  const ctas = globals?.ctas;
+  const configured = ctas?.starterKit;
+  const legacy = configured ?? globals?.starterKit;
   const label = typeof legacy?.label === "string" ? legacy.label : "Download Starter Kit";
   hero2.props.secondaryCta = {
     label,
@@ -3127,9 +3095,9 @@ function footerColumns(footer) {
   if (!Array.isArray(footer.columns))
     return [];
   return footer.columns.flatMap((item, index) => {
-    const column = record(item);
-    if (!column)
+    if (!item || typeof item !== "object" || Array.isArray(item))
       return [];
+    const column = item;
     const label = typeof column.title === "string" ? column.title : "Explore";
     const common = {
       id: `footer-${contentSlug(label, index)}`,
@@ -3162,20 +3130,17 @@ function configMetadata(metadata, businessName, base) {
   };
 }
 function configTheme(colors2, base) {
+  const mappedColors = { ...base.theme.colors };
+  for (const key of ["primary", "background", "foreground", "muted", "accent"]) {
+    const value = colors2[key];
+    if (typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value)) {
+      mappedColors[key] = value;
+    }
+  }
   return {
     ...base.theme,
-    colors: {
-      primary: color(colors2.primary, base.theme.colors.primary),
-      background: color(colors2.background, base.theme.colors.background),
-      foreground: color(colors2.foreground, base.theme.colors.foreground),
-      muted: color(colors2.muted, base.theme.colors.muted),
-      accent: color(colors2.accent, base.theme.colors.accent)
-    }
+    colors: mappedColors
   };
-}
-function configuredLocation(draft) {
-  const parsed = SiteLocationOverrideSchema.safeParse(draft.locationOverride);
-  return parsed.success ? parsed.data : legacyLocationOverride(draft.location);
 }
 function fallbackConfig(candidate, base, mappedPages, mappedProgramPages, locationOverride) {
   const home = mappedPages.find((page) => page.id === "home");
@@ -3191,14 +3156,15 @@ function fallbackConfig(candidate, base, mappedPages, mappedProgramPages, locati
   });
 }
 function legacyDraftToPublicSiteConfig(input, preset, options = {}) {
-  const draft = record(input) ?? {};
+  const draft = Object(input ?? {});
   const preserveStarterKit = options.starterKit === "preserve";
-  const business = record(draft.business) ?? {};
-  const metadata = record(draft.metadata) ?? {};
-  const colors2 = record(record(draft.theme)?.colors) ?? {};
-  const globals = record(draft.globals) ?? {};
-  const brand = record(globals.brand) ?? {};
-  const footer = record(globals.footer) ?? {};
+  const business = draft.business ?? {};
+  const metadata = draft.metadata ?? {};
+  const theme = draft.theme;
+  const colors2 = theme?.colors ?? {};
+  const globals = draft.globals ?? {};
+  const brand = globals.brand ?? {};
+  const footer = globals.footer ?? {};
   const businessName = typeof business.name === "string" ? business.name : "Monstro Site";
   const tagline = typeof business.tagline === "string" ? business.tagline : "Train with confidence.";
   const base = createSitePreset({ preset, businessName, tagline });
@@ -3209,7 +3175,8 @@ function legacyDraftToPublicSiteConfig(input, preset, options = {}) {
   const mappedFooterLinks = navigation(footerColumns(footer), draft, mappedContent, preserveStarterKit);
   const mappedProgramPages = programPages(mappedContent, draft, preserveStarterKit);
   const logo = SiteImageSchema.safeParse(normalizeValue(brand.logo, draft, preserveStarterKit));
-  const locationOverride = configuredLocation(draft);
+  const configuredLocation = SiteLocationOverrideSchema.safeParse(draft.locationOverride);
+  const locationOverride = configuredLocation.success ? configuredLocation.data : legacyLocationOverride(draft.location);
   const candidatePages = combinePages(mappedPages, mappedProgramPages, base.pages);
   if (preserveStarterKit) {
     ensureStarterKitPage(candidatePages, draft, mappedForms);
@@ -3259,18 +3226,23 @@ var SHARED_CONFIG_KEYS = [
   "scriptsAndEmbeds"
 ];
 function migrateDownloadPage(input) {
-  const source = record(input);
-  if (!source || !Array.isArray(source.pages))
+  if (!input || typeof input !== "object" || Array.isArray(input))
     return input;
-  const index = source.pages.findIndex((item) => {
-    const page2 = record(item);
-    return page2?.id === "download" && page2.path === "/download" && page2.kind !== "builtin";
+  const source = input;
+  if (!Array.isArray(source.pages))
+    return input;
+  const index = source.pages.findIndex((item2) => {
+    if (!item2 || typeof item2 !== "object" || Array.isArray(item2))
+      return false;
+    const page2 = item2;
+    return page2.id === "download" && page2.path === "/download" && page2.kind !== "builtin";
   });
   if (index === -1)
     return input;
-  const page = record(source.pages[index]);
-  if (!page)
+  const item = source.pages[index];
+  if (!item || typeof item !== "object" || Array.isArray(item))
     return input;
+  const page = item;
   const pages = source.pages.slice();
   pages[index] = {
     id: "download",
@@ -3296,8 +3268,7 @@ function publicSiteConfigFromStored(input, preset, options = {}) {
   const parsed = PublicSiteConfigSchema.safeParse(normalized);
   if (parsed.success)
     return parsed.data;
-  const source = record(normalized);
-  const shared = source ? sharedConfig(source) : null;
+  const shared = normalized && typeof normalized === "object" && !Array.isArray(normalized) ? sharedConfig(normalized) : null;
   return shared ?? legacyDraftToPublicSiteConfig(normalized, preset, options);
 }
 // src/live-data.ts
@@ -3641,13 +3612,13 @@ var SiteCacheInvalidationSchema = z37.object({
   domains: z37.array(z37.string().min(1).max(253)).min(1).max(100)
 }).strict();
 // src/stored-config.ts
-function record2(value) {
+function record(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 function legacyLeadRouting(input, locationId, primary) {
-  const integrations = record2(record2(input)?.integrations);
-  const ghl = record2(integrations?.ghl);
-  const keyed = Array.isArray(ghl?.locations) ? ghl.locations.map(record2).find((item) => item?.locationId === locationId) : undefined;
+  const integrations = record(record(input)?.integrations);
+  const ghl = record(integrations?.ghl);
+  const keyed = Array.isArray(ghl?.locations) ? ghl.locations.map(record).find((item) => item?.locationId === locationId) : undefined;
   if (keyed) {
     return {
       ghlLocationId: typeof keyed.ghlLocationId === "string" ? keyed.ghlLocationId : "",
