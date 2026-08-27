@@ -7,8 +7,8 @@ import type {
   Transaction,
   Wallet,
 } from ".";
-import { locations } from "../schemas/locations";
 import { locationClosures } from "../schemas/closures";
+import { locations } from "../schemas/locations";
 import { locationState } from "../schemas/locationState";
 import type { AdditionalFee } from "./additionalFees";
 import type { MemberPlan } from "./member";
@@ -38,15 +38,13 @@ export type LocationState = typeof locationState.$inferSelect & {
   settings: LocationSettings;
 }
 
+export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
 
-// export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
-
-// export type HolidaySettings = {
-//   blockedHolidays: number[];
-//   defaultBehavior: HolidayBehavior;
-//   advanceBlockDays: number;
-//   autoNotifyMembers: boolean;
-// };
+export type HolidaySettings = {
+  defaultBehavior: HolidayBehavior;
+  advanceBlockDays: number;
+  autoNotifyMembers: boolean;
+};
 
 export type OnboardingChecklist = {
   importMembers: boolean;
@@ -120,6 +118,6 @@ export type LocationOnboardingSettings = {
 export type LocationSettings = {
   theme: 'default';
   processingMethods: PaymentType[];
-  // holidays?: HolidaySettings;
+  holidays?: HolidaySettings;
   onboarding?: LocationOnboardingSettings;
 }
