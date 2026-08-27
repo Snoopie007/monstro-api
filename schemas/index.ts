@@ -25,6 +25,7 @@ export * from "./promos";
 export * from "./rank";
 export * from "./reservations";
 export * from "./rewards";
+export * from "./sessionExceptions";
 export * from "./sessions";
 export * from "./sites";
 export * from "./staffs";

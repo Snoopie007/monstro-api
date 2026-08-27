@@ -1,4 +1,5 @@
 import { planPrograms, programs, programSessions } from "../schemas/programs";
+import { sessionExceptions } from "../schemas/sessionExceptions";
 import type { Staff } from "./staff";
 import type { Reservation } from "./attendance";
 import type { ProgramStatus } from "./DatabaseEnums";
@@ -19,12 +20,17 @@ export type PlanProgram = typeof planPrograms.$inferSelect & {
   plan?: MemberPlan;
 }
 
+export type SessionException = typeof sessionExceptions.$inferSelect & {
+  session?: ProgramSession;
+};
+
 export type ProgramSession = typeof programSessions.$inferSelect & {
   program?: Program,
   reservations?: Reservation[]
   reservationsCount?: number | null
   staff?: Staff;
   canceled?: boolean;
+  exceptions?: SessionException[];
 }
 
 
@@ -38,4 +44,5 @@ export type ExtendedProgramSession = ProgramSession & {
   utcStartTime: Date;
   utcEndTime: Date;
   holidayName?: string;
+  exception?: SessionException;
 }
