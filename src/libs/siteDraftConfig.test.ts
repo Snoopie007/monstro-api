@@ -166,6 +166,68 @@ test("round trips section image presentation through page settings", () => {
   })).toEqual(config);
 });
 
+test("stores a legacy GFO page as editable blocks and rebuilds valid config", () => {
+  const config = publishableConfig({
+    business: { name: "Academy", tagline: "Train well" },
+    pages: {
+      gfo: {
+        kind: "builtin",
+        path: "/lp/gfo",
+        visible: true,
+        metadata: {
+          title: "Special Offer",
+          description: "Claim this offer.",
+        },
+        props: {
+          notice: "Your starter kit is on the way.",
+          title: "Try two weeks for $39",
+          description: "Meet the coaches and try a class.",
+          videoSrc: "",
+          claimOfferLabel: "Claim Offer",
+          claimOfferHref: "/get-started",
+        },
+      },
+    },
+  });
+  const stored = splitSiteConfig(config);
+  const gfoPage = stored.pages.find((page) => page.pageKey === "gfo");
+
+  expect(gfoPage).toEqual(expect.objectContaining({
+    path: "/lp/gfo",
+    kind: "sections",
+  }));
+  expect(gfoPage?.blocks).toEqual([
+    expect.objectContaining({
+      blockKey: "gfo-offer",
+      type: "gfo_offer",
+      props: expect.not.objectContaining({ video: expect.anything() }),
+    }),
+    expect.objectContaining({
+      blockKey: "gfo-testimonials",
+      type: "testimonials",
+    }),
+  ]);
+
+  const pages = stored.pages.map((page, index) => ({
+    ...page,
+    id: `page-gfo-${index}`,
+  }));
+  const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+  const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+    ...block,
+    pageId: pageIds.get(page.pageKey)!,
+  })));
+  const rebuilt = assembleSiteConfig({
+    schemaVersion: stored.schemaVersion,
+    settings: stored.settings,
+    pages,
+    blocks,
+  });
+
+  expect(PublishableStoredSiteConfigSchema.safeParse(rebuilt).success).toBe(true);
+  expect(rebuilt).toEqual(config);
+});
+
 test("keeps credentials in stored settings but removes them from public config", () => {
   const credentials = {
     privateIntegrationToken: "pit-private",
