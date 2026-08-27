@@ -125,6 +125,31 @@ export async function locationSessions(app: Elysia) {
         }
     }, SessionsProps)
 
+    app.get('/sessions/exceptions', async ({ params, query, status }) => {
+        const { lid } = params;
+        const { date } = query;
+        const startDate = date ? new Date(date) : new Date();
+
+        try {
+            const exceptions = await db.query.sessionExceptions.findMany({
+                where: (sessionExceptions, { gte, and, eq }) => and(
+                    eq(sessionExceptions.locationId, lid),
+                    gte(sessionExceptions.startsAt, startDate)
+                ),
+            });
+            return status(200, exceptions);
+        } catch (error) {
+            console.error(error);
+            return status(500, { error: "Internal server error" });
+        }
+    }, {
+        params: t.Object({
+            lid: t.String(),
+        }),
+        query: t.Object({
+            date: t.Optional(t.String()),
+        }),
+    });
     app.get('/sessions/counts', async ({ params, query, status }) => {
         const { lid } = params;
         const { fromDate } = query;

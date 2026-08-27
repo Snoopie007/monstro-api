@@ -10,9 +10,13 @@ import {
 	unique,
 } from "drizzle-orm/pg-core";
 import { programSessions } from "./programs";
+import { locations } from "./locations";
 
 export const sessionExceptions = pgTable("session_exceptions", {
-	id: text("id").primaryKey().notNull().default(sql`uuid_base62('sxe_')`),
+	id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
+	locationId: text("location_id")
+		.notNull()
+		.references(() => locations.id, { onDelete: "cascade" }),
 	sessionId: text("session_id")
 		.notNull()
 		.references(() => programSessions.id, { onDelete: "cascade" }),
