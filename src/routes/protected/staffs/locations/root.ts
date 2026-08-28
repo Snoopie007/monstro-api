@@ -18,18 +18,34 @@ export const staffLocationsRoutes = new Elysia({ prefix: "/locations" })
                     staffLocations: {
                         with: {
                             location: {
+                                columns: {
+                                    id: true,
+                                    name: true,
+                                    address: true,
+                                    city: true,
+                                    state: true,
+                                    postalCode: true,
+                                },
                                 with: {
-                                    locationState: true,
+                                    locationState: {
+                                        columns: {
+                                            locationId: true,
+                                            status: true,
+                                        },
+                                    },
                                 },
                             },
                         },
                     },
                 },
             });
+
+
             if (!staff) {
                 return status(404, { error: "Staff not found" });
             }
             const locations = staff.staffLocations.map((sl) => sl.location);
+            console.log(locations);
             return status(200, locations);
         } catch (error) {
             console.error(error);

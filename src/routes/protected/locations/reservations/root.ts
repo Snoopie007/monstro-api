@@ -33,7 +33,7 @@ const ReservationsProps = {
             utcStartTime: t.Date(),
             utcEndTime: t.Date(),
             staffId: t.Optional(t.Union([t.String(), t.Null()])),
-            exceptionId: t.Optional(t.String()),
+            exceptionId: t.Optional(t.Union([t.String(), t.Null()])),
         }),
         memberPlanId: t.String(),
         autoReschedule: t.Optional(t.Boolean()),
@@ -41,6 +41,34 @@ const ReservationsProps = {
 };
 export async function locationReservations(app: Elysia) {
     app.group('/reservations', (app) => {
+
+        app.get('/', async ({ params, query, status }) => {
+            const { lid } = params;
+            const { date } = query;
+            const startDate = date ? new Date(date) : new Date();
+            try {
+                const reservations = await db.query.reservations.findMany({
+                    where: (reservations, { eq, gte, and }) => and(
+                        eq(reservations.locationId, lid),
+                        gte(reservations.startOn, startDate),
+                    ),
+                    with: {
+                        attendance: true,
+                    }
+                });
+                return status(200, reservations);
+            } catch (err) {
+                console.error(err);
+                return status(500, { error: err });
+            }
+        }, {
+            params: t.Object({
+                lid: t.String(),
+            }),
+            query: t.Object({
+                date: t.Optional(t.Date()),
+            }),
+        })
         app.post('/', async ({ body, params, status }) => {
             const { lid } = params;
             const { memberPlanId, session, plan } = body;
@@ -140,7 +168,7 @@ export async function locationReservations(app: Elysia) {
                 if (!ml) {
                     throw new Error("Member  not found");
                 }
-                const { member, location } = ml;
+                const { member } = ml;
                 if (!member) {
                     throw new Error("Member not found");
                 }

@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { findOverlappingLocationClosure } from "@subtrees/utils";
 import { reservations } from "@subtrees/schemas";
-import type { ExtendedProgramSession } from "@subtrees/types";
+import type { SessionOccurrence } from "@subtrees/types";
 import { addDays, addMinutes, format, startOfWeek } from "date-fns";
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { and, eq, gte, isNotNull, sql } from "drizzle-orm";
@@ -76,7 +76,7 @@ export async function locationSessions(app: Elysia) {
                     ),
                 ),
             });
-            const sessions: ExtendedProgramSession[] = [];
+            const occurrences: SessionOccurrence[] = [];
 
             programs.forEach((program) => {
                 program.sessions.forEach((session) => {
@@ -103,7 +103,7 @@ export async function locationSessions(app: Elysia) {
                     );
 
                     const r = reservations.filter((r) => r.sessionId === session.id);
-                    sessions.push({
+                    occurrences.push({
                         ...session,
                         reservations: r,
                         program: program,
@@ -113,12 +113,12 @@ export async function locationSessions(app: Elysia) {
                         availability: program.capacity - r.length,
                         utcStartTime,
                         utcEndTime,
-                    } as ExtendedProgramSession);
+                    } as SessionOccurrence);
                 });
             });
 
 
-            return status(200, sessions);
+            return status(200, occurrences);
         } catch (error) {
             console.error(error);
             return status(500, { error: "Internal server error" });
