@@ -1,7 +1,7 @@
 import { Elysia } from "elysia"
 
 
-const CURRENT_VERSION = `1.1.10`;
+const CURRENT_VERSION = `1.1.13`;
 const PREVIOUS_VERSION = `1.1.10`;
 const MINIMUM_VERSION = `1.1.10`;
 
