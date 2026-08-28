@@ -30,7 +30,7 @@ export function mlReservationsRoutes(app: Elysia) {
                     attendance: {
                         columns: {
                             id: true,
-                            checkedInAt: true,
+                            checkInTime: true,
                         },
                     }
                 },
