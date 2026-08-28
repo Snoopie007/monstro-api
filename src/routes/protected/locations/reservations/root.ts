@@ -1,7 +1,8 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import type {
-    Reservation
+    Reservation,
+    SessionException
 } from "subtrees/types";
 import {
     attendances, memberPackages, memberSubscriptions,
@@ -10,7 +11,6 @@ import {
 import { and, count, eq, sql } from "drizzle-orm";
 
 import { differenceInMilliseconds, differenceInMinutes } from "date-fns";
-import { toZonedTime } from 'date-fns-tz';
 import { checkSubClassCredits, getSessionState } from "./utils";
 import { triggerFirstBooking } from "@/utils/triggers";
 import { broadcastAchievement } from "@/libs/broadcast";
@@ -33,6 +33,7 @@ const ReservationsProps = {
             utcStartTime: t.Date(),
             utcEndTime: t.Date(),
             staffId: t.Optional(t.Union([t.String(), t.Null()])),
+            exceptionId: t.Optional(t.String()),
         }),
         memberPlanId: t.String(),
         autoReschedule: t.Optional(t.Boolean()),
@@ -148,18 +149,27 @@ export async function locationReservations(app: Elysia) {
                     return status(200, { success: false, message: "Class limit reached for your plan." });
                 }
 
-                // location time
-                const now = toZonedTime(new Date(), location.timezone);
-                const { utcStartTime, utcEndTime, programId } = session;
-
-                // Check if session is in the past
+                // Check if session is in an exception
+                let exception: Pick<SessionException, "startsAt" | "endsAt"> | undefined = undefined;
+                const exceptionId = session.exceptionId;
+                if (exceptionId) {
+                    exception = await db.query.sessionExceptions.findFirst({
+                        where: (se, { eq: eqSe }) => eqSe(se.id, exceptionId),
+                        columns: {
+                            startsAt: true,
+                            endsAt: true,
+                        },
+                    });
+                }
+                const now = new Date();
+                const utcStartTime = exception?.startsAt ?? session.utcStartTime;
+                const utcEndTime = exception?.endsAt ?? session.utcEndTime;
                 const diff = differenceInMilliseconds(utcStartTime, now);
 
                 if (diff <= 15) {
                     return status(200, { success: false, message: "This session is in the future." });
                 }
 
-                // Check session state
                 const { isFull, isReserved } = await getSessionState({
                     startTime: utcStartTime,
                     sessionId: session.id,
@@ -174,8 +184,9 @@ export async function locationReservations(app: Elysia) {
                 }
 
                 const sessionDuration = differenceInMinutes(utcEndTime, utcStartTime);
+
+
                 const reservation = await db.transaction(async (tx) => {
-                    // Explicitly cast to Reservation[] (or whatever Drizzle returns)
                     const inserted = await tx.insert(reservations).values({
                         memberId,
                         locationId: lid,
@@ -184,7 +195,7 @@ export async function locationReservations(app: Elysia) {
                         sessionDuration: sessionDuration,
                         startOn: utcStartTime,
                         endOn: utcEndTime,
-                        programId: programId,
+                        programId: session.programId,
                         ...(isPackage ? {
                             memberPackageId: memberPlanId,
                         } : {
