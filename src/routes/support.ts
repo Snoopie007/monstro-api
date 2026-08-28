@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { createAdminSupportAiReply } from "src/libs/ai/adminSupport";
+import { createAdminSupportAiReply } from "@/libs/ai/AdminSupport";
 
 export const supportRoutes = new Elysia({ prefix: "/support" }).post("/cases/:caseId/ai", ({ request, params, body, set }) => {
   const requestContext = {
