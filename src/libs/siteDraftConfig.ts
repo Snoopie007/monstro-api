@@ -68,6 +68,9 @@ function splitParsedSiteConfig(
       metadata: { ...page.metadata },
       settings: {
         ...(page.header ? { header: page.header } : {}),
+        ...(page.kind === "sections" && page.displayLocationId
+          ? { displayLocationId: page.displayLocationId }
+          : {}),
         ...(Object.keys(sectionPresentations).length > 0
           ? { sectionPresentations }
           : {}),
@@ -104,6 +107,7 @@ export function assembleSiteConfig(input: {
     .sort((a, b) => a.position - b.position)
     .map((page) => {
       const header = page.settings.header;
+      const displayLocationId = page.settings.displayLocationId;
       const sectionPresentations = page.settings.sectionPresentations;
       const presentations = sectionPresentations &&
         typeof sectionPresentations === "object" &&
@@ -121,6 +125,7 @@ export function assembleSiteConfig(input: {
       if (page.kind === "builtin") return base;
       return {
         ...base,
+        ...(typeof displayLocationId === "string" ? { displayLocationId } : {}),
         sections: (blocksByPage.get(page.id) ?? [])
           .sort((a, b) => a.position - b.position)
           .map((block) => {

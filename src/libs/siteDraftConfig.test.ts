@@ -359,6 +359,45 @@ test("round trips site-only location overrides through site settings", () => {
   }));
 });
 
+test("round trips manual locations and their dedicated page reference", () => {
+  const manualLocation = {
+    id: "manual-location-1",
+    name: "Academy North",
+    mapQuery: "Academy North Austin",
+    hoursDescription: "Weekdays from 9 AM to 5 PM.",
+  };
+  const configured = {
+    ...template,
+    manualLocations: [manualLocation],
+    pages: template.pages.map((page) => page.id === "home"
+      ? { ...page, displayLocationId: manualLocation.id }
+      : page),
+  };
+  const config = publishableConfig(configured);
+  const stored = splitSiteConfig(config);
+  const pages = stored.pages.map((page, index) => ({
+    ...page,
+    id: `page-manual-location-${index}`,
+  }));
+  const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+  const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+    ...block,
+    pageId: pageIds.get(page.pageKey)!,
+  })));
+  const rebuilt = assembleSiteConfig({
+    schemaVersion: stored.schemaVersion,
+    settings: stored.settings,
+    pages,
+    blocks,
+  });
+
+  expect(stored.settings.manualLocations).toEqual([manualLocation]);
+  expect(stored.pages[0]?.settings).toEqual(expect.objectContaining({
+    displayLocationId: manualLocation.id,
+  }));
+  expect(rebuilt).toEqual(config);
+});
+
 test("rejects a config outside the canonical site contract", () => {
   expect(() => splitSiteConfig({
     schemaVersion: 2,

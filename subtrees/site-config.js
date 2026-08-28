@@ -1068,6 +1068,17 @@ var SiteLocationOverrideSchema = z32.object({
   email: z32.string().trim().max(320).optional(),
   hoursDescription: z32.string().trim().max(2000).optional()
 }).strict();
+var SiteManualLocationSchema = SiteLocationOverrideSchema.extend({
+  id: z32.string().min(1).max(128),
+  name: z32.string().trim().min(1).max(200)
+}).strict();
+function manualLocationForDisplay(location) {
+  const { address, ...display } = location;
+  return {
+    ...display,
+    ...address ? { postalAddress: address } : {}
+  };
+}
 var SiteLocationConnectionSchema = z32.object({
   locationId: z32.string().min(1).max(128),
   isPrimary: z32.boolean(),
@@ -1543,6 +1554,7 @@ var SitePageBaseSchema = z35.object({
 });
 var SiteSectionsPageSchema = SitePageBaseSchema.extend({
   kind: z35.literal("sections").default("sections"),
+  displayLocationId: z35.string().min(1).max(128).optional(),
   sections: z35.array(SiteSectionSchema).min(1)
 }).strict();
 var SitePageTemplateSchema = z35.object({
@@ -1635,6 +1647,7 @@ var PublicSiteConfigObjectSchema = z35.object({
     hiddenLocationIds: z35.array(z35.string().min(1).max(128)).default([])
   }).strict(),
   locationConnections: z35.array(SiteLocationConnectionSchema).min(1).optional(),
+  manualLocations: z35.array(SiteManualLocationSchema).default([]),
   locationOverride: SiteLocationOverrideSchema.optional(),
   content: SiteContentSchema.default({
     programs: [],
@@ -1655,6 +1668,7 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
   const pagePaths = new Set;
   const formIds = new Set;
   const connectedLocationIds = new Set;
+  const manualLocationIds = new Set;
   const sandboxedEmbedIds = new Set(config.scriptsAndEmbeds.entries.flatMap((entry) => entry.kind === "sandboxed_embed" ? [entry.id] : []));
   const contentIds = {
     programs: new Set,
@@ -1709,11 +1723,28 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
         break;
       }
     }
+  }
+  for (const [index, location] of config.manualLocations.entries()) {
+    if (manualLocationIds.has(location.id) || connectedLocationIds.has(location.id)) {
+      issue.addIssue({
+        code: "custom",
+        message: `Duplicate display location ID: ${location.id}`,
+        path: ["manualLocations", index, "id"]
+      });
+    }
+    manualLocationIds.add(location.id);
+  }
+  const displayLocationIds = new Set([
+    ...connectedLocationIds,
+    ...manualLocationIds
+  ]);
+  const hasDisplayLocations = Boolean(config.locationConnections) || config.manualLocations.length > 0;
+  if (hasDisplayLocations) {
     for (const [index, locationId] of config.footer.hiddenLocationIds.entries()) {
-      if (!connectedLocationIds.has(locationId)) {
+      if (!displayLocationIds.has(locationId)) {
         issue.addIssue({
           code: "custom",
-          message: `Footer hides an unconnected location: ${locationId}`,
+          message: `Footer hides an unknown display location: ${locationId}`,
           path: ["footer", "hiddenLocationIds", index]
         });
       }
@@ -1814,6 +1845,13 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
     }
     if (page.kind === "builtin")
       continue;
+    if (page.displayLocationId && !displayLocationIds.has(page.displayLocationId)) {
+      issue.addIssue({
+        code: "custom",
+        message: `Page references an unknown display location: ${page.displayLocationId}`,
+        path: ["pages"]
+      });
+    }
     const sectionIds = new Set;
     const renderedSectionIds = new Set;
     for (const section of page.sections) {
@@ -1851,12 +1889,12 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
           path: ["pages"]
         });
       }
-      if (section.type === "contact_form_section" && config.locationConnections) {
+      if (section.type === "contact_form_section" && hasDisplayLocations) {
         for (const locationId of section.props.hiddenLocationIds) {
-          if (!connectedLocationIds.has(locationId)) {
+          if (!displayLocationIds.has(locationId)) {
             issue.addIssue({
               code: "custom",
-              message: `Contact section hides an unconnected location: ${locationId}`,
+              message: `Contact section hides an unknown display location: ${locationId}`,
               path: ["pages"]
             });
           }
@@ -2160,33 +2198,64 @@ function siteLocationReferences(config, locationId) {
   return config.pages.flatMap((page) => {
     if (page.kind === "builtin")
       return [];
-    return page.sections.flatMap((section) => {
-      const formPlacement = getNativeFormPlacement(section);
-      const liveLocationIds = section.type === "schedules" || section.type === "plans" ? section.props.locationIds : [];
-      return formPlacement?.fixedLocationId === locationId || liveLocationIds.includes(locationId) ? [`${page.path} \xB7 ${section.id}`] : [];
-    });
+    const pageReference = page.displayLocationId === locationId ? [`${page.path} \xB7 location page`] : [];
+    return [
+      ...pageReference,
+      ...page.sections.flatMap((section) => {
+        const formPlacement = getNativeFormPlacement(section);
+        const liveLocationIds = section.type === "schedules" || section.type === "plans" ? section.props.locationIds : [];
+        return formPlacement?.fixedLocationId === locationId || liveLocationIds.includes(locationId) ? [`${page.path} \xB7 ${section.id}`] : [];
+      })
+    ];
   });
 }
-function withStoredLocationConnections(config, connections) {
-  const locationConnections = normalizeStoredLocationConnections(connections);
-  const remaining = new Set(locationConnections.map((connection) => connection.locationId));
-  return StoredSiteConfigSchema.parse({
-    ...config,
-    locationConnections,
+function pruneLocationReferences(config, remaining) {
+  return {
     footer: {
       ...config.footer,
       hiddenLocationIds: config.footer.hiddenLocationIds.filter((id2) => remaining.has(id2))
     },
-    pages: config.pages.map((page) => page.kind === "builtin" ? page : {
-      ...page,
-      sections: page.sections.map((section) => section.type === "contact_form_section" ? {
-        ...section,
-        props: {
-          ...section.props,
-          hiddenLocationIds: section.props.hiddenLocationIds.filter((id2) => remaining.has(id2))
-        }
-      } : section)
+    pages: config.pages.map((page) => {
+      if (page.kind === "builtin")
+        return page;
+      const nextPage = { ...page };
+      if (nextPage.displayLocationId && !remaining.has(nextPage.displayLocationId)) {
+        delete nextPage.displayLocationId;
+      }
+      return {
+        ...nextPage,
+        sections: nextPage.sections.map((section) => section.type === "contact_form_section" ? {
+          ...section,
+          props: {
+            ...section.props,
+            hiddenLocationIds: section.props.hiddenLocationIds.filter((id2) => remaining.has(id2))
+          }
+        } : section)
+      };
     })
+  };
+}
+function withStoredLocationConnections(config, connections) {
+  const locationConnections = normalizeStoredLocationConnections(connections);
+  const remaining = new Set([
+    ...locationConnections.map((connection) => connection.locationId),
+    ...config.manualLocations.map((location) => location.id)
+  ]);
+  return StoredSiteConfigSchema.parse({
+    ...config,
+    locationConnections,
+    ...pruneLocationReferences(config, remaining)
+  });
+}
+function withManualLocations(config, manualLocations) {
+  const remaining = new Set([
+    ...config.locationConnections.map((connection) => connection.locationId),
+    ...manualLocations.map((location) => location.id)
+  ]);
+  return StoredSiteConfigSchema.parse({
+    ...config,
+    manualLocations,
+    ...pruneLocationReferences(config, remaining)
   });
 }
 function storedLocationConnectionsArePublishable(connections) {
@@ -3673,6 +3742,7 @@ function storedSiteConfigFromStored(input, preset, fallbackConnections, options 
 }
 export {
   withStoredLocationConnections,
+  withManualLocations,
   withLocationSlug,
   validateFormValues,
   toVideoEmbedUrl,
@@ -3700,6 +3770,7 @@ export {
   normalizeSitePageTemplateV2,
   normalizeSiteConfigV2,
   materializeSitePageTemplate,
+  manualLocationForDisplay,
   locationBySlug,
   locationById,
   legacyDraftToPublicSiteConfig,
@@ -3740,6 +3811,7 @@ export {
   SitePageHeaderSchema,
   SiteOpeningHoursSchema,
   SiteMetaPixelEntrySchema,
+  SiteManualLocationSchema,
   SiteLocationSlugSchema,
   SiteLocationSchema,
   SiteLocationOverrideSchema,
