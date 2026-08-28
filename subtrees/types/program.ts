@@ -23,6 +23,7 @@ export type PlanProgram = typeof planPrograms.$inferSelect & {
 
 export type SessionException = typeof sessionExceptions.$inferSelect & {
   session?: ProgramSession;
+  reservations?: Reservation[];
 };
 
 export type ProgramSession = typeof programSessions.$inferSelect & {
@@ -35,7 +36,7 @@ export type ProgramSession = typeof programSessions.$inferSelect & {
 }
 
 
-export type ExtendedProgramSession = ProgramSession & {
+export type SessionOccurrence = ProgramSession & {
   closure: LocationClosure | null;
   availability: number;
   isFull: boolean;
@@ -46,5 +47,7 @@ export type ExtendedProgramSession = ProgramSession & {
   utcStartTime: Date;
   utcEndTime: Date;
   holidayName?: string;
+  exceptionId?: string;
   exception?: SessionException;
 }
+

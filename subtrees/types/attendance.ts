@@ -1,7 +1,7 @@
 import { attendances } from "../schemas/attendances";
 import { reservations } from "../schemas/reservations";
 import type { Member, MemberPackage, MemberSubscription } from "./member";
-import type { ProgramSession } from "./program";
+import type { ProgramSession, SessionException } from "./program";
 
 export type Attendance = typeof attendances.$inferSelect & {
   reservation?: Reservation;
@@ -17,6 +17,7 @@ export type InsertReservation = typeof reservations.$inferInsert;
 // Full reservation type - combi nes base fields with optional schema fields
 export type Reservation = typeof reservations.$inferSelect & {
   session?: ProgramSession | null;
+  exception?: SessionException | null;
   member?: Member;
   memberSubscription?: MemberSubscription | null;
   memberPackage?: MemberPackage | null;

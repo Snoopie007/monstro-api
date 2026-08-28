@@ -350,6 +350,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	}),
 	taxRates: many(taxRates),
 	locationClosures: many(locationClosures),
+	sessionExceptions: many(sessionExceptions),
 	products: many(products),
 	orders: many(orders),
 	rankProcesses: many(rankProcesses),
@@ -760,11 +761,16 @@ export const programSessionsRelations = relations(programSessions, ({ one, many 
 	exceptions: many(sessionExceptions),
 }));
 
-export const sessionExceptionsRelations = relations(sessionExceptions, ({ one }) => ({
+export const sessionExceptionsRelations = relations(sessionExceptions, ({ one, many }) => ({
 	session: one(programSessions, {
 		fields: [sessionExceptions.sessionId],
 		references: [programSessions.id],
 	}),
+	location: one(locations, {
+		fields: [sessionExceptions.locationId],
+		references: [locations.id],
+	}),
+	reservations: many(reservations),
 }));
 
 export const planProgramsRelations = relations(planPrograms, ({ one }) => ({
@@ -801,6 +807,10 @@ export const reservationsRelations = relations(reservations, ({ one }) => ({
 	session: one(programSessions, {
 		fields: [reservations.sessionId],
 		references: [programSessions.id],
+	}),
+	exception: one(sessionExceptions, {
+		fields: [reservations.exceptionId],
+		references: [sessionExceptions.id],
 	}),
 	member: one(members, {
 		fields: [reservations.memberId],
