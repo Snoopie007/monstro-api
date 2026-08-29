@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { retrySubscriptionPayment, type RetryPaymentErrorCode } from "@/handlers/subscription/retryPayment";
 import type { ToolArgs, ToolExecutorResult } from "../type";
 import {
     argString,
@@ -11,6 +12,16 @@ import {
     pauseClarify,
 } from "../utils";
 
+const retryToolMessage: Record<RetryPaymentErrorCode, string> = {
+    SUBSCRIPTION_NOT_FOUND: "We couldn't retry that subscription.",
+    SUBSCRIPTION_CANCELED: "This subscription is canceled and cannot be retried.",
+    NO_PAYMENT_METHOD: "This subscription has no card on file.",
+    INVOICE_NOT_FOUND: "No unpaid invoice found for this subscription.",
+    TRANSACTION_NOT_FOUND: "No unpaid invoice found for this subscription.",
+    LOCATION_INACTIVE: "This location isn't accepting payments right now.",
+    CHARGE_FAILED: "Payment retry failed.",
+};
+
 function subLabel(sub: {
     pricing?: { name: string; price: number; plan?: { name: string } | null } | null;
 }) {
@@ -19,56 +30,13 @@ function subLabel(sub: {
     return `${name} · ${amount} · unpaid`;
 }
 
-async function retryUnpaidSubscription(lid: string, mid: string, sid: string) {
-    const sub = await db.query.memberSubscriptions.findFirst({
-        where: (s, { and, eq }) => and(
-            eq(s.id, sid),
-            eq(s.status, "unpaid"),
-        ),
-        columns: { id: true, cancelAt: true },
-    });
-    if (!sub) return null;
-    if (sub.cancelAt && sub.cancelAt.getTime() <= Date.now()) {
-        return {
-            content: jsonResult({
-                ok: false,
-                error: "This subscription is canceled and cannot be retried.",
-                ui: actionCard("error", "This subscription is canceled and cannot be retried."),
-            }),
-        };
-    }
-
-    const failedInvoice = await db.query.memberInvoices.findFirst({
-        where: (i, { and, eq }) => and(
-            eq(i.locationId, lid),
-            eq(i.memberId, mid),
-            eq(i.memberPlanId, sid),
-            eq(i.status, "unpaid"),
-        ),
-        columns: { id: true, transactionId: true },
-
-    })
-
-    if (!failedInvoice) {
-        return {
-            content: jsonResult({
-                ok: false,
-                error: "No unpaid invoice found for this subscription.",
-                ui: actionCard("error", "No unpaid invoice found for this subscription."),
-            }),
-        };
-    }
-
-
-
+function retryError(code: RetryPaymentErrorCode, fallback: string): ToolExecutorResult {
+    const message = code === "CHARGE_FAILED" ? fallback : retryToolMessage[code];
     return {
         content: jsonResult({
-            ok: true,
-            status: "retried",
-            subscriptionId: sub.id,
-            memberId: mid,
-            transactionId: failedInvoice.id,
-            ui: actionCard("success", "Done. Payment retry was submitted."),
+            ok: false,
+            error: message,
+            ui: actionCard("error", message),
         }),
     };
 }
@@ -78,8 +46,23 @@ export async function executeRetryFailed(args: ToolArgs, lid: string): Promise<T
     const sid = argString(args, "subscriptionId", "sid");
 
     if (sid && mid) {
-        const retried = await retryUnpaidSubscription(lid, mid, sid);
-        if (retried) return retried;
+        try {
+            const result = await retrySubscriptionPayment({ lid, memberPlanId: sid });
+            if (!result.ok) return retryError(result.code, result.message);
+            return {
+                content: jsonResult({
+                    ok: true,
+                    status: "retried",
+                    subscriptionId: result.subscriptionId,
+                    memberId: mid,
+                    transactionId: result.transactionId,
+                    ui: actionCard("success", "Done. Payment retry was submitted."),
+                }),
+            };
+        } catch (error) {
+            console.error(error);
+            return retryError("CHARGE_FAILED", "Payment retry failed.");
+        }
     }
 
     if (!mid) {

@@ -3,6 +3,7 @@ import { db } from "@/db/db";
 import { slAgentRoutes } from "./agent";
 import { slMemberRoutes } from "./members";
 import { slProgramRoutes } from "./programs";
+import { slMemberPlanRoutes } from "./plans";
 
 
 export const staffLocationsRoutes = new Elysia({ prefix: "/locations" })
@@ -45,7 +46,6 @@ export const staffLocationsRoutes = new Elysia({ prefix: "/locations" })
                 return status(404, { error: "Staff not found" });
             }
             const locations = staff.staffLocations.map((sl) => sl.location);
-            console.log(locations);
             return status(200, locations);
         } catch (error) {
             console.error(error);
@@ -59,6 +59,7 @@ export const staffLocationsRoutes = new Elysia({ prefix: "/locations" })
     .group("/:lid", (app) => {
         app.use(slMemberRoutes);
         app.use(slProgramRoutes);
+        app.use(slMemberPlanRoutes);
         app.use(slAgentRoutes);
         return app;
     })
