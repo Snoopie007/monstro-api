@@ -1,6 +1,8 @@
 import { db } from "@/db/db";
 import { getSessionState } from "@/routes/protected/locations/reservations/utils";
 import { memberPackages, memberSubscriptions, reservations } from "@subtrees/schemas";
+import type { LocationClosure, SessionException } from "@subtrees/types";
+import { findOverlappingLocationClosure } from "@subtrees/utils";
 import { addMinutes, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { and, count, eq, gte, inArray, lte } from "drizzle-orm";
@@ -16,6 +18,22 @@ import {
     pauseClarify,
 } from "../utils";
 
+type SessionTemplate = { id: string; day: number; time: string; duration: number };
+type ExceptionRow = Pick<SessionException, "sessionId" | "originalDate" | "startsAt" | "endsAt" | "isCancelled" | "reason">;
+type ExceptionMap = Map<string, ExceptionRow>;
+
+type ScheduleLookups = {
+    sessions: SessionTemplate[];
+    timezone: string;
+    time: string;
+    closures: LocationClosure[];
+    exceptions: ExceptionMap;
+};
+
+function exceptionKey(sessionId: string, date: string) {
+    return `${sessionId}|${date}`;
+}
+
 function formatTime(time: string) {
     const [hours, minutes] = time.split(":").map(Number);
     const hour = hours ?? 0;
@@ -23,23 +41,62 @@ function formatTime(time: string) {
     return `${hour % 12 || 12}:${String(minutes ?? 0).padStart(2, "0")} ${suffix}`;
 }
 
-function classDateOptions(
-    sessions: Array<{ day: number; time: string }>,
+function templateWindow(session: SessionTemplate, date: string, timezone: string) {
+    const [year, month, day] = date.split("-").map(Number);
+    const [hours, minutes] = session.time.split(":").map(Number);
+    const startOn = fromZonedTime(
+        new Date(year ?? 0, (month ?? 1) - 1, day ?? 1, hours ?? 0, minutes ?? 0, 0, 0),
+        timezone,
+    );
+    return { startOn, endOn: addMinutes(startOn, session.duration) };
+}
+
+function occurrenceWindow(
+    session: SessionTemplate,
+    date: string,
     timezone: string,
-    time: string,
+    exception: ExceptionRow | undefined,
 ) {
+    if (exception?.isCancelled) return null;
+    if (exception) return { startOn: exception.startsAt, endOn: exception.endsAt };
+    return templateWindow(session, date, timezone);
+}
+
+function isOpen(
+    session: SessionTemplate,
+    date: string,
+    lookups: ScheduleLookups,
+) {
+    const window = occurrenceWindow(
+        session,
+        date,
+        lookups.timezone,
+        lookups.exceptions.get(exceptionKey(session.id, date)),
+    );
+    if (!window) return false;
+    return !findOverlappingLocationClosure(
+        lookups.closures,
+        window.startOn,
+        window.endOn,
+        lookups.timezone,
+    );
+}
+
+function classDateOptions(lookups: ScheduleLookups) {
     const options: Array<{ id: string; label: string }> = [];
-    for (let offset = 0; offset < 7; offset += 1) {
-        const local = toZonedTime(new Date(), timezone);
+    for (let offset = 0; options.length < 5 && offset < 28; offset += 1) {
+        const local = toZonedTime(new Date(), lookups.timezone);
         local.setDate(local.getDate() + offset);
+        const date = format(local, "yyyy-MM-dd");
         const weekday = local.getDay();
-        const hasClass = sessions.some((session) => {
+        const available = lookups.sessions.some((session) => {
             if (session.day !== weekday) return false;
-            return !time || session.time.slice(0, 5) === time;
+            if (lookups.time && session.time.slice(0, 5) !== lookups.time) return false;
+            return isOpen(session, date, lookups);
         });
-        if (!hasClass) continue;
+        if (!available) continue;
         options.push({
-            id: format(local, "yyyy-MM-dd"),
+            id: date,
             label: offset === 0 ? "Today" : offset === 1 ? "Tomorrow" : format(local, "EEE, MMM d"),
         });
     }
@@ -47,15 +104,24 @@ function classDateOptions(
 }
 
 function classTimeOptions(
-    sessions: Array<{ id: string; time: string }>,
+    sessions: SessionTemplate[],
     programName: string,
+    date: string,
+    lookups: ScheduleLookups,
 ) {
     return [...sessions]
+        .filter((session) => isOpen(session, date, lookups))
         .sort((a, b) => a.time.localeCompare(b.time))
-        .map((session) => ({
-            id: session.id,
-            label: `${formatTime(session.time.slice(0, 5))} · ${programName}`,
-        }));
+        .map((session) => {
+            const exception = lookups.exceptions.get(exceptionKey(session.id, date));
+            const clock = exception && !exception.isCancelled
+                ? format(toZonedTime(exception.startsAt, lookups.timezone), "HH:mm")
+                : session.time.slice(0, 5);
+            return {
+                id: session.id,
+                label: `${formatTime(clock)} · ${programName}`,
+            };
+        });
 }
 
 function periodBounds(startOn: Date, timezone: string, interval: "week" | "month") {
@@ -253,16 +319,44 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
 
 
     // 4. Date: omit → today;
-    // AI should pass yyyy-MM-dd. Match sessions; if none, offer the next 7 days.
+    // AI should pass yyyy-MM-dd. Match sessions; if none, offer the next 5 open dates.
     const location = await db.query.locations.findFirst({
         where: (row, { eq: eqLoc }) => eqLoc(row.id, lid),
         columns: { timezone: true },
+        with: {
+            locationClosures: true,
+        },
     });
 
     const timezone = location?.timezone || "UTC";
-
     const today = format(toZonedTime(new Date(), timezone), "yyyy-MM-dd");
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) date = today;
+
+    const exceptionRows = await db.query.sessionExceptions.findMany({
+        where: (se, { and, eq, inArray, gte }) => and(
+            eq(se.locationId, lid),
+            inArray(se.sessionId, program.sessions.map((session) => session.id)),
+            gte(se.originalDate, today),
+        ),
+        columns: {
+            sessionId: true,
+            originalDate: true,
+            startsAt: true,
+            endsAt: true,
+            isCancelled: true,
+            reason: true,
+        },
+    });
+
+    const lookups: ScheduleLookups = {
+        sessions: program.sessions,
+        timezone,
+        time,
+        closures: location?.locationClosures ?? [],
+        exceptions: new Map(
+            exceptionRows.map((row) => [exceptionKey(row.sessionId, row.originalDate), row]),
+        ),
+    };
 
     const [year, month, day] = date.split("-").map(Number);
     const weekday = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).getDay();
@@ -271,28 +365,56 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
         ? daySessions.filter((session) => session.time.slice(0, 5) === time)
         : daySessions;
     if (pickedSessionId) matching = matching.filter((session) => session.id === pickedSessionId);
+    matching = matching.filter((session) => isOpen(session, date, lookups));
 
     if (matching.length !== 1) {
-        if (daySessions.length > 0) {
-            return pauseClarify("Which time should I book?",
-                classTimeOptions(matching.length > 1 ? matching : daySessions, program.name),
+        const candidates = matching.length > 1 ? matching : daySessions;
+        const timeChoices = classTimeOptions(candidates, program.name, date, lookups);
+        if (timeChoices.length === 1) {
+            matching = candidates.filter((session) => session.id === timeChoices[0]!.id);
+        } else if (timeChoices.length > 1) {
+            return pauseClarify("Which time should I book?", timeChoices);
+        } else {
+            return pauseClarify(
+                date === today
+                    ? `No ${program.name} classes today. Pick another date.`
+                    : `No ${program.name} classes on ${date}. Pick another date.`,
+                classDateOptions(lookups),
             );
         }
-        return pauseClarify(
-            date === today
-                ? `No ${program.name} classes today. Pick another date.`
-                : `No ${program.name} classes on ${date}. Pick another date.`,
-            classDateOptions(program.sessions, timezone, time),
-        );
     }
 
     const selectedSession = matching[0]!;
-    const [hours, minutes] = selectedSession.time.split(":").map(Number);
-    const startOn = fromZonedTime(
-        new Date(year ?? 0, (month ?? 1) - 1, day ?? 1, hours ?? 0, minutes ?? 0, 0, 0),
+    const exception = lookups.exceptions.get(exceptionKey(selectedSession.id, date));
+    const window = occurrenceWindow(selectedSession, date, timezone, exception);
+    if (!window) {
+        return pauseClarify(
+            exception?.reason
+                ? `${program.name} is cancelled (${exception.reason}). Pick another date.`
+                : `No ${program.name} classes on ${date}. Pick another date.`,
+            classDateOptions(lookups),
+        );
+    }
+
+    const closure = findOverlappingLocationClosure(
+        lookups.closures,
+        window.startOn,
+        window.endOn,
         timezone,
     );
-    const displayTime = formatTime(selectedSession.time);
+    if (closure) {
+        return pauseClarify(
+            `No ${program.name} on ${date} (${closure.reason}). Pick another date.`,
+            classDateOptions(lookups),
+        );
+    }
+
+    const { startOn, endOn } = window;
+    const displayTime = formatTime(
+        exception
+            ? format(toZonedTime(exception.startsAt, timezone), "HH:mm")
+            : selectedSession.time.slice(0, 5),
+    );
 
     const { isFull, isReserved } = await getSessionState({
         startTime: startOn,
@@ -391,7 +513,7 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
             programName: program.name,
             sessionId: selectedSession.id,
             startOn,
-            endOn: addMinutes(startOn, selectedSession.duration),
+            endOn,
             programId: program.id,
             ...(isPackage
                 ? { memberPackageId: selectedPlan.id }
