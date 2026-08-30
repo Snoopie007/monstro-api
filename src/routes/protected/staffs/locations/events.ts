@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import {
     handleFreeEventRegistration,
     handlePaidEventRegistration,
-    mapEventRegistrationError
+    mapEventRegistrationError,
 } from "@/handlers/event";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
@@ -23,16 +23,19 @@ const EventRegisterBody = t.Object({
 
 
 export async function locationEventRoutes(app: Elysia) {
-    app.get("/events", async ({ params, status }) => {
+    app.get("/events", async ({ params, query, status }) => {
         const today = new Date();
         const { lid } = params;
+        const { upcomingOnly } = query;
         try {
             const events = await db.query.locationEvents.findMany({
                 where: (locationEvents, { eq, and, gte }) => and(
                     eq(locationEvents.locationId, lid),
-                    gte(locationEvents.startsAt, today),
                     eq(locationEvents.status, "published"),
                 ),
+                with: {
+                    tickets: true,
+                },
                 orderBy: (locationEvents, { asc }) => asc(locationEvents.startsAt),
             });
 
@@ -44,47 +47,28 @@ export async function locationEventRoutes(app: Elysia) {
     }, {
         params: t.Object({
             lid: t.String(),
-
-        })
+            staffId: t.String(),
+        }),
     })
 
-    app.get('/events/upcoming', async ({ params, status }) => {
-        const { lid } = params;
-        try {
-            const event = await db.query.locationEvents.findFirst({
-                where: (locationEvents, { eq }) => eq(locationEvents.locationId, lid),
-                orderBy: (locationEvents, { asc }) => asc(locationEvents.startsAt),
-            });
-            if (!event) return status(404, { error: "Event not found" });
-            return status(200, event);
-        } catch (error) {
-            console.error(error);
-            return status(500, { error: "Unable to load event" });
-        }
-    }, {
-        params: t.Object({
-            lid: t.String()
-        }),
-    });
-    app.group('/events/:eventId', (app) => {
+
+    app.group('/events/:eventId/registrations', (app) => {
         app.get('/', async ({ params, status }) => {
             const { eventId } = params;
             try {
-                const event = await db.query.locationEvents.findFirst({
-                    where: (locationEvents, { eq }) => eq(locationEvents.id, eventId),
-                    with: {
-                        tickets: true,
-                    }
+                const registrations = await db.query.eventRegistrations.findMany({
+                    where: (eventRegistrations, { eq }) => eq(eventRegistrations.eventId, eventId),
                 });
-                return status(200, event);
+                return status(200, registrations);
             } catch (error) {
                 console.error(error);
-                return status(500, { error: "Unable to load event" });
+                return status(500, { error: "Unable to load registrations" });
             }
         }, {
             params: t.Object({
                 lid: t.String(),
                 eventId: t.String(),
+                staffId: t.String(),
             }),
         });
         app.post('/register/free', async ({ params, body, status }) => {

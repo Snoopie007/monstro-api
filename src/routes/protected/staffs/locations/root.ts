@@ -4,6 +4,7 @@ import { slAgentRoutes } from "./agent";
 import { slMemberRoutes } from "./members";
 import { slProgramRoutes } from "./programs";
 import { slMemberPlanRoutes } from "./plans";
+import { locationEventRoutes } from "./events";
 
 
 export const staffLocationsRoutes = new Elysia({ prefix: "/locations" })
@@ -61,5 +62,6 @@ export const staffLocationsRoutes = new Elysia({ prefix: "/locations" })
         app.use(slProgramRoutes);
         app.use(slMemberPlanRoutes);
         app.use(slAgentRoutes);
+        app.use(locationEventRoutes);
         return app;
     })
