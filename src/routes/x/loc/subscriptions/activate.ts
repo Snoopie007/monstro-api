@@ -19,6 +19,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
+import Stripe from "stripe";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
 
 type GatewayService = "stripe" | "square";
@@ -306,8 +307,9 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             } else if (gatewayService === "stripe") {
                 const stripe = new StripePaymentGateway(integration.accessToken);
                 const paymentResult = await withTimeout(
-                    stripe.createCharge(memberLocation.gatewayCustomerId!, paymentMethod.value.id, {
-                        ...chargeDetails,
+                    stripe.createChargeWithoutLineItems(memberLocation.gatewayCustomerId!, paymentMethod.value.id, {
+                        total: chargeDetails.total,
+                        feesAmount: chargeDetails.feesAmount,
                         description: chargeDescription,
                         metadata: {
                             lid,
@@ -318,7 +320,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                             memberSubscriptionId: sub.id,
                             gatewayService,
                         },
-                        productName: planName,
                         currency: currency || "usd",
                     }),
                     30000,
@@ -347,6 +348,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to process payment";
+            const stripeError = error instanceof Stripe.errors.StripeError ? error : null;
             console.error("[x/subscriptions/activate] process payment failed", {
                 lid,
                 sid,
@@ -354,8 +356,25 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 paymentMethodId,
                 gatewayService,
                 message,
+                stripeType: stripeError?.type,
+                stripeCode: stripeError?.code,
+                stripeDeclineCode: stripeError?.decline_code,
+                stripeParam: stripeError?.param,
+                stripeRequestId: stripeError?.requestId,
+                stripeStatusCode: stripeError?.statusCode,
             });
-            return status(502, { error: message });
+            if (!stripeError) return status(502, { error: message });
+            return status(502, {
+                error: message,
+                code: stripeError.code || "STRIPE_ERROR",
+                details: {
+                    type: stripeError.type,
+                    declineCode: stripeError.decline_code,
+                    param: stripeError.param,
+                    requestId: stripeError.requestId,
+                    statusCode: stripeError.statusCode,
+                },
+            });
         }
 
         const finalizedImmediately = gatewayService === "square" || chargeDetails.total === 0;
