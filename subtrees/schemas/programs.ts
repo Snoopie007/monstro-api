@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, integer, pgTable, primaryKey, smallint, text, time, timestamp, unique, uuid } from "drizzle-orm/pg-core";
-import { ProgramStatusEnum } from "./DatabaseEnums";
+import { ProgramSessionModeEnum, ProgramStatusEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { memberPlans } from "./MemberPlan";
 import { members } from "./members";
@@ -22,6 +22,7 @@ export const programs = pgTable("programs", {
 	cancelationThreshold: smallint("cancelation_threshold").notNull().default(0),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	status: ProgramStatusEnum("status").notNull().default("active"),
+	sessionMode: ProgramSessionModeEnum("session_mode").notNull().default("group"),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
 

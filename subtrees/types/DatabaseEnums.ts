@@ -29,6 +29,7 @@ export type RoleColor = "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "o
 export type TransactionStatus = 'pending' | 'paid' | 'failed' | 'disputed';
 export type StaffStatus = 'active' | 'inactive';
 export type ProgramStatus = 'active' | 'inactive' | 'archived';
+export type ProgramSessionMode = 'group' | 'private';
 export type MigrateStatus = 'pending' | 'completed';
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'archived';
 export type EventType = 'in_person' | 'online';

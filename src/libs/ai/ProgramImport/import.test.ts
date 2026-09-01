@@ -15,6 +15,15 @@ test("defaults invalid values extracted from incomplete program documents", () =
         capacity: 10,
         minAge: 3,
         maxAge: 18,
+        sessionMode: "group",
         sessions: [{ day: 1, time: "12:00:00", duration: 30 }],
     }]);
+});
+
+test("preserves a vendor-selected private session type", () => {
+    expect(normalizeProgramDrafts([{
+        name: "Private Piano",
+        sessionMode: "private",
+        sessions: [{ day: 2, time: "15:00", duration: 45 }],
+    }])[0]?.sessionMode).toBe("private");
 });
