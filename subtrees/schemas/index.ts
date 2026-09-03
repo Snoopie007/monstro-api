@@ -21,6 +21,7 @@ export * from "./members";
 export * from "./MigrateMembers";
 export * from "./permissions";
 export * from "./programs";
+export * from "./privateReservations";
 export * from "./promos";
 export * from "./rank";
 export * from "./reservations";

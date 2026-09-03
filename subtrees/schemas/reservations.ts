@@ -18,12 +18,14 @@ import { members } from "./members";
 import { programSessions, programs } from "./programs";
 import { staffs } from "./staffs";
 import { sessionExceptions } from "./sessionExceptions";
+import { privateReservations } from "./privateReservations";
 
 
 export const reservations = pgTable("reservations", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('rsv_')`),
 	exceptionId: text("exception_id").references(() => sessionExceptions.id, { onDelete: "set null" }),
 	sessionId: text("session_id").references(() => programSessions.id, { onDelete: "set null" }),
+	privateReservationId: text("private_reservation_id").references(() => privateReservations.id, { onDelete: "set null" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	memberSubscriptionId: text("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
 	memberPackageId: text("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
@@ -56,6 +58,9 @@ export const reservations = pgTable("reservations", {
 	uniqueIndex("reservations_member_session_occurrence_active_uq")
 		.on(t.memberId, t.sessionId, t.startOn)
 		.where(sql`${t.status} in ('confirmed', 'completed')`),
+	uniqueIndex("reservations_private_reservation_occurrence_uq")
+		.on(t.privateReservationId, t.startOn)
+		.where(sql`${t.privateReservationId} is not null`),
 ]);
 
 export const memberAutoSchedule = pgTable("member_auto_schedule", {

@@ -25,6 +25,7 @@ export const TransactionStatusEnum = pgEnum("transaction_status", ["pending", "p
 export const StaffStatusEnum = pgEnum("staff_status", ["active", "inactive"]);
 export const ProgramStatusEnum = pgEnum("program_status", ["active", "inactive", "archived"]);
 export const ProgramSessionModeEnum = pgEnum("program_session_mode", ["group", "private"]);
+export const PrivateReservationStatusEnum = pgEnum("private_reservation_status", ["active", "ended", "cancelled"]);
 export const MigrateStatusEnum = pgEnum("migrate_status", ["pending", "completed"]);
 export const CustomFieldTypeEnum = pgEnum("custom_field_type", ["text", "number", "date", "boolean", "select", "multi-select"]);
 
