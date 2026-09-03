@@ -52,6 +52,9 @@ export const reservations = pgTable("reservations", {
 	index("idx_reservations_program_id").on(t.programId),
 	index("idx_reservations_session_id").on(t.sessionId),
 	index("idx_reservations_status").on(t.status),
+	index("idx_reservations_confirmed_package_start")
+		.on(t.memberPackageId, t.startOn)
+		.where(sql`${t.status} = 'confirmed' and ${t.memberPackageId} is not null`),
 	index("idx_reservations_is_make_up").on(t.isMakeUpClass).where(sql`${t.isMakeUpClass} = true`),
 	unique("session_package_unique").on(t.startOn, t.memberId, t.sessionId, t.memberPackageId),
 	unique("session_subscription_unique").on(t.startOn, t.memberId, t.sessionId, t.memberSubscriptionId),

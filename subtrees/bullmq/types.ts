@@ -117,6 +117,15 @@ export const CheckMissedClassSchema = z.object({
     class: ClassSchema,
 });
 
+export const PRIVATE_RESERVATION_MATERIALIZE_JOB = "private-reservation:materialize";
+export const PRIVATE_RESERVATION_REMINDER_JOB = "private-reservation:reminder";
+export const PRIVATE_RESERVATION_SWEEP_JOB = "private-reservation:sweep";
+
+export const PrivateReservationMaterializationJobSchema = z.object({
+    privateReservationId: z.string().min(1),
+    locationId: z.string().min(1),
+});
+
 
 // retry payment jobs
 export const RetrySubPaymentSchema = z.object({
@@ -147,6 +156,7 @@ export type RankAttendanceJobData = z.infer<typeof RankAttendanceJobSchema>;
 export type RetrySubPaymentData = z.infer<typeof RetrySubPaymentSchema>;
 export type RetryWalletData = z.infer<typeof RetryWalletSchema>;
 export type CheckMissedClassData = z.infer<typeof CheckMissedClassSchema>;
+export type PrivateReservationMaterializationJobData = z.infer<typeof PrivateReservationMaterializationJobSchema>;
 export type ClassReminderData = z.infer<typeof ClassReminderJobSchema>;
 export type RRClassData = z.infer<typeof RRClassSchema>;
 export type DiscountData = z.infer<typeof DiscountSchema>;

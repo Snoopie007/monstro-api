@@ -28,6 +28,9 @@ export const privateReservations = pgTable("private_reservations", {
 		sql`${table.endDate} >= ${table.startDate}`,
 	),
 	index("idx_private_reservations_location_status").on(table.locationId, table.status),
+	index("idx_private_reservations_active_sweep")
+		.on(table.id, table.locationId)
+		.where(sql`${table.status} = 'active'`),
 	index("idx_private_reservations_member_id").on(table.memberId),
 	index("idx_private_reservations_active_session_dates")
 		.on(table.sessionId, table.startDate, table.endDate)
