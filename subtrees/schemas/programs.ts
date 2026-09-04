@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, integer, pgTable, primaryKey, smallint, text, time, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, primaryKey, smallint, text, time, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { ProgramSessionModeEnum, ProgramStatusEnum } from "./DatabaseEnums";
 import { locations } from "./locations";
 import { memberPlans } from "./MemberPlan";
@@ -38,9 +38,14 @@ export const programSessions = pgTable("program_sessions", {
 	duration: smallint("duration").notNull().default(0),
 	day: smallint("day").notNull().default(1),
 	staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),
+	reservedMemberId: text("reserved_member_id").references(() => members.id, { onDelete: "set null" }),
+	nextReservationJobId: text("next_reservation_job_id"),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-}, (t) => [unique("unique_program_session").on(t.programId, t.time, t.duration, t.day)]);
+}, (t) => [
+	unique("unique_program_session").on(t.programId, t.time, t.duration, t.day),
+	index("idx_program_sessions_reserved_member_id").on(t.reservedMemberId),
+]);
 
 
 export const sessionWaitlist = pgTable("session_waitlist", {

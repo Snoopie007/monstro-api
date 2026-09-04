@@ -20,10 +20,10 @@ test("defaults invalid values extracted from incomplete program documents", () =
     }]);
 });
 
-test("preserves a vendor-selected private session type", () => {
+test("preserves a vendor-selected 1-on-1 session type", () => {
     expect(normalizeProgramDrafts([{
-        name: "Private Piano",
-        sessionMode: "private",
+        name: "Piano",
+        sessionMode: "one_on_one",
         sessions: [{ day: 2, time: "15:00", duration: 45 }],
-    }])[0]?.sessionMode).toBe("private");
+    }])[0]?.sessionMode).toBe("one_on_one");
 });

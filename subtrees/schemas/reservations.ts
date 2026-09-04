@@ -9,7 +9,6 @@ import {
 	time,
 	timestamp,
 	uniqueIndex,
-	unique,
 } from "drizzle-orm/pg-core";
 import { ReservationStatusEnum } from "./DatabaseEnums";
 import { memberPackages, memberSubscriptions } from "./MemberEnrollment";
@@ -18,14 +17,12 @@ import { members } from "./members";
 import { programSessions, programs } from "./programs";
 import { staffs } from "./staffs";
 import { sessionExceptions } from "./sessionExceptions";
-import { privateReservations } from "./privateReservations";
 
 
 export const reservations = pgTable("reservations", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('rsv_')`),
 	exceptionId: text("exception_id").references(() => sessionExceptions.id, { onDelete: "set null" }),
 	sessionId: text("session_id").references(() => programSessions.id, { onDelete: "set null" }),
-	privateReservationId: text("private_reservation_id").references(() => privateReservations.id, { onDelete: "set null" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	memberSubscriptionId: text("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
 	memberPackageId: text("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
@@ -56,14 +53,9 @@ export const reservations = pgTable("reservations", {
 		.on(t.memberPackageId, t.startOn)
 		.where(sql`${t.status} = 'confirmed' and ${t.memberPackageId} is not null`),
 	index("idx_reservations_is_make_up").on(t.isMakeUpClass).where(sql`${t.isMakeUpClass} = true`),
-	unique("session_package_unique").on(t.startOn, t.memberId, t.sessionId, t.memberPackageId),
-	unique("session_subscription_unique").on(t.startOn, t.memberId, t.sessionId, t.memberSubscriptionId),
 	uniqueIndex("reservations_member_session_occurrence_active_uq")
 		.on(t.memberId, t.sessionId, t.startOn)
-		.where(sql`${t.status} in ('confirmed', 'completed')`),
-	uniqueIndex("reservations_private_reservation_occurrence_uq")
-		.on(t.privateReservationId, t.startOn)
-		.where(sql`${t.privateReservationId} is not null`),
+		.where(sql`${t.status} in ('pending_payment', 'confirmed', 'completed')`),
 ]);
 
 export const memberAutoSchedule = pgTable("member_auto_schedule", {

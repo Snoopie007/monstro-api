@@ -26,7 +26,6 @@ import {
 } from "./members";
 import { migrateMembers } from "./MigrateMembers";
 import { planPrograms, programs, programSessions, sessionWaitlist } from "./programs";
-import { privateReservations } from "./privateReservations";
 import { sessionExceptions } from "./sessionExceptions";
 import { promos } from "./promos";
 import {
@@ -757,8 +756,11 @@ export const programSessionsRelations = relations(programSessions, ({ one, many 
 		fields: [programSessions.staffId],
 		references: [staffs.id],
 	}),
+	reservedMember: one(members, {
+		fields: [programSessions.reservedMemberId],
+		references: [members.id],
+	}),
 	reservations: many(reservations),
-	privateReservations: many(privateReservations),
 	waitlist: many(sessionWaitlist),
 	exceptions: many(sessionExceptions),
 }));
@@ -810,10 +812,6 @@ export const reservationsRelations = relations(reservations, ({ one }) => ({
 		fields: [reservations.sessionId],
 		references: [programSessions.id],
 	}),
-	privateReservation: one(privateReservations, {
-		fields: [reservations.privateReservationId],
-		references: [privateReservations.id],
-	}),
 	exception: one(sessionExceptions, {
 		fields: [reservations.exceptionId],
 		references: [sessionExceptions.id],
@@ -847,30 +845,6 @@ export const reservationsRelations = relations(reservations, ({ one }) => ({
 		references: [reservations.id],
 		relationName: "makeUpReservations",
 	}),
-}));
-
-export const privateReservationsRelations = relations(privateReservations, ({ one, many }) => ({
-	location: one(locations, {
-		fields: [privateReservations.locationId],
-		references: [locations.id],
-	}),
-	session: one(programSessions, {
-		fields: [privateReservations.sessionId],
-		references: [programSessions.id],
-	}),
-	member: one(members, {
-		fields: [privateReservations.memberId],
-		references: [members.id],
-	}),
-	memberPackage: one(memberPackages, {
-		fields: [privateReservations.memberPackageId],
-		references: [memberPackages.id],
-	}),
-	memberSubscription: one(memberSubscriptions, {
-		fields: [privateReservations.memberSubscriptionId],
-		references: [memberSubscriptions.id],
-	}),
-	reservations: many(reservations),
 }));
 
 // ============================================================================
