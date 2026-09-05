@@ -8,6 +8,7 @@ export const ProgramDraftSchema = z.object({
     capacity: z.number().int().min(1).catch(10),
     minAge: z.number().int().min(0).catch(3),
     maxAge: z.number().int().min(1).catch(18),
+    sessionMode: z.enum(["group", "one_on_one"]).default("group"),
     sessions: z.array(z.object({
         day: z.number().int().min(1).max(7),
         time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).default("12:00"),

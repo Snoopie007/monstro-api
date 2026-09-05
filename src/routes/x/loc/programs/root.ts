@@ -44,6 +44,7 @@ export const xPrograms = new Elysia({ prefix: "/programs" })
                     capacity: draft.capacity,
                     minAge: draft.minAge,
                     maxAge: draft.maxAge,
+                    sessionMode: draft.sessionMode,
                     allowWaitlist: false,
                     waitlistCapacity: 0,
                     allowMakeUpClass: false,

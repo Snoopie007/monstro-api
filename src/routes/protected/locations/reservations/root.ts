@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, type Context } from "elysia";
 import { db } from "@/db/db";
 import type {
     Reservation,
@@ -39,6 +39,28 @@ const ReservationsProps = {
         autoReschedule: t.Optional(t.Boolean()),
     }),
 };
+
+async function rejectOneOnOneBooking(context: Context) {
+    const { session } = context.body as { session: { id: string } };
+    const { lid } = context.params as { lid: string };
+    const requestedSession = await db.query.programSessions.findFirst({
+        where: (row, { eq }) => eq(row.id, session.id),
+        columns: { id: true },
+        with: {
+            program: { columns: { locationId: true, sessionMode: true } },
+        },
+    });
+    if (!requestedSession || requestedSession.program.locationId !== lid) {
+        return context.status(404, { success: false, message: "Session not found." });
+    }
+    if (requestedSession.program.sessionMode === "one_on_one") {
+        return context.status(400, {
+            success: false,
+            message: "Book 1-on-1 reservations from the vendor calendar.",
+        });
+    }
+}
+
 export async function locationReservations(app: Elysia) {
     app.group('/reservations', (app) => {
 
@@ -267,7 +289,7 @@ export async function locationReservations(app: Elysia) {
                 console.error(err);
                 return status(500, { error: err });
             }
-        }, ReservationsProps)
+        }, { ...ReservationsProps, beforeHandle: rejectOneOnOneBooking })
 
         app.group('/:rid', (app) => {
             app.get('/', async ({ params, status }) => {
@@ -490,8 +512,6 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-
-
 
 
 

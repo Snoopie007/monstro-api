@@ -756,6 +756,10 @@ export const programSessionsRelations = relations(programSessions, ({ one, many 
 		fields: [programSessions.staffId],
 		references: [staffs.id],
 	}),
+	reservedMember: one(members, {
+		fields: [programSessions.reservedMemberId],
+		references: [members.id],
+	}),
 	reservations: many(reservations),
 	waitlist: many(sessionWaitlist),
 	exceptions: many(sessionExceptions),
