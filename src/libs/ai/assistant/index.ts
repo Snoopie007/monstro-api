@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { askUser, askUserSchema } from "./tools/ask";
 import { assistantMemoryWritebackQueue } from "@/queues";
 import { ChatOpenAI } from "@langchain/openai";
 import { OpenAIEmbeddings } from "@langchain/openai";
@@ -35,7 +36,6 @@ import {
 import {
 	MAX_TOOL_ITERATIONS,
 	assistantChartBlockSchema,
-	detectConfirmationIntent,
 	executeToolCall,
 	formatHumanDateInTimezone,
 	parseToolInput,
@@ -66,12 +66,12 @@ export const rememberPreferenceInputSchema = z.object({
 });
 
 export const assistantChatRequestSchema = z.object({
-	message: z.string().trim().min(1).max(4000),
+	message: z.string().trim().min(1).max(5000),
 	threadId: z.string().trim().min(1).max(120).optional(),
 	history: z.array(z.object({
 		role: z.enum(["user", "assistant"]),
-		content: z.string().trim().min(1).max(4000),
-	})).max(20).optional(),
+		content: z.string().trim().min(1).max(16000),
+	})).max(40).optional(),
 });
 
 export type AssistantChatRequest = SharedAssistantChatRequest;
@@ -102,6 +102,8 @@ type RunAssistantTurnProps = {
 	message: string;
 	threadId?: string;
 	history?: Array<{ role: "user" | "assistant"; content: string }>;
+	confirmationIntent?: "confirm" | "cancel" | null;
+	confirmedBooking?: AssistantChatResult["bookingCandidate"];
 };
 
 type TokenUsage = {
@@ -110,7 +112,7 @@ type TokenUsage = {
 };
 
 type RunAssistantTurnStreamProps = RunAssistantTurnProps & {
-	onCompleted?: (meta: { usage: TokenUsage; cost: number }) => Promise<void> | void;
+	onCompleted?: (meta: { usage: TokenUsage; cost: number; result: AssistantChatResult }) => Promise<void> | void;
 	onFailed?: () => Promise<void> | void;
 };
 
@@ -140,6 +142,7 @@ function getAssistantModel(onTokenUsage?: (usage: TokenUsage) => void) {
 		apiKey: process.env.OPENAI_API_KEY,
 		modelName: process.env.ASSISTANT_MODEL || DEFAULT_ASSISTANT_MODEL,
 		temperature: 0.7,
+		maxTokens: 2000,
 		maxRetries: 3,
 		callbacks,
 	});
@@ -265,6 +268,8 @@ async function runToolLoop(params: {
 	history: Array<{ role: "user" | "assistant"; content: string }>;
 	recalledMemories: RecalledMemory[];
 	inferredExplicitPreference: RememberPreferenceInput | null;
+	confirmationIntent?: "confirm" | "cancel" | null;
+	confirmedBooking?: AssistantChatResult["bookingCandidate"];
 }) {
 	const usageTotals: TokenUsage = {
 		promptTokens: 0,
@@ -282,8 +287,12 @@ async function runToolLoop(params: {
 
 	const system = new SystemMessage([
 		"You are Monstro Location Assistant.",
+		"Keep greetings friendly and do not include internal location or vendor IDs.",
 		"You are scoped to exactly one location and must never mix cross-location context.",
 		"Use tools when needed. For actions that are not fully certain, ask for missing details.",
+		"Use ask_user to ask one question when information is missing. The app will pause and show an answer card.",
+		"An answer to ask_user supplies information only. A booking still needs its own confirmation.",
+		"Users may type a custom answer or dismiss a question. A dismissal cancels the dependent task; never choose an answer for them.",
 		"For questions about bookable programs/sessions or schedule availability in a date range, always call schedule_manage with action=check.",
 		"location_reports is only for KPI metrics (revenue, attendance, active_members), never for schedule/program availability.",
 		"For member roster requests (new members, joined in last X days, list/filter/sort), use member_lookup with mode=list or mode=aggregate as appropriate.",
@@ -313,7 +322,7 @@ async function runToolLoop(params: {
 
 	const usedTools: AssistantToolCall[] = [];
 	const toolExecutions: ToolExecutionTrace[] = [];
-	const confirmationIntent = detectConfirmationIntent(params.message);
+	let confirmationIntent = params.confirmationIntent ?? null;
 	let explicitPreference: RememberPreferenceInput | null = params.inferredExplicitPreference;
 	let finalReply = "";
 
@@ -321,11 +330,28 @@ async function runToolLoop(params: {
 		const response = await modelWithTools.invoke(messages);
 		const aiMessage = response as AIMessage;
 		const toolCalls = Array.isArray(aiMessage.tool_calls) ? aiMessage.tool_calls : [];
+		const question = toolCalls.find((call) => call.name === "ask_user");
+		if (question) {
+			if (!askUserSchema.safeParse(question.args).success) {
+				messages.push(aiMessage);
+				for (const call of toolCalls) messages.push(new ToolMessage({
+					tool_call_id: call.id || crypto.randomUUID(), name: call.name,
+					content: JSON.stringify({ ok: false, error: "No tools executed. Ask one question with up to five uniquely valued options, or omit options for a text answer." }),
+				}));
+				continue;
+			}
+			const prompt = askUser(question.args);
+			return {
+				reply: prompt.question,
+				usedTools: [...usedTools, { name: "ask_user" as const, input: parseToolInput(question.args) }],
+				explicitPreference, toolExecutions, usage: usageTotals, prompt,
+			};
+		}
 
 		if (toolCalls.length === 0) {
 			finalReply = toTextContent(aiMessage.content);
 			if (!finalReply) {
-				finalReply = `I am scoped to location ${params.locationId}. Ask about schedules, reports, or members and I will help.`;
+				finalReply = "Hi there! What can I help you with today? You can ask me about bookings, reports, or member details.";
 			}
 			break;
 		}
@@ -358,7 +384,9 @@ async function runToolLoop(params: {
 				message: params.message,
 				history: params.history,
 				confirmationIntent,
+				confirmedBooking: params.confirmedBooking,
 			});
+			if (name === "schedule_manage" && toolInput.action === "create") confirmationIntent = null;
 
 			let parsedToolOutput: Record<string, unknown> | null = null;
 			try {
@@ -409,6 +437,7 @@ async function runToolLoop(params: {
 		explicitPreference,
 		toolExecutions,
 		usage: usageTotals,
+		prompt: undefined as AssistantPrompt | undefined,
 	};
 }
 
@@ -434,6 +463,8 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 		history: parsed.data.history || [],
 		recalledMemories,
 		inferredExplicitPreference,
+		confirmationIntent: props.confirmationIntent,
+		confirmedBooking: props.confirmedBooking,
 	});
 
 	const reply = extractCancelledByUserReply(loopResult.toolExecutions) || loopResult.reply;
@@ -442,7 +473,7 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 		locationId: props.locationId,
 		usedTools: loopResult.usedTools,
 	});
-	const finalReply = unsupportedReply || reply;
+	const finalReply = loopResult.prompt ? loopResult.reply : unsupportedReply || reply;
 
 	const writebackJob: AssistantMemoryWritebackJob = {
 		turnId: crypto.randomUUID(),
@@ -452,17 +483,35 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 		threadId,
 		userMessage: parsed.data.message,
 		assistantReply: finalReply,
-		toolCalls: loopResult.usedTools,
+		toolCalls: loopResult.usedTools.filter((tool) => tool.name !== "ask_user"),
 		explicitPreference: loopResult.explicitPreference || undefined,
 		createdAt: new Date().toISOString(),
 	};
 
 	await enqueueWritebackJob(writebackJob);
 
-	const uiState = deriveAssistantUiState({
+	const uiState = loopResult.prompt ? {
+		responseState: "ask_clarification" as const,
+		inputMode: "prompt_only" as const,
+		prompts: [loopResult.prompt],
+	} : deriveAssistantUiState({
 		reply: finalReply,
 		toolExecutions: loopResult.toolExecutions,
 	});
+	// One pending question can be answered unambiguously after a refresh.
+	uiState.prompts = uiState.prompts.slice(0, 1).map((prompt) => ({
+		...prompt, id: crypto.randomUUID(), blocking: true, responseChannel: "inline" as const,
+	}));
+	if (uiState.prompts.length) uiState.inputMode = "prompt_only";
+	const staged = loopResult.toolExecutions.findLast((trace) => trace.name === "schedule_manage" && trace.output?.status === "requires_confirmation");
+	const candidate = staged?.output?.bookingCandidate as Record<string, unknown> | undefined;
+	const bookingCandidate = candidate && typeof candidate.memberId === "string"
+		&& typeof candidate.sessionId === "string" && typeof candidate.startOnUtc === "string"
+		? { memberId: candidate.memberId, sessionId: candidate.sessionId, startOnUtc: candidate.startOnUtc }
+		: undefined;
+	if (candidate && uiState.prompts[0]?.kind === "confirm") {
+		uiState.prompts[0].question = `Book ${candidate.memberName} into ${candidate.programName} at ${candidate.startOnLocation}?`;
+	}
 	const bookingMeta = extractBookingMeta(loopResult.toolExecutions, formatHumanDateInTimezone);
 	const blocks = extractChartBlocks(loopResult.toolExecutions, assistantChartBlockSchema as unknown as z.ZodType<AssistantBlock>);
 
@@ -471,6 +520,7 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 		reply: finalReply,
 		usedTools: loopResult.usedTools,
 		memorySaved: !!loopResult.explicitPreference,
+		bookingCandidate,
 		bookingMeta,
 		blocks,
 		responseState: uiState.responseState,
@@ -519,6 +569,7 @@ export async function* runAssistantTurnStream(
 			await props.onCompleted({
 				usage: internal.usage,
 				cost: internal.cost,
+				result: internal.result,
 			});
 		}
 

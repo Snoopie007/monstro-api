@@ -362,7 +362,11 @@ export async function executeScheduleTool(params: {
 			};
 		}
 
-		if (context.confirmationIntent !== "confirm") {
+		const confirmed = context.confirmedBooking;
+		const matchesConfirmation = confirmed?.memberId === member.id
+			&& confirmed.sessionId === selectedSlot.id
+			&& new Date(confirmed.startOnUtc).getTime() === new Date(selectedSlot.startOnUtc).getTime();
+		if (context.confirmationIntent !== "confirm" || !matchesConfirmation) {
 			return {
 				content: JSON.stringify({
 					ok: true,

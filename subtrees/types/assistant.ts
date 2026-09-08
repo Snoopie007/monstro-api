@@ -3,6 +3,7 @@ export const assistantToolNames = [
   "member_lookup",
   "location_reports",
   "remember_preference",
+  "ask_user",
 ] as const;
 
 export type AssistantToolName = (typeof assistantToolNames)[number];
@@ -50,6 +51,7 @@ export type AssistantPrompt = {
   blocking: boolean;
   responseChannel: "chatbox" | "inline";
   options?: AssistantPromptOption[];
+  allowCustomAnswer?: boolean;
   placeholder?: string;
 };
 
@@ -96,10 +98,33 @@ export type AssistantHistoryEntry = {
   content: string;
 };
 
+export type AssistantAnswer =
+  | { promptId: string; value: string; kind?: "option" | "text" | "custom" }
+  | { promptId: string; kind: "dismiss"; value?: never };
+
 export type AssistantChatRequest = {
   message: string;
   threadId?: string;
+  requestId?: string;
+  answer?: AssistantAnswer;
   history?: AssistantHistoryEntry[];
+};
+
+export type AssistantStoredTurn = {
+  requestId: string;
+  message: string;
+  contextMessage?: string;
+  answeredPromptId?: string;
+  answer?: AssistantAnswer;
+  result?: AssistantChatResult;
+};
+
+export type AssistantThread = {
+  threadId: string;
+  turns: AssistantStoredTurn[];
+  pendingPrompt?: AssistantPrompt;
+  busy: boolean;
+  interrupted?: boolean;
 };
 
 export type AssistantChatResult = {
@@ -107,6 +132,7 @@ export type AssistantChatResult = {
   reply: string;
   usedTools: AssistantToolCall[];
   memorySaved: boolean;
+  bookingCandidate?: { memberId: string; sessionId: string; startOnUtc: string };
   bookingMeta?: AssistantBookingMeta;
   blocks?: AssistantBlock[];
   responseState?: AssistantResponseState;
