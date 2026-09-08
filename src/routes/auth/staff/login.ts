@@ -64,7 +64,7 @@ export async function staffLogin(app: Elysia) {
                 return status(404, { message: "Staff record not found." })
             }
 
-            const user = account.user;
+            const { isChild, ...user } = account.user;
             const data = {
                 ...user,
                 ...staff,
