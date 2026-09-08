@@ -45,7 +45,7 @@ export function assistantChatRoute(app: Elysia) {
 				const event = { type: "assistant_final", threadId: turn.state.threadId, messageId: request.requestId, result: turn.cached, ts: Date.now() };
 				return new Response(`event: assistant_final\ndata: ${JSON.stringify(event)}\n\n`, { headers: streamHeaders });
 			}
-			const history = historyFromThread(turn.state);
+			const history = historyFromThread(turn.state, request.requestId);
 			const wallet = new Wallet(lid);
 			const operationId = crypto.randomUUID();
 			let reserved = false;
@@ -84,7 +84,7 @@ export function assistantChatRoute(app: Elysia) {
 						for await (const event of runAssistantTurnStream({
 							...scope, threadId: turn.state.threadId, message: turn.message, history,
 							confirmationIntent: turn.confirmationIntent as "confirm" | "cancel" | null,
-							confirmedBooking: turn.confirmationIntent ? turn.state.turns.at(-1)?.result.bookingCandidate : undefined,
+							confirmedBooking: turn.confirmedBooking,
 							onCompleted: async ({ result, cost }) => {
 								await memory.complete(scope, turn.state, {
 									requestId: request.requestId, message: request.message, contextMessage: turn.message,
@@ -121,10 +121,14 @@ export function assistantChatRoute(app: Elysia) {
 			message: t.String({ minLength: 1, maxLength: 4000 }),
 			threadId: t.String({ minLength: 1, maxLength: 120 }),
 			requestId: t.String({ minLength: 1, maxLength: 120 }),
-			answer: t.Optional(t.Object({
+			answer: t.Optional(t.Union([t.Object({
 				promptId: t.String({ minLength: 1, maxLength: 120 }),
 				value: t.String({ minLength: 1, maxLength: 4000 }),
-			})),
+				kind: t.Optional(t.Union([t.Literal("option"), t.Literal("text"), t.Literal("custom")])),
+			}), t.Object({
+				promptId: t.String({ minLength: 1, maxLength: 120 }),
+				kind: t.Literal("dismiss"),
+			})])),
 		}),
 	});
 	return app;

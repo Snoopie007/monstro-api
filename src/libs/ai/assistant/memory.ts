@@ -44,10 +44,10 @@ end
 return 1
 `;
 
-export function historyFromThread(thread: AssistantThread): AssistantHistoryEntry[] {
-	return thread.turns.flatMap((turn) => [
+export function historyFromThread(thread: AssistantThread, excludeRequestId?: string): AssistantHistoryEntry[] {
+	return thread.turns.filter((turn) => turn.requestId !== excludeRequestId).flatMap((turn) => [
 		{ role: "user" as const, content: turn.contextMessage || turn.message },
-		{ role: "assistant" as const, content: turn.result.reply },
+		...(turn.result ? [{ role: "assistant" as const, content: turn.result.reply }] : []),
 	]);
 }
 
@@ -60,11 +60,25 @@ export function resolveAnswer(thread: AssistantThread, request: AssistantChatReq
 	if (!request.answer || request.answer.promptId !== pending.id) {
 		throw new AssistantSessionError("Answer the current question before continuing.");
 	}
-	const value = request.answer.value.trim();
-	if (!value || value.length > 4000) throw new AssistantSessionError("Enter an answer of up to 4,000 characters.");
 	if (pending.kind === "confirm") {
+		if (request.answer.kind === "custom" || request.answer.kind === "dismiss") {
+			throw new AssistantSessionError("Choose Confirm or Cancel.");
+		}
+		const value = request.answer.value.trim();
 		if (value !== "confirm" && value !== "cancel") throw new AssistantSessionError("Choose Confirm or Cancel.");
 		return { message: value, confirmationIntent: value };
+	}
+	if (request.answer.kind === "dismiss") {
+		return {
+			message: `The user dismissed this question: "${pending.question}". The dependent task is cancelled. Do not continue it unless the user explicitly requests it again.`,
+			confirmationIntent: null,
+		};
+	}
+	const value = request.answer.value.trim();
+	if (!value || value.length > 4000) throw new AssistantSessionError("Enter an answer of up to 4,000 characters.");
+	if (request.answer.kind === "custom") {
+		if (pending.allowCustomAnswer === false) throw new AssistantSessionError("Choose one of the available answers.");
+		return { message: `Question: ${pending.question}\nCustom answer: ${value}`, confirmationIntent: null };
 	}
 	const option = pending.options?.find((item) => item.value === value);
 	if (pending.kind === "choice" && !option) throw new AssistantSessionError("Choose one of the available answers.");
@@ -103,10 +117,12 @@ export function createAssistantMemory(redis: RedisClient = getRedisClient()) {
 		const state = await load(scope, request.threadId);
 		const cached = state.turns.find((turn) => turn.requestId === request.requestId);
 		if (cached) {
-			if (cached.message !== request.message || cached.answeredPromptId !== request.answer?.promptId) {
+			if (cached.message !== request.message || cached.answeredPromptId !== request.answer?.promptId
+				|| (cached.answer && (cached.answer.kind !== request.answer?.kind || cached.answer.value !== request.answer?.value))) {
 				throw new AssistantSessionError("This request ID belongs to a different message.");
 			}
-			return { state, cached: cached.result, message: "", confirmationIntent: null };
+			if (cached.result) return { state, cached: cached.result, message: "", confirmationIntent: null, confirmedBooking: undefined };
+			throw new AssistantSessionError("This request was already accepted. Reload to check its result.");
 		}
 		if (state.requests.includes(request.requestId)) {
 			throw new AssistantSessionError("This request was already attempted. Reload to check its result.");
@@ -115,19 +131,37 @@ export function createAssistantMemory(redis: RedisClient = getRedisClient()) {
 		if (state.interrupted) throw new AssistantSessionError("This conversation was interrupted. Check the action's result before starting a new chat.");
 		if (state.requests.length >= MAX_REQUESTS) throw new AssistantSessionError("This conversation is full. Start a new chat.");
 		const answer = resolveAnswer(state, request);
+		const confirmedBooking = answer.confirmationIntent ? state.turns.at(-1)?.result?.bookingCandidate : undefined;
+		const dismissed = request.answer?.kind === "dismiss";
+		const accepted: AssistantStoredTurn = {
+			requestId: request.requestId, message: request.message, contextMessage: answer.message,
+			answeredPromptId: request.answer?.promptId, answer: request.answer,
+			...(dismissed ? { result: {
+				threadId: state.threadId, reply: "Question cancelled. What would you like to do next?",
+				usedTools: [], memorySaved: false, prompts: [],
+			} } : {}),
+		};
 		const next = await save(scope, {
-			...state, busy: true, activeRequest: request.requestId,
+			...state, busy: !dismissed, activeRequest: dismissed ? undefined : request.requestId,
 			requests: [...state.requests, request.requestId],
+			turns: trimTurns([...state.turns, accepted]),
+			pendingPrompt: undefined,
 		}, true);
-		return { state: next, cached: undefined, ...answer };
+		return { state: next, cached: accepted.result, ...answer, confirmedBooking };
 	}
 
-	async function complete(scope: AssistantScope, state: ThreadState, turn: AssistantStoredTurn) {
-		const turns = [...state.turns, turn].slice(-MAX_TURNS);
+	function trimTurns(history: AssistantStoredTurn[]) {
+		const turns = history.slice(-MAX_TURNS);
 		while (turns.length > 1 && JSON.stringify(turns).length > MAX_HISTORY_CHARS) turns.shift();
 		if (JSON.stringify(turns).length > MAX_HISTORY_CHARS) {
 			throw new AssistantSessionError("The response was too large to save. Reload before continuing.", 503);
 		}
+		return turns;
+	}
+
+	async function complete(scope: AssistantScope, state: ThreadState, turn: AssistantStoredTurn & { result: NonNullable<AssistantStoredTurn["result"]> }) {
+		if (state.activeRequest !== turn.requestId) throw new AssistantSessionError("This request is no longer active.");
+		const turns = trimTurns(state.turns.map((accepted) => accepted.requestId === turn.requestId ? { ...accepted, ...turn } : accepted));
 		return save(scope, {
 			...state, turns, busy: false, activeRequest: undefined,
 			pendingPrompt: turn.result.prompts?.find((prompt) => prompt.blocking),

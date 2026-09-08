@@ -291,6 +291,7 @@ async function runToolLoop(params: {
 		"Use tools when needed. For actions that are not fully certain, ask for missing details.",
 		"Use ask_user to ask one question when information is missing. The app will pause and show an answer card.",
 		"An answer to ask_user supplies information only. A booking still needs its own confirmation.",
+		"Users may type a custom answer or dismiss a question. A dismissal cancels the dependent task; never choose an answer for them.",
 		"For questions about bookable programs/sessions or schedule availability in a date range, always call schedule_manage with action=check.",
 		"location_reports is only for KPI metrics (revenue, attendance, active_members), never for schedule/program availability.",
 		"For member roster requests (new members, joined in last X days, list/filter/sort), use member_lookup with mode=list or mode=aggregate as appropriate.",

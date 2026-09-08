@@ -44,4 +44,19 @@ describe.skipIf(!enabled)("vendor memory against local Redis", () => {
 		]);
 		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
 	});
+
+	test("a separate read sees the accepted answer before model completion", async () => {
+		const { owner, memory } = fixture();
+		const request = { threadId: "thread", requestId: "question", message: "Find Alex" };
+		const first = await memory.begin(owner, request);
+		const prompt = askUser({ question: "Which Alex?" });
+		await memory.complete(owner, first.state, { ...request, result: { threadId: "thread", reply: prompt.question, prompts: [prompt], usedTools: [], memorySaved: false } });
+		const accepted = await memory.begin(owner, { ...request, requestId: "answer", message: "Alex Smith", answer: { promptId: prompt.id, value: "Alex Smith" } });
+		const restored = await createAssistantMemory(redis!).load(owner);
+		expect(restored.pendingPrompt).toBeUndefined();
+		expect(restored.turns.at(-1)?.answeredPromptId).toBe(prompt.id);
+		expect(restored.turns.at(-1)?.result).toBeUndefined();
+		await memory.fail(owner, accepted.state, true);
+		expect((await memory.load(owner)).turns.at(-1)?.message).toBe("Alex Smith");
+	});
 });

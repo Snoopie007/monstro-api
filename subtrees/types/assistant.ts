@@ -51,6 +51,7 @@ export type AssistantPrompt = {
   blocking: boolean;
   responseChannel: "chatbox" | "inline";
   options?: AssistantPromptOption[];
+  allowCustomAnswer?: boolean;
   placeholder?: string;
 };
 
@@ -97,11 +98,15 @@ export type AssistantHistoryEntry = {
   content: string;
 };
 
+export type AssistantAnswer =
+  | { promptId: string; value: string; kind?: "option" | "text" | "custom" }
+  | { promptId: string; kind: "dismiss"; value?: never };
+
 export type AssistantChatRequest = {
   message: string;
   threadId?: string;
   requestId?: string;
-  answer?: { promptId: string; value: string };
+  answer?: AssistantAnswer;
   history?: AssistantHistoryEntry[];
 };
 
@@ -110,7 +115,8 @@ export type AssistantStoredTurn = {
   message: string;
   contextMessage?: string;
   answeredPromptId?: string;
-  result: AssistantChatResult;
+  answer?: AssistantAnswer;
+  result?: AssistantChatResult;
 };
 
 export type AssistantThread = {

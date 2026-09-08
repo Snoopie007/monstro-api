@@ -50,7 +50,7 @@ function toFunctionTool(name: AssistantToolName, description: string, schema: Re
 }
 
 export const toolDefinitions = [
-	toFunctionTool("ask_user", "Ask the user for missing information before continuing. Ask one question at a time. Supply two to five choices when the answers are known. This does not authorize bookings or other actions.", {
+	toFunctionTool("ask_user", "Ask the user for missing information before continuing. Ask one question at a time. Supply two to five choices when the answers are known. The UI provides custom answers and question dismissal automatically. This does not authorize bookings or other actions.", {
 		type: "object",
 		properties: {
 			question: { type: "string", maxLength: 500 },

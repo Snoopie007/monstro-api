@@ -18,6 +18,7 @@ export function askUser(input: unknown): AssistantPrompt {
 		kind: parsed.options ? "choice" : "text",
 		question: parsed.question,
 		options: parsed.options,
+		allowCustomAnswer: true,
 		required: true,
 		risk: "low",
 		blocking: true,

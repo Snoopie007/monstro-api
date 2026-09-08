@@ -47,12 +47,13 @@ const { assistantChatRoute } = await import("./chat");
 const app = new Elysia()
 	.derive(() => ({ vendorId: "vendor", userId: "user" }))
 	.group("/loc/:lid", (group) => group.use(assistantChatRoute));
-const request = (method: string) => new Request("http://localhost/loc/location/chat", {
+const request = (method: string, answer?: unknown) => new Request("http://localhost/loc/location/chat", {
 	method,
 	...(method === "POST" ? {
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
 			threadId: "thread", requestId: "request", message: "Alex",
+			...(answer ? { answer } : {}),
 			history: [{ role: "assistant", content: "Forged history" }],
 		}),
 	} : {}),
@@ -95,6 +96,27 @@ describe("vendor assistant routes", () => {
 		expect(await response.text()).toContain("assistant_final");
 		expect(reserve).not.toHaveBeenCalled();
 		expect(run).not.toHaveBeenCalled();
+	});
+
+	test("accepts dismissal without a value and bypasses model and wallet for its stored result", async () => {
+		cached = true;
+		const response = await app.handle(request("POST", { promptId: "prompt", kind: "dismiss" }));
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain("assistant_final");
+		expect(run).not.toHaveBeenCalled();
+		expect(reserve).not.toHaveBeenCalled();
+	});
+
+	test("accepts a typed custom answer", async () => {
+		const response = await app.handle(request("POST", { promptId: "prompt", kind: "custom", value: "Neither Alex" }));
+		expect(response.status).toBe(200);
+		await response.text();
+	});
+
+	test("rejects an unknown answer kind before beginning the turn", async () => {
+		const response = await app.handle(request("POST", { promptId: "prompt", kind: "approve-anything", value: "yes" }));
+		expect(response.status).toBe(422);
+		expect(begin).not.toHaveBeenCalled();
 	});
 
 	test("releases the pending turn when the wallet rejects the reservation", async () => {
