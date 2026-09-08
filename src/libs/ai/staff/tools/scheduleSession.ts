@@ -5,7 +5,7 @@ import type { LocationClosure, SessionException } from "@subtrees/types";
 import { findOverlappingLocationClosure } from "@subtrees/utils";
 import { addMinutes, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
-import { and, count, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, count, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { ToolArgs, ToolExecutorResult } from "../type";
 import {
     actionCard,
@@ -214,7 +214,7 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
             eq(p.locationId, lid),
             eq(p.status, "active"),
         ),
-        columns: { id: true, name: true, capacity: true },
+        columns: { id: true, name: true, capacity: true, sessionMode: true },
         with: {
             sessions: {
                 columns: { id: true, day: true, time: true, duration: true },
@@ -226,6 +226,9 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
         return pauseAsk("I couldn't find that class. What's the program name?");
     }
 
+    if (program.sessionMode === "one_on_one") {
+        return pauseAsk("Book 1-on-1 lessons from the vendor calendar.");
+    }
     if (program.sessions.length === 0) {
         return {
             content: jsonResult({
@@ -507,6 +510,12 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
     }
 
     const reservationId = await db.transaction(async (tx) => {
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lid}, 0))`);
+        const currentProgram = await tx.query.programs.findFirst({
+            where: (p, { and, eq }) => and(eq(p.id, program.id), eq(p.locationId, lid)),
+            columns: { sessionMode: true },
+        });
+        if (currentProgram?.sessionMode !== "group") return null;
         const rows = await tx.insert(reservations).values({
             memberId,
             locationId: lid,
@@ -536,6 +545,8 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
 
         return reservation.id;
     });
+
+    if (!reservationId) return pauseAsk("The class mode changed. Book this lesson from the vendor calendar.");
 
     return {
         content: jsonResult({
