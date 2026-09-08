@@ -195,7 +195,7 @@ export class StripePaymentGateway {
             },
             description: description,
             confirm: true,
-            application_fee_amount: feesAmount,
+            ...(feesAmount ? { application_fee_amount: feesAmount } : {}),
             payment_method: paymentMethodId || undefined,
             capture_method: authorizeOnly ? "manual" : "automatic",
             return_url: url,
@@ -203,22 +203,15 @@ export class StripePaymentGateway {
             metadata: metadata || undefined
         }
 
-        try {
-            const requestOptions = stripePaymentIntentRequestOptions(idempotencyKey);
-            const { id, client_secret } = requestOptions
-                ? await this._client.paymentIntents.create(option, requestOptions)
-                : await this._client.paymentIntents.create(option);
+        const requestOptions = stripePaymentIntentRequestOptions(idempotencyKey);
+        const { id, client_secret } = requestOptions
+            ? await this._client.paymentIntents.create(option, requestOptions)
+            : await this._client.paymentIntents.create(option);
 
-            return {
-                id,
-                clientSecret: client_secret,
-            };
-        } catch (error) {
-            if (error instanceof Stripe.errors.StripeCardError) {
-                throw error;
-            }
-            throw new Error("Failed to charge payment");
-        }
+        return {
+            id,
+            clientSecret: client_secret,
+        };
     }
 
     async createChargeWithoutLineItems(customerId: string, paymentMethodId: string, options: ChargeOptions) {
@@ -227,7 +220,7 @@ export class StripePaymentGateway {
             customer: customerId,
             amount: total,
             payment_method: paymentMethodId,
-            application_fee_amount: feesAmount,
+            ...(feesAmount ? { application_fee_amount: feesAmount } : {}),
             currency: currency,
             confirm: true,
             capture_method: "automatic",
