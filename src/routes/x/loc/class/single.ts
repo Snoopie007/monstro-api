@@ -15,6 +15,7 @@ import { loadReservationJobs } from "./reservationJobs";
 import { formatInTimeZone } from "date-fns-tz";
 import type { Elysia } from "elysia";
 import { z } from "zod";
+import { withTimeout } from "../subscriptions/shared";
 
 const RescheduleSingleNextSchema = z.object({
     jobId: z.string().min(1),
@@ -54,9 +55,9 @@ export async function singleNextRoutes(app: Elysia, getNow = () => new Date()) {
                 columns: { startsAt: true, isCancelled: true },
             });
             const runAt = exception && !exception.isCancelled ? exception.startsAt : parsed.data.nextStartOn;
-            await classQueue.add(SINGLE_NEXT_JOB, parsed.data, {
+            await withTimeout(classQueue.add(SINGLE_NEXT_JOB, parsed.data, {
                 jobId, delay: singleNextDelay(runAt, getNow()), attempts: 3, removeOnComplete: true,
-            });
+            }), 5000, "Queue unavailable");
         });
         return { queued: true, jobId };
     });

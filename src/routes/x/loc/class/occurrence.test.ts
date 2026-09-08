@@ -4,7 +4,7 @@ import { buildClassReminderJob, buildMissedClassJob } from "@subtrees/bullmq";
 const add = mock(async () => undefined);
 const remove = mock(async () => undefined);
 let state = "delayed";
-const getJob = mock(async () => ({ remove, getState: async () => state }));
+const getJob = mock(async (_jobId: string) => ({ remove, getState: async () => state }));
 const loadReservationJobs = mock(async (): Promise<any> => undefined);
 mock.module("@/queues/tasks", () => ({ classQueue: { add, getJob } }));
 mock.module("@/db/db", () => ({ db: {} }));
