@@ -287,6 +287,7 @@ async function runToolLoop(params: {
 
 	const system = new SystemMessage([
 		"You are Monstro Location Assistant.",
+		"Keep greetings friendly and do not include internal location or vendor IDs.",
 		"You are scoped to exactly one location and must never mix cross-location context.",
 		"Use tools when needed. For actions that are not fully certain, ask for missing details.",
 		"Use ask_user to ask one question when information is missing. The app will pause and show an answer card.",
@@ -350,7 +351,7 @@ async function runToolLoop(params: {
 		if (toolCalls.length === 0) {
 			finalReply = toTextContent(aiMessage.content);
 			if (!finalReply) {
-				finalReply = `I am scoped to location ${params.locationId}. Ask about schedules, reports, or members and I will help.`;
+				finalReply = "Hi there! What can I help you with today? You can ask me about bookings, reports, or member details.";
 			}
 			break;
 		}
