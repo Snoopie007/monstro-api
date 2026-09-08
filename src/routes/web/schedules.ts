@@ -46,7 +46,10 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
     }
 
     const programs = await db.query.programs.findMany({
-        where: (p, { eq }) => eq(p.locationId, lid),
+        where: (p, { and, eq }) => and(
+            eq(p.locationId, lid),
+            eq(p.sessionMode, "group"),
+        ),
         columns: {
             id: true,
             name: true,
