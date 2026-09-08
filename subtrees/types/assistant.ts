@@ -3,6 +3,7 @@ export const assistantToolNames = [
   "member_lookup",
   "location_reports",
   "remember_preference",
+  "ask_user",
 ] as const;
 
 export type AssistantToolName = (typeof assistantToolNames)[number];
@@ -99,7 +100,25 @@ export type AssistantHistoryEntry = {
 export type AssistantChatRequest = {
   message: string;
   threadId?: string;
+  requestId?: string;
+  answer?: { promptId: string; value: string };
   history?: AssistantHistoryEntry[];
+};
+
+export type AssistantStoredTurn = {
+  requestId: string;
+  message: string;
+  contextMessage?: string;
+  answeredPromptId?: string;
+  result: AssistantChatResult;
+};
+
+export type AssistantThread = {
+  threadId: string;
+  turns: AssistantStoredTurn[];
+  pendingPrompt?: AssistantPrompt;
+  busy: boolean;
+  interrupted?: boolean;
 };
 
 export type AssistantChatResult = {
@@ -107,6 +126,7 @@ export type AssistantChatResult = {
   reply: string;
   usedTools: AssistantToolCall[];
   memorySaved: boolean;
+  bookingCandidate?: { memberId: string; sessionId: string; startOnUtc: string };
   bookingMeta?: AssistantBookingMeta;
   blocks?: AssistantBlock[];
   responseState?: AssistantResponseState;
