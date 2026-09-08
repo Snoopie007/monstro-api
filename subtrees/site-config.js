@@ -388,7 +388,7 @@ var FormSubmissionResponseSchema = z5.object({
   redirectTo: z5.string().optional()
 }).strict();
 var SiteFormSchema = NativeSiteFormSchema;
-var REQUIRED_CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
+var CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
 function isFormFieldVisible(field, values) {
   if (!field.showWhen)
     return true;
@@ -401,7 +401,7 @@ function getFormValidationErrors(form, input) {
   const errors = {};
   const allowedFields = new Map(form.fields.map((field) => [field.name, field]));
   for (const key of Object.keys(parsed.data)) {
-    if (!allowedFields.has(key) && !REQUIRED_CONSENT_FIELDS.includes(key)) {
+    if (!allowedFields.has(key) && !CONSENT_FIELDS.includes(key)) {
       errors[key] = "Unknown form field.";
     }
   }
@@ -422,9 +422,10 @@ function getFormValidationErrors(form, input) {
       errors[field.name] = "Enter a valid email address.";
     }
   }
-  for (const field of REQUIRED_CONSENT_FIELDS) {
-    if (parsed.data[field] !== true)
-      errors[field] = "Consent is required to submit this form.";
+  for (const field of CONSENT_FIELDS) {
+    if (parsed.data[field] !== undefined && typeof parsed.data[field] !== "boolean") {
+      errors[field] = "Invalid consent value.";
+    }
   }
   return errors;
 }
@@ -441,8 +442,8 @@ function validateFormValues(form, input) {
       values[field.name] = parsed.data[field.name];
     }
   }
-  for (const field of REQUIRED_CONSENT_FIELDS)
-    values[field] = true;
+  for (const field of CONSENT_FIELDS)
+    values[field] = parsed.data[field] === true;
   return values;
 }
 function resolveFormRedirect(form, values, pages) {
@@ -3858,7 +3859,6 @@ export {
   RenderedTenantContextSchema,
   RenderedSiteLocationSchema,
   RedirectRuleSchema,
-  REQUIRED_CONSENT_FIELDS,
   PublishableStoredSiteConfigSchema,
   PublicSiteConfigSchema,
   ProgramsSectionSchema,
@@ -3912,6 +3912,7 @@ export {
   ContactFormSectionSchema,
   CompareSectionSchema,
   CheckoutAdditionalFeeSchema,
+  CONSENT_FIELDS,
   BuiltinPageIdSchema,
   BottomCtaSectionSchema,
   BottomCtaFormSectionSchema,
