@@ -42,6 +42,8 @@ const ReservationsProps = {
 
 class SessionModeChangedError extends Error {}
 
+// This endpoint uses group capacity/package rules. Allowing 1-on-1 here would
+// bypass weekly-slot ownership and the dedicated booking/payment flow.
 async function rejectOneOnOneBooking(context: Context) {
     const { session } = context.body as { session: { id: string } };
     const { lid } = context.params as { lid: string };
@@ -239,6 +241,8 @@ export async function locationReservations(app: Elysia) {
 
 
                 const reservation = await db.transaction(async (tx) => {
+                    // The earlier check gives fast feedback; this locked reread closes
+                    // the race with a vendor changing program mode during plan validation.
                     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lid}, 0))`);
                     const current = await tx.query.programSessions.findFirst({
                         where: (row, { eq }) => eq(row.id, session.id), columns: { id: true },
@@ -271,6 +275,8 @@ export async function locationReservations(app: Elysia) {
                     }
                     if (pkg) {
 
+                        // Legacy group accounting consumes usage at booking.
+                        // The 1-on-1 path counts it when Present attendance is recorded.
                         await tx.update(memberPackages).set({
                             totalClassAttended: Math.max((pkg?.totalClassAttended || 0) + 1, 0)
                         }).where(eq(memberPackages.id, memberPlanId));
@@ -523,6 +529,4 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-
-
 

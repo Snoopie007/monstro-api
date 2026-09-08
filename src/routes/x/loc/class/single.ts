@@ -22,6 +22,10 @@ const RescheduleSingleNextSchema = z.object({
 
 const forbidden = { error: "Service role required" };
 
+/**
+ * Service-only queue transport. Enqueueing is not a booking: the worker validates
+ * the stored owner, continuation pointer, and plan before creating a reservation.
+ */
 export async function singleNextRoutes(app: Elysia, getNow = () => new Date()) {
     app.post("/single/next", async (context) => {
         const { body, params, status, isServiceRole } = context as typeof context & AuthXContext;
@@ -66,6 +70,7 @@ export async function singleNextRoutes(app: Elysia, getNow = () => new Date()) {
         ) {
             return status(404, { error: "Active single-next job not found" });
         }
+        // Exceptions change the execution time, not the job's regular occurrence identity.
         const regularDate = formatInTimeZone(
             new Date(jobData.data.nextStartOn),
             jobData.data.snapshot.timezone,
@@ -88,6 +93,7 @@ export async function singleNextRoutes(app: Elysia, getNow = () => new Date()) {
         }
 
         const delay = singleNextDelay(parsed.data.startsAt, getNow());
+        // Only delayed jobs can change delay; an active handler cannot be interrupted here.
         const jobState = await job.getState();
         if (jobState === "delayed") {
             await job.changeDelay(delay);

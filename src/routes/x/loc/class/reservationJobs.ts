@@ -14,6 +14,8 @@ export const ScheduleReservationJobSchema = z.object({
     locationId: z.string().min(1),
 });
 
+// Use the saved occurrence, not client-supplied times. The job builders include
+// those times in their IDs so a moved lesson does not reuse the old reminder job.
 export async function loadReservationJobs(
     reservationId: string,
     locationId: string,

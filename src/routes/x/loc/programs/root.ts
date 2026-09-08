@@ -37,6 +37,8 @@ export const xPrograms = new Elysia({ prefix: "/programs" })
             if (drafts.length === 0) {
                 return status(400, { error: "No programs to import" });
             }
+            // Validate the whole batch before inserting, so an invalid instructor
+            // cannot leave a partially created import.
             const oneOnOne = drafts.filter((draft) => draft.sessionMode === "one_on_one");
             if (oneOnOne.some((draft) => !draft.instructorId || draft.instructorId === "null")) {
                 return status(400, { error: "Choose an instructor for every 1-on-1 program" });
