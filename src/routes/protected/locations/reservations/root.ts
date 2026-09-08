@@ -40,6 +40,8 @@ const ReservationsProps = {
     }),
 };
 
+class SessionModeChangedError extends Error {}
+
 async function rejectOneOnOneBooking(context: Context) {
     const { session } = context.body as { session: { id: string } };
     const { lid } = context.params as { lid: string };
@@ -237,6 +239,14 @@ export async function locationReservations(app: Elysia) {
 
 
                 const reservation = await db.transaction(async (tx) => {
+                    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lid}, 0))`);
+                    const current = await tx.query.programSessions.findFirst({
+                        where: (row, { eq }) => eq(row.id, session.id), columns: { id: true },
+                        with: { program: { columns: { sessionMode: true, locationId: true } } },
+                    });
+                    if (!current || current.program.locationId !== lid || current.program.sessionMode !== "group") {
+                        throw new SessionModeChangedError("The session mode changed. Reload the calendar before booking.");
+                    }
                     const inserted = await tx.insert(reservations).values({
                         memberId,
                         locationId: lid,
@@ -286,6 +296,7 @@ export async function locationReservations(app: Elysia) {
                 }
                 return status(200, { success: true, data: reservation });
             } catch (err) {
+                if (err instanceof SessionModeChangedError) return status(409, { success: false, message: err.message });
                 console.error(err);
                 return status(500, { error: err });
             }
@@ -512,7 +523,6 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-
 
 
 
