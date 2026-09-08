@@ -1,7 +1,8 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { normalizeProgramDrafts, parseProgramImportFile } from "@/libs/ai/ProgramImport";
-import { programSessions, programs } from "@subtrees/schemas";
+import { programSessions, programs, staffsLocations } from "@subtrees/schemas";
+import { and, eq, inArray } from "drizzle-orm";
 
 function isUploadFile(value: unknown): value is File {
     return value instanceof File;
@@ -36,6 +37,20 @@ export const xPrograms = new Elysia({ prefix: "/programs" })
             if (drafts.length === 0) {
                 return status(400, { error: "No programs to import" });
             }
+            // Validate the whole batch before inserting, so an invalid instructor
+            // cannot leave a partially created import.
+            const oneOnOne = drafts.filter((draft) => draft.sessionMode === "one_on_one");
+            if (oneOnOne.some((draft) => !draft.instructorId || draft.instructorId === "null")) {
+                return status(400, { error: "Choose an instructor for every 1-on-1 program" });
+            }
+            const staffIds = [...new Set(oneOnOne.flatMap((draft) => draft.instructorId ? [draft.instructorId] : []))];
+            if (staffIds.length > 0) {
+                const assigned = await db.select({ id: staffsLocations.staffId }).from(staffsLocations)
+                    .where(and(eq(staffsLocations.locationId, lid), inArray(staffsLocations.staffId, staffIds)));
+                if (assigned.length !== staffIds.length) {
+                    return status(400, { error: "Choose instructors assigned to this location" });
+                }
+            }
             const created = await db.transaction(async (tx) => {
                 const programRows = await tx.insert(programs).values(drafts.map((draft) => ({
                     locationId: lid,
@@ -44,6 +59,8 @@ export const xPrograms = new Elysia({ prefix: "/programs" })
                     capacity: draft.capacity,
                     minAge: draft.minAge,
                     maxAge: draft.maxAge,
+                    sessionMode: draft.sessionMode,
+                    ...(draft.sessionMode === "one_on_one" ? { instructorId: draft.instructorId } : {}),
                     allowWaitlist: false,
                     waitlistCapacity: 0,
                     allowMakeUpClass: false,
@@ -60,6 +77,7 @@ export const xPrograms = new Elysia({ prefix: "/programs" })
                         day: session.day,
                         time: session.time,
                         duration: session.duration,
+                        ...(drafts[index]!.sessionMode === "one_on_one" ? { staffId: drafts[index]!.instructorId } : {}),
                     }))
                 );
 

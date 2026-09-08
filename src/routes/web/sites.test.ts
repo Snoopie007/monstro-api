@@ -99,7 +99,7 @@ const db = {
       })),
     },
     programs: {
-      findMany: mock(async () => scheduleRows),
+      findMany: mock(async (_options?: unknown) => scheduleRows),
     },
     websiteContents: {
       findMany: mock(async () => postRows),
@@ -457,6 +457,28 @@ test("returns selected-location schedules and rejects invalid dates", async () =
   expect(validResponse.status).toBe(200);
   expect(await validResponse.json()).toEqual({ sessions: [] });
   expect(db.query.locations.findFirst).toHaveBeenCalledTimes(1);
+
+  const [query] = db.query.programs.findMany.mock.calls[0] as [{
+    where: (
+      columns: { locationId: string; sessionMode: string },
+      operators: {
+        and: (...conditions: string[]) => string;
+        eq: (column: string, value: string) => string;
+      },
+    ) => string;
+  }];
+  const comparisons: Array<[string, string]> = [];
+  query.where(
+    { locationId: "locationId", sessionMode: "sessionMode" },
+    {
+      and: (...conditions) => conditions.join(" AND "),
+      eq: (column, value) => {
+        comparisons.push([column, value]);
+        return `${column} = ${value}`;
+      },
+    },
+  );
+  expect(comparisons).toContainEqual(["sessionMode", "group"]);
 });
 
 test("returns only published posts for the selected site location", async () => {
