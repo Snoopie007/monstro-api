@@ -272,6 +272,8 @@ import { z as z6 } from "zod";
 import { z as z5 } from "zod";
 var FormIdSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 var FieldNameSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_]*$/);
+var FORM_LOCATION_FIELD = "$location";
+var ConditionFieldSchema = z5.union([FieldNameSchema, z5.literal(FORM_LOCATION_FIELD)]);
 var RedirectTypeSchema = z5.enum(["page", "url"]);
 var FormFieldSchema = z5.object({
   name: FieldNameSchema,
@@ -290,7 +292,7 @@ var FormFieldSchema = z5.object({
     format: z5.enum(["email"]).optional()
   }).strict().optional(),
   showWhen: z5.object({
-    field: FieldNameSchema,
+    field: ConditionFieldSchema,
     equals: z5.string().max(1000)
   }).strict().optional()
 }).strict().superRefine((field, issue) => {
@@ -306,7 +308,7 @@ var FormFieldSchema = z5.object({
 });
 var RedirectRuleSchema = z5.object({
   when: z5.object({
-    field: FieldNameSchema,
+    field: ConditionFieldSchema,
     equals: z5.string().max(1000)
   }).strict(),
   redirectTo: z5.string().min(1).max(2000),
@@ -333,7 +335,7 @@ var NativeSiteFormSchema = z5.object({
     } else {
       fields.set(field.name, index);
     }
-    if (field.showWhen) {
+    if (field.showWhen && field.showWhen.field !== FORM_LOCATION_FIELD) {
       const dependency = fields.get(field.showWhen.field);
       if (dependency === undefined || dependency >= index) {
         issue.addIssue({ code: "custom", message: "Conditional fields must reference an earlier field", path: ["fields", index, "showWhen", "field"] });
@@ -351,7 +353,7 @@ var NativeSiteFormSchema = z5.object({
   }
   if (Array.isArray(form.redirectRules)) {
     for (const [index, rule] of form.redirectRules.entries()) {
-      if (!fields.has(rule.when.field)) {
+      if (rule.when.field !== FORM_LOCATION_FIELD && !fields.has(rule.when.field)) {
         issue.addIssue({ code: "custom", message: `Unknown redirect field: ${rule.when.field}`, path: ["redirectRules", index, "when", "field"] });
       }
     }
@@ -389,12 +391,18 @@ var FormSubmissionResponseSchema = z5.object({
 }).strict();
 var SiteFormSchema = NativeSiteFormSchema;
 var CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
-function isFormFieldVisible(field, values) {
+function matchesFormCondition(condition, values, locationId) {
+  if (condition.field === FORM_LOCATION_FIELD) {
+    return Boolean(locationId) && locationId === condition.equals;
+  }
+  return String(values[condition.field] ?? "") === condition.equals;
+}
+function isFormFieldVisible(field, values, locationId) {
   if (!field.showWhen)
     return true;
-  return String(values[field.showWhen.field] ?? "") === field.showWhen.equals;
+  return matchesFormCondition(field.showWhen, values, locationId);
 }
-function getFormValidationErrors(form, input) {
+function getFormValidationErrors(form, input, locationId) {
   const parsed = FormValuesSchema.safeParse(input);
   if (!parsed.success)
     return { _form: "Invalid form values." };
@@ -406,7 +414,7 @@ function getFormValidationErrors(form, input) {
     }
   }
   for (const field of form.fields) {
-    if (!isFormFieldVisible(field, parsed.data))
+    if (!isFormFieldVisible(field, parsed.data, locationId))
       continue;
     const rawValue = parsed.data[field.name];
     const value = typeof rawValue === "string" ? rawValue : "";
@@ -429,16 +437,16 @@ function getFormValidationErrors(form, input) {
   }
   return errors;
 }
-function validateFormValues(form, input) {
+function validateFormValues(form, input, locationId) {
   const parsed = FormValuesSchema.safeParse(input);
   if (!parsed.success)
     throw new Error("Invalid form values.");
-  const errors = getFormValidationErrors(form, parsed.data);
+  const errors = getFormValidationErrors(form, parsed.data, locationId);
   if (Object.keys(errors).length > 0)
     throw new Error(Object.values(errors).join(" "));
   const values = {};
   for (const field of form.fields) {
-    if (isFormFieldVisible(field, parsed.data) && parsed.data[field.name] !== undefined) {
+    if (isFormFieldVisible(field, parsed.data, locationId) && parsed.data[field.name] !== undefined) {
       values[field.name] = parsed.data[field.name];
     }
   }
@@ -446,9 +454,9 @@ function validateFormValues(form, input) {
     values[field] = parsed.data[field] === true;
   return values;
 }
-function resolveFormRedirect(form, values, pages) {
+function resolveFormRedirect(form, values, pages, locationId) {
   for (const field of form.fields) {
-    if (!isFormFieldVisible(field, values) || field.type !== "select")
+    if (!isFormFieldVisible(field, values, locationId) || field.type !== "select")
       continue;
     const selected = field.options?.find((option) => option.value === String(values[field.name] ?? ""));
     const redirect = resolveRedirectTarget(selected?.redirectTo, undefined, values, pages);
@@ -457,7 +465,7 @@ function resolveFormRedirect(form, values, pages) {
   }
   if (Array.isArray(form.redirectRules)) {
     for (const rule of form.redirectRules) {
-      if (String(values[rule.when.field] ?? "") === rule.when.equals) {
+      if (matchesFormCondition(rule.when, values, locationId)) {
         return resolveRedirectTarget(rule.redirectTo, rule.redirectToType, values, pages) ?? "/";
       }
     }
@@ -487,8 +495,8 @@ function isSafeRedirectUrl(value) {
     return false;
   }
 }
-function toGhlFormContact(form, values) {
-  const allowed = new Set(form.fields.filter((field) => isFormFieldVisible(field, values)).map((field) => field.name));
+function toGhlFormContact(form, values, locationId) {
+  const allowed = new Set(form.fields.filter((field) => isFormFieldVisible(field, values, locationId)).map((field) => field.name));
   const submitted = Object.fromEntries(Object.entries(values).filter(([key]) => allowed.has(key)));
   const { firstName, lastName } = splitName(submitted);
   return {
@@ -1935,14 +1943,21 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
     }
   }
   for (const [formIndex, form2] of config.forms.entries()) {
+    let checkLocationCondition = function(condition, path) {
+      if (condition?.field === FORM_LOCATION_FIELD && config.locationConnections && !connectedLocationIds.has(condition.equals)) {
+        issue.addIssue({ code: "custom", message: `Form rule references an unconnected location: ${condition.equals}`, path });
+      }
+    };
     if (Array.isArray(form2.redirectRules)) {
       for (const [ruleIndex, rule] of form2.redirectRules.entries()) {
+        checkLocationCondition(rule.when, ["forms", formIndex, "redirectRules", ruleIndex, "when", "equals"]);
         checkRedirect(rule.redirectTo, rule.redirectToType, ["forms", formIndex, "redirectRules", ruleIndex, "redirectTo"]);
       }
     } else {
       checkRedirect(form2.redirectTo ?? (typeof form2.redirectRules === "string" ? form2.redirectRules : undefined), form2.redirectToType, ["forms", formIndex, "redirectTo"]);
     }
     for (const [fieldIndex, field] of form2.fields.entries()) {
+      checkLocationCondition(field.showWhen, ["forms", formIndex, "fields", fieldIndex, "showWhen", "equals"]);
       for (const [optionIndex, option] of (field.options ?? []).entries()) {
         checkRedirect(option.redirectTo, "page", ["forms", formIndex, "fields", fieldIndex, "options", optionIndex, "redirectTo"]);
       }
@@ -3901,6 +3916,7 @@ export {
   FormPlacementSchema,
   FormFieldSchema,
   FaqsSectionSchema,
+  FORM_LOCATION_FIELD,
   FORM_IFRAME_POLICY,
   ExternalWidgetSectionSchema,
   ExternalWidgetSectionPropsSchema,
