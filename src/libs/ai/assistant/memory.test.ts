@@ -89,7 +89,30 @@ describe("vendor assistant memory", () => {
 		const begun = await memory.begin(scope, request);
 		await expect(memory.begin(scope, { ...request, requestId: "second" })).rejects.toThrow("still being processed");
 		await memory.fail(scope, begun.state);
-		await expect(memory.begin(scope, request)).rejects.toThrow("already accepted");
+		await expect(memory.begin(scope, request)).rejects.toThrow("already attempted");
+	});
+
+	test("wallet rejection removes the unprocessed message and restores its question", async () => {
+		const { memory } = fixture();
+		const prompt = askUser({ question: "Which Alex?" });
+		const first = await memory.begin(scope, request);
+		await memory.complete(scope, first.state, { ...request, result: reply({ prompts: [prompt] }) });
+		const answer = await memory.begin(scope, { ...request, requestId: "answer", message: "Alex", answer: { promptId: prompt.id, value: "Alex" } });
+		await memory.fail(scope, answer.state, false);
+		const restored = await memory.load(scope);
+		expect(restored.turns).toHaveLength(1);
+		expect(restored.pendingPrompt).toEqual(prompt);
+		expect(restored.busy).toBe(false);
+	});
+
+	test("restoration repairs legacy wallet-rejected history without hiding interrupted actions", async () => {
+		const { memory } = fixture();
+		const pending = await memory.begin(scope, request);
+		const legacy = { ...pending.state, busy: false, activeRequest: undefined };
+		const reader = createAssistantMemory({ get: async () => legacy } as unknown as Parameters<typeof createAssistantMemory>[0]);
+		expect((await reader.load(scope, "thread")).turns).toHaveLength(0);
+		legacy.interrupted = true;
+		expect((await reader.load(scope, "thread")).turns).toHaveLength(1);
 	});
 
 	test("a stale state cannot overwrite a completed turn", async () => {

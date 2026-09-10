@@ -1,6 +1,7 @@
 import { estimateAssistantTurnCost, runAssistantTurnStream } from "@/libs/ai/assistant";
 import { AssistantSessionError, createAssistantMemory, historyFromThread } from "@/libs/ai/assistant/memory";
 import { Wallet } from "@/libs/wallet";
+import { assistantBudgetError } from "@/libs/ai/assistant/errors";
 import { canAccessLocation } from "@/utils/merchandise";
 import type { AssistantChatRequest } from "@subtrees/types/assistant";
 import type { Context, Elysia } from "elysia";
@@ -17,6 +18,7 @@ async function authorizedScope(ctx: AssistantContext, locationId: string) {
 const streamHeaders = {
 	"content-type": "text/event-stream; charset=utf-8",
 	"cache-control": "no-cache, no-transform",
+	"x-accel-buffering": "no",
 };
 
 export function assistantChatRoute(app: Elysia) {
@@ -28,8 +30,12 @@ export function assistantChatRoute(app: Elysia) {
 			const state = await createAssistantMemory().load(scope, ctx.query.threadId);
 			ctx.set.headers["cache-control"] = "no-store";
 			return { threadId: state.threadId, turns: state.turns, pendingPrompt: state.pendingPrompt, busy: state.busy, interrupted: state.interrupted };
-		} catch {
-			return ctx.status(503, { message: "Unable to load the conversation. Please try again." });
+		} catch (error) {
+			console.error("Unable to load assistant history", error);
+			return ctx.status(503, {
+				message: error instanceof AssistantSessionError ? error.message : "Unable to load the conversation. Please try again.",
+				code: "ASSISTANT_HISTORY_UNAVAILABLE",
+			});
 		}
 	}, { query: t.Object({ threadId: t.Optional(t.String({ minLength: 1, maxLength: 120 })) }) });
 
@@ -65,8 +71,10 @@ export function assistantChatRoute(app: Elysia) {
 					description: "assistant_chat", id: operationId,
 				});
 				if (!reserve.ok) {
-					await memory.fail(scope, turn.state);
-					return ctx.status(402, { message: "Unable to reserve funds for this assistant request.", code: reserve.reason });
+					const failure = assistantBudgetError(reserve.reason);
+					try { await memory.fail(scope, turn.state); }
+					catch (error) { console.error("Unable to release rejected assistant request", error); }
+					return ctx.status(failure.status, { message: failure.message, code: failure.code });
 				}
 				reserved = true;
 			} catch (error) {
