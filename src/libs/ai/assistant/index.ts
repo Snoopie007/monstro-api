@@ -3,7 +3,7 @@ import { askUser, askUserSchema } from "./tools/ask";
 import { assistantMemoryWritebackQueue } from "@/queues";
 import { ChatOpenAI } from "@langchain/openai";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import { AIMessage, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
+import { AIMessage, AIMessageChunk, HumanMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
 import { calculateAICost } from "@/libs/ai/AI";
 import { db } from "@/db/db";
 import { sql } from "drizzle-orm";
@@ -25,7 +25,6 @@ import {
 } from "@subtrees/types/assistant";
 import {
 	buildReply,
-	chunkReplyText,
 	deriveAssistantUiState,
 	extractBookingMeta,
 	extractCancelledByUserReply,
@@ -259,7 +258,7 @@ async function enqueueWritebackJob(job: AssistantMemoryWritebackJob) {
 	);
 }
 
-async function runToolLoop(params: {
+async function* runToolLoop(params: {
 	locationId: string;
 	vendorId: string;
 	userId: string;
@@ -327,8 +326,19 @@ async function runToolLoop(params: {
 	let finalReply = "";
 
 	for (let step = 0; step < MAX_TOOL_ITERATIONS; step += 1) {
-		const response = await modelWithTools.invoke(messages);
-		const aiMessage = response as AIMessage;
+		const beforeUsage = { ...usageTotals };
+		let assembled: AIMessageChunk | undefined;
+		let index = 0;
+		for await (const chunk of await modelWithTools.stream(messages)) {
+			assembled = assembled ? assembled.concat(chunk) : chunk;
+			const delta = toTextContent(chunk.content);
+			if (delta) yield { delta, index: index++ };
+		}
+		if (usageTotals.promptTokens === beforeUsage.promptTokens && usageTotals.completionTokens === beforeUsage.completionTokens) {
+			usageTotals.promptTokens += assembled?.usage_metadata?.input_tokens || 0;
+			usageTotals.completionTokens += assembled?.usage_metadata?.output_tokens || 0;
+		}
+		const aiMessage = assembled || new AIMessage("");
 		const toolCalls = Array.isArray(aiMessage.tool_calls) ? aiMessage.tool_calls : [];
 		const question = toolCalls.find((call) => call.name === "ask_user");
 		if (question) {
@@ -441,7 +451,7 @@ async function runToolLoop(params: {
 	};
 }
 
-async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
+async function* runAssistantTurnInternal(props: RunAssistantTurnProps) {
 	const parsed = assistantChatRequestSchema.safeParse({
 		message: props.message,
 		threadId: props.threadId,
@@ -454,7 +464,7 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 	const threadId = props.threadId || crypto.randomUUID();
 	const inferredExplicitPreference = parseExplicitPreference(parsed.data.message);
 	const recalledMemories = await recallMemories(props.locationId, parsed.data.message);
-	const loopResult = await runToolLoop({
+	const loopResult = yield* runToolLoop({
 		locationId: props.locationId,
 		vendorId: props.vendorId,
 		userId: props.userId,
@@ -488,7 +498,12 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 		createdAt: new Date().toISOString(),
 	};
 
-	await enqueueWritebackJob(writebackJob);
+	let writebackQueued = true;
+	try { await enqueueWritebackJob(writebackJob); }
+	catch (error) {
+		writebackQueued = false;
+		console.error("Assistant preference writeback failed", error);
+	}
 
 	const uiState = loopResult.prompt ? {
 		responseState: "ask_clarification" as const,
@@ -519,7 +534,7 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 		threadId,
 		reply: finalReply,
 		usedTools: loopResult.usedTools,
-		memorySaved: !!loopResult.explicitPreference,
+		memorySaved: !!loopResult.explicitPreference && writebackQueued,
 		bookingCandidate,
 		bookingMeta,
 		blocks,
@@ -531,6 +546,9 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 			maxPromptsThisTurn: uiState.prompts.length,
 		},
 	};
+	if (loopResult.explicitPreference && !writebackQueued) {
+		result.reply += "\n\nI couldn't save that preference. Please try again.";
+	}
 
 	return {
 		result,
@@ -540,8 +558,10 @@ async function runAssistantTurnInternal(props: RunAssistantTurnProps) {
 }
 
 export async function runAssistantTurn(props: RunAssistantTurnProps): Promise<AssistantChatResult> {
-	const internal = await runAssistantTurnInternal(props);
-	return internal.result;
+	const turn = runAssistantTurnInternal(props);
+	let next = await turn.next();
+	while (!next.done) next = await turn.next();
+	return next.value.result;
 }
 
 export async function* runAssistantTurnStream(
@@ -559,10 +579,16 @@ export async function* runAssistantTurnStream(
 	};
 
 	try {
-		const internal = await runAssistantTurnInternal({
+		const turn = runAssistantTurnInternal({
 			...props,
 			threadId,
 		});
+		let next = await turn.next();
+		while (!next.done) {
+			yield { type: "text_delta", threadId, messageId, ...next.value, ts: Date.now() };
+			next = await turn.next();
+		}
+		const internal = next.value;
 		const result = internal.result;
 
 		if (props.onCompleted) {
@@ -571,20 +597,6 @@ export async function* runAssistantTurnStream(
 				cost: internal.cost,
 				result: internal.result,
 			});
-		}
-
-		const textChunks = chunkReplyText(result.reply, 120);
-		for (let index = 0; index < textChunks.length; index += 1) {
-			const delta = textChunks[index] || "";
-			if (!delta) continue;
-			yield {
-				type: "text_delta",
-				threadId,
-				messageId,
-				delta,
-				index,
-				ts: Date.now(),
-			};
 		}
 
 		for (const block of result.blocks || []) {
@@ -614,16 +626,20 @@ export async function* runAssistantTurnStream(
 		};
 	} catch (error) {
 		if (props.onFailed) {
-			await props.onFailed();
+			try { await props.onFailed(); }
+			catch (cleanupError) { console.error("Assistant failure cleanup failed", cleanupError); }
 		}
 
 		const message = error instanceof Error ? error.message : "Failed to process assistant turn";
+		const code = error && typeof error === "object" && "code" in error && typeof error.code === "string"
+			? error.code : "ASSISTANT_TURN_FAILED";
 
 		yield {
 			type: "error",
 			threadId,
 			messageId,
 			message,
+			code,
 			ts: Date.now(),
 		};
 
