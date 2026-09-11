@@ -148,6 +148,7 @@ var HttpsUrlSchema = z2.string().url().refine((value) => {
     return false;
   }
 }, "URL must use HTTPS without embedded credentials");
+var SiteColorSchema = z2.string().regex(/^#[0-9a-f]{6}$/i, "Color must be a six-digit hex value");
 var SectionIdentifierSchema = z2.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 var IFRAME_HOSTS = {
   video: ["youtube.com", "youtube-nocookie.com", "vimeo.com", "veed.io"],
@@ -191,7 +192,8 @@ var SiteLinkSchema = z2.object({
   label: z2.string().min(1),
   href: SiteHrefSchema,
   external: z2.boolean().default(false),
-  variant: z2.enum(["primary", "secondary"]).default("primary")
+  variant: z2.enum(["primary", "secondary"]).default("primary"),
+  textColor: SiteColorSchema.nullable().optional()
 }).strict();
 var SectionImageFitSchema = z2.enum(["cover", "contain", "fill"]);
 var SectionImagePositionSchema = z2.enum([
@@ -1529,15 +1531,14 @@ var SiteHeaderActionSchema = z35.discriminatedUnion("kind", [
   }).strict(),
   z35.object({ kind: z35.literal("hidden") }).strict()
 ]);
-var HexColorSchema = z35.string().regex(/^#[0-9a-f]{6}$/i);
 var PagePathSchema = z35.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
 var SiteThemeSchema = z35.object({
   colors: z35.object({
-    primary: HexColorSchema,
-    background: HexColorSchema,
-    foreground: HexColorSchema,
-    muted: HexColorSchema,
-    accent: HexColorSchema
+    primary: SiteColorSchema,
+    background: SiteColorSchema,
+    foreground: SiteColorSchema,
+    muted: SiteColorSchema,
+    accent: SiteColorSchema
   }).strict(),
   typography: z35.object({
     heading: z35.enum(["sans", "serif"]),
@@ -3849,6 +3850,7 @@ export {
   SiteCustomEmbedPartSchema,
   SiteCustomEmbedEntrySchema,
   SiteContentSchema,
+  SiteColorSchema,
   SiteCapabilitiesSchema,
   SiteCacheInvalidationSchema,
   SiteBuiltinPageSchema,
