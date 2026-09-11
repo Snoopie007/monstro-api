@@ -1544,7 +1544,12 @@ var SiteThemeSchema = z35.object({
     heading: z35.enum(["sans", "serif"]),
     body: z35.enum(["sans", "serif"])
   }).strict(),
-  radius: z35.enum(["none", "small", "medium", "large"])
+  radius: z35.enum(["none", "small", "medium", "large"]),
+  button: z35.object({
+    borderColor: SiteColorSchema.nullable().optional(),
+    backgroundColor: SiteColorSchema.nullable().optional(),
+    textColor: SiteColorSchema.nullable().optional()
+  }).strict().optional()
 }).strict();
 var SitePageHeaderSchema = z35.object({
   mode: z35.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
