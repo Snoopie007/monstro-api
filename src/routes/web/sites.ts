@@ -26,6 +26,7 @@ async function findActiveSiteLocation(siteId: string, locationId: string) {
     .select({
       siteId: websiteSites.id,
       publishedRevisionId: websiteSites.publishedRevisionId,
+      paused: websiteSites.paused,
       locationId: locations.id,
       isPrimary: websiteSiteLocations.isPrimary,
       currency: locationState.currency,
@@ -48,6 +49,18 @@ async function findActiveSiteLocation(siteId: string, locationId: string) {
     .limit(1);
 
   return siteLocation ?? null;
+}
+
+function sitePausedResponse(set: {
+  status?: number | string;
+  headers: Record<string, string | number>;
+}) {
+  set.status = 503;
+  set.headers["Cache-Control"] = "no-store";
+  return {
+    code: "SITE_PAUSED",
+    message: "This site is unavailable at this time. Please contact Monstro Support.",
+  };
 }
 
 function parseDateOnly(value: string): string | null {
@@ -148,7 +161,7 @@ function hasSitesServiceToken(request: Request): boolean {
 
 export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   "/resolve",
-  async ({ query, status }) => {
+  async ({ query, status, set }) => {
     const hostname = normalizeHostname(query.hostname);
     if (!hostname) {
       return status(400, {
@@ -161,6 +174,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
       .select({
         siteId: websiteSites.id,
         vendorId: websiteSites.vendorId,
+        paused: websiteSites.paused,
         publishedRevisionId: websiteSites.publishedRevisionId,
         domain: websiteSiteDomains.hostname,
         verificationData: websiteSiteDomains.verificationData,
@@ -183,6 +197,8 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
         message: "No published site is connected to this domain",
       });
     }
+
+    if (resolved.paused) return sitePausedResponse(set);
 
     const [revisionRows, locationRows, canonicalRows] = await Promise.all([
       db
@@ -312,7 +328,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
 )
   .get(
     "/:siteId/locations/:locationId/schedules",
-    async ({ params, query, status }) => {
+    async ({ params, query, status, set }) => {
       const siteLocation = await findActiveSiteLocation(
         params.siteId,
         params.locationId,
@@ -323,6 +339,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           message: "Site location not found",
         });
       }
+      if (siteLocation.paused) return sitePausedResponse(set);
 
       if (!parseDateOnly(query.date)) {
         return status(400, {
@@ -357,7 +374,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   )
   .get(
     "/:siteId/locations/:locationId/plans",
-    async ({ params, status }) => {
+    async ({ params, status, set }) => {
       const siteLocation = await findActiveSiteLocation(
         params.siteId,
         params.locationId,
@@ -368,6 +385,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           message: "Site location not found",
         });
       }
+      if (siteLocation.paused) return sitePausedResponse(set);
 
       try {
         return status(200, await getLocationPlans(params.locationId));
@@ -385,13 +403,15 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   )
   .get(
     "/:siteId/locations/:locationId/posts",
-    async ({ params, query, status }) => {
-      if (!await findActiveSiteLocation(params.siteId, params.locationId)) {
+    async ({ params, query, status, set }) => {
+      const siteLocation = await findActiveSiteLocation(params.siteId, params.locationId);
+      if (!siteLocation) {
         return status(404, {
           code: "SITE_LOCATION_NOT_FOUND",
           message: "Site location not found",
         });
       }
+      if (siteLocation.paused) return sitePausedResponse(set);
       try {
         const { posts, total } = await getPublishedBlogPosts(
           params.locationId,
@@ -427,13 +447,15 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   )
   .get(
     "/:siteId/locations/:locationId/posts/:slug",
-    async ({ params, status }) => {
-      if (!await findActiveSiteLocation(params.siteId, params.locationId)) {
+    async ({ params, status, set }) => {
+      const siteLocation = await findActiveSiteLocation(params.siteId, params.locationId);
+      if (!siteLocation) {
         return status(404, {
           code: "SITE_LOCATION_NOT_FOUND",
           message: "Site location not found",
         });
       }
+      if (siteLocation.paused) return sitePausedResponse(set);
       try {
         const post = await getPublishedBlogPost(params.locationId, params.slug);
         if (!post) {
@@ -473,7 +495,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   )
   .get(
     "/:siteId/locations/:locationId/products",
-    async ({ params, status }) => {
+    async ({ params, status, set }) => {
       const siteLocation = await findActiveSiteLocation(params.siteId, params.locationId);
       if (!siteLocation) {
         return status(404, {
@@ -481,6 +503,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           message: "Site location not found",
         });
       }
+      if (siteLocation.paused) return sitePausedResponse(set);
       try {
         const products = await getActiveLocationProducts(params.locationId);
         return status(200, products.map((product) => ({
@@ -530,7 +553,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   )
   .get(
     "/:siteId/locations/:locationId/products/:productId",
-    async ({ params, status }) => {
+    async ({ params, status, set }) => {
       const siteLocation = await findActiveSiteLocation(params.siteId, params.locationId);
       if (!siteLocation) {
         return status(404, {
@@ -538,6 +561,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           message: "Site location not found",
         });
       }
+      if (siteLocation.paused) return sitePausedResponse(set);
       try {
         const product = await getActiveLocationProduct(params.locationId, params.productId);
         if (!product) {
@@ -594,7 +618,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
   )
   .post(
     "/:siteId/locations/:locationId/forms/:formId/submissions",
-    async ({ params, body, request, status }) => {
+    async ({ params, body, request, status, set }) => {
       if (!hasSitesServiceToken(request)) {
         return status(401, { code: "UNAUTHORIZED", message: "Unauthorized" });
       }
@@ -605,6 +629,7 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
           message: "Site location not found",
         });
       }
+      if (siteLocation.paused) return sitePausedResponse(set);
       try {
         const [revision] = await db
           .select({ config: websiteSiteRevisions.config })
