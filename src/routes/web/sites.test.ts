@@ -10,6 +10,7 @@ let siteLocationRows: Array<{
   siteId: string;
   locationId: string;
   publishedRevisionId?: string | null;
+  paused?: boolean;
 }> = [];
 let selectedRows: unknown[][] = [];
 const planRows: unknown[] = [];
@@ -155,6 +156,29 @@ test("normalizes legacy location slugs for public site context", () => {
     .toBe("odyssey-health-spa-fitness-inc");
 });
 
+test("returns a temporary unavailable response for a paused site", async () => {
+  selectedRows = [[{
+    siteId: "site-1",
+    vendorId: "vendor-1",
+    paused: true,
+    publishedRevisionId: "revision-1",
+    domain: "academy.monstro.site",
+    verificationData: { source: "wildcard" },
+    isCanonical: true,
+  }]];
+
+  const response = await app.handle(new Request(
+    "http://localhost/sites/resolve?hostname=academy.monstro.site",
+  ));
+
+  expect(response.status).toBe(503);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(await response.json()).toEqual({
+    code: "SITE_PAUSED",
+    message: "This site is unavailable at this time. Please contact Monstro Support.",
+  });
+});
+
 test("projects map identity and structured address through the public resolve response", async () => {
   const publishedConfig = routingConfig([{
     locationId: "location-1",
@@ -291,6 +315,30 @@ test("requires service authorization for native form submissions", async () => {
   ));
 
   expect(response.status).toBe(401);
+  expect(submitGhlFormContact).not.toHaveBeenCalled();
+});
+
+test("blocks authorized form submissions for a paused site", async () => {
+  selectedRows = [[{
+    siteId: "site-1",
+    locationId: "location-1",
+    publishedRevisionId: "revision-1",
+    paused: true,
+  }]];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-1/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(503);
+  expect(response.headers.get("cache-control")).toBe("no-store");
   expect(submitGhlFormContact).not.toHaveBeenCalled();
 });
 
