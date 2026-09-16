@@ -8,10 +8,12 @@ const findSession = mock(async () => ({
 const findCurrentSession = mock(async () => ({ id: "session-1", program: { locationId: "location-1", sessionMode: "group" } }));
 const insert = mock(() => ({ values: () => ({ returning: async () => [{ id: "rsv_1" }] }) }));
 const update = mock(() => ({ set: () => ({ where: async () => undefined }) }));
+const findReservation = mock(async () => ({ id: "rsv_1", program: { sessionMode: "one_on_one" } }));
 const tx = { execute: mock(async () => undefined), query: { programSessions: { findFirst: findCurrentSession } }, insert, update };
 mock.module("@/db/db", () => ({
     db: {
         query: {
+            reservations: { findFirst: findReservation },
             programSessions: { findFirst: findSession },
             memberPackages: { findFirst: async () => ({ memberId: "member-1", totalClassLimit: 10, totalClassAttended: 0 }) },
             memberLocations: { findFirst: async () => ({ onboarded: true, member: { id: "member-1" }, location: {} }) },
@@ -68,6 +70,15 @@ test("rejects 1-on-1 sessions from the generic reservation route", async () => {
         success: false,
         message: "Book 1-on-1 reservations from the vendor calendar.",
     });
+});
+
+test.each(["DELETE", "PATCH"])("rejects legacy %s before modifying a 1-on-1 reservation", async (method) => {
+    const app = new Elysia({ prefix: "/protected/locations/:lid" });
+    await locationReservations(app as never);
+    const suffix = method === "PATCH" ? "/resume" : "";
+    const response = await app.handle(new Request(`http://localhost/protected/locations/location-1/reservations/rsv_1${suffix}`, { method }));
+    expect(response.status).toBe(409);
+    expect(update).not.toHaveBeenCalled();
 });
 
 test("rejects a mode change during booking without a reservation or package increment", async () => {

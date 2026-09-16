@@ -65,6 +65,23 @@ async function rejectOneOnOneBooking(context: Context) {
     }
 }
 
+// Older clients cannot safely cancel/resume weekly-owned or paid 1-on-1 lessons.
+async function rejectOneOnOneMutation(context: Context) {
+    const { lid, rid } = context.params as { lid: string; rid: string };
+    const reservation = await db.query.reservations.findFirst({
+        where: and(eq(reservations.id, rid), eq(reservations.locationId, lid)),
+        columns: { id: true },
+        with: {
+            program: { columns: { sessionMode: true } },
+            session: { with: { program: { columns: { sessionMode: true } } } },
+        },
+    });
+    if (!reservation) return context.status(404, { error: "Reservation not found" });
+    if (reservation.program?.sessionMode === "one_on_one" || reservation.session?.program?.sessionMode === "one_on_one") {
+        return context.status(409, { success: false, message: "Manage 1-on-1 lessons from the vendor calendar." });
+    }
+}
+
 export async function locationReservations(app: Elysia) {
     app.group('/reservations', (app) => {
 
@@ -339,6 +356,7 @@ export async function locationReservations(app: Elysia) {
                     const reservation = await db.query.reservations.findFirst({
                         where: (reservations, { eq, and, or }) => and(
                             eq(reservations.id, rid),
+                            eq(reservations.locationId, params.lid),
                             or(
                                 eq(reservations.status, "cancelled_by_member"),
                                 eq(reservations.status, "cancelled_by_vendor"),
@@ -398,6 +416,7 @@ export async function locationReservations(app: Elysia) {
                     return status(500, { error: err });
                 }
             }, {
+                beforeHandle: rejectOneOnOneMutation,
                 params: t.Object({
                     lid: t.String(),
                     rid: t.String(),
@@ -409,7 +428,7 @@ export async function locationReservations(app: Elysia) {
                 const byStaff = body?.byStaff;
                 try {
                     const reservation = await db.query.reservations.findFirst({
-                        where: (reservations, { eq }) => eq(reservations.id, rid),
+                        where: (reservations, { eq, and }) => and(eq(reservations.id, rid), eq(reservations.locationId, params.lid)),
                         with: {
                             attendance: {
                                 columns: {
@@ -510,6 +529,7 @@ export async function locationReservations(app: Elysia) {
                     return status(500, { error: "Internal server error" })
                 }
             }, {
+                beforeHandle: rejectOneOnOneMutation,
                 params: t.Object({
                     lid: t.String(),
                     rid: t.String(),
@@ -529,4 +549,3 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-
