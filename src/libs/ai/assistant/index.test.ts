@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { AIMessage } from "@langchain/core/messages";
+import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
 import { z } from "zod";
 
 const invoke = mock(async (_messages: unknown) => new AIMessage("Done."));
 const execute = mock(async () => ({ content: JSON.stringify({ ok: true }) }));
 const add = mock(async () => ({}));
+let chunks: AsyncGenerator<AIMessageChunk> | undefined;
 mock.module("@langchain/openai", () => ({
-	ChatOpenAI: class { bindTools() { return { invoke }; } },
+	ChatOpenAI: class { bindTools() { return { stream: async function* (messages: unknown) {
+		if (chunks) { yield* chunks; return; }
+		const result = await invoke(messages);
+		yield new AIMessageChunk({ content: result.content, tool_calls: result.tool_calls });
+	} }; } },
 	OpenAIEmbeddings: class { async embedQuery() { return []; } },
 }));
 mock.module("@/queues", () => ({
@@ -26,9 +31,42 @@ mock.module("./tools", () => ({
 const { runAssistantTurn, runAssistantTurnStream } = await import("./index");
 const scope = { locationId: "location", vendorId: "vendor", userId: "user", threadId: "thread" };
 
-beforeEach(() => { invoke.mockClear(); execute.mockClear(); add.mockClear(); });
+beforeEach(() => { chunks = undefined; invoke.mockClear(); execute.mockClear(); add.mockReset(); add.mockResolvedValue({}); });
 
 describe("ask_user in the vendor tool loop", () => {
+	test("publishes model text before generation and saving finish", async () => {
+		let finish = () => {};
+		const gate = new Promise<void>((resolve) => { finish = resolve; });
+		chunks = (async function* () {
+			yield new AIMessageChunk({ content: "Hello " });
+			await gate;
+			yield new AIMessageChunk({ content: "there." });
+		})();
+		const completed = mock(async () => {});
+		const events = runAssistantTurnStream({ ...scope, message: "Hi", onCompleted: completed });
+		expect((await events.next()).value?.type).toBe("session_start");
+		expect((await events.next()).value).toMatchObject({ type: "text_delta", delta: "Hello ", index: 0 });
+		expect(completed).not.toHaveBeenCalled();
+		finish();
+		const remaining = [];
+		for await (const event of events) remaining.push(event);
+		expect(remaining.find((event) => event.type === "assistant_final")).toMatchObject({ result: { reply: "Hello there." } });
+	});
+
+	test("cleanup errors do not replace the model failure event", async () => {
+		chunks = (async function* () { yield new AIMessageChunk({ content: "Partial" }); throw new Error("Model unavailable"); })();
+		const events = [];
+		for await (const event of runAssistantTurnStream({
+			...scope, message: "Hi", onFailed: async () => { throw new Error("Redis unavailable"); },
+		})) events.push(event);
+		expect(events.find((event) => event.type === "error")).toMatchObject({ message: "Model unavailable" });
+	});
+
+	test("legacy memory queue failure does not discard a generated reply", async () => {
+		invoke.mockResolvedValue(new AIMessage("Hello there."));
+		add.mockRejectedValue(new Error("Queue unavailable"));
+		expect((await runAssistantTurn({ ...scope, message: "Hi" })).reply).toBe("Hello there.");
+	});
 	test("pauses before other actions in the same model response", async () => {
 		invoke.mockResolvedValue(new AIMessage({
 			content: "",

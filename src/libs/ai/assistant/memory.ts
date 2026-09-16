@@ -92,7 +92,13 @@ export function createAssistantMemory(redis: RedisClient = getRedisClient()) {
 			const keys = assistantKeys(scope, suppliedThreadId || "");
 			const threadId = suppliedThreadId || await redis.get<string>(keys.latest) || crypto.randomUUID();
 			const state = await redis.get<ThreadState>(assistantKeys(scope, threadId).thread);
-			return state || { threadId, turns: [], busy: false, revision: 0, requests: [] };
+			if (!state) return { threadId, turns: [], busy: false, revision: 0, requests: [] };
+			// Older rejected wallet requests left user-only turns despite never running the model.
+			if (!state.busy && !state.interrupted && state.turns.some((turn) => !turn.result)) {
+				const turns = state.turns.filter((turn) => turn.result);
+				return { ...state, turns, pendingPrompt: turns.at(-1)?.result?.prompts?.find((prompt) => prompt.blocking) };
+			}
+			return state;
 		} catch {
 			throw new AssistantSessionError("Conversation storage is unavailable. Please try again.", 503);
 		}
@@ -170,7 +176,11 @@ export function createAssistantMemory(redis: RedisClient = getRedisClient()) {
 
 	async function fail(scope: AssistantScope, state: ThreadState, interrupted = false) {
 		// Retain the attempted ID so a network retry cannot repeat a side effect.
-		return save(scope, { ...state, busy: false, activeRequest: undefined, interrupted });
+		const turns = interrupted ? state.turns : state.turns.filter((turn) => turn.requestId !== state.activeRequest);
+		return save(scope, {
+			...state, turns, busy: false, activeRequest: undefined, interrupted,
+			pendingPrompt: interrupted ? state.pendingPrompt : turns.at(-1)?.result?.prompts?.find((prompt) => prompt.blocking),
+		});
 	}
 
 	return { load, begin, complete, fail };

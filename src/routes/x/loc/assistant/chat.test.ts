@@ -15,7 +15,7 @@ const begin = mock(async () => {
 });
 const complete = mock(async () => {});
 const fail = mock(async () => {});
-const reserve = mock(async () => ({ ok: true }));
+const reserve = mock(async (): Promise<{ ok: boolean; reason?: string }> => ({ ok: true }));
 const settle = mock(async () => ({ ok: true }));
 const run = mock(async () => {});
 mock.module("@/utils/merchandise", () => ({ canAccessLocation: async () => ({ allowed }) }));
@@ -37,6 +37,8 @@ mock.module("@/libs/ai/assistant", () => ({
 		history: unknown;
 		onCompleted: (meta: unknown) => Promise<void>;
 	}) {
+		yield { type: "session_start", threadId: "thread", messageId: "request", ts: Date.now() };
+		yield { type: "text_delta", threadId: "thread", messageId: "request", delta: "Hello", index: 0, ts: Date.now() };
 		await run();
 		expect(props.history).toEqual([{ role: "user", content: "Server-owned history" }]);
 		await props.onCompleted({ cost: 1, usage: {}, result });
@@ -67,6 +69,40 @@ beforeEach(() => {
 });
 
 describe("vendor assistant routes", () => {
+	test("streams over a real HTTP connection before the model finishes", async () => {
+		let finish = () => {};
+		const gate = new Promise<void>((resolve) => { finish = resolve; });
+		run.mockImplementationOnce(async () => { await gate; });
+		const server = app.listen({ port: 0, hostname: "127.0.0.1" });
+		try {
+			const response = await fetch(`http://127.0.0.1:${server.server!.port}/loc/location/chat`, {
+				method: "POST", headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ threadId: "thread", requestId: "request", message: "Hi" }),
+				signal: AbortSignal.timeout(5000),
+			});
+			expect(response.headers.get("content-type")).toContain("text/event-stream");
+			const reader = response.body!.getReader();
+			const first = await reader.read();
+			expect(new TextDecoder().decode(first.value)).toContain("session_start");
+			expect(complete).not.toHaveBeenCalled();
+			finish();
+			let tail = "";
+			for (;;) {
+				const chunk = await reader.read();
+				if (chunk.done) break;
+				tail += new TextDecoder().decode(chunk.value);
+			}
+			expect(tail).toContain("assistant_final");
+		} finally { finish(); await server.stop(true); }
+	});
+
+	test("reports a missing wallet as setup failure rather than insufficient funds", async () => {
+		reserve.mockResolvedValueOnce({ ok: false, reason: "WALLET_NOT_FOUND" });
+		const response = await app.handle(request("POST"));
+		expect(response.status).toBe(409);
+		expect(await response.json()).toMatchObject({ code: "WALLET_NOT_FOUND", message: expect.stringContaining("wallet set up") });
+		expect(run).not.toHaveBeenCalled();
+	});
 	test.each(["GET", "POST"])("rejects unauthorized location access before Redis or billing for %s", async (method) => {
 		allowed = false;
 		const response = await app.handle(request(method));
@@ -120,7 +156,7 @@ describe("vendor assistant routes", () => {
 	});
 
 	test("releases the pending turn when the wallet rejects the reservation", async () => {
-		reserve.mockResolvedValueOnce({ ok: false });
+		reserve.mockResolvedValueOnce({ ok: false, reason: "INSUFFICIENT_FUNDS" });
 		const response = await app.handle(request("POST"));
 		expect(response.status).toBe(402);
 		expect(fail).toHaveBeenCalledTimes(1);
