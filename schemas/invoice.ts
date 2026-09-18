@@ -34,6 +34,8 @@ export const memberInvoices = pgTable('member_invoices', {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [
+    // TODO(vendor-member-fees): after cleaning up duplicate periods, add a unique
+    // index on memberPlanId + forPeriodStart + forPeriodEnd before charging prepared invoices.
     uniqueIndex('member_invoices_transaction_id_uq')
         .on(t.transactionId)
         .where(sql`${t.transactionId} is not null`),

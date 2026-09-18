@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { members } from "../members";
-import { rankProcesses } from "./RankProcesses";
+import { rankProcesses } from "./rankProcesses";
 import { ranks } from "./ranks";
 
 export const memberRanks = pgTable("member_ranks", {

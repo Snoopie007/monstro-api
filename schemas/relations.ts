@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 
 // Import all table definitions
 import { accounts } from "./accounts";
+import { additionalFees } from "./additionalFees";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
@@ -9,6 +10,7 @@ import { eventRegistrations, eventTickets, locationEvents } from "./event";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
 import { locations } from "./locations";
+import { locationClosures } from "./closures";
 import { locationState } from "./locationState";
 import { memberLocations } from "./MemberLocation";
 import { memberPasses } from "./MemberPasses";
@@ -24,6 +26,7 @@ import {
 } from "./members";
 import { migrateMembers } from "./MigrateMembers";
 import { planPrograms, programs, programSessions, sessionWaitlist } from "./programs";
+import { sessionExceptions } from "./sessionExceptions";
 import { promos } from "./promos";
 import {
 	memberRankRequirements,
@@ -32,7 +35,7 @@ import {
 	rankRequirements,
 	ranks,
 } from "./rank";
-import { reservationExceptions, reservations } from "./reservations";
+import { reservations } from "./reservations";
 import { memberRewards, rewards } from "./rewards";
 import { sessions } from "./sessions";
 import { staffs, staffsLocations } from "./staffs";
@@ -41,7 +44,7 @@ import { taxRates } from "./tax";
 import { transactions } from "./transactions";
 import { userNotifications, users } from "./users";
 import { supportPlans, vendors } from "./vendors";
-import { wallets, walletUsages } from "./wallets";
+import { wallets, walletLedgers } from "./wallets";
 
 // Chat tables
 import {
@@ -323,6 +326,7 @@ export const memberCustomFieldsRelations = relations(memberCustomFields, ({ one 
 // ============================================================================
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
+	additionalFees: many(additionalFees),
 	memberLocations: many(memberLocations),
 	integrations: many(integrations),
 	programs: many(programs),
@@ -345,12 +349,28 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		references: [wallets.locationId],
 	}),
 	taxRates: many(taxRates),
+	locationClosures: many(locationClosures),
+	sessionExceptions: many(sessionExceptions),
 	products: many(products),
 	orders: many(orders),
 	rankProcesses: many(rankProcesses),
 	ranks: many(ranks),
 	locationEvents: many(locationEvents),
 	courses: many(courses),
+}));
+
+export const locationClosuresRelations = relations(locationClosures, ({ one }) => ({
+	location: one(locations, {
+		fields: [locationClosures.locationId],
+		references: [locations.id],
+	}),
+}));
+
+export const additionalFeesRelations = relations(additionalFees, ({ one }) => ({
+	location: one(locations, {
+		fields: [additionalFees.locationId],
+		references: [locations.id],
+	}),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -384,7 +404,15 @@ export const walletRelations = relations(wallets, ({ one, many }) => ({
 		fields: [wallets.locationId],
 		references: [locations.id],
 	}),
-	usages: many(walletUsages, { relationName: "usages" }),
+	ledgers: many(walletLedgers, { relationName: "ledgers" }),
+}));
+
+export const walletLedgerRelations = relations(walletLedgers, ({ one }) => ({
+	wallet: one(wallets, {
+		fields: [walletLedgers.walletId],
+		references: [wallets.id],
+		relationName: "ledgers",
+	}),
 }));
 
 // ============================================================================
@@ -728,8 +756,25 @@ export const programSessionsRelations = relations(programSessions, ({ one, many 
 		fields: [programSessions.staffId],
 		references: [staffs.id],
 	}),
+	reservedMember: one(members, {
+		fields: [programSessions.reservedMemberId],
+		references: [members.id],
+	}),
 	reservations: many(reservations),
 	waitlist: many(sessionWaitlist),
+	exceptions: many(sessionExceptions),
+}));
+
+export const sessionExceptionsRelations = relations(sessionExceptions, ({ one, many }) => ({
+	session: one(programSessions, {
+		fields: [sessionExceptions.sessionId],
+		references: [programSessions.id],
+	}),
+	location: one(locations, {
+		fields: [sessionExceptions.locationId],
+		references: [locations.id],
+	}),
+	reservations: many(reservations),
 }));
 
 export const planProgramsRelations = relations(planPrograms, ({ one }) => ({
@@ -758,7 +803,7 @@ export const sessionWaitlistRelations = relations(sessionWaitlist, ({ one }) => 
 // RESERVATION RELATIONS
 // ============================================================================
 
-export const reservationsRelations = relations(reservations, ({ one, many }) => ({
+export const reservationsRelations = relations(reservations, ({ one }) => ({
 	attendance: one(attendances, {
 		fields: [reservations.id],
 		references: [attendances.reservationId],
@@ -766,6 +811,10 @@ export const reservationsRelations = relations(reservations, ({ one, many }) => 
 	session: one(programSessions, {
 		fields: [reservations.sessionId],
 		references: [programSessions.id],
+	}),
+	exception: one(sessionExceptions, {
+		fields: [reservations.exceptionId],
+		references: [sessionExceptions.id],
 	}),
 	member: one(members, {
 		fields: [reservations.memberId],
@@ -795,29 +844,6 @@ export const reservationsRelations = relations(reservations, ({ one, many }) => 
 		fields: [reservations.originalReservationId],
 		references: [reservations.id],
 		relationName: "makeUpReservations",
-	}),
-	exceptions: many(reservationExceptions, {
-		relationName: "reservationExceptions",
-	}),
-}));
-
-export const reservationExceptionsRelations = relations(reservationExceptions, ({ one }) => ({
-	reservation: one(reservations, {
-		fields: [reservationExceptions.reservationId],
-		references: [reservations.id],
-		relationName: "reservationExceptions",
-	}),
-	location: one(locations, {
-		fields: [reservationExceptions.locationId],
-		references: [locations.id],
-	}),
-	session: one(programSessions, {
-		fields: [reservationExceptions.sessionId],
-		references: [programSessions.id],
-	}),
-	createdByStaff: one(staffs, {
-		fields: [reservationExceptions.createdBy],
-		references: [staffs.id],
 	}),
 }));
 

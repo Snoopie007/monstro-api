@@ -1,23 +1,22 @@
+import { sql } from "drizzle-orm";
 import {
+	boolean,
 	integer,
+	jsonb,
+	pgTable,
 	text,
 	timestamp,
-	pgTable,
-	jsonb,
-	boolean,
 } from "drizzle-orm/pg-core";
-import { locations } from "./locations";
-import { sql } from "drizzle-orm";
-import { members } from "./members";
-import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
-import type { TransactionActivity, TransactionMetadata } from "../types";
+import type { InvoiceItem, TransactionActivity, TransactionMetadata } from "../types";
 import type { Currency } from "../types/currency";
-import type { InvoiceItem } from "../types/invoices";
+import { PaymentTypeEnum, TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
+import { locations } from "./locations";
+import { members } from "./members";
 
 export const transactions = pgTable("transactions", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('txn_')`),
 	description: text("description"),
-	items: jsonb("items").$type<InvoiceItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
+	items: jsonb("items").array().$type<InvoiceItem[]>().notNull().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
 	feeAmount: integer("fee_amount").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),

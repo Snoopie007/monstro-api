@@ -1,4 +1,5 @@
 export * from "./account";
+export * from "./additionalFees";
 export * from "./achievement";
 export * from "./attendance";
 export * from "./assistant";

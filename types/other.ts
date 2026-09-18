@@ -34,6 +34,10 @@ export type GMBLocation = {
     websiteUri?: string;
     accountName?: string;
     reviewParent?: string;
+    metadata?: {
+        placeId?: string;
+        mapsUri?: string;
+    };
     storefrontAddress?: {
         addressLines?: string[];
         locality?: string;
