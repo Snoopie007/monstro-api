@@ -1,3 +1,4 @@
+import type { StoredSiteConfigSchema } from "subtrees/site-config";
 import {
 	websiteSiteDomains,
 	websiteSiteDrafts,
@@ -28,23 +29,7 @@ export type WebsiteConfigProgram = {
 	description?: string;
 };
 
-export type WebsiteConfig = {
-	schemaVersion?: number;
-	pages?: WebsiteConfigPage[];
-	forms?: Record<string, unknown>[];
-	theme?: Record<string, unknown>;
-	footer?: Record<string, unknown>;
-	locale?: string;
-	content?: {
-		programs?: WebsiteConfigProgram[];
-		[key: string]: unknown;
-	};
-	business?: Record<string, unknown>;
-	metadata?: Record<string, unknown>;
-	navigation?: Record<string, unknown>[];
-	capabilities?: Record<string, unknown>;
-	locationConnections?: Record<string, unknown>;
-};
+export type WebsiteConfig = ReturnType<typeof StoredSiteConfigSchema.parse>;
 
 export type WebsiteSite = typeof websiteSites.$inferSelect & {
 	vendor?: Vendor;

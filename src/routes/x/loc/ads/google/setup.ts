@@ -3,7 +3,7 @@ import {
     AdsSetupError, adsErrorMessage,
     ensureMxAssets, ensureMxConversionActions, findAdsLocationAsset
 } from "@/libs/google";
-import { adsSettings, locations, websiteSiteLocations } from "@subtrees/schemas";
+import { adsSettings } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { loadAdsSettings } from "./settings";
