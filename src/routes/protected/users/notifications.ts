@@ -28,6 +28,7 @@ export async function userNotificationRoutes(app: Elysia) {
                         nativeToken: body.nativeToken,
                         token: body.token,
                         enabled: body.enabled,
+                        isStaffApp: body.isStaffApp,
                     },
                 }).returning()
                 if (!notification) {
@@ -48,6 +49,7 @@ export async function userNotificationRoutes(app: Elysia) {
                 enabled: t.Boolean(),
                 platform: t.Union([t.Literal("ios"), t.Literal("android")]),
                 nativeToken: t.String(),
+                isStaffApp: t.Optional(t.Boolean()),
             }),
         });
 

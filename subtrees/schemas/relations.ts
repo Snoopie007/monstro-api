@@ -6,6 +6,7 @@ import { additionalFees } from "./additionalFees";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
+import { adsSettings } from "./Ads";
 import { eventRegistrations, eventTickets, locationEvents } from "./event";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
@@ -940,6 +941,17 @@ export const integrationRelations = relations(integrations, ({ one }) => ({
 	location: one(locations, {
 		fields: [integrations.locationId],
 		references: [locations.id],
+	}),
+	adsSettings: one(adsSettings, {
+		fields: [integrations.id],
+		references: [adsSettings.integrationId],
+	}),
+}));
+
+export const adsSettingsRelations = relations(adsSettings, ({ one }) => ({
+	integration: one(integrations, {
+		fields: [adsSettings.integrationId],
+		references: [integrations.id],
 	}),
 }));
 

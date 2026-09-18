@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import bcrypt from "bcryptjs";
-import { USER_AUTH_COLUMNS, MEMBER_AUTH_COLUMNS } from "@/utils/userUtils";
+import { USER_AUTH_COLUMNS } from "@/utils/userUtils";
 import { generateMobileToken } from "@/libs/auth";
 
 const MobileLoginSchema = {
@@ -57,6 +57,7 @@ export async function staffLogin(app: Elysia) {
                     lastName: true,
                     email: true,
                     phone: true,
+                    installedStaffApp: true,
                 },
             });
 
@@ -84,6 +85,8 @@ export async function staffLogin(app: Elysia) {
                 refreshToken,
                 expires,
                 user: data,
+
+                setupCompleted: staff.installedStaffApp
             })
         } catch (error) {
             console.error("Error in mobile login:", error);

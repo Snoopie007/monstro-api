@@ -1,6 +1,7 @@
 export * from "./accounts";
 export * from "./additionalFees";
 export * from "./achievements";
+export * from "./Ads";
 export * from "./attendances";
 export * from "./chat";
 export * from "./closures";

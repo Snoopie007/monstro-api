@@ -66,12 +66,15 @@ export function testRoutes(app: Elysia) {
         })
         .post("/test/google", async ({ body, set, status }) => {
 
+
+
+
+
             const google = new GoogleAdsApi({
                 client_id: process.env.AUTH_GOOGLE_ID!,
                 client_secret: process.env.AUTH_GOOGLE_SECRET!,
                 developer_token: process.env.GOOGLE_ADS_DEVELOPER_TOKEN!,
             });
-
 
 
 

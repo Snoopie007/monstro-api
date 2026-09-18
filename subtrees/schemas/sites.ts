@@ -13,6 +13,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
+import type { WebsiteConfig } from "../types/website";
 import { vendors } from "./vendors";
 
 export const websiteSites = pgTable(
@@ -314,7 +315,7 @@ export const websiteSiteRevisions = pgTable(
     schemaVersion: integer("schema_version").notNull(),
     status: text("status").notNull().default("draft"),
     config: jsonb("config")
-      .$type<Record<string, unknown>>()
+      .$type<WebsiteConfig>()
       .notNull(),
     baseRevisionId: text("base_revision_id").references(
       (): AnyPgColumn => websiteSiteRevisions.id,
