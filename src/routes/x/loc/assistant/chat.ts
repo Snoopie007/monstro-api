@@ -1,129 +1,135 @@
 import { estimateAssistantTurnCost, runAssistantTurnStream } from "@/libs/ai/assistant";
+import { AssistantSessionError, createAssistantMemory, historyFromThread } from "@/libs/ai/assistant/memory";
 import { Wallet } from "@/libs/wallet";
+import { canAccessLocation } from "@/utils/merchandise";
+import type { AssistantChatRequest } from "@subtrees/types/assistant";
 import type { Context, Elysia } from "elysia";
 import { t } from "elysia";
 
+type AssistantContext = Context & { vendorId?: string; userId?: string };
+
+async function authorizedScope(ctx: AssistantContext, locationId: string) {
+	if (!ctx.vendorId || !ctx.userId) return null;
+	if (!(await canAccessLocation(locationId, ctx.vendorId)).allowed) return null;
+	return { locationId, vendorId: ctx.vendorId, userId: ctx.userId };
+}
+
+const streamHeaders = {
+	"content-type": "text/event-stream; charset=utf-8",
+	"cache-control": "no-cache, no-transform",
+};
+
 export function assistantChatRoute(app: Elysia) {
-  app.post(
-    "/chat",
-    async ({ params, body, status, set, ...ctx }) => {
-      const { vendorId, userId } = ctx as Context & { vendorId?: string; userId?: string };
-      const { lid } = params as { lid: string };
-      const { message, threadId, history } = body as {
-        message: string;
-        threadId?: string;
-        history?: Array<{ role: "user" | "assistant"; content: string }>;
-      };
+	app.get("/chat", async (ctx) => {
+		const { lid } = ctx.params as { lid: string };
+		const scope = await authorizedScope(ctx as AssistantContext, lid);
+		if (!scope) return ctx.status(403, { message: "You cannot access this location's assistant." });
+		try {
+			const state = await createAssistantMemory().load(scope, ctx.query.threadId);
+			ctx.set.headers["cache-control"] = "no-store";
+			return { threadId: state.threadId, turns: state.turns, pendingPrompt: state.pendingPrompt, busy: state.busy, interrupted: state.interrupted };
+		} catch {
+			return ctx.status(503, { message: "Unable to load the conversation. Please try again." });
+		}
+	}, { query: t.Object({ threadId: t.Optional(t.String({ minLength: 1, maxLength: 120 })) }) });
 
-      if (!vendorId || !userId) {
-        return status(401, { message: "Unauthorized", code: "UNAUTHORIZED" });
-      }
+	app.post("/chat", async (ctx) => {
+		const { lid } = ctx.params as { lid: string };
+		const scope = await authorizedScope(ctx as AssistantContext, lid);
+		if (!scope) return ctx.status(403, { message: "You cannot access this location's assistant." });
+		const request = ctx.body as AssistantChatRequest & { requestId: string };
+		try {
+			const memory = createAssistantMemory();
+			const turn = await memory.begin(scope, request);
+			if (turn.cached) {
+				const event = { type: "assistant_final", threadId: turn.state.threadId, messageId: request.requestId, result: turn.cached, ts: Date.now() };
+				return new Response(`event: assistant_final\ndata: ${JSON.stringify(event)}\n\n`, { headers: streamHeaders });
+			}
+			const history = historyFromThread(turn.state, request.requestId);
+			const wallet = new Wallet(lid);
+			const operationId = crypto.randomUUID();
+			let reserved = false;
+			let completed = false;
+			let settled = false;
+			let executionStarted = false;
+			const failTurn = async () => {
+				if (reserved && !settled) {
+					const result = await wallet.voidAtomic({ ledgerId: operationId });
+					if (result.ok) reserved = false;
+				}
+				if (!completed) await memory.fail(scope, turn.state, executionStarted);
+			};
+			try {
+				const reserve = await wallet.reserveAtomic({
+					amount: estimateAssistantTurnCost(turn.message, history),
+					description: "assistant_chat", id: operationId,
+				});
+				if (!reserve.ok) {
+					await memory.fail(scope, turn.state);
+					return ctx.status(402, { message: "Unable to reserve funds for this assistant request.", code: reserve.reason });
+				}
+				reserved = true;
+			} catch (error) {
+				await failTurn();
+				throw error;
+			}
 
-      const wallet = new Wallet(lid);
-      const operationId = crypto.randomUUID();
-      const reservedAmount = estimateAssistantTurnCost(message, history || []);
-      const reserveResult = await wallet.reserveAtomic({
-        amount: reservedAmount,
-        description: "assistant_chat",
-        id: operationId,
-      });
-
-      if (!reserveResult.ok) {
-        const code = reserveResult.reason || "BUDGET_RESERVE_FAILED";
-        if (code === "RECHARGE_FAILED" || code === "RESERVE_EXCEEDS_THRESHOLD" || code === "INSUFFICIENT_FUNDS") {
-          return status(402, {
-            message: "Insufficient wallet funds for assistant request",
-            code,
-          });
-        }
-        return status(500, { message: "Unable to reserve assistant budget", code });
-      }
-
-      const encoder = new TextEncoder();
-      set.headers["content-type"] = "text/event-stream; charset=utf-8";
-      set.headers["cache-control"] = "no-cache, no-transform";
-      set.headers.connection = "keep-alive";
-
-      const stream = new ReadableStream<Uint8Array>({
-        async start(controller) {
-          let finalizationState: "pending" | "settled" | "voided" = "pending";
-
-          const voidReservedHold = async () => {
-            if (finalizationState !== "pending") return;
-            const voidResult = await wallet.voidAtomic({ ledgerId: operationId });
-            if (voidResult.ok) {
-              finalizationState = "voided";
-            }
-          };
-
-          const settleReservedBudget = async (actualAmount: number) => {
-            if (finalizationState !== "pending") return;
-            const settleResult = await wallet.settleAtomic({
-              ledgerId: operationId,
-              actualAmount,
-            });
-            if (settleResult.ok) {
-              finalizationState = "settled";
-              return;
-            }
-            await voidReservedHold();
-          };
-
-          const abortSignal = ctx.request?.signal;
-          const onAbort = () => {
-            void voidReservedHold();
-          };
-
-          if (abortSignal) {
-            if (abortSignal.aborted) {
-              await voidReservedHold();
-              controller.close();
-              return;
-            }
-            abortSignal.addEventListener("abort", onAbort, { once: true });
-          }
-
-          try {
-            for await (const event of runAssistantTurnStream({
-              locationId: lid,
-              vendorId,
-              userId,
-              message,
-              threadId,
-              history,
-              onCompleted: ({ cost }) => settleReservedBudget(cost),
-              onFailed: voidReservedHold,
-            })) {
-              const payload = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
-              controller.enqueue(encoder.encode(payload));
-            }
-          } catch (error) {
-            await voidReservedHold();
-            const message = error instanceof Error ? error.message : "Failed to process assistant turn";
-            const payload = `event: error\ndata: ${JSON.stringify({ type: "error", message, ts: Date.now() })}\n\n`;
-            controller.enqueue(encoder.encode(payload));
-          } finally {
-            if (abortSignal) {
-              abortSignal.removeEventListener("abort", onAbort);
-            }
-            controller.close();
-          }
-        },
-      });
-
-      return new Response(stream);
-    },
-    {
-      body: t.Object({
-        message: t.String({ minLength: 1, maxLength: 4000 }),
-        threadId: t.Optional(t.String({ minLength: 1, maxLength: 120 })),
-        history: t.Optional(t.Array(t.Object({
-          role: t.Union([t.Literal("user"), t.Literal("assistant")]),
-          content: t.String({ minLength: 1, maxLength: 4000 }),
-        }))),
-      }),
-    },
-  );
-
-  return app;
+			const encoder = new TextEncoder();
+			let disconnected = false;
+			return new Response(new ReadableStream<Uint8Array>({
+				cancel() { disconnected = true; },
+				async start(controller) {
+					executionStarted = true;
+					try {
+						for await (const event of runAssistantTurnStream({
+							...scope, threadId: turn.state.threadId, message: turn.message, history,
+							confirmationIntent: turn.confirmationIntent as "confirm" | "cancel" | null,
+							confirmedBooking: turn.confirmedBooking,
+							onCompleted: async ({ result, cost }) => {
+								await memory.complete(scope, turn.state, {
+									requestId: request.requestId, message: request.message, contextMessage: turn.message,
+									answeredPromptId: request.answer?.promptId, result,
+								});
+								completed = true;
+								const settlement = await wallet.settleAtomic({ ledgerId: operationId, actualAmount: cost });
+								settled = settlement.ok;
+								if (!settled) throw new Error("Unable to settle the assistant request.");
+							},
+							onFailed: failTurn,
+						})) {
+							if (!disconnected && !ctx.request.signal.aborted) {
+								controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`));
+							}
+						}
+					} catch (error) {
+						console.error("Vendor assistant turn failed", error);
+						if (!disconnected && !ctx.request.signal.aborted) {
+							controller.enqueue(encoder.encode('event: error\ndata: {"type":"error","message":"Unable to complete the reply. Reload to check the conversation before retrying."}\n\n'));
+						}
+					} finally {
+						if (!disconnected) controller.close();
+					}
+				},
+			}), { headers: streamHeaders });
+		} catch (error) {
+			if (error instanceof AssistantSessionError) return ctx.status(error.status, { message: error.message });
+			console.error("Vendor assistant request failed", error);
+			return ctx.status(503, { message: "The assistant is unavailable. Please try again." });
+		}
+	}, {
+		body: t.Object({
+			message: t.String({ minLength: 1, maxLength: 4000 }),
+			threadId: t.String({ minLength: 1, maxLength: 120 }),
+			requestId: t.String({ minLength: 1, maxLength: 120 }),
+			answer: t.Optional(t.Union([t.Object({
+				promptId: t.String({ minLength: 1, maxLength: 120 }),
+				value: t.String({ minLength: 1, maxLength: 4000 }),
+				kind: t.Optional(t.Union([t.Literal("option"), t.Literal("text"), t.Literal("custom")])),
+			}), t.Object({
+				promptId: t.String({ minLength: 1, maxLength: 120 }),
+				kind: t.Literal("dismiss"),
+			})])),
+		}),
+	});
+	return app;
 }

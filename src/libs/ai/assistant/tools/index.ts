@@ -50,6 +50,21 @@ function toFunctionTool(name: AssistantToolName, description: string, schema: Re
 }
 
 export const toolDefinitions = [
+	toFunctionTool("ask_user", "Ask the user for missing information before continuing. Ask one question at a time. Supply two to five choices when the answers are known. The UI provides custom answers and question dismissal automatically. This does not authorize bookings or other actions.", {
+		type: "object",
+		properties: {
+			question: { type: "string", maxLength: 500 },
+			options: {
+				type: "array", minItems: 2, maxItems: 5,
+				items: {
+					type: "object",
+					properties: { label: { type: "string" }, value: { type: "string" } },
+					required: ["label", "value"],
+				},
+			},
+		},
+		required: ["question"],
+	}),
 	toFunctionTool(
 		"schedule_manage",
 		"Use for creating bookings or checking schedule availability for the current location. For questions about what programs/sessions are bookable in a date range, always use this tool with action=check.",

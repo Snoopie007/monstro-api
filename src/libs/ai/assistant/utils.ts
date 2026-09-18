@@ -71,7 +71,7 @@ export function buildReply(message: string, locationId: string, memories: Recall
 		return `I can look up member details scoped to location ${locationId}. Share the member name, email, or phone.${memoryHint}`;
 	}
 
-	return `I am scoped to location ${locationId}. Ask about schedules, reports, or members and I will help.${memoryHint}`;
+	return `Hi there! What can I help you with today? You can ask me about bookings, reports, or member details.${memoryHint}`;
 }
 
 function buildUnsupportedCapabilityReply(locationId: string) {

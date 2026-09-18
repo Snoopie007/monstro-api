@@ -8,6 +8,8 @@ export const ProgramDraftSchema = z.object({
     capacity: z.number().int().min(1).catch(10),
     minAge: z.number().int().min(0).catch(3),
     maxAge: z.number().int().min(1).catch(18),
+    sessionMode: z.enum(["group", "one_on_one"]).default("group"),
+    instructorId: z.string().trim().optional(),
     sessions: z.array(z.object({
         day: z.number().int().min(1).max(7),
         time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).default("12:00"),
@@ -58,7 +60,9 @@ export async function parseProgramImportFile(file: File): Promise<ProgramDraft[]
         useResponsesApi: true,
     });
 
-    const result = await model.withStructuredOutput(ProgramImportSchema, { name: "program_import" }).invoke([
+    // Instructor IDs come from the vendor's selection, never document extraction.
+    const extractionSchema = z.object({ programs: z.array(ProgramDraftSchema.omit({ instructorId: true })) });
+    const result = await model.withStructuredOutput(extractionSchema, { name: "program_import" }).invoke([
         new SystemMessage("You import youth activity program schedules into Monstro. Prefer empty-safe practical defaults over guessing impossible details."),
         new HumanMessage({ content }),
     ]);

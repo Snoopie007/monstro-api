@@ -46,7 +46,10 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
     }
 
     const programs = await db.query.programs.findMany({
-        where: (p, { eq }) => eq(p.locationId, lid),
+        where: (p, { and, eq }) => and(
+            eq(p.locationId, lid),
+            eq(p.sessionMode, "group"),
+        ),
         columns: {
             id: true,
             name: true,
@@ -70,8 +73,8 @@ export async function getLocationSchedules(lid: string, date?: string): Promise<
     const mappedSessions: MappedSession[] = [];
     programs.forEach((program) => {
         program.sessions.forEach((session) => {
-            // session.day is 0 (Sunday) through 6 (Saturday)
-            const sessionDay = typeof session.day === "number" ? session.day : 0;
+            // Stored days are 1 (Monday) through 7 (Sunday); this week starts on Sunday.
+            const sessionDay = typeof session.day === "number" ? session.day % 7 : 0;
             const sessionDate = new Date(weekStart);
             sessionDate.setDate(weekStart.getDate() + sessionDay);
 

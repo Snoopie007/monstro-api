@@ -34,7 +34,7 @@ function selectChain() {
 
 function mutationChain() {
   const chain = {
-    where: async () => [],
+    where() { return chain; },
     onConflictDoUpdate() { return chain; },
     returning: async () => returningRows.shift() ?? [{ id: "rev-2" }],
     then(resolve: (value: unknown[]) => void) { resolve([]); },
@@ -94,6 +94,7 @@ const site = {
   locationTimezone: "America/Chicago",
   createdAt: new Date("2026-08-08T11:00:00.000Z"),
   status: "active",
+  paused: false,
   publishedRevisionId: "rev-1",
 };
 const templateConfig = {
@@ -293,6 +294,19 @@ test("lists only the latest active platform page template versions", async () =>
 test("requires service authentication", async () => {
   const response = await app.handle(new Request("http://localhost/shared-sites/site-1/editor"));
   expect(response.status).toBe(401);
+});
+
+test("sets an explicit pause state idempotently", async () => {
+  returningRows = [[{ siteId: "site-1", paused: true }]];
+
+  const response = await request("/shared-sites/site-1/paused", {
+    method: "PUT",
+    body: JSON.stringify({ paused: true }),
+  });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ siteId: "site-1", paused: true });
+  expect(updates).toContainEqual(expect.objectContaining({ paused: true }));
 });
 
 test("creates a relational draft from the active plan template", async () => {
@@ -592,6 +606,7 @@ test("publishes only the expected relational draft", async () => {
   });
   expect(inserted).toEqual(expect.objectContaining({ status: "published" }));
   expect(updates).toContainEqual(expect.objectContaining({ status: "active", publishedRevisionId: "rev-2" }));
+  expect(updates.some((update) => "paused" in update)).toBe(false);
 });
 
 test("publishing atomically replaces the live location snapshot", async () => {

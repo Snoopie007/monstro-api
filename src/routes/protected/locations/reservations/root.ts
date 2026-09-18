@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, type Context } from "elysia";
 import { db } from "@/db/db";
 import type {
     Reservation,
@@ -39,6 +39,32 @@ const ReservationsProps = {
         autoReschedule: t.Optional(t.Boolean()),
     }),
 };
+
+class SessionModeChangedError extends Error {}
+
+// This endpoint uses group capacity/package rules. Allowing 1-on-1 here would
+// bypass weekly-slot ownership and the dedicated booking/payment flow.
+async function rejectOneOnOneBooking(context: Context) {
+    const { session } = context.body as { session: { id: string } };
+    const { lid } = context.params as { lid: string };
+    const requestedSession = await db.query.programSessions.findFirst({
+        where: (row, { eq }) => eq(row.id, session.id),
+        columns: { id: true },
+        with: {
+            program: { columns: { locationId: true, sessionMode: true } },
+        },
+    });
+    if (!requestedSession || requestedSession.program.locationId !== lid) {
+        return context.status(404, { success: false, message: "Session not found." });
+    }
+    if (requestedSession.program.sessionMode === "one_on_one") {
+        return context.status(400, {
+            success: false,
+            message: "Book 1-on-1 reservations from the vendor calendar.",
+        });
+    }
+}
+
 export async function locationReservations(app: Elysia) {
     app.group('/reservations', (app) => {
 
@@ -215,6 +241,16 @@ export async function locationReservations(app: Elysia) {
 
 
                 const reservation = await db.transaction(async (tx) => {
+                    // The earlier check gives fast feedback; this locked reread closes
+                    // the race with a vendor changing program mode during plan validation.
+                    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lid}, 0))`);
+                    const current = await tx.query.programSessions.findFirst({
+                        where: (row, { eq }) => eq(row.id, session.id), columns: { id: true },
+                        with: { program: { columns: { sessionMode: true, locationId: true } } },
+                    });
+                    if (!current || current.program.locationId !== lid || current.program.sessionMode !== "group") {
+                        throw new SessionModeChangedError("The session mode changed. Reload the calendar before booking.");
+                    }
                     const inserted = await tx.insert(reservations).values({
                         memberId,
                         locationId: lid,
@@ -239,6 +275,8 @@ export async function locationReservations(app: Elysia) {
                     }
                     if (pkg) {
 
+                        // Legacy group accounting consumes usage at booking.
+                        // The 1-on-1 path counts it when Present attendance is recorded.
                         await tx.update(memberPackages).set({
                             totalClassAttended: Math.max((pkg?.totalClassAttended || 0) + 1, 0)
                         }).where(eq(memberPackages.id, memberPlanId));
@@ -264,10 +302,11 @@ export async function locationReservations(app: Elysia) {
                 }
                 return status(200, { success: true, data: reservation });
             } catch (err) {
+                if (err instanceof SessionModeChangedError) return status(409, { success: false, message: err.message });
                 console.error(err);
                 return status(500, { error: err });
             }
-        }, ReservationsProps)
+        }, { ...ReservationsProps, beforeHandle: rejectOneOnOneBooking })
 
         app.group('/:rid', (app) => {
             app.get('/', async ({ params, status }) => {
@@ -490,9 +529,4 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-
-
-
-
-
 

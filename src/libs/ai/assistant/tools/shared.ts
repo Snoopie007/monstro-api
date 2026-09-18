@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "@/db/db";
 import { sql } from "drizzle-orm";
-import type { AssistantChartBlock, AssistantToolName, RememberPreferenceInput } from "@subtrees/types/assistant";
+import type { AssistantChatResult, AssistantChartBlock, AssistantToolName, RememberPreferenceInput } from "@subtrees/types/assistant";
 
 export type ToolExecutorContext = {
 	locationId: string;
@@ -11,6 +11,7 @@ export type ToolExecutorContext = {
 	message: string;
 	history: Array<{ role: "user" | "assistant"; content: string }>;
 	confirmationIntent: "confirm" | "cancel" | null;
+	confirmedBooking?: AssistantChatResult["bookingCandidate"];
 };
 
 export type ToolExecutorResult = {
@@ -602,4 +603,3 @@ export async function fetchReportWithChart(locationId: string, metric: string, r
 		chartBlock,
 	};
 }
-

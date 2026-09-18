@@ -53,12 +53,6 @@ export const reservations = pgTable("reservations", {
 		.on(t.memberPackageId, t.startOn)
 		.where(sql`${t.status} = 'confirmed' and ${t.memberPackageId} is not null`),
 	index("idx_reservations_is_make_up").on(t.isMakeUpClass).where(sql`${t.isMakeUpClass} = true`),
-	index("idx_reservations_confirmed_subscription_start")
-		.on(t.memberSubscriptionId, t.startOn)
-		.where(sql`${t.status} = 'confirmed' and ${t.memberSubscriptionId} is not null`),
-	index("idx_reservations_active_session_start")
-		.on(t.sessionId, t.startOn)
-		.where(sql`${t.status} in ('pending_payment', 'confirmed', 'completed')`),
 	uniqueIndex("reservations_member_session_occurrence_active_uq")
 		.on(t.memberId, t.sessionId, t.startOn)
 		.where(sql`${t.status} in ('pending_payment', 'confirmed', 'completed')`),

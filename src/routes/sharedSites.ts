@@ -538,6 +538,7 @@ async function listSites() {
         slug: websiteSites.slug,
         plan: websiteSites.plan,
         status: websiteSites.status,
+        paused: websiteSites.paused,
         publishedRevisionId: websiteSites.publishedRevisionId,
         createdAt: websiteSites.created,
         updatedAt: websiteSiteDrafts.updated,
@@ -582,6 +583,7 @@ async function listSites() {
       slug: site.slug,
       plan: sharedSitePlan(site.plan),
       status: site.status,
+      paused: site.paused,
       locationId: site.locationId ?? null,
       publishedRevisionId: site.publishedRevisionId,
       draftRevisionId: site.isDirty
@@ -829,6 +831,7 @@ async function getSite(siteId: string) {
       slug: websiteSites.slug,
       plan: websiteSites.plan,
       status: websiteSites.status,
+      paused: websiteSites.paused,
       publishedRevisionId: websiteSites.publishedRevisionId,
       locationId: websiteSiteLocations.locationId,
       locationName: locations.name,
@@ -853,6 +856,16 @@ async function getSite(siteId: string) {
     .leftJoin(locations, eq(locations.id, websiteSiteLocations.locationId))
     .where(eq(websiteSites.id, siteId))
     .limit(1);
+  if (!site) throw new SiteEditorError(404, "SITE_NOT_FOUND", "Site not found");
+  return site;
+}
+
+async function setSitePaused(siteId: string, paused: boolean) {
+  const [site] = await db
+    .update(websiteSites)
+    .set({ paused, updated: new Date() })
+    .where(eq(websiteSites.id, siteId))
+    .returning({ siteId: websiteSites.id, paused: websiteSites.paused });
   if (!site) throw new SiteEditorError(404, "SITE_NOT_FOUND", "Site not found");
   return site;
 }
@@ -909,6 +922,7 @@ async function editorState(siteId: string) {
     slug: site.slug,
     plan: sharedSitePlan(site.plan),
     status: site.status,
+    paused: site.paused,
     locationId: primaryLocation?.id ?? null,
     primaryLocation,
     locations: state.siteLocations,
@@ -1486,6 +1500,13 @@ export const sharedSiteAdminRoutes = new Elysia({ prefix: "/shared-sites" })
       return handleError(error, set);
     }
   })
+  .put("/:siteId/paused", async ({ params, body, set }) => {
+    try {
+      return await setSitePaused(params.siteId, body.paused);
+    } catch (error) {
+      return handleError(error, set);
+    }
+  }, { body: t.Object({ paused: t.Boolean() }) })
   .get("/:siteId/domains", async ({ params, set }) => {
     try {
       return await listDomains(params.siteId);

@@ -25,6 +25,7 @@ export const websiteSites = pgTable(
     slug: text("slug").notNull(),
     plan: text("plan").notNull(),
     status: text("status").notNull().default("draft"),
+    paused: boolean("paused").notNull().default(false),
     publishedRevisionId: text("published_revision_id"),
     createdBy: text("created_by").notNull(),
     migrationSource: text("migration_source"),

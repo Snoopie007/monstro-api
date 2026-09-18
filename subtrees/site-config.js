@@ -1,6 +1,6 @@
 // @bun
 // src/config.ts
-import { z as z35 } from "zod";
+import { z as z36 } from "zod";
 
 // src/collections.ts
 import { z as z31 } from "zod";
@@ -148,6 +148,7 @@ var HttpsUrlSchema = z2.string().url().refine((value) => {
     return false;
   }
 }, "URL must use HTTPS without embedded credentials");
+var SiteColorSchema = z2.string().regex(/^#[0-9a-f]{6}$/i, "Color must be a six-digit hex value");
 var SectionIdentifierSchema = z2.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 var IFRAME_HOSTS = {
   video: ["youtube.com", "youtube-nocookie.com", "vimeo.com", "veed.io"],
@@ -191,7 +192,8 @@ var SiteLinkSchema = z2.object({
   label: z2.string().min(1),
   href: SiteHrefSchema,
   external: z2.boolean().default(false),
-  variant: z2.enum(["primary", "secondary"]).default("primary")
+  variant: z2.enum(["primary", "secondary"]).default("primary"),
+  textColor: SiteColorSchema.nullable().optional()
 }).strict();
 var SectionImageFitSchema = z2.enum(["cover", "contain", "fill"]);
 var SectionImagePositionSchema = z2.enum([
@@ -272,6 +274,8 @@ import { z as z6 } from "zod";
 import { z as z5 } from "zod";
 var FormIdSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 var FieldNameSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_]*$/);
+var FORM_LOCATION_FIELD = "$location";
+var ConditionFieldSchema = z5.union([FieldNameSchema, z5.literal(FORM_LOCATION_FIELD)]);
 var RedirectTypeSchema = z5.enum(["page", "url"]);
 var FormFieldSchema = z5.object({
   name: FieldNameSchema,
@@ -290,7 +294,7 @@ var FormFieldSchema = z5.object({
     format: z5.enum(["email"]).optional()
   }).strict().optional(),
   showWhen: z5.object({
-    field: FieldNameSchema,
+    field: ConditionFieldSchema,
     equals: z5.string().max(1000)
   }).strict().optional()
 }).strict().superRefine((field, issue) => {
@@ -306,7 +310,7 @@ var FormFieldSchema = z5.object({
 });
 var RedirectRuleSchema = z5.object({
   when: z5.object({
-    field: FieldNameSchema,
+    field: ConditionFieldSchema,
     equals: z5.string().max(1000)
   }).strict(),
   redirectTo: z5.string().min(1).max(2000),
@@ -333,7 +337,7 @@ var NativeSiteFormSchema = z5.object({
     } else {
       fields.set(field.name, index);
     }
-    if (field.showWhen) {
+    if (field.showWhen && field.showWhen.field !== FORM_LOCATION_FIELD) {
       const dependency = fields.get(field.showWhen.field);
       if (dependency === undefined || dependency >= index) {
         issue.addIssue({ code: "custom", message: "Conditional fields must reference an earlier field", path: ["fields", index, "showWhen", "field"] });
@@ -351,7 +355,7 @@ var NativeSiteFormSchema = z5.object({
   }
   if (Array.isArray(form.redirectRules)) {
     for (const [index, rule] of form.redirectRules.entries()) {
-      if (!fields.has(rule.when.field)) {
+      if (rule.when.field !== FORM_LOCATION_FIELD && !fields.has(rule.when.field)) {
         issue.addIssue({ code: "custom", message: `Unknown redirect field: ${rule.when.field}`, path: ["redirectRules", index, "when", "field"] });
       }
     }
@@ -388,25 +392,31 @@ var FormSubmissionResponseSchema = z5.object({
   redirectTo: z5.string().optional()
 }).strict();
 var SiteFormSchema = NativeSiteFormSchema;
-var REQUIRED_CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
-function isFormFieldVisible(field, values) {
+var CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
+function matchesFormCondition(condition, values, locationId) {
+  if (condition.field === FORM_LOCATION_FIELD) {
+    return Boolean(locationId) && locationId === condition.equals;
+  }
+  return String(values[condition.field] ?? "") === condition.equals;
+}
+function isFormFieldVisible(field, values, locationId) {
   if (!field.showWhen)
     return true;
-  return String(values[field.showWhen.field] ?? "") === field.showWhen.equals;
+  return matchesFormCondition(field.showWhen, values, locationId);
 }
-function getFormValidationErrors(form, input) {
+function getFormValidationErrors(form, input, locationId) {
   const parsed = FormValuesSchema.safeParse(input);
   if (!parsed.success)
     return { _form: "Invalid form values." };
   const errors = {};
   const allowedFields = new Map(form.fields.map((field) => [field.name, field]));
   for (const key of Object.keys(parsed.data)) {
-    if (!allowedFields.has(key) && !REQUIRED_CONSENT_FIELDS.includes(key)) {
+    if (!allowedFields.has(key) && !CONSENT_FIELDS.includes(key)) {
       errors[key] = "Unknown form field.";
     }
   }
   for (const field of form.fields) {
-    if (!isFormFieldVisible(field, parsed.data))
+    if (!isFormFieldVisible(field, parsed.data, locationId))
       continue;
     const rawValue = parsed.data[field.name];
     const value = typeof rawValue === "string" ? rawValue : "";
@@ -422,32 +432,33 @@ function getFormValidationErrors(form, input) {
       errors[field.name] = "Enter a valid email address.";
     }
   }
-  for (const field of REQUIRED_CONSENT_FIELDS) {
-    if (parsed.data[field] !== true)
-      errors[field] = "Consent is required to submit this form.";
+  for (const field of CONSENT_FIELDS) {
+    if (parsed.data[field] !== undefined && typeof parsed.data[field] !== "boolean") {
+      errors[field] = "Invalid consent value.";
+    }
   }
   return errors;
 }
-function validateFormValues(form, input) {
+function validateFormValues(form, input, locationId) {
   const parsed = FormValuesSchema.safeParse(input);
   if (!parsed.success)
     throw new Error("Invalid form values.");
-  const errors = getFormValidationErrors(form, parsed.data);
+  const errors = getFormValidationErrors(form, parsed.data, locationId);
   if (Object.keys(errors).length > 0)
     throw new Error(Object.values(errors).join(" "));
   const values = {};
   for (const field of form.fields) {
-    if (isFormFieldVisible(field, parsed.data) && parsed.data[field.name] !== undefined) {
+    if (isFormFieldVisible(field, parsed.data, locationId) && parsed.data[field.name] !== undefined) {
       values[field.name] = parsed.data[field.name];
     }
   }
-  for (const field of REQUIRED_CONSENT_FIELDS)
-    values[field] = true;
+  for (const field of CONSENT_FIELDS)
+    values[field] = parsed.data[field] === true;
   return values;
 }
-function resolveFormRedirect(form, values, pages) {
+function resolveFormRedirect(form, values, pages, locationId) {
   for (const field of form.fields) {
-    if (!isFormFieldVisible(field, values) || field.type !== "select")
+    if (!isFormFieldVisible(field, values, locationId) || field.type !== "select")
       continue;
     const selected = field.options?.find((option) => option.value === String(values[field.name] ?? ""));
     const redirect = resolveRedirectTarget(selected?.redirectTo, undefined, values, pages);
@@ -456,7 +467,7 @@ function resolveFormRedirect(form, values, pages) {
   }
   if (Array.isArray(form.redirectRules)) {
     for (const rule of form.redirectRules) {
-      if (String(values[rule.when.field] ?? "") === rule.when.equals) {
+      if (matchesFormCondition(rule.when, values, locationId)) {
         return resolveRedirectTarget(rule.redirectTo, rule.redirectToType, values, pages) ?? "/";
       }
     }
@@ -486,8 +497,8 @@ function isSafeRedirectUrl(value) {
     return false;
   }
 }
-function toGhlFormContact(form, values) {
-  const allowed = new Set(form.fields.filter((field) => isFormFieldVisible(field, values)).map((field) => field.name));
+function toGhlFormContact(form, values, locationId) {
+  const allowed = new Set(form.fields.filter((field) => isFormFieldVisible(field, values, locationId)).map((field) => field.name));
   const submitted = Object.fromEntries(Object.entries(values).filter(([key]) => allowed.has(key)));
   const { firstName, lastName } = splitName(submitted);
   return {
@@ -1430,6 +1441,46 @@ var SiteScriptsAndEmbedsSchema = z34.object({
   }
 });
 
+// src/blog-embed.ts
+import { z as z35 } from "zod";
+var BlogIframeSchema = z35.object({
+  src: HttpsUrlSchema,
+  title: z35.string().trim().min(1).max(200),
+  sizing: z35.enum(["fixed", "ratio"]),
+  height: z35.number().int().min(100).max(3000),
+  aspectRatio: z35.number().min(0.1).max(10)
+}).strict();
+function encodeBlogIframe(input) {
+  return encodeURIComponent(JSON.stringify(BlogIframeSchema.parse(input)));
+}
+function decodeBlogIframe(value) {
+  try {
+    const parsed = BlogIframeSchema.safeParse(JSON.parse(decodeURIComponent(value)));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+var MAX_BLOG_HTML_EMBED_BYTES = 75000;
+var BlogHtmlEmbedSchema = z35.object({
+  version: z35.literal(1),
+  title: z35.string().trim().min(1).max(200),
+  source: z35.string().refine((source) => source.trim().length > 0, "Embed source is required").refine((source) => new TextEncoder().encode(source).byteLength <= MAX_BLOG_HTML_EMBED_BYTES, `Embed source cannot exceed ${MAX_BLOG_HTML_EMBED_BYTES} bytes`),
+  sizing: z35.enum(["auto", "fixed"]),
+  height: z35.number().int().min(100).max(3000)
+}).strict();
+function encodeBlogHtmlEmbed(input) {
+  return encodeURIComponent(JSON.stringify(BlogHtmlEmbedSchema.parse(input)));
+}
+function decodeBlogHtmlEmbed(value) {
+  try {
+    const parsed = BlogHtmlEmbedSchema.safeParse(JSON.parse(decodeURIComponent(value)));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
 // src/config.ts
 function asRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
@@ -1494,78 +1545,98 @@ function normalizeSiteConfigV2(input) {
     pages
   };
 }
-var NavigationItemSchema = z35.lazy(() => z35.discriminatedUnion("type", [
-  z35.object({
-    type: z35.literal("link"),
-    id: z35.string().min(1),
-    label: z35.string().min(1),
+var NavigationItemSchema = z36.lazy(() => z36.discriminatedUnion("type", [
+  z36.object({
+    type: z36.literal("link"),
+    id: z36.string().min(1),
+    label: z36.string().min(1),
     href: SiteHrefSchema,
-    external: z35.boolean(),
-    visible: z35.boolean()
+    external: z36.boolean(),
+    visible: z36.boolean()
   }).strict(),
-  z35.object({
-    type: z35.literal("group"),
-    id: z35.string().min(1),
-    label: z35.string().min(1),
-    visible: z35.boolean(),
-    items: z35.array(NavigationItemSchema).min(1)
+  z36.object({
+    type: z36.literal("group"),
+    id: z36.string().min(1),
+    label: z36.string().min(1),
+    visible: z36.boolean(),
+    items: z36.array(NavigationItemSchema).min(1)
   }).strict()
 ]));
-var SiteHeaderActionSchema = z35.discriminatedUnion("kind", [
-  z35.object({
-    kind: z35.literal("link"),
-    label: z35.string().min(1).max(100),
+var SiteHeaderActionSchema = z36.discriminatedUnion("kind", [
+  z36.object({
+    kind: z36.literal("link"),
+    label: z36.string().min(1).max(100),
     href: SiteHrefSchema,
-    external: z35.boolean()
+    external: z36.boolean()
   }).strict(),
-  z35.object({ kind: z35.literal("hidden") }).strict()
+  z36.object({ kind: z36.literal("hidden") }).strict()
 ]);
-var HexColorSchema = z35.string().regex(/^#[0-9a-f]{6}$/i);
-var PagePathSchema = z35.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
-var SiteThemeSchema = z35.object({
-  colors: z35.object({
-    primary: HexColorSchema,
-    background: HexColorSchema,
-    foreground: HexColorSchema,
-    muted: HexColorSchema,
-    accent: HexColorSchema
+var BlogListingEmbedSchema = z36.discriminatedUnion("kind", [
+  BlogIframeSchema.extend({ kind: z36.literal("iframe") }),
+  BlogHtmlEmbedSchema.extend({ kind: z36.literal("html") })
+]);
+var BlogListingSchema = z36.object({
+  source: z36.enum(["native", "external"]),
+  embed: BlogListingEmbedSchema.optional()
+}).strict().superRefine((listing, issue) => {
+  if (listing.source === "external" && !listing.embed) {
+    issue.addIssue({
+      code: "custom",
+      message: "External blog listings require an embed",
+      path: ["embed"]
+    });
+  }
+});
+var PagePathSchema = z36.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
+var SiteThemeSchema = z36.object({
+  colors: z36.object({
+    primary: SiteColorSchema,
+    background: SiteColorSchema,
+    foreground: SiteColorSchema,
+    muted: SiteColorSchema,
+    accent: SiteColorSchema
   }).strict(),
-  typography: z35.object({
-    heading: z35.enum(["sans", "serif"]),
-    body: z35.enum(["sans", "serif"])
+  typography: z36.object({
+    heading: z36.enum(["sans", "serif"]),
+    body: z36.enum(["sans", "serif"])
   }).strict(),
-  radius: z35.enum(["none", "small", "medium", "large"])
+  radius: z36.enum(["none", "small", "medium", "large"]),
+  button: z36.object({
+    borderColor: SiteColorSchema.nullable().optional(),
+    backgroundColor: SiteColorSchema.nullable().optional(),
+    textColor: SiteColorSchema.nullable().optional()
+  }).strict().optional()
 }).strict();
-var SitePageHeaderSchema = z35.object({
-  mode: z35.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
-  contrast: z35.enum(["auto", "light", "dark"]).default("auto")
+var SitePageHeaderSchema = z36.object({
+  mode: z36.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
+  contrast: z36.enum(["auto", "light", "dark"]).default("auto")
 }).strict();
-var SitePageBaseSchema = z35.object({
-  id: z35.string().min(1),
+var SitePageBaseSchema = z36.object({
+  id: z36.string().min(1),
   path: PagePathSchema,
-  visible: z35.boolean(),
-  metadata: z35.object({
-    title: z35.string().min(1),
-    description: z35.string().optional(),
+  visible: z36.boolean(),
+  metadata: z36.object({
+    title: z36.string().min(1),
+    description: z36.string().optional(),
     openGraphImage: SiteImageSchema.optional(),
-    indexable: z35.boolean().optional()
+    indexable: z36.boolean().optional()
   }).strict(),
   header: SitePageHeaderSchema.optional()
 });
 var SiteSectionsPageSchema = SitePageBaseSchema.extend({
-  kind: z35.literal("sections").default("sections"),
-  displayLocationId: z35.string().min(1).max(128).optional(),
-  sections: z35.array(SiteSectionSchema).min(1)
+  kind: z36.literal("sections").default("sections"),
+  displayLocationId: z36.string().min(1).max(128).optional(),
+  sections: z36.array(SiteSectionSchema).min(1)
 }).strict();
-var SitePageTemplateSchema = z35.object({
-  schemaVersion: z35.literal(2),
-  page: z35.object({
-    metadata: z35.object({
-      description: z35.string().optional(),
+var SitePageTemplateSchema = z36.object({
+  schemaVersion: z36.literal(2),
+  page: z36.object({
+    metadata: z36.object({
+      description: z36.string().optional(),
       openGraphImage: SiteImageSchema.optional(),
-      indexable: z35.boolean().optional()
+      indexable: z36.boolean().optional()
     }).strict(),
-    sections: z35.array(SiteSectionSchema).min(1)
+    sections: z36.array(SiteSectionSchema).min(1)
   }).strict()
 }).strict();
 function replacePageTemplateTokens(value, businessName) {
@@ -1584,7 +1655,7 @@ function replacePageTemplateTokens(value, businessName) {
 function materializeSitePageTemplate(input, businessName) {
   return SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(replacePageTemplateTokens(input, businessName)));
 }
-var BuiltinPageIdSchema = z35.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
+var BuiltinPageIdSchema = z36.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
 var BUILTIN_PAGE_PATHS = {
   "/schedules": "schedules",
   "/blog": "blog",
@@ -1593,11 +1664,11 @@ var BUILTIN_PAGE_PATHS = {
   "/shop/plans": "shop-plans"
 };
 var SiteBuiltinPageSchema = SitePageBaseSchema.extend({
-  kind: z35.literal("builtin"),
+  kind: z36.literal("builtin"),
   id: BuiltinPageIdSchema,
-  path: z35.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
+  path: z36.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
 }).strict().refine((page) => BUILTIN_PAGE_PATHS[page.path] === page.id, "Builtin page ID and path must match");
-var SitePageSchema = z35.union([
+var SitePageSchema = z36.union([
   SiteSectionsPageSchema,
   SiteBuiltinPageSchema
 ]);
@@ -1616,38 +1687,38 @@ function getNativeFormPlacement(section) {
   const placement = getFormPlacement(section);
   return placement?.kind === "native" ? placement : null;
 }
-var PublicSiteConfigObjectSchema = z35.object({
-  schemaVersion: z35.union([z35.literal(2), z35.literal(3)]),
-  locale: z35.string().min(2),
-  business: z35.object({
-    name: z35.string().min(1),
-    tagline: z35.string().min(1),
+var PublicSiteConfigObjectSchema = z36.object({
+  schemaVersion: z36.union([z36.literal(2), z36.literal(3)]),
+  locale: z36.string().min(2),
+  business: z36.object({
+    name: z36.string().min(1),
+    tagline: z36.string().min(1),
     logo: SiteImageSchema.optional(),
-    structuredDataType: z35.enum([
+    structuredDataType: z36.enum([
       "LocalBusiness",
       "SportsActivityLocation",
       "EducationalOrganization",
       "Organization"
     ])
   }).strict(),
-  metadata: z35.object({
-    defaultTitle: z35.string().min(1),
-    titleTemplate: z35.string().min(1),
-    defaultDescription: z35.string().min(1),
+  metadata: z36.object({
+    defaultTitle: z36.string().min(1),
+    titleTemplate: z36.string().min(1),
+    defaultDescription: z36.string().min(1),
     openGraphImage: SiteImageSchema.optional(),
-    googleSiteVerification: z35.string().min(1).optional()
+    googleSiteVerification: z36.string().min(1).optional()
   }).strict(),
   theme: SiteThemeSchema,
   headerAction: SiteHeaderActionSchema.optional(),
-  navigation: z35.array(NavigationItemSchema),
-  footer: z35.object({
-    credit: z35.string(),
-    links: z35.array(NavigationItemSchema),
-    locationsTitle: z35.string().min(1).default("Our Locations"),
-    hiddenLocationIds: z35.array(z35.string().min(1).max(128)).default([])
+  navigation: z36.array(NavigationItemSchema),
+  footer: z36.object({
+    credit: z36.string(),
+    links: z36.array(NavigationItemSchema),
+    locationsTitle: z36.string().min(1).default("Our Locations"),
+    hiddenLocationIds: z36.array(z36.string().min(1).max(128)).default([])
   }).strict(),
-  locationConnections: z35.array(SiteLocationConnectionSchema).min(1).optional(),
-  manualLocations: z35.array(SiteManualLocationSchema).default([]),
+  locationConnections: z36.array(SiteLocationConnectionSchema).min(1).optional(),
+  manualLocations: z36.array(SiteManualLocationSchema).default([]),
   locationOverride: SiteLocationOverrideSchema.optional(),
   content: SiteContentSchema.default({
     programs: [],
@@ -1655,13 +1726,14 @@ var PublicSiteConfigObjectSchema = z35.object({
     testimonials: [],
     faqs: []
   }),
-  pages: z35.array(SitePageSchema).min(1),
-  forms: z35.array(SiteFormSchema),
+  pages: z36.array(SitePageSchema).min(1),
+  forms: z36.array(SiteFormSchema),
   capabilities: SiteCapabilitiesSchema,
   scriptsAndEmbeds: SiteScriptsAndEmbedsSchema.default({
     enabled: true,
     entries: []
-  })
+  }),
+  blogListing: BlogListingSchema.optional()
 }).strict();
 var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, issue) => {
   const pageIds = new Set;
@@ -1934,14 +2006,21 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
     }
   }
   for (const [formIndex, form2] of config.forms.entries()) {
+    let checkLocationCondition = function(condition, path) {
+      if (condition?.field === FORM_LOCATION_FIELD && config.locationConnections && !connectedLocationIds.has(condition.equals)) {
+        issue.addIssue({ code: "custom", message: `Form rule references an unconnected location: ${condition.equals}`, path });
+      }
+    };
     if (Array.isArray(form2.redirectRules)) {
       for (const [ruleIndex, rule] of form2.redirectRules.entries()) {
+        checkLocationCondition(rule.when, ["forms", formIndex, "redirectRules", ruleIndex, "when", "equals"]);
         checkRedirect(rule.redirectTo, rule.redirectToType, ["forms", formIndex, "redirectRules", ruleIndex, "redirectTo"]);
       }
     } else {
       checkRedirect(form2.redirectTo ?? (typeof form2.redirectRules === "string" ? form2.redirectRules : undefined), form2.redirectToType, ["forms", formIndex, "redirectTo"]);
     }
     for (const [fieldIndex, field] of form2.fields.entries()) {
+      checkLocationCondition(field.showWhen, ["forms", formIndex, "fields", fieldIndex, "showWhen", "equals"]);
       for (const [optionIndex, option] of (field.options ?? []).entries()) {
         checkRedirect(option.redirectTo, "page", ["forms", formIndex, "fields", fieldIndex, "options", optionIndex, "redirectTo"]);
       }
@@ -1970,8 +2049,8 @@ function publicConfigInput(config) {
   };
 }
 var StoredSiteConfigObjectSchema = PublicSiteConfigObjectSchema.omit({ schemaVersion: true, locationConnections: true, locationOverride: true }).extend({
-  schemaVersion: z35.literal(3),
-  locationConnections: z35.array(StoredSiteLocationConnectionSchema).min(1)
+  schemaVersion: z36.literal(3),
+  locationConnections: z36.array(StoredSiteLocationConnectionSchema).min(1)
 }).strict();
 var StoredSiteConfigSchema = StoredSiteConfigObjectSchema.superRefine((config, issue) => {
   const parsedPublic = PublicSiteConfigSchema.safeParse(publicConfigInput(config));
@@ -3361,239 +3440,239 @@ function publicSiteConfigFromStored(input, preset, options = {}) {
   return shared ?? legacyDraftToPublicSiteConfig(normalized, preset, options);
 }
 // src/live-data.ts
-import { z as z36 } from "zod";
-var JsonValueSchema = z36.lazy(() => z36.union([
-  z36.string(),
-  z36.number(),
-  z36.boolean(),
-  z36.null(),
-  z36.array(JsonValueSchema),
-  z36.record(z36.string(), JsonValueSchema)
+import { z as z37 } from "zod";
+var JsonValueSchema = z37.lazy(() => z37.union([
+  z37.string(),
+  z37.number(),
+  z37.boolean(),
+  z37.null(),
+  z37.array(JsonValueSchema),
+  z37.record(z37.string(), JsonValueSchema)
 ]));
-var SiteDateSchema = z36.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD").refine((value) => {
+var SiteDateSchema = z37.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD").refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }, "Date must be a valid calendar date");
-var LocationListSchema = z36.string().min(1).transform((value) => value.split(",").map((item) => item.trim())).pipe(z36.array(SiteLocationSlugSchema).min(1));
-var ScheduleQuerySchema = z36.object({
+var LocationListSchema = z37.string().min(1).transform((value) => value.split(",").map((item) => item.trim())).pipe(z37.array(SiteLocationSlugSchema).min(1));
+var ScheduleQuerySchema = z37.object({
   date: SiteDateSchema,
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var PlansQuerySchema = z36.object({
+var PlansQuerySchema = z37.object({
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var DocumentSignatureRequestSchema = z36.object({ signature: z36.string().min(1) }).strict();
-var EnrollRequestSchema = z36.object({
-  locationId: z36.string().min(1).optional(),
-  attemptId: z36.string().min(1),
-  priceId: z36.string().min(1),
-  planType: z36.enum(["recurring", "one-time"]).optional(),
-  paymentType: z36.string().min(1),
-  paymentMethodId: z36.string().min(1),
-  promoId: z36.string().min(1).nullable().optional()
+var DocumentSignatureRequestSchema = z37.object({ signature: z37.string().min(1) }).strict();
+var EnrollRequestSchema = z37.object({
+  locationId: z37.string().min(1).optional(),
+  attemptId: z37.string().min(1),
+  priceId: z37.string().min(1),
+  planType: z37.enum(["recurring", "one-time"]).optional(),
+  paymentType: z37.string().min(1),
+  paymentMethodId: z37.string().min(1),
+  promoId: z37.string().min(1).nullable().optional()
 }).strict();
-var EnrollQuoteRequestSchema = z36.object({
-  priceId: z36.string().min(1),
-  planType: z36.enum(["recurring", "one-time"]),
-  paymentType: z36.enum(["card", "us_bank_account"]),
-  promoId: z36.string().min(1).nullable().optional()
+var EnrollQuoteRequestSchema = z37.object({
+  priceId: z37.string().min(1),
+  planType: z37.enum(["recurring", "one-time"]),
+  paymentType: z37.enum(["card", "us_bank_account"]),
+  promoId: z37.string().min(1).nullable().optional()
 }).strict();
-var PaymentAddressSchema = z36.object({
-  line1: z36.string(),
-  line2: z36.string().optional(),
-  city: z36.string(),
-  state: z36.string(),
-  postalCode: z36.string(),
-  country: z36.string()
+var PaymentAddressSchema = z37.object({
+  line1: z37.string(),
+  line2: z37.string().optional(),
+  city: z37.string(),
+  state: z37.string(),
+  postalCode: z37.string(),
+  country: z37.string()
 }).strict();
-var EnrollResponseSchema = z36.object({
-  ok: z36.literal(true),
-  unsignedDocs: z36.array(z36.string().min(1))
+var EnrollResponseSchema = z37.object({
+  ok: z37.literal(true),
+  unsignedDocs: z37.array(z37.string().min(1))
 }).strict();
-var CheckoutAdditionalFeeSchema = z36.object({
-  label: z36.string().min(1),
-  amount: z36.number().int().nonnegative(),
-  description: z36.string().min(1).optional()
+var CheckoutAdditionalFeeSchema = z37.object({
+  label: z37.string().min(1),
+  amount: z37.number().int().nonnegative(),
+  description: z37.string().min(1).optional()
 }).strict();
-var EnrollQuoteSchema = z36.object({
-  baseAmount: z36.number().int().nonnegative(),
-  discount: z36.number().int().nonnegative(),
-  tax: z36.number().int().nonnegative(),
-  fees: z36.number().int().nonnegative(),
-  additionalFees: z36.array(CheckoutAdditionalFeeSchema).default([]),
-  total: z36.number().int().nonnegative(),
-  currency: z36.string().min(1)
+var EnrollQuoteSchema = z37.object({
+  baseAmount: z37.number().int().nonnegative(),
+  discount: z37.number().int().nonnegative(),
+  tax: z37.number().int().nonnegative(),
+  fees: z37.number().int().nonnegative(),
+  additionalFees: z37.array(CheckoutAdditionalFeeSchema).default([]),
+  total: z37.number().int().nonnegative(),
+  currency: z37.string().min(1)
 }).strict();
-var ShopCheckoutQuoteSchema = z36.object({
-  subtotal: z36.number().int().nonnegative(),
-  discount: z36.number().int().nonnegative(),
-  tax: z36.number().int().nonnegative(),
-  feesAmount: z36.number().int().nonnegative(),
-  processingFee: z36.number().int().nonnegative(),
-  additionalFees: z36.array(CheckoutAdditionalFeeSchema).default([]),
-  total: z36.number().int().nonnegative()
+var ShopCheckoutQuoteSchema = z37.object({
+  subtotal: z37.number().int().nonnegative(),
+  discount: z37.number().int().nonnegative(),
+  tax: z37.number().int().nonnegative(),
+  feesAmount: z37.number().int().nonnegative(),
+  processingFee: z37.number().int().nonnegative(),
+  additionalFees: z37.array(CheckoutAdditionalFeeSchema).default([]),
+  total: z37.number().int().nonnegative()
 }).strict();
-var PaymentMethodSchema = z36.discriminatedUnion("type", [
-  z36.object({
-    id: z36.string().min(1),
-    source: z36.enum(["stripe", "square", "authorize"]),
-    type: z36.literal("card"),
-    isDefault: z36.boolean(),
+var PaymentMethodSchema = z37.discriminatedUnion("type", [
+  z37.object({
+    id: z37.string().min(1),
+    source: z37.enum(["stripe", "square", "authorize"]),
+    type: z37.literal("card"),
+    isDefault: z37.boolean(),
     address: PaymentAddressSchema.optional(),
-    card: z36.object({
-      brand: z36.string().min(1),
-      last4: z36.string().nullable().optional(),
-      expMonth: z36.number().nullable(),
-      expYear: z36.number().nullable()
+    card: z37.object({
+      brand: z37.string().min(1),
+      last4: z37.string().nullable().optional(),
+      expMonth: z37.number().nullable(),
+      expYear: z37.number().nullable()
     }).strict()
   }).strict(),
-  z36.object({
-    id: z36.string().min(1),
-    source: z36.enum(["stripe", "square", "authorize"]),
-    type: z36.literal("us_bank_account"),
-    isDefault: z36.boolean(),
-    usBankAccount: z36.object({
-      bankName: z36.string().nullable(),
-      last4: z36.string().nullable(),
-      accountType: z36.string().nullable()
+  z37.object({
+    id: z37.string().min(1),
+    source: z37.enum(["stripe", "square", "authorize"]),
+    type: z37.literal("us_bank_account"),
+    isDefault: z37.boolean(),
+    usBankAccount: z37.object({
+      bankName: z37.string().nullable(),
+      last4: z37.string().nullable(),
+      accountType: z37.string().nullable()
     }).strict()
   }).strict()
 ]);
-var PaymentMethodsApiResponseSchema = z36.array(PaymentMethodSchema);
-var ScheduleSessionSchema = z36.object({
-  id: z36.string().min(1),
-  name: z36.string(),
-  minAge: z36.number(),
-  maxAge: z36.number(),
-  utcStartTime: z36.string().datetime(),
-  utcEndTime: z36.string().datetime(),
-  day: z36.string().datetime(),
-  isHoliday: z36.boolean(),
-  isBlocked: z36.boolean(),
-  holidayName: z36.string().optional(),
-  description: z36.string()
+var PaymentMethodsApiResponseSchema = z37.array(PaymentMethodSchema);
+var ScheduleSessionSchema = z37.object({
+  id: z37.string().min(1),
+  name: z37.string(),
+  minAge: z37.number(),
+  maxAge: z37.number(),
+  utcStartTime: z37.string().datetime(),
+  utcEndTime: z37.string().datetime(),
+  day: z37.string().datetime(),
+  isHoliday: z37.boolean(),
+  isBlocked: z37.boolean(),
+  holidayName: z37.string().optional(),
+  description: z37.string()
 }).strict();
-var ScheduleApiResponseSchema = z36.object({ sessions: z36.array(ScheduleSessionSchema) }).strict();
-var PlanProgramSchema = z36.object({
-  id: z36.string().min(1),
-  name: z36.string(),
-  minAge: z36.number(),
-  maxAge: z36.number(),
-  icon: z36.string().nullable().optional(),
-  description: z36.string().nullable()
+var ScheduleApiResponseSchema = z37.object({ sessions: z37.array(ScheduleSessionSchema) }).strict();
+var PlanProgramSchema = z37.object({
+  id: z37.string().min(1),
+  name: z37.string(),
+  minAge: z37.number(),
+  maxAge: z37.number(),
+  icon: z37.string().nullable().optional(),
+  description: z37.string().nullable()
 }).strict();
-var PlanPricingSchema = z36.object({
-  id: z36.string().min(1),
-  memberPlanId: z36.string().min(1),
-  name: z36.string(),
-  price: z36.number(),
-  interval: z36.string().nullable().optional(),
-  intervalThreshold: z36.number().nullable().optional(),
-  expireInterval: z36.string().nullable().optional(),
-  expireThreshold: z36.number().nullable().optional(),
-  downpayment: z36.number().nullable().optional(),
-  created: z36.string().datetime().optional(),
-  updated: z36.string().datetime().nullable().optional()
+var PlanPricingSchema = z37.object({
+  id: z37.string().min(1),
+  memberPlanId: z37.string().min(1),
+  name: z37.string(),
+  price: z37.number(),
+  interval: z37.string().nullable().optional(),
+  intervalThreshold: z37.number().nullable().optional(),
+  expireInterval: z37.string().nullable().optional(),
+  expireThreshold: z37.number().nullable().optional(),
+  downpayment: z37.number().nullable().optional(),
+  created: z37.string().datetime().optional(),
+  updated: z37.string().datetime().nullable().optional()
 }).strict();
-var SitePlanSchema = z36.object({
-  id: z36.string().min(1),
-  name: z36.string(),
-  description: z36.string().nullable(),
-  family: z36.boolean(),
-  familyMemberLimit: z36.number(),
-  editable: z36.boolean(),
-  archived: z36.boolean(),
-  contractId: z36.string().nullable(),
+var SitePlanSchema = z37.object({
+  id: z37.string().min(1),
+  name: z37.string(),
+  description: z37.string().nullable(),
+  family: z37.boolean(),
+  familyMemberLimit: z37.number(),
+  editable: z37.boolean(),
+  archived: z37.boolean(),
+  contractId: z37.string().nullable(),
   billingAnchorConfig: JsonValueSchema,
   marketingDetails: JsonValueSchema,
-  type: z36.enum(["one-time", "recurring"]),
-  totalClassLimit: z36.number().nullable(),
-  classLimitInterval: z36.string().nullable(),
-  allowProration: z36.boolean(),
-  classLimitThreshold: z36.number().nullable(),
-  makeUpCredits: z36.number(),
-  groupId: z36.string().nullable(),
-  locationId: z36.string(),
-  created: z36.string().datetime(),
-  updated: z36.string().datetime().nullable(),
-  programs: z36.array(PlanProgramSchema),
-  startingPrice: z36.number(),
-  pricings: z36.array(PlanPricingSchema),
-  ageRange: z36.object({ min: z36.number(), max: z36.number() }).strict()
+  type: z37.enum(["one-time", "recurring"]),
+  totalClassLimit: z37.number().nullable(),
+  classLimitInterval: z37.string().nullable(),
+  allowProration: z37.boolean(),
+  classLimitThreshold: z37.number().nullable(),
+  makeUpCredits: z37.number(),
+  groupId: z37.string().nullable(),
+  locationId: z37.string(),
+  created: z37.string().datetime(),
+  updated: z37.string().datetime().nullable(),
+  programs: z37.array(PlanProgramSchema),
+  startingPrice: z37.number(),
+  pricings: z37.array(PlanPricingSchema),
+  ageRange: z37.object({ min: z37.number(), max: z37.number() }).strict()
 }).strict();
-var PlanContractSchema = z36.object({
-  id: z36.string().min(1),
-  title: z36.string(),
-  requireSignature: z36.boolean()
+var PlanContractSchema = z37.object({
+  id: z37.string().min(1),
+  title: z37.string(),
+  requireSignature: z37.boolean()
 }).strict();
 var ApiPlanProgramSchema = PlanProgramSchema.extend({
-  capacity: z36.number()
+  capacity: z37.number()
 }).strict();
 var ApiSitePlanSchema = SitePlanSchema.extend({
   contract: PlanContractSchema.nullable(),
-  programs: z36.array(ApiPlanProgramSchema)
+  programs: z37.array(ApiPlanProgramSchema)
 }).strict().transform(({ contract: _contract, programs: programs3, ...plan }) => ({
   ...plan,
   programs: programs3.map(({ capacity: _capacity, ...program }) => program)
 }));
-var PlansApiResponseSchema = z36.array(ApiSitePlanSchema);
-var BlogPostSummarySchema = z36.object({
-  id: z36.string().min(1),
-  title: z36.string().min(1),
-  slug: z36.string().min(1),
-  featuredImageUrl: z36.string().nullable(),
-  publishedAt: z36.string().datetime().nullable(),
-  updatedAt: z36.string().datetime().nullable()
+var PlansApiResponseSchema = z37.array(ApiSitePlanSchema);
+var BlogPostSummarySchema = z37.object({
+  id: z37.string().min(1),
+  title: z37.string().min(1),
+  slug: z37.string().min(1),
+  featuredImageUrl: z37.string().nullable(),
+  publishedAt: z37.string().datetime().nullable(),
+  updatedAt: z37.string().datetime().nullable()
 }).strict();
 var BlogPostSchema = BlogPostSummarySchema.extend({
-  mdx: z36.string(),
-  metaTitle: z36.string().nullable(),
-  metaDescription: z36.string().nullable(),
-  authorName: z36.string().min(1).nullable()
+  mdx: z37.string(),
+  metaTitle: z37.string().nullable(),
+  metaDescription: z37.string().nullable(),
+  authorName: z37.string().min(1).nullable()
 }).strict();
-var BlogPostsApiResponseSchema = z36.object({
-  posts: z36.array(BlogPostSummarySchema),
-  total: z36.number().int().nonnegative()
+var BlogPostsApiResponseSchema = z37.object({
+  posts: z37.array(BlogPostSummarySchema),
+  total: z37.number().int().nonnegative()
 }).strict();
-var ProductVariantSchema = z36.object({
-  id: z36.string().min(1),
-  productId: z36.string().min(1),
-  name: z36.string().min(1),
-  sku: z36.string().min(1),
-  color: z36.string().nullable(),
-  size: z36.string().nullable(),
-  price: z36.number().int().nonnegative(),
-  salePrice: z36.number().int().nonnegative().nullable(),
-  stock: z36.number().int(),
-  active: z36.boolean()
+var ProductVariantSchema = z37.object({
+  id: z37.string().min(1),
+  productId: z37.string().min(1),
+  name: z37.string().min(1),
+  sku: z37.string().min(1),
+  color: z37.string().nullable(),
+  size: z37.string().nullable(),
+  price: z37.number().int().nonnegative(),
+  salePrice: z37.number().int().nonnegative().nullable(),
+  stock: z37.number().int(),
+  active: z37.boolean()
 }).strict();
-var ProductImageSchema = z36.object({
-  id: z36.string().min(1),
-  productId: z36.string().min(1),
-  imageUrl: z36.string().min(1),
-  sortOrder: z36.number().int()
+var ProductImageSchema = z37.object({
+  id: z37.string().min(1),
+  productId: z37.string().min(1),
+  imageUrl: z37.string().min(1),
+  sortOrder: z37.number().int()
 }).strict();
-var SiteProductSchema = z36.object({
-  id: z36.string().min(1),
-  slug: z36.string().min(1),
-  name: z36.string().min(1),
-  category: z36.string().nullable(),
-  subCategory: z36.string().nullable(),
-  description: z36.string().nullable(),
-  brand: z36.string().nullable(),
-  active: z36.boolean(),
-  currency: z36.string().length(3).nullable(),
-  createdAt: z36.string().datetime(),
-  updatedAt: z36.string().datetime().nullable(),
-  variants: z36.array(ProductVariantSchema),
-  images: z36.array(ProductImageSchema)
+var SiteProductSchema = z37.object({
+  id: z37.string().min(1),
+  slug: z37.string().min(1),
+  name: z37.string().min(1),
+  category: z37.string().nullable(),
+  subCategory: z37.string().nullable(),
+  description: z37.string().nullable(),
+  brand: z37.string().nullable(),
+  active: z37.boolean(),
+  currency: z37.string().length(3).nullable(),
+  createdAt: z37.string().datetime(),
+  updatedAt: z37.string().datetime().nullable(),
+  variants: z37.array(ProductVariantSchema),
+  images: z37.array(ProductImageSchema)
 }).strict();
-var ProductsApiResponseSchema = z36.array(SiteProductSchema);
-var LocationFailureSchema = z36.object({
+var ProductsApiResponseSchema = z37.array(SiteProductSchema);
+var LocationFailureSchema = z37.object({
   location: SiteLocationSchema,
-  message: z36.string().min(1)
+  message: z37.string().min(1)
 }).strict();
 function scheduleQueryKey(siteId, date, locationIds) {
   return ["schedules", siteId, date, ...locationIds];
@@ -3644,14 +3723,14 @@ function getSiteSectionTemplate(key) {
   return SITE_SECTION_TEMPLATES.find((template) => template.key === key);
 }
 // src/runtime.ts
-import { z as z37 } from "zod";
-var RuntimeSitePayloadSchema = z37.object({
+import { z as z38 } from "zod";
+var RuntimeSitePayloadSchema = z38.object({
   context: TenantContextSchema,
-  revision: z37.object({
-    id: z37.string().min(1).max(128),
-    schemaVersion: z37.number().int().positive(),
-    config: z37.unknown(),
-    publishedAt: z37.string().datetime().nullable()
+  revision: z38.object({
+    id: z38.string().min(1).max(128),
+    schemaVersion: z38.number().int().positive(),
+    config: z38.unknown(),
+    publishedAt: z38.string().datetime().nullable()
   }).strict()
 }).strict();
 function parseRuntimeSite(input) {
@@ -3695,10 +3774,10 @@ function parseRuntimeSite(input) {
     }
   };
 }
-var SiteCacheInvalidationSchema = z37.object({
-  siteId: z37.string().min(1).max(128),
-  revisionId: z37.string().min(1).max(128),
-  domains: z37.array(z37.string().min(1).max(253)).min(1).max(100)
+var SiteCacheInvalidationSchema = z38.object({
+  siteId: z38.string().min(1).max(128),
+  revisionId: z38.string().min(1).max(128),
+  domains: z38.array(z38.string().min(1).max(253)).min(1).max(100)
 }).strict();
 // src/stored-config.ts
 function record(value) {
@@ -3781,6 +3860,10 @@ export {
   getFormValidationErrors,
   getFormPlacement,
   formatSiteLocationAddress,
+  encodeBlogIframe,
+  encodeBlogHtmlEmbed,
+  decodeBlogIframe,
+  decodeBlogHtmlEmbed,
   createSitePreset,
   applySiteLocationOverride,
   TopReviewSectionSchema,
@@ -3833,6 +3916,7 @@ export {
   SiteCustomEmbedPartSchema,
   SiteCustomEmbedEntrySchema,
   SiteContentSchema,
+  SiteColorSchema,
   SiteCapabilitiesSchema,
   SiteCacheInvalidationSchema,
   SiteBuiltinPageSchema,
@@ -3858,7 +3942,6 @@ export {
   RenderedTenantContextSchema,
   RenderedSiteLocationSchema,
   RedirectRuleSchema,
-  REQUIRED_CONSENT_FIELDS,
   PublishableStoredSiteConfigSchema,
   PublicSiteConfigSchema,
   ProgramsSectionSchema,
@@ -3901,6 +3984,7 @@ export {
   FormPlacementSchema,
   FormFieldSchema,
   FaqsSectionSchema,
+  FORM_LOCATION_FIELD,
   FORM_IFRAME_POLICY,
   ExternalWidgetSectionSchema,
   ExternalWidgetSectionPropsSchema,
@@ -3912,11 +3996,16 @@ export {
   ContactFormSectionSchema,
   CompareSectionSchema,
   CheckoutAdditionalFeeSchema,
+  CONSENT_FIELDS,
   BuiltinPageIdSchema,
   BottomCtaSectionSchema,
   BottomCtaFormSectionSchema,
   BlogPostsApiResponseSchema,
   BlogPostSummarySchema,
   BlogPostSchema,
+  BlogListingSchema,
+  BlogListingEmbedSchema,
+  BlogIframeSchema,
+  BlogHtmlEmbedSchema,
   AboutSectionSchema
 };
