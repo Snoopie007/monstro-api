@@ -404,3 +404,44 @@ test("rejects a config outside the canonical site contract", () => {
     pages: template.pages,
   })).toThrow();
 });
+
+for (const embed of [
+  {
+    kind: "iframe",
+    src: "https://fixture.example.test/posts",
+    title: "External posts",
+    sizing: "ratio",
+    height: 640,
+    aspectRatio: 16 / 9,
+  },
+  {
+    kind: "html",
+    version: 1,
+    source: '<div id="posts"></div>\n<script src="https://fixture.example.test/posts.js" defer></script>',
+    title: "External posts",
+    sizing: "auto",
+    height: 640,
+  },
+]) {
+  test(`preserves an external ${embed.kind} blog listing through draft storage and public config`, () => {
+    const blogListing = { source: "external", embed };
+    const config = publishableConfig({ ...template, blogListing });
+    const stored = splitSiteConfig(config);
+    expect(stored.settings.blogListing).toEqual(blogListing);
+
+    const pages = stored.pages.map((page, index) => ({ ...page, id: `blog-listing-page-${index}` }));
+    const pageIds = new Map(pages.map((page) => [page.pageKey, page.id]));
+    const blocks = stored.pages.flatMap((page) => page.blocks.map((block) => ({
+      ...block,
+      pageId: pageIds.get(page.pageKey)!,
+    })));
+    const rebuilt = assembleSiteConfig({
+      schemaVersion: stored.schemaVersion,
+      settings: stored.settings,
+      pages,
+      blocks,
+    });
+    expect(rebuilt).toEqual(config);
+    expect(publicSiteConfig(rebuilt).blogListing).toEqual(blogListing);
+  });
+}
