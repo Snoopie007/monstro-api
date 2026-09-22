@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
 import { chats, chatMembers, messages, groupMembers } from "@subtrees/schemas";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { findOrCreateLocationMemberChat } from "@subtrees/utils/server/locationChats";
 import type { Location, Member, Vendor } from "@subtrees/types";
 import { interEmailsAndText } from "./interpolator";
 
@@ -17,15 +18,12 @@ async function createLocationChat(lid: string, member: Pick<Member, "userId" | '
     const interpolatedMsg = interEmailsAndText(welcomeMessage || DEFAULT_WELCOME_MESSAGE, { member, location });
     const startedBy = vendor.userId;
 
-    await db.transaction(async (tx) => {
-        const [chat] = await tx.insert(chats).values({
-            startedBy,
-            locationId: lid,
-            name,
-        }).returning({ id: chats.id });
-        if (!chat) {
-            return await tx.rollback();
-        }
+    return db.transaction(async (tx) => {
+        const { chat, created } = await findOrCreateLocationMemberChat(tx, {
+            locationId: lid, locationName: name, senderId: startedBy, memberUserId: member.userId,
+        });
+        // Do not send another welcome when a retry or workflow already created the chat.
+        if (!created) return chat;
 
         const [message] = await tx.insert(messages).values({
             chatId: chat.id,
@@ -34,20 +32,16 @@ async function createLocationChat(lid: string, member: Pick<Member, "userId" | '
         }).returning({ id: messages.id });
 
         if (!message) {
-            return await tx.rollback();
+            throw new Error("Could not save location welcome message");
         }
 
-        await tx.insert(chatMembers).values([{
-            chatId: chat.id,
-            userId: member.userId,
-            unreadCount: 1,
-        },
-        {
-            chatId: chat.id,
-            userId: startedBy,
-            lastMessageId: message.id,
-        }]);
-
+        await tx.update(chatMembers).set({ unreadCount: 1 }).where(and(
+            eq(chatMembers.chatId, chat.id), eq(chatMembers.userId, member.userId),
+        ));
+        await tx.update(chatMembers).set({ lastMessageId: message.id }).where(and(
+            eq(chatMembers.chatId, chat.id), eq(chatMembers.userId, startedBy),
+        ));
+        return chat;
     });
 }
 
@@ -58,13 +52,13 @@ async function addMembertoGroup(gid: string, uid: string) {
         await tx.insert(groupMembers).values({
             groupId: gid,
             userId: uid,
-        });
+        }).onConflictDoNothing();
         const [chat] = await tx.select({ id: chats.id }).from(chats).where(eq(chats.groupId, gid)).limit(1);
         if (!chat) return await tx.rollback();
         await tx.insert(chatMembers).values({
             chatId: chat.id,
             userId: uid,
-        });
+        }).onConflictDoNothing();
     });
 
 

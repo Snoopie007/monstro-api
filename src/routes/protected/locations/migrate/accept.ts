@@ -199,12 +199,12 @@ export function migrateAcceptRoutes(app: Elysia) {
 
             const groupId = pricing?.plan?.groupId;
             if (groupId) {
-                Promise.all([
+                await Promise.all([
                     addMembertoGroup(groupId, member.userId),
                     createLocationChat(lid, member, location),
                 ]);
             } else {
-                createLocationChat(lid, member, location);
+                await createLocationChat(lid, member, location);
             }
 
 
@@ -257,5 +257,4 @@ export function migrateAcceptRoutes(app: Elysia) {
     });
     return app;
 }
-
 

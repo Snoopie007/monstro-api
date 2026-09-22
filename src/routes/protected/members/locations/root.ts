@@ -103,7 +103,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             }).onConflictDoNothing().returning();
 
 
-            createLocationChat(lid, member, location);
+            await createLocationChat(lid, member, location);
             return status(200, {
                 ...newMemberLocation,
                 location: location,
