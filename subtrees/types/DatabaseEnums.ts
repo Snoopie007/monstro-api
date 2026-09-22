@@ -52,3 +52,4 @@ export enum PromoType {
     FreeTrial = "free_trial"
 }
 export type PromoDuration = "once" | "repeating" | "forever";
+export type WorkflowStatus = "draft" | "active" | "pause" | "deleted";
