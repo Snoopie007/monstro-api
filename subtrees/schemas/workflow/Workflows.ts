@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { WorkflowStatusEnum } from "../DatabaseEnums";
 import { locations } from "../locations";
-import type { WorkflowNode } from "../../types/workflow";
+import type { WorkflowNode } from "../../types/workflows/actions";
 
 export const workflows = pgTable("workflows", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('wfl_')`),

@@ -1,4 +1,4 @@
-import type { MemberUpdatedField } from "../types/workflow";
+import type { MemberUpdatedField } from "../types/workflows/workflow";
 
 export const MEMBER_PROFILE_FIELDS = ["firstName", "lastName", "email", "phone"] as const;
 

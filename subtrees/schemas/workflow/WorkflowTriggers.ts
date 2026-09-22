@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { index, jsonb, pgTable, text } from "drizzle-orm/pg-core";
 import { workflows } from "./Workflows";
-import type { TriggerNodeData } from "../../types/workflow";
+import type { TriggerNodeData } from "../../types/workflows/triggers";
 
 export const workflowTriggers = pgTable("workflow_triggers", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('wft_')`),

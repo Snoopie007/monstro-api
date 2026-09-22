@@ -5,7 +5,7 @@ import { workflowQueues, workflowTriggers, workflows } from "../../schemas/workf
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { members, memberFields, memberCustomFields } from "../../schemas/members";
 import { memberLocations } from "../../schemas/MemberLocation";
-import type { WorkflowEvent, WorkflowNode } from "../../types/workflow";
+import type { WorkflowEvent, WorkflowNode } from "../../types/workflows";
 
 export type WorkflowTransaction = Pick<PostgresJsDatabase, "select" | "insert">;
 
