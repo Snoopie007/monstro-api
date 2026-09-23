@@ -14,6 +14,7 @@ type WorkflowEventValues<T> = T[keyof T];
  */
 export type WorkflowTriggerType =
 	| WorkflowEventValues<typeof WorkflowEvents.member>
+	| WorkflowEventValues<typeof WorkflowEvents.rank>
 	| WorkflowEventValues<typeof WorkflowEvents.custom>;
 
 export type TriggerNodeData = BaseNodeData & {

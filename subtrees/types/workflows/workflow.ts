@@ -31,8 +31,18 @@ export type MemberUpdatedWorkflowEvent = {
 	changedFields: MemberUpdatedField[];
 };
 
+/** A change between existing ranks. First assignment does not emit this event. */
+export type RankChangedWorkflowEvent = {
+	type: typeof WorkflowEvents.rank.CHANGED;
+	locationId: string;
+	memberId: string;
+	processId: string;
+	fromRankId: string;
+	toRankId: string;
+};
+
 /** Backend-supported event payloads. Extend this union as dispatch support is added. */
-export type WorkflowEvent = MemberJoinedWorkflowEvent | MemberUpdatedWorkflowEvent;
+export type WorkflowEvent = MemberJoinedWorkflowEvent | MemberUpdatedWorkflowEvent | RankChangedWorkflowEvent;
 
 /**
  * @deprecated Use `WorkflowNodeData`, `NodeDataByType<T>`, or `TriggerNodeData`.

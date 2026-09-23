@@ -40,7 +40,7 @@ export function hasStartAndEndNodes(nodes: unknown): nodes is WorkflowNode[] {
  * Create durable runs for active workflows listening to this event.
  *
  * Call this with the caller's transaction. That keeps the run insert atomic
- * with the member-location write that emitted the event. The partial unique
+ * with the application write that emitted the event. The partial unique
  * index on workflow_queues prevents repeated or concurrent active runs for
  * the same workflow and member.
  */
@@ -86,6 +86,9 @@ export async function dispatchWorkflowTrigger(
 				metadata: {
 					triggerType: event.type,
 					...(event.type === WorkflowEvents.member.UPDATED ? { changedFields: event.changedFields } : {}),
+					...(event.type === WorkflowEvents.rank.CHANGED ? {
+						processId: event.processId, fromRankId: event.fromRankId, toRankId: event.toRankId,
+					} : {}),
 					locationId: event.locationId,
 					memberId: event.memberId,
 					nodes,

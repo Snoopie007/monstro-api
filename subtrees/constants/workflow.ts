@@ -12,6 +12,9 @@ export const WorkflowEvents = {
 		JOINED: "member::joined",
 		UPDATED: "member::updated",
 	},
+	rank: {
+		CHANGED: "rank::changed",
+	},
 	custom: {
 		REPLY: "custom::reply",
 	},
