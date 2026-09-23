@@ -3,6 +3,8 @@ import { beforeEach, expect, mock, test } from "bun:test";
 const steps: string[] = [];
 const stockUpdates: Record<string, unknown>[] = [];
 const inserted: Record<string, unknown>[] = [];
+const dispatch = mock(async () => []);
+mock.module("@subtrees/utils/server/workflows", () => ({ dispatchWorkflowTrigger: dispatch }));
 
 const tx = {
     query: { orders: { findFirst: mock(async () => undefined) } },
@@ -104,6 +106,8 @@ beforeEach(() => {
     additionalFeeLines = [];
     configuredAdditionalFees = [];
     chargeWithGateway.mockClear();
+    dispatch.mockReset();
+    dispatch.mockResolvedValue([]);
 });
 
 test("returns public additional fee details for checkout quotes", async () => {
@@ -134,6 +138,7 @@ test("returns public additional fee details for checkout quotes", async () => {
     }));
     expect(quote).not.toHaveProperty("additionalFeeLines");
     expect(chargeWithGateway).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
 });
 
 test("decrements inventory in the paid order transaction", async () => {
@@ -151,4 +156,22 @@ test("decrements inventory in the paid order transaction", async () => {
     expect(stockUpdates[0]).toEqual(expect.objectContaining({ updated: expect.any(Date) }));
     expect(steps).toEqual(["transaction", "stock", "order"]);
     expect(inserted).toHaveLength(2);
+    expect(dispatch).toHaveBeenCalledWith(tx, {
+        type: "order::created", locationId: "location-1", memberId: "member-1",
+        orderId: (order as { id: string }).id,
+    });
+});
+
+test("returning an existing transaction's order does not dispatch again", async () => {
+    tx.insert.mockReturnValueOnce({
+        values: mock(() => ({ onConflictDoNothing: mock(() => ({ returning: mock(async () => []) })) })),
+    } as never);
+    tx.query.orders.findFirst.mockResolvedValueOnce({ id: "existing", status: "paid" } as never);
+    const result = await handleMercCheckout({
+        lid: "location-1", mid: "member-1", items: [{ variantId: "variant-1", quantity: 1 }],
+        paymentMethodId: "method-1", attemptId: "attempt-1",
+    });
+    expect(result).toMatchObject({ id: "existing", status: "paid" });
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(stockUpdates).toHaveLength(0);
 });

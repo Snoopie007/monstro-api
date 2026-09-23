@@ -5,8 +5,8 @@ import { orders, productVariants } from "@subtrees/schemas";
 import { eq, inArray } from "drizzle-orm";
 import type { Currency } from "square";
 
-export async function adjustStock(orderId: string, quantityMultiplier: 1 | -1) {
-	const order = await db.query.orders.findFirst({
+export async function adjustStock(orderId: string, quantityMultiplier: 1 | -1, database: Pick<typeof db, "query" | "update"> = db) {
+	const order = await database.query.orders.findFirst({
 		where: eq(orders.id, orderId),
 		columns: { items: true },
 	});
@@ -21,7 +21,7 @@ export async function adjustStock(orderId: string, quantityMultiplier: 1 | -1) {
 		}
 	}
 
-	const variants = await db.query.productVariants.findMany({
+	const variants = await database.query.productVariants.findMany({
 		where: inArray(productVariants.id, variantIds),
 		columns: { id: true, stock: true },
 	});
@@ -33,7 +33,7 @@ export async function adjustStock(orderId: string, quantityMultiplier: 1 | -1) {
 
 		const nextStock = currentStock + item.quantity * quantityMultiplier;
 		stockByVariantId.set(item.variantId, nextStock);
-		await db.update(productVariants)
+		await database.update(productVariants)
 			.set({ stock: nextStock, updated: new Date() })
 			.where(eq(productVariants.id, item.variantId));
 	}

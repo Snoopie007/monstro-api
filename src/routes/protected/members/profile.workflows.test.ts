@@ -81,7 +81,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Member Updated transac
 		expect(response.status).toBe(200);
 		const runs = await db.select().from(workflowQueues);
 		expect(runs.map((run) => run.workflowId)).toEqual(["wa"]);
-		expect(runs[0]!.metadata).toMatchObject({ triggerType: "member::updated", changedFields: ["email"] });
+		expect(runs[0]!.metadata).toMatchObject({ trigger: { type: "member::updated", changedFields: ["email"] } });
 	});
 	test("verified email update uses the same dispatch and commits user/member changes together", async () => {
 		const response = await request("/email/verify", { token: "123456" });
@@ -117,7 +117,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Member Updated transac
 		});
 		const runs = await db.select().from(workflowQueues);
 		expect(runs).toHaveLength(1);
-		expect(runs[0]!.metadata).toMatchObject({ changedFields: ["custom:score"] });
+		expect(runs[0]!.metadata).toMatchObject({ trigger: { changedFields: ["custom:score"] } });
 	});
 	test("a transaction rollback removes both the update and its workflow run", async () => {
 		await expect(db.transaction(async (tx) => {

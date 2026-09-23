@@ -41,8 +41,70 @@ export type RankChangedWorkflowEvent = {
 	toRankId: string;
 };
 
+/** Emitted only for a newly created attendance row, not edits or checkout. */
+export type AttendanceRecordedWorkflowEvent = {
+	type: typeof WorkflowEvents.attendance.RECORDED;
+	locationId: string;
+	memberId: string;
+	attendanceId: string;
+};
+
+/** Creation counts even before the conversation receives its first message. */
+export type SupportCreatedWorkflowEvent = {
+	type: typeof WorkflowEvents.support.CREATED;
+	locationId: string;
+	memberId: string;
+	conversationId: string;
+};
+
+/** A new confirmed registration, including a pending seat that becomes registered. */
+export type EventRegisteredWorkflowEvent = {
+	type: typeof WorkflowEvents.event.REGISTERED;
+	locationId: string;
+	memberId: string;
+	eventId: string;
+	registrationId: string;
+};
+
+/** Order creation counts whether the new order is paid or still pending. */
+export type OrderCreatedWorkflowEvent = {
+	type: typeof WorkflowEvents.order.CREATED;
+	locationId: string;
+	memberId: string;
+	orderId: string;
+};
+
 /** Backend-supported event payloads. Extend this union as dispatch support is added. */
-export type WorkflowEvent = MemberJoinedWorkflowEvent | MemberUpdatedWorkflowEvent | RankChangedWorkflowEvent;
+export type WorkflowEvent =
+	| EventRegisteredWorkflowEvent
+	| OrderCreatedWorkflowEvent
+	| MemberJoinedWorkflowEvent
+	| MemberUpdatedWorkflowEvent
+	| RankChangedWorkflowEvent
+	| AttendanceRecordedWorkflowEvent
+	| SupportCreatedWorkflowEvent;
+
+/**
+ * The event saved in workflowQueues.metadata.trigger. `type` selects its fields:
+ * attendance carries attendanceId; rank changes carry the old/new rank IDs.
+ * Member/location scope already belongs to the run and its workflow.
+ * Add each new supported event here too; do not add optional fields for every event.
+ */
+export type WorkflowRunTrigger =
+	| Omit<EventRegisteredWorkflowEvent, "memberId" | "locationId">
+	| Omit<OrderCreatedWorkflowEvent, "memberId" | "locationId">
+	| Omit<MemberJoinedWorkflowEvent, "memberId" | "locationId">
+	| Omit<MemberUpdatedWorkflowEvent, "memberId" | "locationId">
+	| Omit<RankChangedWorkflowEvent, "memberId" | "locationId">
+	| Omit<AttendanceRecordedWorkflowEvent, "memberId" | "locationId">
+	| Omit<SupportCreatedWorkflowEvent, "memberId" | "locationId">;
+
+/** New runs keep event context, frozen actions, and worker state separate. */
+export type WorkflowRunMetadata = {
+	trigger: WorkflowRunTrigger;
+	nodes: TypedWorkflowNode[];
+	execution?: Record<string, unknown>;
+};
 
 /**
  * @deprecated Use `WorkflowNodeData`, `NodeDataByType<T>`, or `TriggerNodeData`.
@@ -62,7 +124,9 @@ export type Workflow = Omit<WorkflowRow, "nodes"> & {
 	triggers?: WorkFlowTrigger[];
 };
 
-export type WorkflowQueue = WorkflowQueueRow & {
+// Raw database JSON still needs runtime validation when the worker loads it.
+export type WorkflowQueue = Omit<WorkflowQueueRow, "metadata"> & {
+	metadata: WorkflowRunMetadata;
 	workflow?: Workflow;
 };
 
@@ -73,6 +137,8 @@ export type WorkflowLog = WorkflowLogRow & {
 
 export type NewWorkflow = typeof workflows.$inferInsert;
 
-export type NewWorkflowQueue = typeof workflowQueues.$inferInsert;
+export type NewWorkflowQueue = Omit<typeof workflowQueues.$inferInsert, "metadata"> & {
+	metadata: WorkflowRunMetadata;
+};
 
 export type NewWorkflowLog = typeof workflowLogs.$inferInsert;

@@ -5,7 +5,7 @@ import { workflowQueues, workflowTriggers, workflows } from "../../schemas/workf
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { members, memberFields, memberCustomFields } from "../../schemas/members";
 import { memberLocations } from "../../schemas/MemberLocation";
-import type { WorkflowEvent, WorkflowNode } from "../../types/workflows";
+import type { WorkflowEvent, WorkflowNode, WorkflowRunMetadata } from "../../types/workflows";
 
 export type WorkflowTransaction = Pick<PostgresJsDatabase, "select" | "insert">;
 
@@ -48,6 +48,8 @@ export async function dispatchWorkflowTrigger(
 	tx: WorkflowTransaction,
 	event: WorkflowEvent,
 ) {
+	// Save only this event's payload under trigger. Scope stays on the run/workflow.
+	const { memberId, locationId, ...trigger } = event;
 	const matches = await tx
 		.select({
 			workflowId: workflows.id,
@@ -57,7 +59,7 @@ export async function dispatchWorkflowTrigger(
 		.from(workflows)
 		.innerJoin(workflowTriggers, eq(workflowTriggers.workflowId, workflows.id))
 		.where(and(
-			eq(workflows.locationId, event.locationId),
+			eq(workflows.locationId, locationId),
 			eq(workflows.status, "active"),
 			eq(workflowTriggers.type, event.type),
 		));
@@ -81,18 +83,9 @@ export async function dispatchWorkflowTrigger(
 			.insert(workflowQueues)
 			.values({
 				workflowId,
-				memberId: event.memberId,
+				memberId,
 				currentNode: "start",
-				metadata: {
-					triggerType: event.type,
-					...(event.type === WorkflowEvents.member.UPDATED ? { changedFields: event.changedFields } : {}),
-					...(event.type === WorkflowEvents.rank.CHANGED ? {
-						processId: event.processId, fromRankId: event.fromRankId, toRankId: event.toRankId,
-					} : {}),
-					locationId: event.locationId,
-					memberId: event.memberId,
-					nodes,
-				},
+				metadata: { trigger, nodes } satisfies WorkflowRunMetadata,
 			})
 			.onConflictDoNothing()
 			.returning();

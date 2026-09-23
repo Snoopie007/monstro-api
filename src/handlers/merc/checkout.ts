@@ -1,4 +1,6 @@
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@subtrees/utils/server/workflows";
 import type { Promo } from "@subtrees/types";
 import {
     calculateOrderTotals,
@@ -222,6 +224,14 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     gatewayPaymentId: charge.paymentIntentId,
                 }).returning();
                 if (!order) throw new Error("Failed to create order");
+                // The existing-transaction branch above returns without dispatch.
+                // A separate new order, even from a retried request, is a new event.
+                await dispatchWorkflowTrigger(tx, {
+                    type: WorkflowEvents.order.CREATED,
+                    locationId: lid,
+                    memberId: mid,
+                    orderId: order.id,
+                });
                 return order;
             });
         }

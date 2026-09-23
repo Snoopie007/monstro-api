@@ -1,4 +1,6 @@
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@subtrees/utils/server/workflows";
 import {
 	members,
 	orders,
@@ -172,22 +174,31 @@ export async function orderRoutes(app: Elysia) {
 			const shipping = body.shipping ?? 0;
 			const total = subtotal + shipping + tax;
 
-			const [order] = await db.insert(orders).values({
-				locationId: lid,
-				memberId: body.memberId,
-				trackingNumber: Math.floor(1000000000 + Math.random() * 9000000000),
-				status: "pending",
-				subtotal,
-				shipping,
-				tax,
-				total,
-				items: itemRows,
-				processingFee: 0,
-			}).returning();
+			const order = await db.transaction(async (tx) => {
+				const [created] = await tx.insert(orders).values({
+					locationId: lid,
+					memberId: body.memberId,
+					trackingNumber: Math.floor(1000000000 + Math.random() * 9000000000),
+					status: "pending",
+					subtotal,
+					shipping,
+					tax,
+					total,
+					items: itemRows,
+					processingFee: 0,
+				}).returning();
 
-			if (!order) return status(500, { error: "Failed to create order" });
-
-			await adjustStock(order.id, -1);
+				if (!created) throw new Error("Failed to create order");
+				// Unpaid orders count too. Stock, order, and workflow commit together.
+				await adjustStock(created.id, -1, tx);
+				await dispatchWorkflowTrigger(tx, {
+					type: WorkflowEvents.order.CREATED,
+					locationId: lid,
+					memberId: body.memberId,
+					orderId: created.id,
+				});
+				return created;
+			});
 
 
 			const createdOrder = await db.query.orders.findFirst({
