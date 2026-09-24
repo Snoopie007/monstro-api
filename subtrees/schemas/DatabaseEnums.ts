@@ -47,3 +47,4 @@ export const RankRequirementTypeEnum = pgEnum("rank_requirement_type", [
 ]);
 
 export const EventTicketPricingMethodEnum = pgEnum("event_ticket_pricing_method", ["free", "fixed"]);
+export const WorkflowStatusEnum = pgEnum("workflow_status", ["draft", "active", "pause", "deleted"]);

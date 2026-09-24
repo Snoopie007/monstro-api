@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/utils";
+import { captureMemberWorkflowState, dispatchMemberUpdated } from "@subtrees/utils/server/workflows";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -46,6 +47,7 @@ export function memberProfile(app: Elysia) {
 
         try {
             await db.transaction(async (tx) => {
+                const before = await captureMemberWorkflowState(tx, mid);
                 const [member] = await tx.update(members).set({
                     ...rest,
                     phone: phoneNumber,
@@ -58,6 +60,7 @@ export function memberProfile(app: Elysia) {
                 const name = `${rest.firstName} ${rest.lastName}`;
 
                 await tx.update(users).set({ name }).where(eq(users.id, member.userId));
+                await dispatchMemberUpdated(tx, before);
             });
             return status(200, { success: true });
         } catch (error) {
@@ -166,6 +169,7 @@ export function memberProfile(app: Elysia) {
             }
 
             await db.transaction(async (tx) => {
+                const before = await captureMemberWorkflowState(tx, mid);
                 const member = await tx.query.members.findFirst({
                     where: eq(members.id, mid),
 
@@ -175,6 +179,7 @@ export function memberProfile(app: Elysia) {
                 }
                 await tx.update(users).set({ email }).where(eq(users.id, member.userId));
                 await tx.update(members).set({ email }).where(eq(members.id, mid));
+                await dispatchMemberUpdated(tx, before);
             });
 
             // Clean up the token from Redis after successful use
