@@ -1,6 +1,6 @@
-import { dispatchPaymentFailed } from "@subtrees/utils/server/workflows";
+import { dispatchPaymentFailed, dispatchWorkflowTrigger } from "@subtrees/utils/server/workflows";
 import { paymentFailureFromError, isPaymentDecline } from "@subtrees/utils/workflowPayments";
-import { addDays } from "date-fns";
+import { addDays, isFuture } from "date-fns";
 import type { PaymentType } from "@subtrees/types";
 import {
     calculateThresholdDate,
@@ -22,6 +22,7 @@ import {
 import type { SubscriptionJobData } from "@subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@subtrees/constants/workflow";
 import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { randomUUID } from "crypto";
 import { generateUUID } from "subtrees/utils";
@@ -309,7 +310,9 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             });
 
             const member = ml.member;
+            const isTrialCheckout = !!(subscription.trialEnd && isFuture(subscription.trialEnd) && subscription.trialEnd > subscription.startDate);
             const nextBillingDate = new Date(subscription.currentPeriodEnd);
+            let renewal: Promise<unknown> | undefined;
             if (["month", "year"].includes(pricing.interval)) {
                 const promoDuration = discount?.duration === "once"
                     ? 1
@@ -344,7 +347,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         duration: remainingPromoPayments,
                     } : undefined,
                 };
-                const renewal = pricing.intervalThreshold === 1
+                renewal = pricing.intervalThreshold === 1
                     ? scheduleCronBasedRenewal({
                         startDate: nextBillingDate,
                         interval: pricing.interval,
@@ -354,7 +357,23 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         startDate: nextBillingDate,
                         data: { ...payload, recurrenceCount: 1 },
                     });
-                renewal.catch((error) => console.error("Error scheduling renewal:", error));
+                // Ordinary enrollment keeps its existing background scheduling.
+                if (!isTrialCheckout) renewal.catch((error) => console.error("Error scheduling renewal:", error));
+            }
+            if (isTrialCheckout) {
+                try {
+                    // No workflow until required renewal setup has finished.
+                    await renewal;
+                    await db.transaction(tx => dispatchWorkflowTrigger(tx, {
+                        type: WorkflowEvents.trial.CHECKED_OUT,
+                        locationId: lid,
+                        memberId: mid,
+                    }));
+                } catch (error) {
+                    console.error("Trial payment saved but setup incomplete:", subscription.id, error);
+                    // Payment already succeeded. A normal retry could charge again.
+                    throw new CheckoutError(202, `Trial setup is incomplete for ${subscription.id}. Payment was saved; do not repeat checkout.`);
+                }
             }
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(member.userId, achievement);

@@ -74,8 +74,16 @@ export type OrderCreatedWorkflowEvent = {
 	orderId: string;
 };
 
+/** Emitted after trial activation or successful referral-pass claim, not a draft save. */
+export type TrialCheckoutWorkflowEvent = {
+	type: typeof WorkflowEvents.trial.CHECKED_OUT;
+	locationId: string;
+	memberId: string;
+};
+
 /** Backend-supported event payloads. Extend this union as dispatch support is added. */
 export type WorkflowEvent =
+	| TrialCheckoutWorkflowEvent
 	| PaymentFailedWorkflowEvent
 	| EventRegisteredWorkflowEvent
 	| OrderCreatedWorkflowEvent
@@ -92,6 +100,7 @@ export type WorkflowEvent =
  * Add each new supported event here too; do not add optional fields for every event.
  */
 export type WorkflowRunTrigger =
+	| Omit<TrialCheckoutWorkflowEvent, "memberId" | "locationId">
 	| Omit<PaymentFailedWorkflowEvent, "memberId" | "locationId">
 	| Omit<EventRegisteredWorkflowEvent, "memberId" | "locationId">
 	| Omit<OrderCreatedWorkflowEvent, "memberId" | "locationId">

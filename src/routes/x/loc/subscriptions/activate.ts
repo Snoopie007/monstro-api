@@ -1,5 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@subtrees/utils/server/workflows";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
 import {
@@ -185,6 +187,15 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         recurrenceCount: 1,
                     },
                 });
+            }
+
+            // Payment setup and renewal scheduling succeeded. Saving the draft alone does not count.
+            if (!sub.parentId) {
+                await db.transaction(tx => dispatchWorkflowTrigger(tx, {
+                    type: WorkflowEvents.trial.CHECKED_OUT,
+                    locationId: lid,
+                    memberId: sub.memberId,
+                }));
             }
 
             return status(200, {
