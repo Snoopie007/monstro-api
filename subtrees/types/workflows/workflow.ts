@@ -81,8 +81,17 @@ export type TrialCheckoutWorkflowEvent = {
 	memberId: string;
 };
 
+/** A booking newly marked No-show, either automatically or by staff. */
+export type ClassMissedWorkflowEvent = {
+	type: typeof WorkflowEvents.class.MISSED;
+	locationId: string;
+	memberId: string;
+	reservationId: string;
+};
+
 /** Backend-supported event payloads. Extend this union as dispatch support is added. */
 export type WorkflowEvent =
+	| ClassMissedWorkflowEvent
 	| TrialCheckoutWorkflowEvent
 	| PaymentFailedWorkflowEvent
 	| EventRegisteredWorkflowEvent
@@ -100,6 +109,7 @@ export type WorkflowEvent =
  * Add each new supported event here too; do not add optional fields for every event.
  */
 export type WorkflowRunTrigger =
+	| Omit<ClassMissedWorkflowEvent, "memberId" | "locationId">
 	| Omit<TrialCheckoutWorkflowEvent, "memberId" | "locationId">
 	| Omit<PaymentFailedWorkflowEvent, "memberId" | "locationId">
 	| Omit<EventRegisteredWorkflowEvent, "memberId" | "locationId">

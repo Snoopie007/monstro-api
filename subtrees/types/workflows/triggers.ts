@@ -13,6 +13,7 @@ type WorkflowEventValues<T> = T[keyof T];
  * When adding a new group, add its WorkflowEventValues entry to this union.
  */
 export type WorkflowTriggerType =
+	| WorkflowEventValues<typeof WorkflowEvents.class>
 	| WorkflowEventValues<typeof WorkflowEvents.trial>
 	| WorkflowEventValues<typeof WorkflowEvents.payment>
 	| WorkflowEventValues<typeof WorkflowEvents.member>

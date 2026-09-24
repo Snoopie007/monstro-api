@@ -8,6 +8,9 @@
  * Adding an identifier alone does not implement or enable event dispatch.
  */
 export const WorkflowEvents = {
+	class: {
+		MISSED: "class::missed",
+	},
 	trial: {
 		CHECKED_OUT: "trial::checked_out",
 	},
