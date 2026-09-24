@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const invoice = {
     id: "invoice-1",
-    transactionId: null,
+    transactionId: null as string | null,
     description: "Membership",
     currency: "USD",
     subTotal: 1000,
@@ -14,6 +14,8 @@ const invoice = {
 };
 const inserts: Array<Record<string, unknown>> = [];
 let returnedInvoice = false;
+let previousPayment: { status: string; failedReason: string | null; failedCode: string | null } | undefined;
+const emittedFailures: string[] = [];
 const tx = {
     update: mock(() => ({
         set: mock(() => ({
@@ -33,6 +35,7 @@ const tx = {
         }),
     })),
     query: {
+        transactions: { findFirst: async () => previousPayment },
         memberSubscriptions: { findFirst: mock(async () => undefined) },
     },
 };
@@ -43,6 +46,9 @@ const db = {
 let handleStripePlanCharge: typeof import("./stripePlanCharge").handleStripePlanCharge;
 beforeAll(async () => {
     mock.module("@/db/db", () => ({ db }));
+    mock.module("@subtrees/utils/server/workflows", () => ({
+        dispatchPaymentFailed: async (_tx: unknown, id: string) => { emittedFailures.push(id); },
+    }));
     ({ handleStripePlanCharge } = await import("./stripePlanCharge"));
 });
 
@@ -51,6 +57,9 @@ describe("handleStripePlanCharge", () => {
         mock.clearAllMocks();
         returnedInvoice = false;
         inserts.length = 0;
+        invoice.transactionId = null;
+        previousPayment = undefined;
+        emittedFailures.length = 0;
     });
 
     test("copies the charged invoice items to the transaction", async () => {
@@ -71,5 +80,21 @@ describe("handleStripePlanCharge", () => {
         });
 
         expect(inserts[0]?.items).toEqual(invoice.items);
+    });
+
+    test.each([
+        { status: "pending", failedReason: null, failedCode: null, expected: 1 },
+        { status: "failed", failedReason: null, failedCode: null, expected: 1 },
+        { status: "failed", failedReason: "Declined", failedCode: "card_declined", expected: 0 },
+        { status: "paid", failedReason: null, failedCode: null, expected: 0 },
+    ])("a decline webhook on $status payment emits $expected new workflow events", async ({ expected, ...previous }) => {
+        invoice.transactionId = "existing-payment";
+        previousPayment = previous;
+        await handleStripePlanCharge({
+            invoiceId: invoice.id, memberPlanId: "pkg_1", locationId: "location-1", memberId: "member-1",
+            paymentType: "card", failedReason: "Declined", failedCode: "card_declined", success: false,
+            receiptUrl: null, amount: 1200, paymentMethodId: "method", paymentIntentId: "provider-payment", feeAmount: 0,
+        });
+        expect(emittedFailures).toEqual(expected ? ["existing-payment"] : []);
     });
 });

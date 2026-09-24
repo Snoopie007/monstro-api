@@ -76,6 +76,7 @@ export type OrderCreatedWorkflowEvent = {
 
 /** Backend-supported event payloads. Extend this union as dispatch support is added. */
 export type WorkflowEvent =
+	| PaymentFailedWorkflowEvent
 	| EventRegisteredWorkflowEvent
 	| OrderCreatedWorkflowEvent
 	| MemberJoinedWorkflowEvent
@@ -91,6 +92,7 @@ export type WorkflowEvent =
  * Add each new supported event here too; do not add optional fields for every event.
  */
 export type WorkflowRunTrigger =
+	| Omit<PaymentFailedWorkflowEvent, "memberId" | "locationId">
 	| Omit<EventRegisteredWorkflowEvent, "memberId" | "locationId">
 	| Omit<OrderCreatedWorkflowEvent, "memberId" | "locationId">
 	| Omit<MemberJoinedWorkflowEvent, "memberId" | "locationId">
@@ -104,6 +106,14 @@ export type WorkflowRunMetadata = {
 	trigger: WorkflowRunTrigger;
 	nodes: TypedWorkflowNode[];
 	execution?: Record<string, unknown>;
+};
+
+/** A confirmed failed payment attempt, not an unpaid placeholder or unknown result. */
+export type PaymentFailedWorkflowEvent = {
+	type: typeof WorkflowEvents.payment.FAILED;
+	locationId: string;
+	memberId: string;
+	transactionId: string;
 };
 
 /**

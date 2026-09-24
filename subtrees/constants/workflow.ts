@@ -8,6 +8,9 @@
  * Adding an identifier alone does not implement or enable event dispatch.
  */
 export const WorkflowEvents = {
+	payment: {
+		FAILED: "payment::failed",
+	},
 	member: {
 		JOINED: "member::joined",
 		UPDATED: "member::updated",

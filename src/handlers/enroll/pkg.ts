@@ -1,3 +1,5 @@
+import { dispatchPaymentFailed } from "@subtrees/utils/server/workflows";
+import { paymentFailureFromError, isPaymentDecline } from "@subtrees/utils/workflowPayments";
 import type { PaymentType } from "@subtrees/types";
 import { db } from "@/db/db";
 import { memberInvoices, memberPackages, promos, transactions } from "@subtrees/schemas";
@@ -184,6 +186,11 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             description,
             note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
             metadata: { locationId: lid, memberId: mid, transactionId },
+        }).catch((error) => {
+            // Only explicit declines enter the existing failure branch. Other errors keep their behavior.
+            const failure = paymentFailureFromError(error);
+            if (!failure) throw error;
+            return failure;
         });
     }
 
@@ -276,34 +283,40 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         }
         case "failed": {
             const now = new Date();
-            await db.insert(transactions).values({
-                id: transactionId,
-                memberId: mid,
-                locationId: lid,
-                total: chargeDetails.total,
-                subTotal: chargeDetails.subTotal,
-                tax: chargeDetails.tax,
-                feeAmount: chargeDetails.feesAmount,
-                items,
-                description,
-                type: "inbound",
-                status: "failed",
-                paymentMethodId,
-                paymentType,
-                currency,
-                chargeDate: now,
-                paymentIntentId: charge.paymentIntentId,
-                failedReason: charge.failureReason,
-                failedCode: charge.failureCode,
-                metadata: { ...metadata, ...charge.gatewayMetadata },
-                activities: [{
-                    at: now.toISOString(),
-                    reason: `Payment failed: ${charge.failureReason}`,
-                    paymentType: charge.paymentType ?? paymentType,
-                    brand: charge.brand,
-                    last4: charge.last4,
-                }],
-            }).onConflictDoNothing({ target: transactions.id });
+            await db.transaction(async (tx) => {
+                const [created] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    memberId: mid,
+                    locationId: lid,
+                    total: chargeDetails.total,
+                    subTotal: chargeDetails.subTotal,
+                    tax: chargeDetails.tax,
+                    feeAmount: chargeDetails.feesAmount,
+                    items,
+                    description,
+                    type: "inbound",
+                    status: "failed",
+                    paymentMethodId,
+                    paymentType,
+                    currency,
+                    chargeDate: now,
+                    paymentIntentId: charge.paymentIntentId,
+                    failedReason: charge.failureReason,
+                    failedCode: charge.failureCode,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: `Payment failed: ${charge.failureReason}`,
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                // Held/configuration failures keep their billing status, but do not start workflows.
+                if (created && isPaymentDecline(charge.gatewayMetadata.gatewayService, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode)) {
+                    await dispatchPaymentFailed(tx, created.id);
+                }
+            });
             throw new CheckoutError(400, charge.failureReason);
         }
         case "uncertain":

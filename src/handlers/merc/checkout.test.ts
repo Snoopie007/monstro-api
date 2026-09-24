@@ -4,7 +4,15 @@ const steps: string[] = [];
 const stockUpdates: Record<string, unknown>[] = [];
 const inserted: Record<string, unknown>[] = [];
 const dispatch = mock(async () => []);
-mock.module("@subtrees/utils/server/workflows", () => ({ dispatchWorkflowTrigger: dispatch }));
+const failedRuns: Array<{ transactionId: string }> = [];
+let workflowUnavailable = false;
+mock.module("@subtrees/utils/server/workflows", () => ({
+    dispatchWorkflowTrigger: dispatch,
+    dispatchPaymentFailed: async (_tx: unknown, transactionId: string) => {
+        if (workflowUnavailable) throw new Error("Workflow unavailable");
+        failedRuns.push({ transactionId });
+    },
+}));
 
 const tx = {
     query: { orders: { findFirst: mock(async () => undefined) } },
@@ -46,7 +54,11 @@ const db = {
             })),
         })),
     })),
-    transaction: mock(async (callback: (value: typeof tx) => unknown) => callback(tx)),
+    transaction: mock(async (callback: (value: typeof tx) => unknown) => {
+        const savedCount = inserted.length, runCount = failedRuns.length;
+        try { return await callback(tx); }
+        catch (error) { inserted.length = savedCount; failedRuns.length = runCount; throw error; }
+    }),
 };
 
 class CheckoutError extends Error {
@@ -99,6 +111,8 @@ mock.module("@/utils", () => ({
 const { handleMercCheckout } = await import("./checkout");
 
 beforeEach(() => {
+    failedRuns.length = 0;
+    workflowUnavailable = false;
     steps.length = 0;
     stockUpdates.length = 0;
     inserted.length = 0;
@@ -108,6 +122,56 @@ beforeEach(() => {
     chargeWithGateway.mockClear();
     dispatch.mockReset();
     dispatch.mockResolvedValue([]);
+});
+
+test.each([
+    { type: "StripeCardError", code: "card_declined", message: "Declined", payment_intent: { id: "pi_decline" } },
+    { name: "SquareError", body: { errors: [{ code: "CARD_DECLINED", detail: "Declined" }], payment: { id: "square_decline" } } },
+])("a thrown decline saves a failed payment and starts a workflow, without an order", async (error) => {
+    chargeWithGateway.mockRejectedValueOnce(error);
+    await expect(handleMercCheckout({
+        lid: "location-1", mid: "member-1", items: [{ variantId: "variant-1", quantity: 1 }],
+        paymentMethodId: "method-1", attemptId: "attempt",
+    })).rejects.toThrow();
+    expect(inserted).toHaveLength(1);
+    expect(inserted[0]).toMatchObject({ status: "failed", memberId: "member-1", locationId: "location-1" });
+    expect(failedRuns).toEqual([{ transactionId: inserted[0]!.id as string }]);
+    expect(stockUpdates).toHaveLength(0);
+});
+
+test("a timeout keeps the original error and creates no failed payment or workflow", async () => {
+    const timeout = new Error("Timed out");
+    chargeWithGateway.mockRejectedValueOnce(timeout);
+    await expect(handleMercCheckout({
+        lid: "location-1", mid: "member-1", items: [{ variantId: "variant-1", quantity: 1 }],
+        paymentMethodId: "method-1", attemptId: "attempt",
+    })).rejects.toBe(timeout);
+    expect(inserted).toEqual([]);
+    expect(failedRuns).toEqual([]);
+});
+
+test("held-for-review keeps its existing failed billing record without a workflow", async () => {
+    chargeWithGateway.mockResolvedValueOnce({
+        status: "failed", failureCode: "4", failureReason: "Held",
+        gatewayMetadata: { gatewayService: "authorize", authorizeResponseCode: "4" },
+    } as never);
+    await expect(handleMercCheckout({
+        lid: "location-1", mid: "member-1", items: [{ variantId: "variant-1", quantity: 1 }],
+        paymentMethodId: "method-1", attemptId: "attempt",
+    })).rejects.toThrow();
+    expect(inserted[0]).toMatchObject({ status: "failed" });
+    expect(failedRuns).toEqual([]);
+});
+
+test("a workflow write failure rolls back the failed-payment insert", async () => {
+    workflowUnavailable = true;
+    chargeWithGateway.mockRejectedValueOnce({ type: "StripeCardError", code: "card_declined", message: "Declined" });
+    await expect(handleMercCheckout({
+        lid: "location-1", mid: "member-1", items: [{ variantId: "variant-1", quantity: 1 }],
+        paymentMethodId: "method-1", attemptId: "attempt",
+    })).rejects.toThrow("Workflow unavailable");
+    expect(inserted).toEqual([]);
+    expect(failedRuns).toEqual([]);
 });
 
 test("returns public additional fee details for checkout quotes", async () => {

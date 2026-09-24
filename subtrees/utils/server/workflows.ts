@@ -1,4 +1,5 @@
 import { WorkflowEvents } from "../../constants/workflow";
+import { transactions } from "../../schemas/transactions";
 import { changedMemberFields, effectiveMemberFields, parseMemberUpdatedFields } from "../workflowFields";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { workflowQueues, workflowTriggers, workflows } from "../../schemas/workflow";
@@ -8,6 +9,21 @@ import { memberLocations } from "../../schemas/MemberLocation";
 import type { WorkflowEvent, WorkflowNode, WorkflowRunMetadata } from "../../types/workflows";
 
 export type WorkflowTransaction = Pick<PostgresJsDatabase, "select" | "insert">;
+
+/** Call only after a confirmed decline, inside the payment write's transaction.
+ * Failed placeholders and uncertain outcomes must never call this helper.
+ * Replays can still create runs after completion; durable attempt deduplication is deferred.
+ */
+export async function dispatchPaymentFailed(tx: WorkflowTransaction, transactionId: string) {
+	const [payment] = await tx.select({
+		memberId: transactions.memberId, locationId: transactions.locationId,
+	}).from(transactions).where(eq(transactions.id, transactionId));
+	if (!payment?.memberId) return [];
+	return dispatchWorkflowTrigger(tx, {
+		type: WorkflowEvents.payment.FAILED, transactionId,
+		memberId: payment.memberId, locationId: payment.locationId,
+	});
+}
 
 type WorkflowNodeShape = Pick<WorkflowNode, "id" | "type">;
 

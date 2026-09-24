@@ -1,3 +1,5 @@
+import { dispatchPaymentFailed } from "@subtrees/utils/server/workflows";
+import { paymentFailureFromError, isPaymentDecline } from "@subtrees/utils/workflowPayments";
 import { db } from "@/db/db";
 import { getCheckoutContext } from "@/utils/getCheckoutContext";
 import { chargeWithGateway } from "@/utils/checkoutUtil";
@@ -75,6 +77,11 @@ export async function retrySubscriptionPayment(props: {
         description: `Retry payment for ${invoice.id}`,
         note: `transId:${transaction.id}|mid:${sub.memberId}|lid:${lid}|priceId:${sub.id}`,
         metadata: { locationId: lid, memberId: sub.memberId },
+    }).catch((error) => {
+        // Only explicit declines enter the existing failure branch. Other errors keep their behavior.
+        const failure = paymentFailureFromError(error);
+        if (!failure) throw error;
+        return failure;
     });
 
     const now = new Date();
@@ -100,6 +107,9 @@ export async function retrySubscriptionPayment(props: {
         await tx.update(transactions).set({
             activities: [...(transaction.activities ?? []), activity],
         }).where(eq(transactions.id, transaction.id));
+        if (charge.status === "failed" && isPaymentDecline(gateway.service, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode)) {
+            await dispatchPaymentFailed(tx, transaction.id);
+        }
         if (charge.status === "approved") {
             await tx.update(memberInvoices).set({
                 status: "paid",
