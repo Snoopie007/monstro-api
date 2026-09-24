@@ -422,6 +422,37 @@ test("routes a secondary location form to its keyed GHL destination", async () =
   }, validFormContact);
 });
 
+test.each([
+  { locationId: "location-1", isPrimary: true, secondaryToken: "pit-shared", expectedToken: "pit-shared" },
+  { locationId: "location-2", isPrimary: false, secondaryToken: "pit-shared", expectedToken: "pit-shared" },
+  { locationId: "location-2", isPrimary: false, secondaryToken: "pit-secondary", expectedToken: "pit-secondary" },
+])("routes shared GHL destinations using the selected connection: %j", async ({
+  locationId, isPrimary, secondaryToken, expectedToken,
+}) => {
+  selectedRows = [
+    [{ siteId: "site-1", locationId, isPrimary, publishedRevisionId: "revision-1" }],
+    [{ config: routingConfig([
+      { locationId: "location-1", isPrimary: true, ghlLocationId: "ghl-shared", privateIntegrationToken: "pit-shared" },
+      { locationId: "location-2", isPrimary: false, ghlLocationId: "ghl-shared", privateIntegrationToken: secondaryToken },
+    ]) }],
+  ];
+  const response = await app.handle(new Request(
+    `http://localhost/sites/site-1/locations/${locationId}/forms/contact-form/submissions`,
+    {
+      method: "POST",
+      headers: { Authorization: "Bearer sites-service-secret", "Content-Type": "application/json" },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(200);
+  expect(submitGhlFormContact).toHaveBeenCalledTimes(1);
+  expect(submitGhlFormContact).toHaveBeenCalledWith({
+    privateIntegrationToken: expectedToken,
+    locationId: "ghl-shared",
+  }, validFormContact);
+});
+
 test("does not route a secondary location through legacy primary-only credentials", async () => {
   selectedRows = [
     [{
