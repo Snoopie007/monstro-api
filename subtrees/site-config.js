@@ -1785,7 +1785,7 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
 				path: ["locationConnections"]
 			});
 		}
-		for (let order = 0; order < config.locationConnections.length; order += 1) {
+		for (let order = 0;order < config.locationConnections.length; order += 1) {
 			if (!displayOrders.has(order)) {
 				issue.addIssue({
 					code: "custom",
@@ -2006,7 +2006,7 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
 		}
 	}
 	for (const [formIndex, form2] of config.forms.entries()) {
-		let checkLocationCondition = function (condition, path) {
+		let checkLocationCondition = function(condition, path) {
 			if (condition?.field === FORM_LOCATION_FIELD && config.locationConnections && !connectedLocationIds.has(condition.equals)) {
 				issue.addIssue({ code: "custom", message: `Form rule references an unconnected location: ${condition.equals}`, path });
 			}
@@ -2065,7 +2065,6 @@ var StoredSiteConfigSchema = StoredSiteConfigObjectSchema.superRefine((config, i
 	}
 });
 var PublishableStoredSiteConfigSchema = StoredSiteConfigSchema.superRefine((config, issue) => {
-	const ghlLocationIds = new Set;
 	for (const [index, connection] of config.locationConnections.entries()) {
 		const { ghlLocationId, privateIntegrationToken } = connection.leadRouting;
 		if (!ghlLocationId.trim()) {
@@ -2074,14 +2073,7 @@ var PublishableStoredSiteConfigSchema = StoredSiteConfigSchema.superRefine((conf
 				message: `Missing GHL Location ID for connected location: ${connection.locationId}`,
 				path: ["locationConnections", index, "leadRouting", "ghlLocationId"]
 			});
-		} else if (ghlLocationIds.has(ghlLocationId.trim())) {
-			issue.addIssue({
-				code: "custom",
-				message: `Duplicate GHL Location ID: ${ghlLocationId.trim()}`,
-				path: ["locationConnections", index, "leadRouting", "ghlLocationId"]
-			});
 		}
-		ghlLocationIds.add(ghlLocationId.trim());
 		if (!privateIntegrationToken.trim()) {
 			issue.addIssue({
 				code: "custom",
@@ -2341,15 +2333,11 @@ function storedLocationConnectionsArePublishable(connections) {
 	if (connections.length === 0 || connections.filter((connection) => connection.isPrimary).length !== 1) {
 		return false;
 	}
-	const ghlLocationIds = new Set;
 	for (const connection of connections) {
 		const { ghlLocationId, privateIntegrationToken } = connection.leadRouting;
 		const normalizedGhlId = ghlLocationId.trim();
 		if (!normalizedGhlId || !privateIntegrationToken.trim())
 			return false;
-		if (ghlLocationIds.has(normalizedGhlId))
-			return false;
-		ghlLocationIds.add(normalizedGhlId);
 	}
 	return true;
 }
@@ -2922,7 +2910,7 @@ function pricingSections(id2, draft, form2) {
 		type: "pricing_form_section",
 		visible: true,
 		props: {
-			eyebrow: "Looking For Our Pricing?",
+			eyebrow: form2 === "getStarted" ? "Ready To Get Started?" : "Looking For Our Pricing?",
 			title: "Tell us what program you\u2019re looking for below",
 			description: "Fill out the form below, and one of our coaches will send you our pricing, class schedule, and exclusive promo information for our classes.",
 			source
@@ -3705,7 +3693,7 @@ function withLocationSlug(path, slug) {
 }
 // src/section-templates.ts
 var SITE_SECTION_TEMPLATES = [
-	{ key: "hero", type: "hero", name: "Hero", description: "A headline, supporting copy, image, and calls to action." },
+	{ key: "hero", type: "hero", name: "Hero", description: "An optional eyebrow, headline, supporting copy, image, and calls to action." },
 	{ key: "rich-text", type: "rich_text", name: "Rich Text", description: "A heading with flexible paragraph content." },
 	{ key: "external-widget", type: "external_widget", name: "External Widget", description: "A managed provider widget configured from validated embed code." },
 	{ key: "sandboxed-embed", type: "sandboxed_embed", name: "Sandboxed HTML", description: "Third-party HTML and scripts isolated from the site in a sandboxed frame." },
