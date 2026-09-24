@@ -60,11 +60,15 @@ export function paymentFailureFromError(error: unknown): Failure | null {
     if (value.type === "StripeCardError") {
         const lastError = value.payment_intent && typeof value.payment_intent === "object"
             ? value.payment_intent.last_payment_error : undefined;
-        // Stripe can supply "" for decline_code. Skip empty values so card_declined still counts.
-        const code = value.decline_code || lastError?.decline_code || value.code;
-        if (!isPaymentDecline("stripe", code)) return null;
+        // Prefer a recognized detailed code. Empty or unfamiliar details must not hide card_declined.
+        const code = [
+            value.decline_code,
+            lastError?.decline_code,
+            value.code,
+        ].find(candidate => isPaymentDecline("stripe", candidate));
+        if (!code) return null;
         return {
-            status: "failed", failureCode: code!, failureReason: value.message ?? "Card declined",
+            status: "failed", failureCode: code, failureReason: value.message ?? "Card declined",
             paymentIntentId: typeof value.payment_intent === "string" ? value.payment_intent : value.payment_intent?.id,
             gatewayMetadata: { gatewayService: "stripe" },
         };
