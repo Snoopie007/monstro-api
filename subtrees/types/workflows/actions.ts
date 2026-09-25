@@ -49,6 +49,23 @@ export type NotificationNodeData = BaseNodeData & {
 	message: string;
 };
 
+export type TagNodeData = BaseNodeData & {
+	operation: "add" | "remove";
+	tagId: string;
+};
+
+export type CustomFieldNodeData = BaseNodeData & {
+	fieldId: string;
+	// Field values use the existing string storage format. Empty means clear.
+	value: string;
+};
+
+export type GroupPostNodeData = BaseNodeData & {
+	groupId: string;
+	title: string;
+	content: string;
+};
+
 type WorkflowNodeBase = {
 	id: string;
 	position: { x: number; y: number };
@@ -64,7 +81,10 @@ export type TypedWorkflowNode =
 	| (WorkflowNodeBase & { type: "delay"; data: DelayNodeData })
 	| (WorkflowNodeBase & { type: "condition"; data: ConditionNodeData })
 	| (WorkflowNodeBase & { type: "email"; data: EmailNodeData })
-	| (WorkflowNodeBase & { type: "notification"; data: NotificationNodeData });
+	| (WorkflowNodeBase & { type: "notification"; data: NotificationNodeData })
+	| (WorkflowNodeBase & { type: "tag"; data: TagNodeData })
+	| (WorkflowNodeBase & { type: "customField"; data: CustomFieldNodeData })
+	| (WorkflowNodeBase & { type: "groupPost"; data: GroupPostNodeData });
 
 export type WorkflowNodeType = TypedWorkflowNode["type"];
 
