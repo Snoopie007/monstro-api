@@ -11,7 +11,7 @@ export async function canAccessLocation(
 	lid: string,
 	vendorId?: string,
 	staffId?: string,
-	database: LocationAccessReader = db
+	database: LocationAccessReader = db,
 ): Promise<LocationAccessResult> {
 	if (!vendorId && !staffId) {
 		return { allowed: false };
@@ -31,7 +31,7 @@ export async function canAccessLocation(
 			where: and(
 				eq(staffsLocations.staffId, staffId),
 				eq(staffsLocations.locationId, lid),
-				eq(staffsLocations.status, "active")
+				eq(staffsLocations.status, "active"),
 			),
 			columns: { locationId: true },
 		});
@@ -40,12 +40,4 @@ export async function canAccessLocation(
 	}
 
 	return { allowed: false };
-}
-
-export function slugify(value: string) {
-	return value
-		.trim()
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
 }

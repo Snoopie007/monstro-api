@@ -10,6 +10,7 @@
     "paths": {
       "*": ["./*"],
       "@/*": ["./src/*"],
+      "@routes/*": ["./src/routes/*"],
       "@subtrees/*": ["./subtrees/*"]
     },
 

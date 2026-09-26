@@ -2,6 +2,7 @@ import type { ToolArgs, ToolExecutorResult } from "../type";
 import { executeAsk } from "./ask";
 import { executeCancelSession } from "./cancelSession";
 import { executeClarify } from "./clarify";
+import { executeReportTool } from "./reports";
 import { TOOLS_DEFINITIONS } from "./definitions";
 import { executeRetryFailed } from "./retryFailed";
 import { executeScheduleSession } from "./scheduleSession";
@@ -37,6 +38,9 @@ export async function executeTool(name: string, args: ToolArgs, locationId: stri
     }
     if (name === "schedule_session") {
         return attachPauseState(await executeScheduleSession(normalized, locationId), name, normalized);
+    }
+    if (name === "report") {
+        return executeReportTool(normalized, locationId);
     }
     return { content: jsonResult({ ok: false, error: `Unsupported tool: ${name}` }) };
 }

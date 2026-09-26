@@ -18,7 +18,7 @@ const fail = mock(async () => {});
 const reserve = mock(async () => ({ ok: true }));
 const settle = mock(async () => ({ ok: true }));
 const run = mock(async () => {});
-mock.module("@/utils/merchandise", () => ({ canAccessLocation: async () => ({ allowed }) }));
+mock.module("@/utils/locationAccess", () => ({ canAccessLocation: async () => ({ allowed }) }));
 mock.module("@/libs/wallet", () => ({
 	Wallet: class {
 		reserveAtomic = reserve;

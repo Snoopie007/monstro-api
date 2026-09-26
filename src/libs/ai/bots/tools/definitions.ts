@@ -4,7 +4,7 @@ export const TOOLS_DEFINITIONS = [
         type: "function",
         function: {
             name: "clarify",
-            description: "Ask the user to pick from a list of options (task, member, class, or payment). Always include options. Never use this for first and last name.",
+            description: "Ask the user to pick one option after a lookup found several matches (members, class times, or payments). Do not use this for a greeting, to choose the task, or to ask for a first and last name.",
             parameters: {
                 type: "object",
                 properties: {
@@ -32,7 +32,7 @@ export const TOOLS_DEFINITIONS = [
         type: "function",
         function: {
             name: "ask",
-            description: "Ask the user a free-text question with no options, such as a member first and last name.",
+            description: "Do not use this to ask for a member name or to choose a task. Only ask a free-text question when no other tool fits.",
             parameters: {
                 type: "object",
                 properties: {
@@ -131,6 +131,27 @@ export const TOOLS_DEFINITIONS = [
                         description: "Session id from a time chip the user already picked",
                     },
                 },
+            },
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "report",
+            description: "Get a report of the data for the location. Call this when the user asks for a report.",
+            parameters: {
+                type: "object",
+            },
+            properties: {
+                metric: {
+                    type: "string",
+                    description: "Metric name such as attendance, revenue, active_members",
+                },
+                range: {
+                    type: "string",
+                    description: "Time range for report retrieval, for example last 30 days",
+                },
+                required: ["metric", "range"],
             },
         },
     },

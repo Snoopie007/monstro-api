@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { CourseEnrollError, handleCourseEnrollFree, handleCourseEnrollPaid, mapCourseEnrollPaidError } from "@/handlers/course";
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 import { courseEnrollments, courses, memberLocations } from "@subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";

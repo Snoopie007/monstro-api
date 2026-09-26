@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 import {
 	additionalFeeCheckoutTypes,
 	additionalFees,

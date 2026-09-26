@@ -1,7 +1,7 @@
 import { estimateAssistantTurnCost, runAssistantTurnStream } from "@/libs/ai/assistant";
 import { AssistantSessionError, createAssistantMemory, historyFromThread } from "@/libs/ai/assistant/memory";
 import { Wallet } from "@/libs/wallet";
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 import type { AssistantChatRequest } from "@subtrees/types/assistant";
 import type { Context, Elysia } from "elysia";
 import { t } from "elysia";

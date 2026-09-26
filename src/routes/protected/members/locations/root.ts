@@ -6,7 +6,6 @@ import { mlAchievementsRoutes } from './achievements';
 import { mlDocsRoutes } from './docs';
 import { mlReferralsRoutes } from './referrals';
 import { mlRewardsRoutes } from './rewards';
-import { mlSupportRoutes } from './support';
 import { mlPointsRoutes } from './points';
 import { mlRankRoutes } from './rank';
 import { memberLocations } from '@subtrees/schemas';
@@ -127,7 +126,6 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         app.use(mlDocsRoutes)
         app.use(mlRewardsRoutes)
         app.use(mlReferralsRoutes)
-        app.use(mlSupportRoutes)
         app.use(mlPointsRoutes)
         app.use(paymentMethodsRoutes)
         app.use(mlRankRoutes)

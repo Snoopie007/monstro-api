@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { createGroupPostFromFormData } from "@/utils/groupPostCreation";
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 import { groups } from "@subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { Elysia, type Context } from "elysia";

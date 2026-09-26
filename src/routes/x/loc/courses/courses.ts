@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { slugify } from "@/utils/merchandise";
+import { slugify } from "@/utils/otherUtils";
 import { courseChapters, courseLessons, courses, type CourseStatus } from "@subtrees/schemas";
 import { and, asc, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";

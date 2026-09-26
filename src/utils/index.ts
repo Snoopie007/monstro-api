@@ -7,6 +7,7 @@ export * from "./userUtils";
 export * from "./interpolator";
 export * from "./dbUtils";
 export * from "./otherUtils";
+export * from "./locationAccess";
 export * from "./chatsGroupsUtils";
 export * from "./triggers";
 export * from "./posts";
