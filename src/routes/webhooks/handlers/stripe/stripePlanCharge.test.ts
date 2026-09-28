@@ -14,7 +14,7 @@ const invoice = {
 };
 const inserts: Array<Record<string, unknown>> = [];
 let returnedInvoice = false;
-let previousPayment: { status: string; failedReason: string | null; failedCode: string | null } | undefined;
+let previousPayment: { status: string; failedReason: string | null; failedCode: string | null; paymentIntentId?: string | null } | undefined;
 const emittedFailures: string[] = [];
 const tx = {
     update: mock(() => ({
@@ -80,6 +80,39 @@ describe("handleStripePlanCharge", () => {
         });
 
         expect(inserts[0]?.items).toEqual(invoice.items);
+    });
+
+    test.each([
+        { label: "different known payment", previousId: "old-intent", incomingId: "new-intent", expected: 1 },
+        { label: "same payment", previousId: "same-intent", incomingId: "same-intent", expected: 0 },
+        { label: "missing previous ID", previousId: null, incomingId: "new-intent", expected: 0 },
+        { label: "missing incoming ID", previousId: "old-intent", incomingId: null, expected: 0 },
+        { label: "empty previous ID", previousId: "", incomingId: "new-intent", expected: 0 },
+        { label: "empty incoming ID", previousId: "old-intent", incomingId: "", expected: 0 },
+    ])("recorded failure: $label emits $expected events", async ({ previousId, incomingId, expected }) => {
+        invoice.transactionId = "existing-payment";
+        previousPayment = { status: "failed", failedReason: "Old decline", failedCode: "card_declined", paymentIntentId: previousId };
+        await handleStripePlanCharge({
+            invoiceId: invoice.id, memberPlanId: "pkg_1", locationId: "location-1", memberId: "member-1",
+            paymentType: "card", failedReason: "New decline", failedCode: "card_declined", success: false,
+            receiptUrl: null, amount: 1200, paymentMethodId: "method", paymentIntentId: incomingId, feeAmount: 0,
+        });
+        expect(emittedFailures).toEqual(expected ? ["existing-payment"] : []);
+    });
+
+    test.each([
+        { label: "successful payment", success: true, code: null, previousStatus: "failed" },
+        { label: "unrecognized failure", success: false, code: "api_error", previousStatus: "failed" },
+        { label: "previously paid payment", success: false, code: "card_declined", previousStatus: "paid" },
+    ])("a different ID does not bypass $label protection", async ({ success, code, previousStatus }) => {
+        invoice.transactionId = "existing-payment";
+        previousPayment = { status: previousStatus, failedReason: "Old decline", failedCode: "card_declined", paymentIntentId: "old-intent" };
+        await handleStripePlanCharge({
+            invoiceId: invoice.id, memberPlanId: "pkg_1", locationId: "location-1", memberId: "member-1",
+            paymentType: "card", failedReason: success ? null : "Failure", failedCode: code, success,
+            receiptUrl: null, amount: 1200, paymentMethodId: "method", paymentIntentId: "new-intent", feeAmount: 0,
+        });
+        expect(emittedFailures).toEqual([]);
     });
 
     test.each([

@@ -144,7 +144,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
                     transactionId,
                     registrationId,
                     status: "registered",
-                });
+                }, "best-effort");
             });
         }
         case "failed": {

@@ -109,6 +109,7 @@ export async function createEventRegistration(
         registrationId,
         status,
     }: EventRegistrationInput,
+    workflowDispatch: "required" | "best-effort" = "required",
 ) {
     const eventId = event.id;
     const ticketId = ticket.id;
@@ -161,13 +162,28 @@ export async function createEventRegistration(
 
     // Pending seats are not registrations yet. Free and approved paid entries count.
     if (status === "registered") {
-        await dispatchWorkflowTrigger(tx, {
+        const workflowEvent = {
             type: WorkflowEvents.event.REGISTERED,
             locationId: lid,
             memberId: mid,
             eventId,
             registrationId: registration.id,
-        });
+        } as const;
+        if (workflowDispatch === "best-effort") {
+            try {
+                // Only the approved-payment caller opts in. The savepoint isolates
+                // workflow failure without rolling back the paid registration.
+                await tx.transaction(workflowTx => dispatchWorkflowTrigger(workflowTx, workflowEvent));
+            } catch (error) {
+                // Log the missed automation. Recovery cannot retry a run never saved.
+                console.error("[Workflow] Event dispatch failed after payment approval", {
+                    registrationId: registration.id, transactionId, locationId: lid, memberId: mid, error,
+                });
+            }
+        } else {
+            // Free registrations keep their existing all-or-nothing behavior.
+            await dispatchWorkflowTrigger(tx, workflowEvent);
+        }
     }
     return registration;
 }

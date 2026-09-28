@@ -232,12 +232,22 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                 if (!order) throw new Error("Failed to create order");
                 // The existing-transaction branch above returns without dispatch.
                 // A separate new order, even from a retried request, is a new event.
-                await dispatchWorkflowTrigger(tx, {
-                    type: WorkflowEvents.order.CREATED,
-                    locationId: lid,
-                    memberId: mid,
-                    orderId: order.id,
-                });
+                try {
+                    // Payment is already approved. A savepoint isolates workflow SQL
+                    // errors so they cannot undo the payment record, order, or stock.
+                    await tx.transaction(workflowTx => dispatchWorkflowTrigger(workflowTx, {
+                        type: WorkflowEvents.order.CREATED,
+                        locationId: lid,
+                        memberId: mid,
+                        orderId: order.id,
+                    }));
+                } catch (error) {
+                    // Best effort: no run exists to recover if this insert fails.
+                    // The outer transaction must still commit the purchase.
+                    console.error("[Workflow] Order dispatch failed after payment approval", {
+                        orderId: order.id, transactionId, locationId: lid, memberId: mid, error,
+                    });
+                }
                 return order;
             });
         }

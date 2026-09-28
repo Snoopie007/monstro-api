@@ -6,7 +6,8 @@ export type Path = {
 	isDefault: boolean;
 	pathId: string;
 	label: string;
-	field?: string;
+	// Stable custom-field identity; names are display-only and may change.
+	fieldId?: string;
 	operator?: string;
 	value?: string;
 	type?: "string" | "number" | "boolean";

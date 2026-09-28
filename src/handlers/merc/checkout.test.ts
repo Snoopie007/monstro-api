@@ -15,6 +15,7 @@ mock.module("@subtrees/utils/server/workflows", () => ({
 }));
 
 const tx = {
+    transaction: mock(async (callback: (value: unknown) => unknown): Promise<unknown> => callback(tx)),
     query: { orders: { findFirst: mock(async () => undefined) } },
     insert: mock(() => ({
         values: mock((values: Record<string, unknown>) => {

@@ -1,4 +1,4 @@
-import { serial, timestamp, pgTable, text, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { timestamp, pgTable, text, integer, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { reservations } from "./reservations";
 import { locations } from "./locations";
@@ -6,7 +6,7 @@ import { members } from "./members";
 import { programs } from "./programs";
 
 export const attendances = pgTable("check_ins", {
-	id: serial("id").primaryKey(),
+	id: text("id").primaryKey().notNull().default(sql`uuid_base62('chk_')`),
 	reservationId: text("reservation_id").references(() => reservations.id, {
 		onDelete: "set null",
 	}),
@@ -26,6 +26,7 @@ export const attendances = pgTable("check_ins", {
 		.notNull()
 		.defaultNow(),
 	checkOutTime: timestamp("check_out_time", { withTimezone: true }),
+	rankProcessedAt: timestamp("rank_processed_at", { withTimezone: true }),
 	ipAddress: text("ip_address"),
 	macAddress: text("mac_address"),
 	lat: integer("lat"),

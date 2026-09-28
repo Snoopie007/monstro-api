@@ -84,12 +84,19 @@ export async function handleStripePlanCharge({
         if (invoice.transactionId) {
             const previous = await tx.query.transactions.findFirst({
                 where: eq(transactions.id, invoice.transactionId),
-                columns: { status: true, failedReason: true, failedCode: true },
+                columns: { status: true, failedReason: true, failedCode: true, paymentIntentId: true },
             });
+            // A previous decline does not cover a different payment. Require both
+            // IDs so missing provider data does not change the existing policy.
+            const differentFailedPayment = previous?.status === "failed"
+                && !!previous.paymentIntentId && !!paymentIntentId
+                && previous.paymentIntentId !== paymentIntentId;
             await tx.update(transactions).set(values).where(eq(transactions.id, invoice.transactionId));
             // Skip a failure already recorded by the charge operation. Unpaid placeholders still count.
             if (!success && isPaymentDecline("stripe", failedCode)
-                && (previous?.status === "pending" || (previous?.status === "failed" && !previous.failedCode && !previous.failedReason))) {
+                && (previous?.status === "pending"
+                    || (previous?.status === "failed" && !previous.failedCode && !previous.failedReason)
+                    || differentFailedPayment)) {
                 await dispatchPaymentFailed(tx, invoice.transactionId);
             }
         } else {
