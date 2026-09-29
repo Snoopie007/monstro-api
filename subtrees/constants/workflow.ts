@@ -27,6 +27,7 @@ export const WorkflowEvents = {
 	attendance: {
 		RECORDED: "attendance::recorded",
 	},
+	// Legacy saved triggers/runs only. No producer or activation support.
 	support: {
 		CREATED: "support::created",
 	},

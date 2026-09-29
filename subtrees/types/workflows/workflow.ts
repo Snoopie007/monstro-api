@@ -49,14 +49,6 @@ export type AttendanceRecordedWorkflowEvent = {
 	attendanceId: string;
 };
 
-/** Creation counts even before the conversation receives its first message. */
-export type SupportCreatedWorkflowEvent = {
-	type: typeof WorkflowEvents.support.CREATED;
-	locationId: string;
-	memberId: string;
-	conversationId: string;
-};
-
 /** A new confirmed registration, including a pending seat that becomes registered. */
 export type EventRegisteredWorkflowEvent = {
 	type: typeof WorkflowEvents.event.REGISTERED;
@@ -99,8 +91,7 @@ export type WorkflowEvent =
 	| MemberJoinedWorkflowEvent
 	| MemberUpdatedWorkflowEvent
 	| RankChangedWorkflowEvent
-	| AttendanceRecordedWorkflowEvent
-	| SupportCreatedWorkflowEvent;
+	| AttendanceRecordedWorkflowEvent;
 
 /**
  * The event saved in workflowQueues.metadata.trigger. `type` selects its fields:
@@ -118,7 +109,8 @@ export type WorkflowRunTrigger =
 	| Omit<MemberUpdatedWorkflowEvent, "memberId" | "locationId">
 	| Omit<RankChangedWorkflowEvent, "memberId" | "locationId">
 	| Omit<AttendanceRecordedWorkflowEvent, "memberId" | "locationId">
-	| Omit<SupportCreatedWorkflowEvent, "memberId" | "locationId">;
+	// Historical runs can still be displayed; this is not an emitted event.
+	| { type: typeof WorkflowEvents.support.CREATED; conversationId: string };
 
 /** New runs keep event context, frozen actions, and worker state separate. */
 export type WorkflowRunMetadata = {
