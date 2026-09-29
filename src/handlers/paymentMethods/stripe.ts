@@ -90,7 +90,7 @@ export async function getStripePaymentMethods(mid: string, lid: string): Promise
     const stripe = new StripePaymentGateway(stripeIntegration.accessToken);
     const stripePaymentMethods = await stripe.getPaymentMethods(binding.customerId);
     return stripePaymentMethods
-        .map((method) => {
+        .map((method): PaymentMethod | null => {
             if (!method.id) return null;
 
             if (method.type === "card" && method.card) {
