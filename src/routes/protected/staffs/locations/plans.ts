@@ -3,11 +3,14 @@ import { retrySubscriptionPayment, type RetryPaymentErrorCode } from "@/handlers
 
 const retryHttpStatus: Record<RetryPaymentErrorCode, number> = {
     SUBSCRIPTION_NOT_FOUND: 404,
+    SUBSCRIPTION_CHILD: 400,
     INVOICE_NOT_FOUND: 404,
     TRANSACTION_NOT_FOUND: 404,
     SUBSCRIPTION_CANCELED: 400,
     NO_PAYMENT_METHOD: 400,
     LOCATION_INACTIVE: 400,
+    PAYMENT_IN_FLIGHT: 409,
+    PAYMENT_UNKNOWN: 409,
     CHARGE_FAILED: 400,
 };
 

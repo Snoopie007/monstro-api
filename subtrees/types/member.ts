@@ -41,7 +41,7 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
 	child?: MemberSubscription
 	invoices?: MemberInvoice[]
 	plan?: MemberPlan
-	pricing?: MemberPlanPricing
+	pricing?: MemberPlanPricing | null
 	contract?: MemberContract
 	member?: Member
 	paymentType: PaymentType

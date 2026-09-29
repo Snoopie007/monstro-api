@@ -11,21 +11,33 @@ const EnrollSubBody = t.Object({
     paymentType: t.Union([
         t.Literal("card"),
         t.Literal("us_bank_account"),
+        t.Literal("link"),
+        t.Literal("cashapp"),
     ]),
 });
 
-const EnrollQuoteBody = t.Object({
-    priceId: t.String(),
-    promoId: t.Optional(t.Nullable(t.String())),
-    paymentType: t.Union([
-        t.Literal("card"),
-        t.Literal("us_bank_account"),
-    ]),
-    planType: t.Union([
-        t.Literal("recurring"),
-        t.Literal("one-time"),
-    ]),
-});
+const EnrollQuoteBody = t.Union([
+    t.Object({
+        priceId: t.String(),
+        promoId: t.Optional(t.Nullable(t.String())),
+        paymentType: t.Union([
+            t.Literal("card"),
+            t.Literal("us_bank_account"),
+            t.Literal("link"),
+            t.Literal("cashapp"),
+        ]),
+        planType: t.Literal("recurring"),
+    }),
+    t.Object({
+        priceId: t.String(),
+        promoId: t.Optional(t.Nullable(t.String())),
+        paymentType: t.Union([
+            t.Literal("card"),
+            t.Literal("us_bank_account"),
+        ]),
+        planType: t.Literal("one-time"),
+    }),
+]);
 
 export const webEnrollSubRoutes = new Elysia({ prefix: "/enroll" })
     .use(WebAuthMiddleware)

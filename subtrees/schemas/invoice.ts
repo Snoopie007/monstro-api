@@ -14,6 +14,7 @@ export const memberInvoices = pgTable('member_invoices', {
     memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
     locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
     memberPlanId: text('member_plan_id'),
+    renewalKey: text('renewal_key'),
     description: text('description'),
     items: jsonb('items').array().$type<InvoiceItem[]>().default(sql`'{}'::jsonb[]`),
     paid: boolean('paid').notNull().default(false),
@@ -34,8 +35,9 @@ export const memberInvoices = pgTable('member_invoices', {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [
-    // TODO(vendor-member-fees): after cleaning up duplicate periods, add a unique
-    // index on memberPlanId + forPeriodStart + forPeriodEnd before charging prepared invoices.
+    uniqueIndex('member_invoices_renewal_key_uq')
+        .on(t.renewalKey)
+        .where(sql`${t.renewalKey} is not null`),
     uniqueIndex('member_invoices_transaction_id_uq')
         .on(t.transactionId)
         .where(sql`${t.transactionId} is not null`),

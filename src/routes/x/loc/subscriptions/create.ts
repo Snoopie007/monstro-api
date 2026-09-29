@@ -179,6 +179,8 @@ export async function createSubscriptionRoutes(app: Elysia) {
             paymentType: t.Union([
                 t.Literal("card"),
                 t.Literal("us_bank_account"),
+                t.Literal("link"),
+                t.Literal("cashapp"),
                 t.Literal("cash"),
             ]),
             startDate: t.Optional(t.String()),

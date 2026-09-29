@@ -14,8 +14,12 @@ export async function GetMemberPlans(_toolCall: ToolCall, context: Context): Pro
 		});
 
 		const pricingIds = new Set<string>();
-		subs.forEach((sub) => pricingIds.add(sub.memberPlanPricingId));
-		pkgs.forEach((pkg) => pricingIds.add(pkg.memberPlanPricingId));
+		subs.forEach((sub) => {
+			if (sub.memberPlanPricingId) pricingIds.add(sub.memberPlanPricingId);
+		});
+		pkgs.forEach((pkg) => {
+			if (pkg.memberPlanPricingId) pricingIds.add(pkg.memberPlanPricingId);
+		});
 
 		const pricings = await db.query.memberPlanPricing.findMany({
 			where: (p, { inArray }) => inArray(p.id, Array.from(pricingIds)),
@@ -54,6 +58,7 @@ export async function GetMemberPlans(_toolCall: ToolCall, context: Context): Pro
 		}
 
 		for (const sub of subs) {
+			if (!sub.memberPlanPricingId) continue;
 			const pricing = getPricingById(sub.memberPlanPricingId);
 			if (!pricing || !pricing.plan) {
 				console.warn(`No pricing/plan found for subscription ${sub.id}`);
@@ -81,6 +86,7 @@ export async function GetMemberPlans(_toolCall: ToolCall, context: Context): Pro
 		}
 
 		for (const pkg of pkgs) {
+			if (!pkg.memberPlanPricingId) continue;
 			const pricing = getPricingById(pkg.memberPlanPricingId);
 			if (!pricing || !pricing.plan) {
 				console.warn(`No pricing/plan found for package ${pkg.id}`);
