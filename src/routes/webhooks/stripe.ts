@@ -45,8 +45,14 @@ type StripeMetadata = {
     memberId: string;
     invoiceId?: string;
     memberPlanId?: string;
+    billingAttemptId?: string;
     orderId?: string;
 };
+
+function stripePaymentType(type: string | null | undefined): PaymentType {
+    if (type === "card" || type === "us_bank_account" || type === "link" || type === "cashapp") return type;
+    throw new Error(`Unsupported Stripe payment method type: ${type || "unknown"}`);
+}
 
 const isProd = process.env.BUN_ENV === "production";
 
@@ -79,10 +85,12 @@ export function stripeWebhookRoutes(app: Elysia) {
             console.error("[STRIPE WEBHOOK] Failed to construct event:", err);
             return status(500, { error: "[STRIPE WEBHOOK] Failed to construct event" });
         }
-        // Non-blocking: process in background; do not rethrow
-        processEvent(event).catch(err => {
+        try {
+            await processEvent(event);
+        } catch (err) {
             console.error("[STRIPE WEBHOOK] Failed to process event:", err);
-        });
+            return status(500, { error: "[STRIPE WEBHOOK] Failed to process event" });
+        }
         return status(200, { message: "[STRIPE WEBHOOK] Event processed successfully" });
     }, {
         headers: t.Object({
@@ -179,7 +187,7 @@ async function handleCharge(event: Stripe.Event) {
     }
 
 
-    const paymentType: PaymentType = paymentMethodDetails?.type === "us_bank_account" ? "us_bank_account" : "card";
+    const paymentType = stripePaymentType(paymentMethodDetails?.type);
     const receiptUrl = charge.receipt_url;
     const paymentMethodId = charge.payment_method;
     const paymentIntentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id || null;
@@ -219,10 +227,12 @@ async function handleCharge(event: Stripe.Event) {
             failedCode: charge.failure_code || charge.outcome?.reason || null,
             receiptUrl,
             amount: charge.amount,
+            currency: charge.currency,
             paymentMethodId,
             paymentIntentId,
             feeAmount,
-            stripeChargeId: charge.id,
+            stripeAccountId: event.account ?? null,
+            billingAttemptId: metadata.billingAttemptId ?? null,
         });
         console.log(`[STRIPE WEBHOOK] Plan charge ${charge.id} processed successfully`);
         return;
@@ -251,7 +261,7 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
 
 
     const paymentMethodId = paymentMethod?.id || null;
-    const paymentType: PaymentType = paymentMethod?.type === "us_bank_account" ? "us_bank_account" : "card";
+    const paymentType = stripePaymentType(paymentMethod?.type);
     const failedReason = event.type === "payment_intent.canceled"
         ? paymentIntent.cancellation_reason || lastPaymentError?.message || "canceled"
         : lastPaymentError?.message || null;
@@ -273,9 +283,12 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
             failedCode,
             receiptUrl: null,
             amount: paymentIntent.amount,
+            currency: paymentIntent.currency,
             paymentMethodId,
             paymentIntentId: paymentIntent.id || null,
             feeAmount: 0,
+            stripeAccountId: event.account ?? null,
+            billingAttemptId: metadata.billingAttemptId ?? null,
         });
         console.log(`[STRIPE WEBHOOK] Plan charge ${paymentIntent.id} failed`);
         return;

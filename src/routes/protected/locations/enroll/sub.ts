@@ -20,6 +20,8 @@ const EnrollSubProps = {
         paymentType: t.Union([
             t.Literal("card"),
             t.Literal("us_bank_account"),
+            t.Literal("link"),
+            t.Literal("cashapp"),
         ]),
     }),
 };

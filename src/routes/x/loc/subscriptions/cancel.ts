@@ -18,6 +18,9 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
         if (!sub) {
             return status(404, { error: "Subscription not found" });
         }
+        if (sub.parentId) {
+            return status(400, { error: "Cancel the root subscription to update participant access", code: "SUBSCRIPTION_CHILD" });
+        }
 
         if (mode === "now") {
             let refundResult: {
@@ -202,6 +205,13 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                 },
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sid));
+            await db.update(memberSubscriptions).set({
+                status: "canceled",
+                cancelAt: new Date(),
+                endedAt: new Date(),
+                cancelAtPeriodEnd: false,
+                updated: new Date(),
+            }).where(eq(memberSubscriptions.parentId, sid));
 
             await removeRenewalJobs(sid);
 
@@ -228,6 +238,11 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
                 },
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sid));
+            await db.update(memberSubscriptions).set({
+                cancelAtPeriodEnd: true,
+                cancelAt: sub.currentPeriodEnd,
+                updated: new Date(),
+            }).where(eq(memberSubscriptions.parentId, sid));
 
             return status(200, {
                 status: "cancel_at_period_end",
@@ -252,6 +267,11 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
             },
             updated: new Date(),
         }).where(eq(memberSubscriptions.id, sid));
+        await db.update(memberSubscriptions).set({
+            cancelAt: cancelAtDate,
+            cancelAtPeriodEnd: false,
+            updated: new Date(),
+        }).where(eq(memberSubscriptions.parentId, sid));
 
         return status(200, {
             status: "active",

@@ -482,7 +482,7 @@ export async function locationReservations(app: Elysia) {
                                 }
                                 const { pricing } = sub;
 
-                                if (pricing.plan && pricing.plan.classLimitInterval) {
+                                if (pricing?.plan && pricing.plan.classLimitInterval) {
                                     const limit = pricing.plan.totalClassLimit;
 
                                     if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
