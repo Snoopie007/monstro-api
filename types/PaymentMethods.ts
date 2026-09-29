@@ -10,6 +10,9 @@ export type PaymentMethod = {
     card?: CardPaymentMethod
     usBankAccount?: UsBankAccountPaymentMethod
     isDefault: boolean
+    customerId?: string
+    gatewayIntegrationId?: string
+    inUse?: boolean
 }
 
 
