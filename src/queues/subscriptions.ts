@@ -1,7 +1,9 @@
 
+import { db } from "@/db/db";
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
 import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@subtrees/bullmq/types";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
 import { sleep } from "bun";
 
 const MAX_SCHEDULER_ATTEMPTS = 3;
@@ -136,15 +138,82 @@ export async function scheduleRecursiveRenewal({
 
 export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
     if (!dueAt) return;
-    if (!Number.isFinite(dueAt.getTime())) throw new Error("Invalid renewal repair dueAt");
-    await subQueue.add("renewal:repair", {
-        sid,
+    const dueAtMs = dueAt.getTime();
+    if (!Number.isFinite(dueAtMs)) throw new Error("Invalid renewal repair dueAt");
+
+    const sub = await db.query.memberSubscriptions.findFirst({
+        where: (row, { and, eq }) => and(eq(row.id, sid), eq(row.locationId, lid)),
+        with: {
+            member: {
+                columns: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                },
+            },
+            pricing: {
+                with: {
+                    plan: true,
+                },
+            },
+            billingItems: {
+                with: {
+                    pricing: { with: { plan: true } },
+                    participant: {
+                        columns: {
+                            parentId: true,
+                            locationId: true,
+                            memberPlanPricingId: true,
+                        },
+                    },
+                },
+            },
+            location: {
+                with: {
+                    taxRates: true,
+                },
+                columns: {
+                    name: true,
+                    email: true,
+                    phone: true,
+                    address: true,
+                },
+            },
+        },
+    });
+    if (!sub || sub.parentId || sub.paymentType === "cash" || !sub.member || !sub.location) return;
+
+    const migration = getStripeMigration(sub.metadata);
+    if (!migration || !["armed", "first_payment_verified"].includes(migration.state)) return;
+
+    const billingQuote = getSubscriptionBillingQuote(sub);
+    const payload: SubscriptionJobData = {
+        sid: sub.id,
         lid,
         expectedDueAt: dueAt.toISOString(),
-    }, {
+        member: {
+            firstName: sub.member.firstName,
+            lastName: sub.member.lastName,
+            email: sub.member.email,
+        },
+        location: {
+            name: sub.location.name,
+            email: sub.location.email,
+            phone: sub.location.phone,
+            address: sub.location.address,
+        },
+        taxRate: sub.location.taxRates?.find((tax) => tax.isDefault)?.percentage || 0,
+        pricing: {
+            name: billingQuote.name,
+            price: billingQuote.price,
+            interval: billingQuote.interval,
+            intervalThreshold: billingQuote.intervalThreshold,
+        },
+    };
+    await subQueue.add("renewal:static", payload, {
         ...EXACT_RENEWAL_JOB_OPTIONS,
-        jobId: `renewal-repair-${sid}-${dueAt.getTime()}`,
-        delay: Math.max(0, dueAt.getTime() - Date.now()),
+        jobId: `renewal-exact-${sid}-${dueAtMs}-recovery`,
+        delay: Math.max(0, dueAtMs - Date.now()),
     });
 }
 
@@ -176,6 +245,6 @@ export async function removeRenewalJobs(sid: string) {
     }
     const exactJobs = await subQueue.getJobs(["delayed", "waiting", "active"]);
     for (const job of exactJobs) {
-        if (job.id?.startsWith(`renewal-exact-${sid}-`) || job.id?.startsWith(`renewal-repair-${sid}-`)) await job.remove();
+        if (job.id?.startsWith(`renewal-exact-${sid}-`)) await job.remove();
     }
 }
