@@ -20,7 +20,8 @@ import {
 import type { SubscriptionJobData } from "@/subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/subtrees/schemas";
+import { and, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { generateUUID } from "subtrees/utils";
 
@@ -298,6 +299,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     waiverId,
                     signedWaiverId,
                 });
+                await tx.update(memberLocations).set({
+                    status: "active",
+                    updated: now,
+                }).where(and(
+                    eq(memberLocations.memberId, mid),
+                    eq(memberLocations.locationId, lid),
+                ));
                 return result;
             });
 

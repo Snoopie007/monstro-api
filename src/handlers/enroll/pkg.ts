@@ -1,6 +1,6 @@
 import type { PaymentType } from "@/subtrees/types";
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, promos, transactions } from "@/subtrees/schemas";
+import { memberInvoices, memberLocations, memberPackages, promos, transactions } from "@/subtrees/schemas";
 import {
     calculateChargeDetails,
     chargeWithGateway,
@@ -17,7 +17,7 @@ import {
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { generateUUID } from "subtrees/utils";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export type EnrollPkgInput = {
     lid: string;
@@ -263,6 +263,13 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     waiverId,
                     signedWaiverId,
                 });
+                await tx.update(memberLocations).set({
+                    status: "active",
+                    updated: now,
+                }).where(and(
+                    eq(memberLocations.memberId, mid),
+                    eq(memberLocations.locationId, lid),
+                ));
             });
 
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
