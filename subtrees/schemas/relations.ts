@@ -6,7 +6,7 @@ import { additionalFees } from "./additionalFees";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
-import { adsSettings } from "./Ads";
+import { adsSettings } from "./ads";
 import { eventRegistrations, eventTickets, locationEvents } from "./event";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
