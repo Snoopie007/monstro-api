@@ -1,4 +1,4 @@
-import { adsSettings } from "../schemas/Ads";
+import { adsSettings } from "../schemas/ads";
 import type { Integration } from "./integrations";
 
 export type AdsMode = "simple" | "advance";
