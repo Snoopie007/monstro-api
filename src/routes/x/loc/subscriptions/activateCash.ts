@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberSubscriptions, promos, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, promos, transactions } from "@/subtrees/schemas";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { and, eq, sql } from "drizzle-orm";

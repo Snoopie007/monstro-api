@@ -4,8 +4,8 @@ import {
     ClassReminderJobSchema,
     buildClassReminderJob,
     buildMissedClassJob,
-} from "@subtrees/bullmq";
-import { reservations } from "@subtrees/schemas";
+} from "@/subtrees/bullmq";
+import { reservations } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 

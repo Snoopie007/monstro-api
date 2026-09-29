@@ -9,7 +9,7 @@ import {
   locationState,
   websiteSiteLocations,
   websiteSites,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 
 type SiteMapCoverage = SiteMapIdentitySource | "full_address" | "no_target";
 

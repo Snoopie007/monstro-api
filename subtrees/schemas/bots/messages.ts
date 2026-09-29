@@ -1,4 +1,4 @@
-import type { ToolPayload } from "@subtrees/types/bot";
+import type { ToolPayload } from "@/subtrees/types/bot";
 import { sql } from "drizzle-orm";
 import { index, jsonb, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { bots } from "./bots";

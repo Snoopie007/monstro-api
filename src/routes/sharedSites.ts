@@ -12,7 +12,7 @@ import {
   websiteSites,
   websiteTemplates,
   websiteTemplateVersions,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import {
   assembleSiteConfig,
   draftToken,
@@ -26,7 +26,7 @@ import {
   normalizeSitePageTemplateV2,
   SitePageTemplateSchema,
   storedSiteConfigFromStored,
-} from "@subtrees/site-config.js";
+} from "@/subtrees/site-config.js";
 import { SiteEditorError } from "@/services/siteEditorError";
 import {
   normalizeEditorSiteConfig,

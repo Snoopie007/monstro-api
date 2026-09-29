@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { slugify } from "@/utils/otherUtils";
-import { products } from "@subtrees/schemas";
+import { products } from "@/subtrees/schemas";
 import { and, desc, eq } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";

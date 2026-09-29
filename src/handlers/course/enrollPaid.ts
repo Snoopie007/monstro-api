@@ -6,8 +6,8 @@ import {
     getCheckoutContext,
     type ChargeWithGatewayResult,
 } from "@/utils";
-import { courseEnrollments, transactions } from "@subtrees/schemas";
-import type { PaymentType } from "@subtrees/types";
+import { courseEnrollments, transactions } from "@/subtrees/schemas";
+import type { PaymentType } from "@/subtrees/types";
 import { CourseEnrollError } from "./errors";
 import { generateUUID } from "subtrees/utils";
 

@@ -1,9 +1,9 @@
 import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
-import type { MemberPlanPricing } from "@subtrees/types";
+import type { MemberPlanPricing } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
-import { memberContracts } from "@subtrees/schemas";
+import { memberContracts } from "@/subtrees/schemas";
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
 

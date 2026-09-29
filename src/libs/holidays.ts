@@ -1,4 +1,4 @@
-// import { type HolidayWithPattern } from "@subtrees/constants/data";
+// import { type HolidayWithPattern } from "@/subtrees/constants/data";
 // function parsePattern(pattern: string): { month: number; day: number; dow: 'day' | number } {
 //     const [n, dowStr, monthStr] = pattern.split(':');
 //     if (!n || !dowStr || !monthStr) {

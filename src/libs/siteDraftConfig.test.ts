@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createSitePreset, storedSiteConfigFromStored } from "@subtrees/site-config.js";
+import { createSitePreset, storedSiteConfigFromStored } from "@/subtrees/site-config.js";
 import { splitSiteConfig, publicSiteConfig } from "./siteDraftConfig";
 
 test("splits publishable configs with a shared GHL destination and keeps credentials private", () => {

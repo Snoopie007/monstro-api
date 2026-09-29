@@ -1,4 +1,4 @@
-import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
+import { ALLOWED_IMAGE_TYPES } from "@/subtrees/constants/data";
 
 export const MAX_POST_FILE_SIZE = 10 * 1024 * 1024;
 

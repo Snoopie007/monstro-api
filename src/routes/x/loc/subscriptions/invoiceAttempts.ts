@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { memberInvoices } from "@subtrees/schemas";
-import type { SubscriptionBillingAttempt } from "@subtrees/types/subscriptionBilling";
+import { memberInvoices } from "@/subtrees/schemas";
+import type { SubscriptionBillingAttempt } from "@/subtrees/types/subscriptionBilling";
 import { and, eq, sql } from "drizzle-orm";
 
 export type InvoiceAttemptClaim =

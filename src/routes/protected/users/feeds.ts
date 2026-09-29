@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { and, isNull, eq, inArray } from "drizzle-orm";
 import { Elysia, t } from "elysia";
-import { userFeeds } from "@subtrees/schemas";
+import { userFeeds } from "@/subtrees/schemas";
 const UserFeedsProps = {
 
     params: t.Object({

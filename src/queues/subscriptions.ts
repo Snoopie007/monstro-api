@@ -2,8 +2,8 @@
 import { db } from "@/db/db";
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
-import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@subtrees/bullmq/types";
-import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
+import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@/subtrees/bullmq/types";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { sleep } from "bun";
 
 const MAX_SCHEDULER_ATTEMPTS = 3;

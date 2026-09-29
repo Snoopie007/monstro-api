@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import {
     courseEnrollments,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { CourseEnrollError } from "./errors";
 
 

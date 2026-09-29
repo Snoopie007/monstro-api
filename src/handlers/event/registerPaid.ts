@@ -7,8 +7,8 @@ import {
     PaymentChargeError,
     type ChargeWithGatewayResult,
 } from "@/utils";
-import { transactions } from "@subtrees/schemas";
-import { generateUUID } from "@subtrees/utils/generateUUID";
+import { transactions } from "@/subtrees/schemas";
+import { generateUUID } from "@/subtrees/utils/generateUUID";
 import { SquareError } from "square";
 import Stripe from "stripe";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";

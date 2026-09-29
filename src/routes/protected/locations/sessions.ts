@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
-import { findOverlappingLocationClosure } from "@subtrees/utils";
-import { reservations } from "@subtrees/schemas";
-import type { SessionOccurrence } from "@subtrees/types";
+import { findOverlappingLocationClosure } from "@/subtrees/utils";
+import { reservations } from "@/subtrees/schemas";
+import type { SessionOccurrence } from "@/subtrees/types";
 import { addDays, addMinutes, format, startOfWeek } from "date-fns";
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { and, eq, gte, isNotNull, sql } from "drizzle-orm";

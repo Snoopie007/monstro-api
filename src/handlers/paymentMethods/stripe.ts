@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { StripePaymentGateway } from "@/libs/PaymentGateway";
-import { memberLocations } from "@subtrees/schemas";
-import type { PaymentMethod, PaymentType } from "@subtrees/types";
+import { memberLocations } from "@/subtrees/schemas";
+import type { PaymentMethod, PaymentType } from "@/subtrees/types";
 import { eq } from "drizzle-orm";
 
 export async function getStripePaymentMethods(mid: string, lid: string): Promise<PaymentMethod[]> {

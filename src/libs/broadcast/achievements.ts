@@ -1,7 +1,7 @@
 
 import supabase from './SupabaseService';
-import { RealTimeEvents } from '@subtrees/constants/data';
-import type { Achievement } from '@subtrees/types';
+import { RealTimeEvents } from '@/subtrees/constants/data';
+import type { Achievement } from '@/subtrees/types';
 /**
  * Broadcasts a message update to a Supabase Realtime channel
  * @param chatId - The chat ID to broadcast to

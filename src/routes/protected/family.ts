@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import type { MemberRelationship } from "@subtrees/types";
+import type { MemberRelationship } from "@/subtrees/types";
 import { Elysia, t } from "elysia";
 import { familyMembers } from "subtrees/schemas";
 

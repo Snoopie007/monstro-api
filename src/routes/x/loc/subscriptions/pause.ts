@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { removeRenewalJobs } from "@/queues/subscriptions";
-import { memberSubscriptions } from "@subtrees/schemas";
+import { memberSubscriptions } from "@/subtrees/schemas";
 import type Elysia from "elysia";
 import { eq } from "drizzle-orm";
 

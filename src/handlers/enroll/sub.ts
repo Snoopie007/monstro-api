@@ -1,5 +1,5 @@
 import { addDays } from "date-fns";
-import type { PaymentType } from "@subtrees/types";
+import type { PaymentType } from "@/subtrees/types";
 import {
     calculateThresholdDate,
     calculateChargeDetails,
@@ -17,10 +17,10 @@ import {
     scheduleCronBasedRenewal,
     scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
-import type { SubscriptionJobData } from "@subtrees/bullmq";
+import type { SubscriptionJobData } from "@/subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { randomUUID } from "crypto";
 import { generateUUID } from "subtrees/utils";
 

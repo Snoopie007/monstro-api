@@ -3,7 +3,7 @@ import {
     memberInvoices,
     memberLocations,
     memberSubscriptions, migrateMembers,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { Elysia, t } from "elysia";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -14,7 +14,7 @@ import {
 } from "@/utils";
 import { isToday } from "date-fns";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
-import type { SubscriptionJobData } from "@subtrees/bullmq";
+import type { SubscriptionJobData } from "@/subtrees/bullmq";
 import Stripe from "stripe";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 const MigrateSubProps = {

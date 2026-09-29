@@ -1,9 +1,9 @@
 import { strict as assert } from "node:assert";
 
-import type { PaymentType } from "@subtrees/types";
-import type { Currency } from "@subtrees/types/currency";
+import type { PaymentType } from "@/subtrees/types";
+import type { Currency } from "@/subtrees/types/currency";
 import { db } from "@/db/db";
-import { integrations, locationState, memberInvoices, memberPackages, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { integrations, locationState, memberInvoices, memberPackages, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { and, eq, sql } from "drizzle-orm";
 import Stripe from "stripe";
 
@@ -170,12 +170,14 @@ export async function handleStripePlanCharge({
             metadata: {
                 ...(current.metadata || {}),
                 ...(paymentIntentId ? { paymentIntentId } : {}),
-                ...(attempt ? { billingAttempt: {
-                    ...attempt,
-                    status: success ? "succeeded" : "failed",
-                    paymentType,
-                    ...(paymentIntentId ? { paymentIntentId } : {}),
-                } } : {}),
+                ...(attempt ? {
+                    billingAttempt: {
+                        ...attempt,
+                        status: success ? "succeeded" : "failed",
+                        paymentType,
+                        ...(paymentIntentId ? { paymentIntentId } : {}),
+                    }
+                } : {}),
             },
             updated: now,
         }).where(eq(memberInvoices.id, invoiceId)).returning();

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { attendances } from "@subtrees/schemas";
-import type { MemberSubscription, MemberPackage, Reservation } from "@subtrees/types";
+import { attendances } from "@/subtrees/schemas";
+import type { MemberSubscription, MemberPackage, Reservation } from "@/subtrees/types";
 import { differenceInMinutes, isSameHour } from "date-fns";
 import { Elysia, t } from "elysia";
 import { classQueue, rankQueue } from "@/queues";

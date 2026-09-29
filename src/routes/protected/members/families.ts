@@ -1,13 +1,13 @@
 import { Elysia, status, t } from "elysia";
 import { db } from "@/db/db";
-import { accounts, familyMembers, members, users } from "@subtrees/schemas";
-import type { FamilyMember } from "@subtrees/types";
+import { accounts, familyMembers, members, users } from "@/subtrees/schemas";
+import type { FamilyMember } from "@/subtrees/types";
 import { generateUsername } from "@/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 import { EmailSender } from "@/libs/email";
 import { renderToStaticMarkup } from "react-dom/server";
-import ChildFamilyEmail from "@subtrees/emails/ChildFamilyEmail";
+import ChildFamilyEmail from "@/subtrees/emails/ChildFamilyEmail";
 
 
 

@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
-import { memberLocations } from "@subtrees/schemas";
+import { memberLocations } from "@/subtrees/schemas";
 import { db } from "@/db/db";
 const EnrollRequestBody = t.Object({
     priceId: t.String(),

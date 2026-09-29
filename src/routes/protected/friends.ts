@@ -1,6 +1,6 @@
 import { db } from "@/db/db"
-import { friends } from "@subtrees/schemas";
-import type { User } from "@subtrees/types";
+import { friends } from "@/subtrees/schemas";
+import type { User } from "@/subtrees/types";
 import { eq } from "drizzle-orm";
 
 import { Elysia, t } from "elysia";

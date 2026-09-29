@@ -4,10 +4,10 @@ import { Wallet } from "@/libs/wallet";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { addInterval, PENDING_TRANSACTION_STATUS } from "./shared";
 import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
-import type { Currency } from "@subtrees/types/currency";
+import type { Currency } from "@/subtrees/types/currency";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/mark-paid", async ({ params, body, status }) => {

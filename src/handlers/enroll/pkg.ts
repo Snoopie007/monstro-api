@@ -1,6 +1,6 @@
-import type { PaymentType } from "@subtrees/types";
+import type { PaymentType } from "@/subtrees/types";
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, promos, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberPackages, promos, transactions } from "@/subtrees/schemas";
 import {
     calculateChargeDetails,
     chargeWithGateway,

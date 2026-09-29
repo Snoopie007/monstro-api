@@ -6,8 +6,8 @@ import {
     SingleNextJobSchema,
     singleNextDelay,
     singleNextJobId,
-} from "@subtrees/bullmq";
-import { programSessions } from "@subtrees/schemas";
+} from "@/subtrees/bullmq";
+import { programSessions } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import type { Elysia } from "elysia";

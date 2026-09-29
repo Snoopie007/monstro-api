@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { bots } from "@subtrees/schemas";
+import { bots } from "@/subtrees/schemas";
 import { botMessageRoute } from "@/routes/shared/bots/message";
 
 export const slBots = new Elysia({ prefix: "/bots" })

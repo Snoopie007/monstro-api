@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/db";
-import { locations, staffsLocations } from "@subtrees/schemas";
+import { locations, staffsLocations } from "@/subtrees/schemas";
 
 type LocationAccessResult = {
 	allowed: boolean;

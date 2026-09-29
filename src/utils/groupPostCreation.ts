@@ -3,8 +3,8 @@ import { broadcastNewFeeds } from "@/libs/broadcast/feeds";
 import { sendNotifications } from "@/libs/expo";
 import S3Bucket from "@/libs/s3";
 import { ServerState } from "@/state";
-import { groupMembers, groupPosts, groups, media, userFeeds } from "@subtrees/schemas";
-import type { GroupPost, Media } from "@subtrees/types";
+import { groupMembers, groupPosts, groups, media, userFeeds } from "@/subtrees/schemas";
+import type { GroupPost, Media } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
 import {
     getFileTypeCategory,

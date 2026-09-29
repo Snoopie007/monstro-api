@@ -8,7 +8,7 @@ import { mlReferralsRoutes } from './referrals';
 import { mlRewardsRoutes } from './rewards';
 import { mlPointsRoutes } from './points';
 import { mlRankRoutes } from './rank';
-import { memberLocations } from '@subtrees/schemas';
+import { memberLocations } from '@/subtrees/schemas';
 import { paymentMethodsRoutes } from './methods/root';
 import { createLocationChat } from '@/utils/chatsGroupsUtils';
 import { memberLocationPassesRoutes } from './passes';

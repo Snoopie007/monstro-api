@@ -1,9 +1,9 @@
 import { db } from "@/db/db";
-import { getStripeMigration } from "@subtrees/utils/subscriptionBilling";
+import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
 import { paymentQueue } from "@/queues/payments";
 import { scheduleRenewalRepair } from "@/queues/subscriptions";
-import { memberSubscriptions } from "@subtrees/schemas";
-import { RetrySubPaymentSchema } from "@subtrees/bullmq";
+import { memberSubscriptions } from "@/subtrees/schemas";
+import { RetrySubPaymentSchema } from "@/subtrees/bullmq";
 import type Elysia from "elysia";
 import { and, eq } from "drizzle-orm";
 import { findInFlightSubscriptionAttempt } from "../subscriptions/billingContext";

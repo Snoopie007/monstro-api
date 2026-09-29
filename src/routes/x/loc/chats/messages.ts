@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import {
     chatMembers, chats, media,
     messages, reactionCounts,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import {
     broadcastMessage,
     broadcastMessageUpdate, broadcastMessageDelete,
@@ -12,10 +12,10 @@ import type {
     Media, Message,
     ReactionCount, MessageReply,
     User
-} from "@subtrees/types";
+} from "@/subtrees/types";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
-import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
+import { ALLOWED_IMAGE_TYPES } from "@/subtrees/constants/data";
 import { ServerState } from '@/state';
 import { sendNotifications } from "@/libs/expo";
 const MessageProps = {

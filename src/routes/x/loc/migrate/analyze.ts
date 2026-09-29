@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import { calculateAICost } from "@/libs/ai/AI";
 import { analyzeCsvMigration, type PricingPlanInput } from "@/libs/migrate";
 import { Wallet } from "@/libs/wallet";
-import { memberPlans, memberPlanPricing } from "@subtrees/schemas";
+import { memberPlans, memberPlanPricing } from "@/subtrees/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 
 const MIGRATION_MODEL = "gpt-4o-mini";

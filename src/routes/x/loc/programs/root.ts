@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { normalizeProgramDrafts, parseProgramImportFile } from "@/libs/ai/ProgramImport";
-import { programSessions, programs, staffsLocations } from "@subtrees/schemas";
+import { programSessions, programs, staffsLocations } from "@/subtrees/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 
 function isUploadFile(value: unknown): value is File {

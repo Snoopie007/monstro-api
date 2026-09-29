@@ -1,8 +1,8 @@
 import { Elysia, t, type Context } from "elysia";
 import { messageRoute } from "./messages";
 import { db } from "@/db/db";
-import { chatMembers } from "@subtrees/schemas";
-import { groupMembers } from "@subtrees/schemas/chat/groups";
+import { chatMembers } from "@/subtrees/schemas";
+import { groupMembers } from "@/subtrees/schemas/chat/groups";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 export const xChat = new Elysia({ prefix: "/chats" })

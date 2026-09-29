@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts } from "@subtrees/schemas";
+import { users, members, accounts } from "@/subtrees/schemas";
 import {
     USER_AUTH_COLUMNS,
     MEMBER_AUTH_COLUMNS,

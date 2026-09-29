@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { memberLocations, memberPackages, memberPasses } from "@subtrees/schemas";
+import { memberLocations, memberPackages, memberPasses } from "@/subtrees/schemas";
 import { calculateThresholdDate } from "@/utils";
 import { and, eq } from "drizzle-orm";
 

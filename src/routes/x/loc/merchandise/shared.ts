@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { getCheckoutContext } from "@/utils";
-import { orders, productVariants } from "@subtrees/schemas";
+import { orders, productVariants } from "@/subtrees/schemas";
 import { eq, inArray } from "drizzle-orm";
 import type { Currency } from "square";
 

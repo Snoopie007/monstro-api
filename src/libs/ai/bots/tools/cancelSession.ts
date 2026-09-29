@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { attendances, memberPackages, memberSubscriptions, reservations } from "@subtrees/schemas";
+import { attendances, memberPackages, memberSubscriptions, reservations } from "@/subtrees/schemas";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { and, eq, gt, sql } from "drizzle-orm";

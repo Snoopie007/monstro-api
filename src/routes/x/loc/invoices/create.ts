@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, eq } from "drizzle-orm";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import {
     calcTotals,
     createInvoiceBody,

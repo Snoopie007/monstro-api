@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/db";
-import { chatMembers, chats } from "@subtrees/schemas";
+import { chatMembers, chats } from "@/subtrees/schemas";
 import { slBots } from "./bots/root";
 import { slMemberRoutes } from "./members";
 import { slProgramRoutes } from "./programs";

@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import type { IntegrationMetadata } from "@subtrees/types";
+import type { IntegrationMetadata } from "@/subtrees/types";
 
 export class CheckoutError extends Error {
 	readonly status: 202 | 400 | 404 | 500;

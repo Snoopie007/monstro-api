@@ -6,7 +6,7 @@ import {
     integrations,
     locations,
     programs,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { enums, services } from "google-ads-api";

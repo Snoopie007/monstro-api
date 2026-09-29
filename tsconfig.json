@@ -11,7 +11,7 @@
       "*": ["./*"],
       "@/*": ["./src/*"],
       "@routes/*": ["./src/routes/*"],
-      "@subtrees/*": ["./subtrees/*"]
+      "@/subtrees/*": ["./subtrees/*"]
     },
 
     // Bundler mode

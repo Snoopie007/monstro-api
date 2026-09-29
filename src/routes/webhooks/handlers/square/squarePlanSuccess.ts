@@ -1,9 +1,9 @@
 import { strict as assert } from "node:assert";
-import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import type { PaymentType } from "@subtrees/types";
-import type { Currency } from "@subtrees/types/currency";
+import type { PaymentType } from "@/subtrees/types";
+import type { Currency } from "@/subtrees/types/currency";
 
 
 interface HandleSquarePlanSuccessProps {

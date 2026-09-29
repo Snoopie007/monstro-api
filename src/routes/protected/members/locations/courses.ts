@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { courseLessonCompletions } from "@subtrees/schemas";
+import { courseLessonCompletions } from "@/subtrees/schemas";
 import { Elysia, t } from "elysia";
 
 const MemberLocationCoursesProps = {

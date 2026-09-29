@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import type { AdditionalFee, AdditionalFeeCheckoutType } from "@subtrees/types";
+import type { AdditionalFee, AdditionalFeeCheckoutType } from "@/subtrees/types";
 
 export async function getAdditionalFeesForCheckout(
 	locationId: string,

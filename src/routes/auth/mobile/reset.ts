@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { EmailSender } from "@/libs/email";
 import { getRedisClient } from "@/libs/redis";
 import { generateOtp } from "@/utils/userUtils";
-import { accounts } from "@subtrees/schemas";
+import { accounts } from "@/subtrees/schemas";
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";

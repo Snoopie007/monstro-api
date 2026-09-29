@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberContracts } from "@subtrees/schemas";
+import { memberContracts } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { generatePDFBuffer } from "@/libs/PDFGenerator";
 import S3Bucket from "@/libs/s3";

@@ -3,7 +3,7 @@ import { canAccessLocation } from "@/utils/locationAccess";
 import {
 	additionalFeeCheckoutTypes,
 	additionalFees,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { and, asc, eq } from "drizzle-orm";
 import { Elysia, t, type Context } from "elysia";
 

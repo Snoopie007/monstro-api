@@ -1,4 +1,4 @@
-import { StoredSiteConfigSchema } from "@subtrees/site-config.js";
+import { StoredSiteConfigSchema } from "@/subtrees/site-config.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -18,9 +18,9 @@ function configuredCredentials(config: unknown, monstroLocationId: string) {
   const { ghlLocationId, privateIntegrationToken } = connection.leadRouting;
   return ghlLocationId.trim() && privateIntegrationToken.trim()
     ? {
-        locationId: ghlLocationId.trim(),
-        privateIntegrationToken: privateIntegrationToken.trim(),
-      }
+      locationId: ghlLocationId.trim(),
+      privateIntegrationToken: privateIntegrationToken.trim(),
+    }
     : null;
 }
 
@@ -40,9 +40,9 @@ function legacyCredentials(
   return typeof privateIntegrationToken === "string" && privateIntegrationToken.trim()
     && typeof locationId === "string" && locationId.trim()
     ? {
-        privateIntegrationToken: privateIntegrationToken.trim(),
-        locationId: locationId.trim(),
-      }
+      privateIntegrationToken: privateIntegrationToken.trim(),
+      locationId: locationId.trim(),
+    }
     : null;
 }
 

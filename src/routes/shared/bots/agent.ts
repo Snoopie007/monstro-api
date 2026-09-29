@@ -16,8 +16,8 @@ import {
 } from "@/libs/ai/bots";
 import { Wallet } from "@/libs/wallet";
 import { db } from "@/db/db";
-import { bots, botMessages } from "@subtrees/schemas";
-import type { ToolPayload } from "@subtrees/types/bot";
+import { bots, botMessages } from "@/subtrees/schemas";
+import type { ToolPayload } from "@/subtrees/types/bot";
 import {
 	AIMessage,
 	AIMessageChunk,

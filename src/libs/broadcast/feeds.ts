@@ -1,6 +1,6 @@
-import type { UserFeed } from '@subtrees/types';
+import type { UserFeed } from '@/subtrees/types';
 import supabase from './SupabaseService';
-import { RealTimeEvents } from '@subtrees/constants/data';
+import { RealTimeEvents } from '@/subtrees/constants/data';
 /**
  * Broadcasts a message update to a Supabase Realtime channel
  * @param chatId - The chat ID to broadcast to

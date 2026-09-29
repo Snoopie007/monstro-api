@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { VendorStripePayments } from "./stripe";
-import { wallets, walletLedgers } from "@subtrees/schemas";
+import { wallets, walletLedgers } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 
 export const RESERVATION_OFFSET = 0.1;

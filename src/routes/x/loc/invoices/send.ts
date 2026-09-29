@@ -5,7 +5,7 @@ import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
-import { memberInvoices, transactions } from "@subtrees/schemas";
+import { memberInvoices, transactions } from "@/subtrees/schemas";
 import { scheduleInvoiceReminderAndOverdue } from "./shared";
 import type { Currency } from "square";
 

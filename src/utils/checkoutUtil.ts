@@ -1,7 +1,7 @@
 
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import type { CheckoutContext } from "./getCheckoutContext";
-import type { PaymentType } from "@subtrees/types";
+import type { PaymentType } from "@/subtrees/types";
 import type { Currency, Payment } from "square";
 import type Stripe from "stripe";
 

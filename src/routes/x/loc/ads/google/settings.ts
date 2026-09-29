@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { AdsSetupError } from "@/libs/google";
-import { adsSettings } from "@subtrees/schemas";
+import { adsSettings } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 export async function loadAdsSettings(lid: string, settingsId: string) {
