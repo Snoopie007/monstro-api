@@ -36,10 +36,10 @@ writes or OAuth refreshes.
 ## Subscription billing
 
 - Apply the matching monorepo migration, `20260928000000_saved_wallet_subscription_billing.sql`, before deploying these API and worker changes.
-- Imported subscriptions retain their connected account, customer, saved payment method, exact billing anchor, and final price. Grouped bills use explicit billing items; child subscriptions never collect.
+- Each billable subscription uses its own price and produces its own charge, invoice and transaction. A parent can pay multiple student subscriptions with the same saved method; access-only child subscriptions never collect. Imported subscriptions retain their connected account, customer, saved method, exact anchor and final price.
 - Billing-context metadata overrides must be nonempty strings; otherwise existing defaults apply. Saved-method selection keeps request override → subscription method → metadata precedence, with customer ownership checked before charging.
 - Payment attempts are persisted on the invoice. A timeout is not a decline: reconcile a known Stripe intent before retrying, and hold an unknown outcome without an intent ID.
-- Imported Stripe roots use exact-due renewals and retained explicit repair jobs; ordinary subscriptions keep the existing scheduler. Imported resume rejects a date override that differs from the stored billing boundary before changing membership status or renewal jobs.
+- Imported Stripe roots use exact-due renewals; recovery uses the existing `renewal:static` job. Ordinary subscriptions keep the existing scheduler. Imported resume rejects a date override that differs from the stored billing boundary before changing membership status or renewal jobs.
 - Mobile payment-method/setup responses remain card/bank-only. Existing customer bindings are reused; ambiguous bindings return `409`. Access requires the member, a verified guardian relationship, or the internal service role.
 - Customer migration and arming are a separate post-merge operation. The cutover script must stop the legacy Stripe collector and resolve overlapping invoices before arming; the API checks local readiness/account/cutoff but does not re-read legacy Stripe subscriptions or invoices. This change adds no migration endpoint and performs no customer cutover.
 - Subscription-linked electronic automatic invoice sends are rejected; use the existing subscription payment retry flow. Children and missing linked roots are rejected before any ordinary charge path.

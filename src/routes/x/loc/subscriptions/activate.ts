@@ -54,18 +54,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         plan: true,
                     },
                 },
-                billingItems: {
-                    with: {
-                        pricing: { with: { plan: true } },
-                        participant: {
-                            columns: {
-                                parentId: true,
-                                locationId: true,
-                                memberPlanPricingId: true,
-                            },
-                        },
-                    },
-                },
                 location: {
                     with: {
                         taxRates: true,
@@ -85,7 +73,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             },
         });
 
-        if (!sub || !sub.member || !sub.location || (!sub.pricing && !sub.billingItems?.length)) {
+        if (!sub || !sub.member || !sub.location || !sub.pricing) {
             return status(404, { error: "Subscription billing definition not found" });
         }
         if (sub.parentId) {
@@ -246,33 +234,23 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const planName = sub.pricing?.plan?.name
             ? `${sub.pricing.plan.name}/${sub.pricing.name}`
             : billingQuote.name;
-        const isDownpayment = !!sub.pricing?.downpayment && !sub.billingItems?.length;
-        const billedAmount = isDownpayment ? sub.pricing!.downpayment! : billingQuote.price;
+        const isDownpayment = !!sub.pricing.downpayment;
+        const billedAmount = sub.pricing.downpayment || billingQuote.price;
         const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
         const chargeDetails = calculateChargeDetails({
             amount: billedAmount,
-            discount: sub.billingItems?.length ? undefined : discount,
+            discount,
             taxRate: taxRate?.percentage ?? 0,
             planId: sub.location.locationState?.planId ?? 0,
             additionalFees,
         });
-        const lineItems = sub.billingItems?.length
-            ? [
-                ...billingQuote.items.map((item) => ({
-                    name: item.name,
-                    description: "Subscription billing period",
-                    quantity: item.quantity,
-                    price: item.price,
-                })),
-                ...chargeDetails.additionalFeeLines,
-            ]
-            : [{
-                name: planName,
-                description: isDownpayment ? "Subscription downpayment" : "Subscription billing period",
-                quantity: 1,
-                price: chargeDetails.unitCost,
-                discount: chargeDetails.productDiscount,
-            }, ...chargeDetails.additionalFeeLines];
+        const lineItems = [{
+            name: planName,
+            description: isDownpayment ? "Subscription downpayment" : "Subscription billing period",
+            quantity: 1,
+            price: chargeDetails.unitCost,
+            discount: chargeDetails.productDiscount,
+        }, ...chargeDetails.additionalFeeLines];
 
         const [invoice] = await db.insert(memberInvoices).values({
             memberId: sub.memberId,
@@ -611,7 +589,7 @@ function buildRenewalPayload({
     const remainingDiscountPayments = promoMeta?.discount
         ? Math.max(0, promoMeta.discount.duration - (discountAlreadyApplied ? 1 : 0))
         : 0;
-    const renewalPricing = sub.pricing ?? billingQuote;
+    const renewalPricing = billingQuote;
     return {
         sid: sub.id,
         lid,

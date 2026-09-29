@@ -17,19 +17,6 @@ type SubscriptionPricing = {
     } | null;
 };
 
-type SubscriptionBillingItem = {
-    rootSubscriptionId: string;
-    participantSubscriptionId: string;
-    pricingId: string;
-    quantity: number;
-    pricing: SubscriptionPricing | null;
-    participant: {
-        parentId: string | null;
-        locationId: string | null;
-        memberPlanPricingId: string | null;
-    } | null;
-};
-
 type SubscriptionLocation = {
     country: string;
     locationState?: {
@@ -46,10 +33,8 @@ type BuildSubscriptionInvoiceQuoteProps = {
     subscriptionId: string;
     parentId?: string | null;
     subscriptionMetadata?: Record<string, unknown> | null;
-    pricing?: SubscriptionPricing | null;
-    billingItems?: SubscriptionBillingItem[];
+    pricing: SubscriptionPricing;
     memberPlanPricingId?: string | null;
-    isParticipant?: boolean;
     promoId?: string | null;
     location: SubscriptionLocation;
     billingPhase?: "initial" | "renewal";
@@ -62,9 +47,7 @@ export async function buildSubscriptionInvoiceQuote({
     parentId = null,
     subscriptionMetadata,
     pricing,
-    billingItems,
     memberPlanPricingId,
-    isParticipant = false,
     promoId,
     location,
     billingPhase: requestedBillingPhase,
@@ -74,33 +57,17 @@ export async function buildSubscriptionInvoiceQuote({
         id: subscriptionId,
         parentId,
         locationId,
-        isParticipant,
-        memberPlanPricingId: memberPlanPricingId ?? pricing?.id ?? null,
+        memberPlanPricingId: memberPlanPricingId ?? pricing.id,
         promoId,
         metadata: subscriptionMetadata,
-        pricing: pricing
-            ? {
-                id: pricing.id,
-                name: pricing.name,
-                price: pricing.price,
-                interval: pricing.interval,
-                intervalThreshold: pricing.intervalThreshold,
-                plan: pricing.plan ? { locationId: pricing.plan.locationId } : null,
-            }
-            : null,
-        billingItems: billingItems?.map((item) => ({
-            ...item,
-            pricing: item.pricing
-                ? {
-                    id: item.pricing.id,
-                    name: item.pricing.name,
-                    price: item.pricing.price,
-                    interval: item.pricing.interval,
-                    intervalThreshold: item.pricing.intervalThreshold,
-                    plan: item.pricing.plan ? { locationId: item.pricing.plan.locationId } : null,
-                }
-                : null,
-        })),
+        pricing: {
+            id: pricing.id,
+            name: pricing.name,
+            price: pricing.price,
+            interval: pricing.interval,
+            intervalThreshold: pricing.intervalThreshold,
+            plan: pricing.plan ? { locationId: pricing.plan.locationId } : null,
+        },
     });
     const startsAtRenewal = subscriptionMetadata?.additionalFeesStartAtRenewal === true;
     const paidInvoice = requestedBillingPhase || startsAtRenewal
@@ -124,28 +91,21 @@ export async function buildSubscriptionInvoiceQuote({
     const taxRate = location.taxRates.find((rate) => rate.isDefault);
     const chargeDetails = calculateChargeDetails({
         amount: billingQuote.price,
-        discount: billingItems?.length ? undefined : discount,
+        discount,
         taxRate: taxRate?.percentage ?? 0,
         planId: location.locationState?.planId ?? 0,
         additionalFees,
     });
-    const productName = pricing?.plan?.name
+    const productName = pricing.plan?.name
         ? `${pricing.plan.name} - ${pricing.name}`
         : billingQuote.name;
-    const productLines = billingItems?.length
-        ? billingQuote.items.map((item) => ({
-            name: item.name,
-            description: billingPhase === "renewal" ? "Subscription renewal" : "Subscription billing period",
-            quantity: item.quantity,
-            price: item.price,
-        }))
-        : [{
-            name: productName,
-            description: billingPhase === "renewal" ? "Subscription renewal" : "Subscription billing period",
-            quantity: 1,
-            price: chargeDetails.unitCost,
-            discount: chargeDetails.productDiscount,
-        }];
+    const productLines = [{
+        name: productName,
+        description: billingPhase === "renewal" ? "Subscription renewal" : "Subscription billing period",
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        discount: chargeDetails.productDiscount,
+    }];
 
     return {
         items: [...productLines, ...chargeDetails.additionalFeeLines],

@@ -16,7 +16,7 @@ import { locationState } from "./locationState";
 import { memberLocations } from "./MemberLocation";
 import { memberPasses } from "./MemberPasses";
 import { memberPlanPricing, memberPlans } from "./MemberPlan";
-import { memberPackages, memberSubscriptions, subscriptionBillingItems } from "./MemberEnrollment";
+import { memberPackages, memberSubscriptions } from "./MemberEnrollment";
 import {
 	familyMembers,
 	memberContracts,
@@ -697,27 +697,10 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 	childs: many(memberSubscriptions, {
 		relationName: "childs",
 	}),
-	billingItems: many(subscriptionBillingItems, { relationName: "billingRoot" }),
 	invoices: many(memberInvoices),
 	reservations: many(reservations),
 }));
 
-export const subscriptionBillingItemRelations = relations(subscriptionBillingItems, ({ one }) => ({
-	root: one(memberSubscriptions, {
-		fields: [subscriptionBillingItems.rootSubscriptionId],
-		references: [memberSubscriptions.id],
-		relationName: "billingRoot",
-	}),
-	participant: one(memberSubscriptions, {
-		fields: [subscriptionBillingItems.participantSubscriptionId],
-		references: [memberSubscriptions.id],
-		relationName: "billingParticipant",
-	}),
-	pricing: one(memberPlanPricing, {
-		fields: [subscriptionBillingItems.pricingId],
-		references: [memberPlanPricing.id],
-	}),
-}));
 
 export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
 

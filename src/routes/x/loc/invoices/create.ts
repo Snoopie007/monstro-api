@@ -76,18 +76,6 @@ export async function createInvoiceRoutes(app: Elysia) {
                             plan: true,
                         },
                     },
-                    billingItems: {
-                        with: {
-                            pricing: { with: { plan: true } },
-                            participant: {
-                                columns: {
-                                    parentId: true,
-                                    locationId: true,
-                                    memberPlanPricingId: true,
-                                },
-                            },
-                        },
-                    },
                 },
             });
 
@@ -97,7 +85,7 @@ export async function createInvoiceRoutes(app: Elysia) {
             if (sub.parentId) {
                 return status(400, { error: "Only root subscriptions can generate recurring invoices", code: "SUBSCRIPTION_CHILD" });
             }
-            if (!sub.pricing && !sub.billingItems?.length) {
+            if (!sub.pricing) {
                 return status(404, { error: "Subscription billing definition not found" });
             }
             if (collectionMethod === "charge_automatically") {
@@ -113,9 +101,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                 parentId: sub.parentId,
                 subscriptionMetadata: sub.metadata,
                 pricing: sub.pricing,
-                billingItems: sub.billingItems,
                 memberPlanPricingId: sub.memberPlanPricingId,
-                isParticipant: sub.isParticipant,
                 promoId: sub.promoId,
                 location: sub.location,
                 discount,

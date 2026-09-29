@@ -25,6 +25,7 @@ export function getStripeMigration(metadata: Record<string, unknown> | null | un
   const value = raw as Record<string, unknown>;
   if (
     typeof value.sourceSubscriptionId !== "string" || !/^sub_[A-Za-z0-9]+$/.test(value.sourceSubscriptionId)
+    || typeof value.sourceSubscriptionItemId !== "string" || !/^si_[A-Za-z0-9]+$/.test(value.sourceSubscriptionItemId)
     || typeof value.connectedAccountId !== "string" || !/^acct_[A-Za-z0-9]+$/.test(value.connectedAccountId)
     || typeof value.state !== "string" || !migrationStates.has(value.state as StripeSubscriptionMigration["state"])
     || (value.blockedReason !== undefined && typeof value.blockedReason !== "string")
@@ -49,44 +50,20 @@ export function getSubscriptionBillingQuote(sub: SubscriptionBillingInput): Subs
   if (sub.parentId !== null) throw new Error("Access-only subscriptions cannot collect payments");
   if (!sub.locationId) throw new Error("Subscription billing location is missing");
   const migration = getStripeMigration(sub.metadata);
-  const billingItems = sub.billingItems ?? [];
-  if ((migration || billingItems.length > 0) && sub.promoId) {
-    throw new Error("Imported and combined bills use final prices without an additional promotion");
+  if (migration && sub.promoId) {
+    throw new Error("Imported subscriptions use final prices without an additional promotion");
   }
-  if (billingItems.length === 0) {
-    if (!sub.memberPlanPricingId || sub.pricing?.id !== sub.memberPlanPricingId) throw new Error("Subscription billing price is missing");
-    validatePrice(sub.pricing, sub.locationId);
-    return {
-      name: sub.pricing.name,
-      price: sub.pricing.price,
-      interval: sub.pricing.interval,
-      intervalThreshold: sub.pricing.intervalThreshold,
-      items: [{ name: sub.pricing.name, price: sub.pricing.price, quantity: 1, pricingId: sub.pricing.id }],
-    };
+  if (!sub.memberPlanPricingId || sub.pricing?.id !== sub.memberPlanPricingId) {
+    throw new Error("Subscription billing price is missing");
   }
-  if (sub.memberPlanPricingId !== null || sub.isParticipant) throw new Error("A combined bill requires an access-free collecting root without its own price");
-  const participants = new Set<string>();
-  let total = 0;
-  let cadence: { interval: Interval; intervalThreshold: number } | undefined;
-  const items: SubscriptionBillingQuote["items"] = [];
-  for (const item of billingItems) {
-    if (item.rootSubscriptionId !== sub.id || item.participantSubscriptionId === sub.id || participants.has(item.participantSubscriptionId)
-      || item.participant?.parentId !== sub.id || item.participant.locationId !== sub.locationId
-      || item.participant.memberPlanPricingId !== item.pricingId || item.pricing?.id !== item.pricingId) {
-      throw new Error("Combined bill item does not match its participant, price and root");
-    }
-    validatePrice(item.pricing, sub.locationId);
-    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) throw new Error("Billing quantity must be a positive integer");
-    if (cadence && (cadence.interval !== item.pricing.interval || cadence.intervalThreshold !== item.pricing.intervalThreshold)) {
-      throw new Error("Combined bill items must share a billing cadence");
-    }
-    cadence = { interval: item.pricing.interval, intervalThreshold: item.pricing.intervalThreshold };
-    total += item.pricing.price * item.quantity;
-    if (!Number.isSafeInteger(total) || total > 2_147_483_647) throw new Error("Combined bill total exceeds integer cents storage");
-    participants.add(item.participantSubscriptionId);
-    items.push({ name: item.pricing.name, price: item.pricing.price, quantity: item.quantity, pricingId: item.pricingId, participantSubscriptionId: item.participantSubscriptionId });
-  }
-  return { name: "Combined membership", price: total, ...cadence!, items };
+  validatePrice(sub.pricing, sub.locationId);
+  return {
+    name: sub.pricing.name,
+    price: sub.pricing.price,
+    interval: sub.pricing.interval,
+    intervalThreshold: sub.pricing.intervalThreshold,
+    items: [{ name: sub.pricing.name, price: sub.pricing.price, quantity: 1, pricingId: sub.pricing.id }],
+  };
 }
 
 /** Stripe calendar anchors are UTC; retain the original day through short months. */

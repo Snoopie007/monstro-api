@@ -156,18 +156,6 @@ export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Dat
                     plan: true,
                 },
             },
-            billingItems: {
-                with: {
-                    pricing: { with: { plan: true } },
-                    participant: {
-                        columns: {
-                            parentId: true,
-                            locationId: true,
-                            memberPlanPricingId: true,
-                        },
-                    },
-                },
-            },
             location: {
                 with: {
                     taxRates: true,
@@ -181,7 +169,7 @@ export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Dat
             },
         },
     });
-    if (!sub || sub.parentId || sub.paymentType === "cash" || !sub.member || !sub.location) return;
+    if (!sub || sub.parentId || sub.paymentType === "cash" || !sub.pricing || !sub.member || !sub.location) return;
 
     const migration = getStripeMigration(sub.metadata);
     if (!migration || !["armed", "first_payment_verified"].includes(migration.state)) return;

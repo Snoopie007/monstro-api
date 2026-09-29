@@ -58,6 +58,9 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
             : undefined;
 
         if (sub?.paymentType === "cash") {
+            if (!sub.pricing) {
+                return status(404, { error: "Subscription billing definition not found" });
+            }
             const platformFeeAmount = typeof invoice.metadata?.platformFeeAmount === "number"
                 ? Math.max(0, Math.floor(invoice.metadata.platformFeeAmount))
                 : 0;

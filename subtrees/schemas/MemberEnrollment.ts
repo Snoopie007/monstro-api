@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
-	check,
 	foreignKey,
 	integer,
 	jsonb,
@@ -9,7 +8,6 @@ import {
 	text,
 	timestamp,
 	uuid,
-	unique,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { promos } from "./promos";
@@ -54,22 +52,12 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 			foreignColumns: [table.id],
 			name: "parent_child_fk",
 		}),
-		uniqueIndex("member_subscriptions_stripe_source_uq")
-			.on(table.locationId, sql`${table.metadata}->'stripeMigration'->>'connectedAccountId'`, sql`${table.metadata}->'stripeMigration'->>'sourceSubscriptionId'`)
+		uniqueIndex("member_subscriptions_stripe_source_item_uq")
+			.on(table.locationId, sql`${table.metadata}->'stripeMigration'->>'connectedAccountId'`, sql`${table.metadata}->'stripeMigration'->>'sourceSubscriptionId'`, sql`${table.metadata}->'stripeMigration'->>'sourceSubscriptionItemId'`)
 			.where(sql`${table.metadata}->'stripeMigration' is not null`),
 	]
 );
 
-export const subscriptionBillingItems = pgTable("subscription_billing_items", {
-	id: text("id").primaryKey().notNull().default(sql`uuid_base62('sbi_')`),
-	rootSubscriptionId: text("root_subscription_id").notNull().references(() => memberSubscriptions.id, { onDelete: "cascade" }),
-	participantSubscriptionId: text("participant_subscription_id").notNull().references(() => memberSubscriptions.id, { onDelete: "restrict" }),
-	pricingId: text("pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "restrict" }),
-	quantity: integer("quantity").notNull().default(1),
-}, (table) => [
-	unique("subscription_billing_items_participant_uq").on(table.rootSubscriptionId, table.participantSubscriptionId),
-	check("subscription_billing_items_quantity_check", sql`${table.quantity} > 0`),
-]);
 
 export const memberPackages = pgTable("member_packages", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),

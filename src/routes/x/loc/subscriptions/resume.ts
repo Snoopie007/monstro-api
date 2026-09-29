@@ -35,18 +35,6 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                         plan: true,
                     },
                 },
-                billingItems: {
-                    with: {
-                        pricing: { with: { plan: true } },
-                        participant: {
-                            columns: {
-                                parentId: true,
-                                locationId: true,
-                                memberPlanPricingId: true,
-                            },
-                        },
-                    },
-                },
                 location: {
                     with: {
                         taxRates: true,
@@ -62,7 +50,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             },
         });
 
-        if (!sub || !sub.member || !sub.location || (!sub.pricing && !sub.billingItems?.length)) {
+        if (!sub || !sub.member || !sub.location || !sub.pricing) {
             return status(404, { error: "Subscription billing definition not found" });
         }
         if (sub.parentId) {

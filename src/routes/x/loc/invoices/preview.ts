@@ -46,18 +46,6 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid), eq(s.memberId, memberId)),
                 with: {
                     pricing: { with: { plan: true } },
-                    billingItems: {
-                        with: {
-                            pricing: { with: { plan: true } },
-                            participant: {
-                                columns: {
-                                    parentId: true,
-                                    locationId: true,
-                                    memberPlanPricingId: true,
-                                },
-                            },
-                        },
-                    },
                     location: {
                         with: {
                             locationState: true,
@@ -66,7 +54,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
                     },
                 },
             });
-            if (!sub || (!sub.pricing && !sub.billingItems?.length)) {
+            if (!sub || !sub.pricing) {
                 return status(404, { error: "Subscription billing definition not found" });
             }
 
@@ -76,9 +64,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 parentId: sub.parentId,
                 subscriptionMetadata: sub.metadata,
                 pricing: sub.pricing,
-                billingItems: sub.billingItems,
                 memberPlanPricingId: sub.memberPlanPricingId,
-                isParticipant: sub.isParticipant,
                 promoId: sub.promoId,
                 location: sub.location,
                 discount,

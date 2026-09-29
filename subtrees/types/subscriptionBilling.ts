@@ -2,6 +2,7 @@ import type { Interval, PaymentType } from "./DatabaseEnums";
 
 export type StripeSubscriptionMigration = {
   sourceSubscriptionId: string;
+  sourceSubscriptionItemId: string;
   connectedAccountId: string;
   state: "prepared" | "legacy_stop_scheduled" | "armed" | "first_payment_verified" | "blocked";
   cutoffAt: string;
@@ -31,29 +32,14 @@ export type SubscriptionBillingPrice = {
   plan?: { locationId: string } | null;
 };
 
-export type SubscriptionBillingItem = {
-  rootSubscriptionId: string;
-  participantSubscriptionId: string;
-  pricingId: string;
-  quantity: number;
-  pricing: SubscriptionBillingPrice | null;
-  participant: {
-    parentId: string | null;
-    locationId: string | null;
-    memberPlanPricingId: string | null;
-  } | null;
-};
-
 export type SubscriptionBillingInput = {
   id: string;
   parentId: string | null;
   locationId: string | null;
-  isParticipant: boolean;
   memberPlanPricingId: string | null;
   promoId?: string | null;
   metadata?: Record<string, unknown> | null;
   pricing?: SubscriptionBillingPrice | null;
-  billingItems?: SubscriptionBillingItem[];
 };
 
 export type SubscriptionBillingQuote = {
@@ -66,6 +52,5 @@ export type SubscriptionBillingQuote = {
     price: number;
     quantity: number;
     pricingId: string;
-    participantSubscriptionId?: string;
   }[];
 };
