@@ -2,7 +2,6 @@ export * from "./account";
 export * from "./achievement";
 export * from "./additionalFees";
 export * from "./ads";
-export * from "./assistant";
 export * from "./attendance";
 export * from "./bot";
 export * from "./chat";
