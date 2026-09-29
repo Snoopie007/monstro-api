@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
-import { chats, chatMembers, messages, groupMembers } from "@subtrees/schemas";
+import { chats, chatMembers, messages, groupMembers } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
-import type { Location, Member, Vendor } from "@subtrees/types";
+import type { Location, Member, Vendor } from "@/subtrees/types";
 import { interEmailsAndText } from "./interpolator";
 
 type LocationChat = Pick<Location, "name" | "welcomeMessage"> & { vendor: Pick<Vendor, "userId"> };

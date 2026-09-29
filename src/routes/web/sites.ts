@@ -12,7 +12,7 @@ import {
   websiteSiteLocations,
   websiteSiteRevisions,
   websiteSites,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { getLocationPlans } from "./plans";
 import { getLocationSchedules } from "./schedules";
 import { getPublishedBlogPost, getPublishedBlogPosts } from "./content";
@@ -112,22 +112,22 @@ function locationFacts(value: unknown, selectedGmb: unknown) {
     : {};
   const openingHours = Array.isArray(metadata.openingHours)
     ? metadata.openingHours.flatMap((value) => {
-        if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-        const item = value as Record<string, unknown>;
-        if (
-          !Array.isArray(item.dayOfWeek) ||
-          !item.dayOfWeek.every((day) => typeof day === "string" && openingDays.has(day)) ||
-          typeof item.opens !== "string" ||
-          typeof item.closes !== "string" ||
-          !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.opens) ||
-          !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.closes)
-        ) return [];
-        return [{
-          dayOfWeek: item.dayOfWeek,
-          opens: item.opens,
-          closes: item.closes,
-        }];
-      })
+      if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+      const item = value as Record<string, unknown>;
+      if (
+        !Array.isArray(item.dayOfWeek) ||
+        !item.dayOfWeek.every((day) => typeof day === "string" && openingDays.has(day)) ||
+        typeof item.opens !== "string" ||
+        typeof item.closes !== "string" ||
+        !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.opens) ||
+        !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.closes)
+      ) return [];
+      return [{
+        dayOfWeek: item.dayOfWeek,
+        opens: item.opens,
+        closes: item.closes,
+      }];
+    })
     : undefined;
   const rating =
     typeof metadata.rating === "number" && metadata.rating >= 0 && metadata.rating <= 5
@@ -135,8 +135,8 @@ function locationFacts(value: unknown, selectedGmb: unknown) {
       : undefined;
   const reviewCount =
     typeof metadata.userRatingCount === "number" &&
-    Number.isInteger(metadata.userRatingCount) &&
-    metadata.userRatingCount >= 0
+      Number.isInteger(metadata.userRatingCount) &&
+      metadata.userRatingCount >= 0
       ? metadata.userRatingCount
       : undefined;
   const mapIdentity = siteLocationMapIdentity(value, selectedGmb);

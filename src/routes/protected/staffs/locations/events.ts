@@ -7,7 +7,7 @@ import {
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
 import type { AuthContext } from "@/middlewares/AuthMW";
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 
 // A staff ID in the URL is not proof that the caller owns that staff account.
 async function canRegisterAsStaff(actor: AuthContext, staffId: string, locationId: string) {

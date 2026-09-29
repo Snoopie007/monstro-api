@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import type { PaymentType } from "@subtrees/types";
+import type { PaymentType } from "@/subtrees/types";
 
 const BASE_MONSTRO_X_URL = 'https://m.monstro-x.com';
 export const STRIPE_API_VERSION = "2026-03-25.dahlia";

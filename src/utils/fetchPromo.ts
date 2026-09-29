@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import type { MemberPlanPricing } from "@subtrees/types";
+import type { MemberPlanPricing } from "@/subtrees/types";
 
 
 export class PromoValidationError extends Error {

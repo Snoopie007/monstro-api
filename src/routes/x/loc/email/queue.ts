@@ -1,6 +1,6 @@
 import type { AuthXContext } from "@/middlewares/AuthMW";
 import { emailQueue } from "@/queues/email";
-import { EmailTemplates } from "@subtrees/emails";
+import { EmailTemplates } from "@/subtrees/emails";
 import type { Elysia } from "elysia";
 import { z } from "zod";
 

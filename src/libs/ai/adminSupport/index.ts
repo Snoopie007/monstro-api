@@ -66,16 +66,16 @@ export async function createAdminSupportAiReply({
   const generation = directEscalation
     ? { kind: "escalate" as const, aiCostMicrousd: 0 }
     : await generate(
-        promptFor(
-          supportCase,
-          history.slice(0, -1),
-          localMatches.length ? documents : [],
-          trigger,
-        ),
-        Bun.env.SUPPORT_AI_MODEL || "gpt-5.5",
-        documents,
-        isMarketingSuite,
-      );
+      promptFor(
+        supportCase,
+        history.slice(0, -1),
+        localMatches.length ? documents : [],
+        trigger,
+      ),
+      Bun.env.SUPPORT_AI_MODEL || "gpt-5.5",
+      documents,
+      isMarketingSuite,
+    );
   const content =
     generation.kind === "escalate"
       ? ""
@@ -141,18 +141,18 @@ export async function createAdminSupportAiReply({
       const offlineContent = supportOfflineMessage?.trim();
       const offlineMessage = offlineContent
         ? (
-            await tx
-              .insert(adminSupportCaseMessages)
-              .values({
-                caseId,
-                agentId: null,
-                content: offlineContent,
-                attachments: [],
-                role: "agent",
-                type: "live chat",
-              })
-              .returning()
-          )[0]
+          await tx
+            .insert(adminSupportCaseMessages)
+            .values({
+              caseId,
+              agentId: null,
+              content: offlineContent,
+              attachments: [],
+              role: "agent",
+              type: "live chat",
+            })
+            .returning()
+        )[0]
         : undefined;
 
       if (!updatedCase || !log) {
@@ -225,10 +225,10 @@ export async function createAdminSupportAiReply({
       broadcastAdminSupportCase(caseId, "case_log", { log: result.log }),
       ...(result.offlineMessage
         ? [
-            broadcastAdminSupportCase(caseId, "new_message", {
-              message: result.offlineMessage,
-            }),
-          ]
+          broadcastAdminSupportCase(caseId, "new_message", {
+            message: result.offlineMessage,
+          }),
+        ]
         : []),
     );
   } else {

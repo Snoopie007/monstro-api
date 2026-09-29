@@ -1,4 +1,4 @@
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 import { Elysia, type Context } from "elysia";
 import { xGoogleAdsCampaign } from "./campaign";
 import { xGoogleAdsConquest } from "./conquest";

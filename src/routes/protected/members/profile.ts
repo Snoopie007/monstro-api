@@ -1,15 +1,15 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { familyMembers, members, users } from "@subtrees/schemas";
+import { familyMembers, members, users } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/utils";
-import { captureMemberWorkflowState, dispatchMemberUpdated } from "@subtrees/utils/server/workflows";
+import { captureMemberWorkflowState, dispatchMemberUpdated } from "@/subtrees/utils/server/workflows";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { renderToStaticMarkup } from "react-dom/server";
-import UpdateEmailOTP from "@subtrees/emails/UpdateEmailOTP";
+import UpdateEmailOTP from "@/subtrees/emails/UpdateEmailOTP";
 const MemberProfileProps = {
     params: t.Object({
         mid: t.String(),

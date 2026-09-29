@@ -2,8 +2,8 @@ import { Elysia, t } from "elysia";
 import Stripe from "stripe";
 import { VendorStripePayments } from "@/libs/stripe";
 import { db } from "@/db/db";
-import { memberLocations } from "@subtrees/schemas";
-import type { PaymentType } from "@subtrees/types";
+import { memberLocations } from "@/subtrees/schemas";
+import type { PaymentType } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
 import { handleStripeOrderCharge, handleStripePlanCharge } from "@/routes/webhooks/handlers/stripe";
 

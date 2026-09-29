@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { migrateMembers } from "subtrees/schemas";
 import { eq } from "drizzle-orm";
-import type { AuthAdditionalData } from "@subtrees/types/auth";
+import type { AuthAdditionalData } from "@/subtrees/types/auth";
 
 type HandleAdditionalDataOptions = {
 	delay?: number;

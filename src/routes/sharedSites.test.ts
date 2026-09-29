@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import {
   PublishableStoredSiteConfigSchema,
   storedSiteConfigFromStored,
-} from "@subtrees/site-config.js";
+} from "@/subtrees/site-config.js";
 
 let rows: unknown[][] = [];
 let inserted: unknown = null;

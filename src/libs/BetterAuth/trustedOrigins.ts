@@ -3,7 +3,7 @@ import {
     locations,
     websiteSiteDomains,
     websiteSites,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { and, eq, isNotNull } from "drizzle-orm";
 
 const NEGATIVE_CACHE_TTL_MS = 2 * 60 * 1000;

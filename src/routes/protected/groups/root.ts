@@ -2,8 +2,8 @@ import { db } from "@/db/db";
 import { createGroupPostFromFormData } from "@/utils/groupPostCreation";
 import { Elysia } from "elysia";
 import { z } from "zod";
-import type { ReactionCount } from "@subtrees/types";
-import { reactionCounts } from "@subtrees/schemas";
+import type { ReactionCount } from "@/subtrees/types";
+import { reactionCounts } from "@/subtrees/schemas";
 import { and, eq, inArray } from "drizzle-orm";
 
 

@@ -8,8 +8,8 @@ import {
     createEventRegistration,
 } from "@/handlers/event/shared";
 import { db } from "@/db/db";
-import { dispatchPaymentFailed } from "@subtrees/utils/server/workflows";
-import { isPaymentDecline } from "@subtrees/utils/workflowPayments";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
@@ -26,8 +26,8 @@ import {
     memberSubscriptions,
     orders,
     transactions,
-} from "@subtrees/schemas";
-import type { SubscriptionJobData } from "@subtrees/bullmq";
+} from "@/subtrees/schemas";
+import type { SubscriptionJobData } from "@/subtrees/bullmq";
 
 const PAYMENT_EVENTS = new Set([
     "net.authorize.payment.authorization.created",
@@ -96,8 +96,8 @@ export function authorizePaymentState(details: AuthorizeTransactionDetails): "pa
     const responseCode = String(details.responseCode ?? "");
     return responseCode === "1" ? "paid"
         : responseCode === "4" ? "pending"
-        : responseCode === "2" || responseCode === "3" ? "failed"
-        : null;
+            : responseCode === "2" || responseCode === "3" ? "failed"
+                : null;
 }
 
 function cents(value: unknown) {

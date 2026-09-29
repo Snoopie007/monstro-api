@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import S3Bucket from "@/libs/s3";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
-import { courseChapters, courseLessonAttachments, courseLessons, courses } from "@subtrees/schemas";
+import { courseChapters, courseLessonAttachments, courseLessons, courses } from "@/subtrees/schemas";
 import type { CourseAccessContext } from "./shared";
 import {
 	COURSE_LESSON_ATTACHMENT_CONTENT_TYPES,

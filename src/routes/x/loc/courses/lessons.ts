@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { courseLessons, courses, courseChapters, type LessonStatus } from "@subtrees/schemas";
+import { courseLessons, courses, courseChapters, type LessonStatus } from "@/subtrees/schemas";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { deleteCourseLessonVideoObjectBestEffort, isCourseLessonVideoObjectKey } from "./uploads";

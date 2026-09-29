@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import * as schema from "@subtrees/schemas";
+import * as schema from "@/subtrees/schemas";
 
 describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outcomes and workflows", () => {
     const url = process.env.WORKFLOW_TEST_DATABASE_URL!;

@@ -51,7 +51,7 @@ const db = {
 };
 
 mock.module("@/db/db", () => ({ db }));
-mock.module("@/utils/merchandise", () => ({
+mock.module("@/utils/locationAccess", () => ({
 	canAccessLocation: mock(async () => ({ allowed: accessAllowed })),
 }));
 

@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { triggerNewMember } from "@/utils";
-import { AchievementTriggers } from "@subtrees/constants/data";
-import { achievements, memberLocations, memberPasses, memberPlans } from "@subtrees/schemas";
-import type { MemberPass } from "@subtrees/types";
+import { AchievementTriggers } from "@/subtrees/constants/data";
+import { achievements, memberLocations, memberPasses, memberPlans } from "@/subtrees/schemas";
+import type { MemberPass } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 

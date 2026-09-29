@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, spyOn, test } 
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { Elysia } from "elysia";
-import * as schema from "@subtrees/schemas";
+import * as schema from "@/subtrees/schemas";
 
 // Run separately from mock-only suites. Real HTTP, production handlers/dispatcher,
 // and Postgres savepoints; payment approval and authenticated identity are simulated.

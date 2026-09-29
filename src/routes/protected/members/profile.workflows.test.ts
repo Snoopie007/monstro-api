@@ -4,11 +4,11 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { eq, getTableName } from "drizzle-orm";
 import { getTableConfig, type AnyPgTable } from "drizzle-orm/pg-core";
 import { Elysia } from "elysia";
-import { members, memberFields, memberCustomFields, familyMembers } from "@subtrees/schemas/members";
-import { users } from "@subtrees/schemas/users";
-import { memberLocations } from "@subtrees/schemas/MemberLocation";
-import { workflows, workflowTriggers, workflowQueues } from "@subtrees/schemas/workflow";
-import { captureMemberWorkflowState, dispatchMemberUpdated } from "@subtrees/utils/server/workflows";
+import { members, memberFields, memberCustomFields, familyMembers } from "@/subtrees/schemas/members";
+import { users } from "@/subtrees/schemas/users";
+import { memberLocations } from "@/subtrees/schemas/MemberLocation";
+import { workflows, workflowTriggers, workflowQueues } from "@/subtrees/schemas/workflow";
+import { captureMemberWorkflowState, dispatchMemberUpdated } from "@/subtrees/utils/server/workflows";
 
 // Opt in to local Postgres. Each run owns an isolated, randomly named schema.
 describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Member Updated transactions", () => {
@@ -41,7 +41,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Member Updated transac
 		}
 		await client.unsafe('CREATE UNIQUE INDEX active_run ON workflow_queues (workflow_id,member_id) WHERE stopped IS NULL');
 		mock.module("@/db/db", () => ({ db }));
-		mock.module("@subtrees/schemas", () => ({ members, users, familyMembers }));
+		mock.module("@/subtrees/schemas", () => ({ members, users, familyMembers }));
 		mock.module("@/libs/redis", () => ({ getRedisClient: () => ({
 			get: async () => `123456::verified@example.com::${Math.floor(Date.now() / 1000)}`,
 			del: async () => 1, set: async () => undefined,

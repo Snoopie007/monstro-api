@@ -10,7 +10,7 @@ import {
     orders,
     reservations,
     transactions,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { getRefundAmounts } from "@/utils/refunds";
 
@@ -287,131 +287,131 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             });
         }
 
-		if (transaction.paymentType === "cash") {
-			return status(400, { error: "Cash transactions cannot be refunded through Stripe" });
-		}
+        if (transaction.paymentType === "cash") {
+            return status(400, { error: "Cash transactions cannot be refunded through Stripe" });
+        }
 
-		const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
-		const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
-		let refundAmount = refundAmounts.refundableAmount;
-		if (amountType === "partial") {
-			if (typeof amount !== "number" || amount <= 0) {
-				return status(400, { error: "Valid amount is required for partial refunds" });
-			}
-			if (amount > refundAmounts.refundableAmount) {
-				return status(400, {
-					error: "Refund amount cannot exceed refundable amount",
-					maximumRefundableAmount: refundAmounts.refundableAmount,
-				});
-			}
-			refundAmount = amount;
-		}
-		if (refundAmount <= 0) {
-			return status(400, { error: "This transaction has no refundable amount" });
-		}
+        const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
+        const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
+        let refundAmount = refundAmounts.refundableAmount;
+        if (amountType === "partial") {
+            if (typeof amount !== "number" || amount <= 0) {
+                return status(400, { error: "Valid amount is required for partial refunds" });
+            }
+            if (amount > refundAmounts.refundableAmount) {
+                return status(400, {
+                    error: "Refund amount cannot exceed refundable amount",
+                    maximumRefundableAmount: refundAmounts.refundableAmount,
+                });
+            }
+            refundAmount = amount;
+        }
+        if (refundAmount <= 0) {
+            return status(400, { error: "This transaction has no refundable amount" });
+        }
 
-		if (txMeta.gatewayService === "square") {
-			const squarePaymentId = typeof txMeta.squarePaymentId === "string"
-				? txMeta.squarePaymentId
-				: typeof txMeta.chargeId === "string"
-					? txMeta.chargeId
-					: null;
+        if (txMeta.gatewayService === "square") {
+            const squarePaymentId = typeof txMeta.squarePaymentId === "string"
+                ? txMeta.squarePaymentId
+                : typeof txMeta.chargeId === "string"
+                    ? txMeta.chargeId
+                    : null;
 
-			if (!squarePaymentId) {
-				return status(400, { error: "Square payment ID not found in transaction metadata" });
-			}
+            if (!squarePaymentId) {
+                return status(400, { error: "Square payment ID not found in transaction metadata" });
+            }
 
-			const squareIntegration = await db.query.integrations.findFirst({
-				where: (ig, { and, eq }) => and(eq(ig.locationId, lid), eq(ig.service, "square")),
-				columns: { accessToken: true, metadata: true },
-			});
+            const squareIntegration = await db.query.integrations.findFirst({
+                where: (ig, { and, eq }) => and(eq(ig.locationId, lid), eq(ig.service, "square")),
+                columns: { accessToken: true, metadata: true },
+            });
 
-			if (!squareIntegration || !squareIntegration.accessToken) {
-				return status(404, { error: "Square integration not found" });
-			}
+            if (!squareIntegration || !squareIntegration.accessToken) {
+                return status(404, { error: "Square integration not found" });
+            }
 
-			const square = new SquarePaymentGateway(squareIntegration.accessToken);
+            const square = new SquarePaymentGateway(squareIntegration.accessToken);
 
-			const refund = await square.refundPayment(
-				squarePaymentId,
-				refundAmount,
-				reason || "Vendor requested refund",
-			);
+            const refund = await square.refundPayment(
+                squarePaymentId,
+                refundAmount,
+                reason || "Vendor requested refund",
+            );
 
-			await db.transaction(async (tx) => {
-				await tx.update(transactions).set({
-					refunded: true,
-					refundedAmount: refundAmount,
-					updated: new Date(),
-					metadata: {
-						...txMeta,
-						squarePaymentId,
-						squareRefundId: refund.id,
-						squareRefundStatus: refund.status,
-						gatewayService: "square",
-						refund: {
-							id: refund.id,
-							amount: refundAmount,
-							nonRefundableAmount: refundAmounts.nonRefundableAmount,
-							reason: reason || null,
-							note: note || null,
-							refundedAt: new Date().toISOString(),
-						},
-					},
-				}).where(eq(transactions.id, tid));
+            await db.transaction(async (tx) => {
+                await tx.update(transactions).set({
+                    refunded: true,
+                    refundedAmount: refundAmount,
+                    updated: new Date(),
+                    metadata: {
+                        ...txMeta,
+                        squarePaymentId,
+                        squareRefundId: refund.id,
+                        squareRefundStatus: refund.status,
+                        gatewayService: "square",
+                        refund: {
+                            id: refund.id,
+                            amount: refundAmount,
+                            nonRefundableAmount: refundAmounts.nonRefundableAmount,
+                            reason: reason || null,
+                            note: note || null,
+                            refundedAt: new Date().toISOString(),
+                        },
+                    },
+                }).where(eq(transactions.id, tid));
 
-				if (transaction.invoice) {
-					const invoice = await tx.query.memberInvoices.findFirst({
-						where: eq(memberInvoices.id, transaction.invoice.id),
-					});
-					if (invoice) {
-						await tx.update(memberInvoices).set({
-							...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
-							updated: new Date(),
-						}).where(eq(memberInvoices.id, transaction.invoice.id));
-					}
-				}
+                if (transaction.invoice) {
+                    const invoice = await tx.query.memberInvoices.findFirst({
+                        where: eq(memberInvoices.id, transaction.invoice.id),
+                    });
+                    if (invoice) {
+                        await tx.update(memberInvoices).set({
+                            ...(shouldVoidInvoice ? { status: "void", paid: false } : {}),
+                            updated: new Date(),
+                        }).where(eq(memberInvoices.id, transaction.invoice.id));
+                    }
+                }
 
-				if (packageId) {
-					const memberPackage = await tx.query.memberPackages.findFirst({
-						where: (pkg, { and, eq }) => and(eq(pkg.id, packageId), eq(pkg.locationId, lid)),
-					});
-					if (memberPackage) {
-						await tx.update(memberPackages).set({
-							...(amountType === "full" ? { status: "incomplete" } : {}),
-							updated: new Date(),
-						}).where(eq(memberPackages.id, packageId));
+                if (packageId) {
+                    const memberPackage = await tx.query.memberPackages.findFirst({
+                        where: (pkg, { and, eq }) => and(eq(pkg.id, packageId), eq(pkg.locationId, lid)),
+                    });
+                    if (memberPackage) {
+                        await tx.update(memberPackages).set({
+                            ...(amountType === "full" ? { status: "incomplete" } : {}),
+                            updated: new Date(),
+                        }).where(eq(memberPackages.id, packageId));
 
-						if (amountType === "full") {
-							const now = new Date();
-							await tx.update(reservations).set({
-								status: "cancelled_by_vendor",
-								cancelledAt: now,
-								cancelledReason: "Cancelled due to package refund",
-								updated: now,
-							}).where(and(
-								eq(reservations.memberPackageId, packageId),
-								eq(reservations.locationId, lid),
-								gte(reservations.startOn, now),
-								eq(reservations.status, "confirmed")
-							));
-						}
-					}
-				}
-			});
+                        if (amountType === "full") {
+                            const now = new Date();
+                            await tx.update(reservations).set({
+                                status: "cancelled_by_vendor",
+                                cancelledAt: now,
+                                cancelledReason: "Cancelled due to package refund",
+                                updated: now,
+                            }).where(and(
+                                eq(reservations.memberPackageId, packageId),
+                                eq(reservations.locationId, lid),
+                                gte(reservations.startOn, now),
+                                eq(reservations.status, "confirmed")
+                            ));
+                        }
+                    }
+                }
+            });
 
-			return status(200, {
-				success: true,
-				refunded: true,
-				transactionId: tid,
-				refundId: refund.id,
-				amount: refundAmount,
-				nonRefundableAmount: refundAmounts.nonRefundableAmount,
-				message: "Square refund processed successfully",
-			});
-		}
+            return status(200, {
+                success: true,
+                refunded: true,
+                transactionId: tid,
+                refundId: refund.id,
+                amount: refundAmount,
+                nonRefundableAmount: refundAmounts.nonRefundableAmount,
+                message: "Square refund processed successfully",
+            });
+        }
 
-		const integration = await db.query.integrations.findFirst({
+        const integration = await db.query.integrations.findFirst({
             where: (ig, { and, eq }) => and(eq(ig.locationId, lid), eq(ig.service, "stripe")),
             columns: { accountId: true, accessToken: true },
         });
@@ -428,8 +428,8 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             return status(400, { error: "No payment intent found for transaction" });
         }
 
-		const stripeGateway = new StripePaymentGateway(integration.accessToken ?? "");
-		const refund = await stripeGateway.createRefund(paymentIntentId, refundAmount, transaction.currency);
+        const stripeGateway = new StripePaymentGateway(integration.accessToken ?? "");
+        const refund = await stripeGateway.createRefund(paymentIntentId, refundAmount, transaction.currency);
 
         await db.transaction(async (tx) => {
             await tx.update(transactions).set({
@@ -441,7 +441,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                     refund: {
                         id: refund.id,
                         amount: refundAmount,
-						nonRefundableAmount: refundAmounts.nonRefundableAmount,
+                        nonRefundableAmount: refundAmounts.nonRefundableAmount,
                         reason: reason || null,
                         note: note || null,
                         refundedAt: new Date().toISOString(),
@@ -519,7 +519,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             transactionId: tid,
             refundId: refund.id,
             amount: refundAmount,
-			nonRefundableAmount: refundAmounts.nonRefundableAmount,
+            nonRefundableAmount: refundAmounts.nonRefundableAmount,
             message: "Refund processed successfully",
         });
     }, {
@@ -575,24 +575,24 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             });
         }
 
-		const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
-		const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
-		let refundAmount = refundAmounts.refundableAmount;
-		if (amountType === "partial") {
-			if (typeof amount !== "number" || amount <= 0) {
-				return status(400, { error: "Valid amount is required for partial refunds" });
-			}
-			if (amount > refundAmounts.refundableAmount) {
-				return status(400, {
-					error: "Refund amount cannot exceed refundable amount",
-					maximumRefundableAmount: refundAmounts.refundableAmount,
-				});
-			}
-			refundAmount = amount;
-		}
-		if (refundAmount <= 0) {
-			return status(400, { error: "This transaction has no refundable amount" });
-		}
+        const refundAmounts = getRefundAmounts(transaction.total, transaction.items);
+        const shouldVoidInvoice = amountType === "full" && refundAmounts.nonRefundableAmount === 0;
+        let refundAmount = refundAmounts.refundableAmount;
+        if (amountType === "partial") {
+            if (typeof amount !== "number" || amount <= 0) {
+                return status(400, { error: "Valid amount is required for partial refunds" });
+            }
+            if (amount > refundAmounts.refundableAmount) {
+                return status(400, {
+                    error: "Refund amount cannot exceed refundable amount",
+                    maximumRefundableAmount: refundAmounts.refundableAmount,
+                });
+            }
+            refundAmount = amount;
+        }
+        if (refundAmount <= 0) {
+            return status(400, { error: "This transaction has no refundable amount" });
+        }
 
         const manualRefundId = `cash_manual_${Date.now()}`;
 
@@ -606,7 +606,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                     refund: {
                         id: manualRefundId,
                         amount: refundAmount,
-						nonRefundableAmount: refundAmounts.nonRefundableAmount,
+                        nonRefundableAmount: refundAmounts.nonRefundableAmount,
                         reason: reason || null,
                         note: note || null,
                         source: "cash_manual",
@@ -690,7 +690,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             transactionId: tid,
             refundId: manualRefundId,
             amount: refundAmount,
-			nonRefundableAmount: refundAmounts.nonRefundableAmount,
+            nonRefundableAmount: refundAmounts.nonRefundableAmount,
             message: "Cash refund recorded successfully",
         });
     }, {

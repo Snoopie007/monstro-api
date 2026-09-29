@@ -1,4 +1,4 @@
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 import { Elysia } from "elysia";
 import { courseRoutes } from "./courses";
 import { courseEnrollmentRoutes } from "./enrollments";

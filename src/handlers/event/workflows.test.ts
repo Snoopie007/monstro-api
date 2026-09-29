@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "b
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { Elysia } from "elysia";
-import * as schema from "@subtrees/schemas";
+import * as schema from "@/subtrees/schemas";
 
 // Run separately from mock-only checkout suites. These writes and dispatches use real Postgres.
 describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("registration and order workflow transactions", () => {

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
-import { memberSubscriptions } from "@subtrees/schemas";
+import { memberSubscriptions } from "@/subtrees/schemas";
 import {
     getStripePaymentMethods,
     getStripeSetupIntent,

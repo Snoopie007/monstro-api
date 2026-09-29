@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions } from "@subtrees/schemas";
+import { memberSubscriptions } from "@/subtrees/schemas";
 import { BillingContextError, findInFlightSubscriptionAttempt, resolveSubscriptionBillingContext } from "./billingContext";
 import { addDays } from "date-fns";
 import type Elysia from "elysia";

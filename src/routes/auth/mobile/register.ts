@@ -1,12 +1,12 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/db";
-import { members, users, accounts } from "@subtrees/schemas";
+import { members, users, accounts } from "@/subtrees/schemas";
 import {
     generateUsername,
     handleAdditionalData
 } from "@/utils";
 import bcrypt from "bcryptjs";
-import type { Member } from "@subtrees/types";
+import type { Member } from "@/subtrees/types";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { z } from "zod";
 import { AuthAdditionalDataSchema } from "@/libs/schemas";

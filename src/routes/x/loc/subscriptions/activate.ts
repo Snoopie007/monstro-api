@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import { WorkflowEvents } from "@subtrees/constants/workflow";
-import { dispatchWorkflowTrigger } from "@subtrees/utils/server/workflows";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
 import {
@@ -15,8 +15,8 @@ import {
     memberSubscriptions,
     promos,
     transactions,
-} from "@subtrees/schemas";
-import type { SubscriptionJobData } from "@subtrees/bullmq/types";
+} from "@/subtrees/schemas";
+import type { SubscriptionJobData } from "@/subtrees/bullmq/types";
 import { and, eq, sql } from "drizzle-orm";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
@@ -25,7 +25,7 @@ import Stripe from "stripe";
 import { BillingContextError, resolveSubscriptionBillingContext } from "./billingContext";
 import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
-import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 type GatewayService = "stripe" | "square";
 type SquarePaymentResult = { id?: string; status?: string; receiptUrl?: string };
 
@@ -415,12 +415,12 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                         gatewayService,
                         gatewayIntegrationId: integration.id,
                         gatewayCustomerId: billingContext.gatewayCustomerId,
-                    ...(promoMeta && {
-                        promo: {
-                            ...promoMeta,
-                            applied: true,
-                        },
-                    }),
+                        ...(promoMeta && {
+                            promo: {
+                                ...promoMeta,
+                                applied: true,
+                            },
+                        }),
                     },
                 }).where(eq(memberSubscriptions.id, sub.id));
 

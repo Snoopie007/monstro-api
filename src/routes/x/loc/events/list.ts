@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { eventRegistrations, eventTickets, locationEvents, locationState } from "@subtrees/schemas";
+import { eventRegistrations, eventTickets, locationEvents, locationState } from "@/subtrees/schemas";
 import { and, asc, count, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 

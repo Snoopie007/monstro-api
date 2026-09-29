@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
 import { and, eq, sql } from "drizzle-orm";
-import { users, websiteContents } from "@subtrees/schemas";
+import { users, websiteContents } from "@/subtrees/schemas";
 
 const DEFAULT_PAGE_SIZE = 10;
 

@@ -1,4 +1,4 @@
-import type { InvoiceItem } from "@subtrees/types";
+import type { InvoiceItem } from "@/subtrees/types";
 
 export function getRefundAmounts(total: number, items: InvoiceItem[] | null) {
 	const nonRefundableAmount = Math.min(total, (items || []).reduce(

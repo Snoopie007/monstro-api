@@ -1,12 +1,12 @@
 import { db } from "@/db/db";
-import { WorkflowEvents } from "@subtrees/constants/workflow";
-import { dispatchWorkflowTrigger } from "@subtrees/utils/server/workflows";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import {
     eventRegistrations,
     eventTickets,
     locationEvents,
-} from "@subtrees/schemas";
-import type { LocationEvent, EventTicket } from "@subtrees/types";
+} from "@/subtrees/schemas";
+import type { LocationEvent, EventTicket } from "@/subtrees/types";
 import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
 
 export class EventRegistrationError extends Error {
@@ -27,9 +27,9 @@ type EventRegistrationInput = {
     event: LocationEvent;
     ticket: EventTicket;
 } & (
-    | { status: "pending"; transactionId: string; registrationId: string }
-    | { status: "registered"; transactionId?: string; registrationId?: string }
-);
+        | { status: "pending"; transactionId: string; registrationId: string }
+        | { status: "registered"; transactionId?: string; registrationId?: string }
+    );
 
 export type LoadEventContextParams = {
     lid: string;

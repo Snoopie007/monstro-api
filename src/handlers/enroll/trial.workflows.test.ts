@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "b
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { Elysia } from "elysia";
-import * as schema from "@subtrees/schemas";
+import * as schema from "@/subtrees/schemas";
 
 // The routes, transaction writes, and dispatcher are real. No gateway/Redis calls leave this suite.
 describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with local Postgres", () => {

@@ -1,5 +1,5 @@
-import type { Location } from "@subtrees/types";
-import type { Member, MemberPlanPricing } from "@subtrees/types";
+import type { Location } from "@/subtrees/types";
+import type { Member, MemberPlanPricing } from "@/subtrees/types";
 
 export function formatContractInterval(
     interval: string | null,

@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { removeRenewalJobs } from "@/queues/subscriptions";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, desc, eq, or, sql } from "drizzle-orm";

@@ -1,9 +1,9 @@
 import { db } from "@/db/db";
-import { products, productVariants } from "@subtrees/schemas";
+import { products, productVariants } from "@/subtrees/schemas";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import type { ProductSize } from "@subtrees/types";
+import type { ProductSize } from "@/subtrees/types";
 
 type MerchandiseAccessContext = {
 	merchandiseLocationAccess: { allowed: boolean };

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { AchievementTriggers } from "@subtrees/constants/data";
-import { memberReferrals } from "@subtrees/schemas";
+import { AchievementTriggers } from "@/subtrees/constants/data";
+import { memberReferrals } from "@/subtrees/schemas";
 import { triggerIncrement } from "./triggers";
 import { broadcastAchievement } from "@/libs/broadcast";
 

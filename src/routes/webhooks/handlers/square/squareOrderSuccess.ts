@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import type { PaymentType } from "@subtrees/types";
-import { orders, transactions } from "@subtrees/schemas";
+import type { PaymentType } from "@/subtrees/types";
+import { orders, transactions } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { queueOrderPaidNotifications } from "@/utils/orderEmailNotifications";
 

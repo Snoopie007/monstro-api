@@ -4,8 +4,8 @@ import {
     scheduleCronBasedRenewal,
     scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
-import { memberSubscriptions } from "@subtrees/schemas";
-import type { SubscriptionJobData } from "@subtrees/bullmq/types";
+import { memberSubscriptions } from "@/subtrees/schemas";
+import type { SubscriptionJobData } from "@/subtrees/bullmq/types";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
@@ -14,7 +14,7 @@ import { BillingContextError, findInFlightSubscriptionAttempt, resolveSubscripti
 import type { PromoDiscount } from "./shared";
 import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate } from "./shared";
-import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 export async function resumeSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/resume", async ({ params, body, status }) => {
         const { lid, sid } = params as { lid: string; sid: string };

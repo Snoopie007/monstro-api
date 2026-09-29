@@ -1,13 +1,13 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import { paymentFailureFromError } from "@subtrees/utils/workflowPayments";
-import { dispatchPaymentFailed } from "@subtrees/utils/server/workflows";
+import { paymentFailureFromError } from "@/subtrees/utils/workflowPayments";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
-import { memberInvoices, transactions } from "@subtrees/schemas";
+import { memberInvoices, transactions } from "@/subtrees/schemas";
 import { scheduleInvoiceReminderAndOverdue } from "./shared";
 import type { Currency } from "square";
 

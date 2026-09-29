@@ -1,5 +1,5 @@
-import { dispatchPaymentFailed } from "@subtrees/utils/server/workflows";
-import { paymentFailureFromError, isPaymentDecline } from "@subtrees/utils/workflowPayments";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import { db } from "@/db/db";
 import {
     calculateChargeDetails,
@@ -8,8 +8,8 @@ import {
     getCheckoutContext,
     type ChargeWithGatewayResult,
 } from "@/utils";
-import { courseEnrollments, transactions } from "@subtrees/schemas";
-import type { PaymentType } from "@subtrees/types";
+import { courseEnrollments, transactions } from "@/subtrees/schemas";
+import type { PaymentType } from "@/subtrees/types";
 import { CourseEnrollError } from "./errors";
 import { generateUUID } from "subtrees/utils";
 

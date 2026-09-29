@@ -7,8 +7,8 @@ import {
     authorizeMerchantCustomerId,
     type AuthorizeCustomerProfile,
 } from "@/libs/PaymentGateway";
-import { integrations, locationState, memberLocations } from "@subtrees/schemas";
-import type { Address, PaymentMethod } from "@subtrees/types";
+import { integrations, locationState, memberLocations } from "@/subtrees/schemas";
+import type { Address, PaymentMethod } from "@/subtrees/types";
 
 async function getAuthorizeGateway(lid: string) {
     const state = await db.query.locationState.findFirst({

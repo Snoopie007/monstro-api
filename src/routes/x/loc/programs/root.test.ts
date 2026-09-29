@@ -3,15 +3,17 @@ import { randomUUID } from "node:crypto";
 import { Elysia } from "elysia";
 import postgres from "postgres";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import * as schema from "@subtrees/schemas";
+import * as schema from "@/subtrees/schemas";
 
 let database: PostgresJsDatabase<typeof schema>;
 let sql: ReturnType<typeof postgres>;
 let admin: ReturnType<typeof postgres>;
-mock.module("@/db/db", () => ({ db: {
-    get select() { return database.select.bind(database); },
-    get transaction() { return database.transaction.bind(database); },
-} }));
+mock.module("@/db/db", () => ({
+    db: {
+        get select() { return database.select.bind(database); },
+        get transaction() { return database.transaction.bind(database); },
+    }
+}));
 const { xPrograms } = await import("./root");
 const app = new Elysia().group("/x/loc/:lid", (app) => app.use(xPrograms));
 const databaseUrl = process.env.ONE_ON_ONE_TEST_DATABASE_URL;
@@ -22,7 +24,7 @@ describe.skipIf(!databaseUrl)("program import instructor assignment with local P
     beforeAll(async () => {
         const url = new URL(databaseUrl!);
         if (!["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || url.search) throw new Error("Local Postgres required");
-        admin = postgres(databaseUrl!, { max: 1, onnotice: () => {} });
+        admin = postgres(databaseUrl!, { max: 1, onnotice: () => { } });
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         sql = postgres(databaseUrl!, { max: 1, prepare: false, connection: { search_path: `${namespace},public,extensions` } });

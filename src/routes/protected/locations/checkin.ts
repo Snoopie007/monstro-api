@@ -1,13 +1,13 @@
 import { db } from "@/db/db";
-import { attendances, reservations } from "@subtrees/schemas";
+import { attendances, reservations } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { differenceInMinutes } from "date-fns";
 import { Elysia, t } from "elysia";
 import { classQueue, rankQueue } from "@/queues";
-import { WorkflowEvents } from "@subtrees/constants/workflow";
-import { dispatchWorkflowTrigger } from "@subtrees/utils/server/workflows";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import type { AuthContext } from "@/middlewares/AuthMW";
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 
 
 const LocationCheckinProps = {

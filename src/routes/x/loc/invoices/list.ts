@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { desc, eq, sql } from "drizzle-orm";
-import { memberInvoices } from "@subtrees/schemas";
+import { memberInvoices } from "@/subtrees/schemas";
 
 export async function listInvoiceRoutes(app: Elysia) {
     return app.get("/", async ({ params, query, status }) => {

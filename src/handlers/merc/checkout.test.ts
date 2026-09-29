@@ -6,7 +6,7 @@ const inserted: Record<string, unknown>[] = [];
 const dispatch = mock(async () => []);
 const failedRuns: Array<{ transactionId: string }> = [];
 let workflowUnavailable = false;
-mock.module("@subtrees/utils/server/workflows", () => ({
+mock.module("@/subtrees/utils/server/workflows", () => ({
     dispatchWorkflowTrigger: dispatch,
     dispatchPaymentFailed: async (_tx: unknown, transactionId: string) => {
         if (workflowUnavailable) throw new Error("Workflow unavailable");

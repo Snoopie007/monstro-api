@@ -2,11 +2,11 @@ import { asc, eq, inArray } from "drizzle-orm";
 import {
   StoredSiteConfigSchema,
   storedSiteConfigFromStored,
-} from "@subtrees/site-config.js";
+} from "@/subtrees/site-config.js";
 import {
   locations,
   websiteSiteLocations,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { db } from "@/db/db";
 import { SiteEditorError } from "./siteEditorError";
 

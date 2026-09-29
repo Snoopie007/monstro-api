@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { eq, sql, and } from "drizzle-orm";
-import { memberLocations, memberSubscriptions } from "@subtrees/schemas";
+import { memberLocations, memberSubscriptions } from "@/subtrees/schemas";
 
 import { Elysia, t } from "elysia";
 import { z } from "zod";

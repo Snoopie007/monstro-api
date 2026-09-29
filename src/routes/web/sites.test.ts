@@ -1,10 +1,10 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
-import { normalizeLocationSlug } from "@subtrees/schemas";
+import { normalizeLocationSlug } from "@/subtrees/schemas";
 import {
   createSitePreset,
   storedSiteConfigFromStored,
-} from "@subtrees/site-config.js";
+} from "@/subtrees/site-config.js";
 
 let siteLocationRows: Array<{
   siteId: string;
@@ -431,10 +431,12 @@ test.each([
 }) => {
   selectedRows = [
     [{ siteId: "site-1", locationId, isPrimary, publishedRevisionId: "revision-1" }],
-    [{ config: routingConfig([
-      { locationId: "location-1", isPrimary: true, ghlLocationId: "ghl-shared", privateIntegrationToken: "pit-shared" },
-      { locationId: "location-2", isPrimary: false, ghlLocationId: "ghl-shared", privateIntegrationToken: secondaryToken },
-    ]) }],
+    [{
+      config: routingConfig([
+        { locationId: "location-1", isPrimary: true, ghlLocationId: "ghl-shared", privateIntegrationToken: "pit-shared" },
+        { locationId: "location-2", isPrimary: false, ghlLocationId: "ghl-shared", privateIntegrationToken: secondaryToken },
+      ])
+    }],
   ];
   const response = await app.handle(new Request(
     `http://localhost/sites/site-1/locations/${locationId}/forms/contact-form/submissions`,

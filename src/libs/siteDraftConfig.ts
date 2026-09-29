@@ -4,7 +4,7 @@ import {
   PublishableStoredSiteConfigSchema,
   StoredSiteConfigSchema,
   toPublicSiteConfig,
-} from "@subtrees/site-config.js";
+} from "@/subtrees/site-config.js";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -54,10 +54,10 @@ function splitParsedSiteConfig(
   const pages = config.pages.map((page, position): StoredPageInput => {
     const sectionPresentations = page.kind === "sections"
       ? Object.fromEntries(page.sections.flatMap((section) =>
-          "presentation" in section && section.presentation
-            ? [[section.id, section.presentation]]
-            : []
-        ))
+        "presentation" in section && section.presentation
+          ? [[section.id, section.presentation]]
+          : []
+      ))
       : {};
     return {
       pageKey: page.id,
@@ -77,12 +77,12 @@ function splitParsedSiteConfig(
       },
       blocks: page.kind === "sections"
         ? page.sections.map((section, blockPosition): StoredBlockInput => ({
-            blockKey: section.id,
-            type: section.type,
-            position: blockPosition,
-            visible: section.visible,
-            props: { ...section.props },
-          }))
+          blockKey: section.id,
+          type: section.type,
+          position: blockPosition,
+          visible: section.visible,
+          props: { ...section.props },
+        }))
         : [],
     };
   });

@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { StripePaymentGateway, SquarePaymentGateway } from "@/libs/PaymentGateway";
-import { getStripeMigration } from "@subtrees/utils/subscriptionBilling";
+import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
 
 export type SupportedStripePaymentMethod = "card" | "us_bank_account" | "link" | "cashapp";
 export type SubscriptionBillingContext = {
