@@ -1,7 +1,7 @@
+import type { ToolPayload } from "@subtrees/types/bot";
 import { sql } from "drizzle-orm";
 import { index, jsonb, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { bots } from "./bots";
-import type { ToolPayload } from "subtrees/types/bot";
 
 export const messageRoleEnum = pgEnum("message_role", [
 	"human",

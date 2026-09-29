@@ -46,6 +46,8 @@ export type SessionOccurrence = ProgramSession & {
   endTime: Date;
   utcStartTime: Date;
   utcEndTime: Date;
+  originalUtcStartTime?: Date;
+  originalUtcEndTime?: Date;
   holidayName?: string;
   exceptionId?: string;
   exception?: SessionException;

@@ -1785,7 +1785,7 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
 				path: ["locationConnections"]
 			});
 		}
-		for (let order = 0;order < config.locationConnections.length; order += 1) {
+		for (let order = 0; order < config.locationConnections.length; order += 1) {
 			if (!displayOrders.has(order)) {
 				issue.addIssue({
 					code: "custom",
@@ -2006,7 +2006,7 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
 		}
 	}
 	for (const [formIndex, form2] of config.forms.entries()) {
-		let checkLocationCondition = function(condition, path) {
+		let checkLocationCondition = function (condition, path) {
 			if (condition?.field === FORM_LOCATION_FIELD && config.locationConnections && !connectedLocationIds.has(condition.equals)) {
 				issue.addIssue({ code: "custom", message: `Form rule references an unconnected location: ${condition.equals}`, path });
 			}
@@ -2065,6 +2065,7 @@ var StoredSiteConfigSchema = StoredSiteConfigObjectSchema.superRefine((config, i
 	}
 });
 var PublishableStoredSiteConfigSchema = StoredSiteConfigSchema.superRefine((config, issue) => {
+	const ghlLocationIds = new Set;
 	for (const [index, connection] of config.locationConnections.entries()) {
 		const { ghlLocationId, privateIntegrationToken } = connection.leadRouting;
 		if (!ghlLocationId.trim()) {
@@ -2073,7 +2074,14 @@ var PublishableStoredSiteConfigSchema = StoredSiteConfigSchema.superRefine((conf
 				message: `Missing GHL Location ID for connected location: ${connection.locationId}`,
 				path: ["locationConnections", index, "leadRouting", "ghlLocationId"]
 			});
+		} else if (ghlLocationIds.has(ghlLocationId.trim())) {
+			issue.addIssue({
+				code: "custom",
+				message: `Duplicate GHL Location ID: ${ghlLocationId.trim()}`,
+				path: ["locationConnections", index, "leadRouting", "ghlLocationId"]
+			});
 		}
+		ghlLocationIds.add(ghlLocationId.trim());
 		if (!privateIntegrationToken.trim()) {
 			issue.addIssue({
 				code: "custom",
@@ -2333,11 +2341,15 @@ function storedLocationConnectionsArePublishable(connections) {
 	if (connections.length === 0 || connections.filter((connection) => connection.isPrimary).length !== 1) {
 		return false;
 	}
+	const ghlLocationIds = new Set;
 	for (const connection of connections) {
 		const { ghlLocationId, privateIntegrationToken } = connection.leadRouting;
 		const normalizedGhlId = ghlLocationId.trim();
 		if (!normalizedGhlId || !privateIntegrationToken.trim())
 			return false;
+		if (ghlLocationIds.has(normalizedGhlId))
+			return false;
+		ghlLocationIds.add(normalizedGhlId);
 	}
 	return true;
 }
@@ -2910,7 +2922,7 @@ function pricingSections(id2, draft, form2) {
 		type: "pricing_form_section",
 		visible: true,
 		props: {
-			eyebrow: form2 === "getStarted" ? "Ready To Get Started?" : "Looking For Our Pricing?",
+			eyebrow: "Looking For Our Pricing?",
 			title: "Tell us what program you\u2019re looking for below",
 			description: "Fill out the form below, and one of our coaches will send you our pricing, class schedule, and exclusive promo information for our classes.",
 			source
@@ -3693,7 +3705,7 @@ function withLocationSlug(path, slug) {
 }
 // src/section-templates.ts
 var SITE_SECTION_TEMPLATES = [
-	{ key: "hero", type: "hero", name: "Hero", description: "An optional eyebrow, headline, supporting copy, image, and calls to action." },
+	{ key: "hero", type: "hero", name: "Hero", description: "A headline, supporting copy, image, and calls to action." },
 	{ key: "rich-text", type: "rich_text", name: "Rich Text", description: "A heading with flexible paragraph content." },
 	{ key: "external-widget", type: "external_widget", name: "External Widget", description: "A managed provider widget configured from validated embed code." },
 	{ key: "sandboxed-embed", type: "sandboxed_embed", name: "Sandboxed HTML", description: "Third-party HTML and scripts isolated from the site in a sandboxed frame." },
@@ -3808,192 +3820,8 @@ function storedSiteConfigFromStored(input, preset, fallbackConnections, options 
 	return StoredSiteConfigSchema.parse(storedInput);
 }
 export {
-	withStoredLocationConnections,
-	withManualLocations,
-	withLocationSlug,
-	validateFormValues,
-	toVideoEmbedUrl,
-	toPublicSiteConfig,
-	toGhlFormContact,
-	storedSiteConfigFromStored,
-	storedLocationConnectionsArePublishable,
-	siteLocationReferences,
-	siteCustomEmbedPartsByteLength,
-	sectionImageTargetKey,
-	scheduleQueryKey,
-	safeSameOriginPath,
-	resolveSitePageHeader,
-	resolveSelectedLocation,
-	resolveRenderedTenantContext,
-	resolveFormRedirect,
-	publicSiteConfigFromStored,
-	plansQueryKey,
-	parseStoredSiteConfig,
-	parseRuntimeSite,
-	parsePublicSiteConfig,
-	parseGymdeskScheduleSnippet,
-	orderedAllowedLocations,
-	normalizeStoredLocationConnections,
-	normalizeSitePageTemplateV2,
-	normalizeSiteConfigV2,
-	materializeSitePageTemplate,
-	manualLocationForDisplay,
-	locationBySlug,
-	locationById,
-	legacyDraftToPublicSiteConfig,
-	isIframeUrlAllowed,
-	isFormFieldVisible,
-	getSiteSectionTemplate,
-	getNativeFormPlacement,
-	getFormValidationErrors,
-	getFormPlacement,
-	formatSiteLocationAddress,
-	encodeBlogIframe,
-	encodeBlogHtmlEmbed,
-	decodeBlogIframe,
-	decodeBlogHtmlEmbed,
-	createSitePreset,
-	applySiteLocationOverride,
-	TopReviewSectionSchema,
-	ThreeBoxSectionSchema,
-	TextIframeSectionSchema,
-	TestimonialsSectionSchema,
-	TenantContextSchema,
-	TeamSectionSchema,
-	StoredSiteLocationConnectionSchema,
-	StoredSiteConfigSchema,
-	SiteTikTokPixelEntrySchema,
-	SiteThemeSchema,
-	SiteTestimonialSchema,
-	SiteTeamMemberSchema,
-	SiteSectionsPageSchema,
-	SiteSectionSchema,
-	SiteScriptsAndEmbedsSchema,
-	SiteScriptPurposeSchema,
-	SiteScriptPlacementSchema,
-	SiteScriptEntrySchema,
-	SiteSandboxedEmbedEntrySchema,
-	SiteProgramSchema,
-	SiteProductSchema,
-	SitePostalAddressSchema,
-	SitePlanSchema,
-	SitePageTemplateSchema,
-	SitePageSchema,
-	SitePageHeaderSchema,
-	SiteOpeningHoursSchema,
-	SiteMetaPixelEntrySchema,
-	SiteManualLocationSchema,
-	SiteLocationSlugSchema,
-	SiteLocationSchema,
-	SiteLocationOverrideSchema,
-	SiteLocationLeadRoutingSchema,
-	SiteLocationConnectionSchema,
-	SiteLinkSchema,
-	SiteImageTargetSchema,
-	SiteImageSchema,
-	SiteHrefSchema,
-	SiteHeaderActionSchema,
-	SiteGtmEntrySchema,
-	SiteGoogleTagEntrySchema,
-	SiteFormSchema,
-	SiteFaqSchema,
-	SiteDateSchema,
-	SiteCustomMarkupPartSchema,
-	SiteCustomInlineScriptPartSchema,
-	SiteCustomExternalScriptPartSchema,
-	SiteCustomEmbedPartSchema,
-	SiteCustomEmbedEntrySchema,
-	SiteContentSchema,
-	SiteColorSchema,
-	SiteCapabilitiesSchema,
-	SiteCacheInvalidationSchema,
-	SiteBuiltinPageSchema,
-	SiteAssetSrcSchema,
-	ShopCheckoutQuoteSchema,
-	SectionPresentationSchema,
-	SectionImageTargetSchema,
-	SectionImagePositionSchema,
-	SectionImageOverrideSchema,
-	SectionImageFitSchema,
-	SectionIdentifierSchema,
-	SectionHeadingSchema,
-	SectionBaseSchema,
-	SchedulesSectionSchema,
-	SchedulesSectionPropsSchema,
-	ScheduleSessionSchema,
-	ScheduleQuerySchema,
-	ScheduleApiResponseSchema,
-	SandboxedEmbedSectionSchema,
-	SITE_SECTION_TEMPLATES,
-	SITE_FOOTER_EDITOR_TARGET_ID,
-	RichTextSectionSchema,
-	RenderedTenantContextSchema,
-	RenderedSiteLocationSchema,
-	RedirectRuleSchema,
-	PublishableStoredSiteConfigSchema,
-	PublicSiteConfigSchema,
-	ProgramsSectionSchema,
-	ProgramDetailSectionSchema,
-	ProductsApiResponseSchema,
-	ProductVariantSchema,
-	ProductImageSchema,
-	PricingFormSectionSchema,
-	PlansSectionSchema,
-	PlansSectionPropsSchema,
-	PlansQuerySchema,
-	PlansApiResponseSchema,
-	PlanProgramSchema,
-	PlanPricingSchema,
-	PaymentMethodsApiResponseSchema,
-	PaymentMethodSchema,
-	OrderedIdsSchema,
-	NotSureSectionSchema,
-	NavigationItemSchema,
-	NativeSiteFormSchema,
-	MediaSectionBaseSchema,
-	MAX_SITE_SANDBOXED_EMBED_BYTES,
-	MAX_SITE_CUSTOM_EMBED_BYTES,
-	LocationFailureSchema,
-	IframeFormPlacementSchema,
-	IframeEmbedSectionSchema,
-	HttpsUrlSchema,
-	HowToStartSectionSchema,
-	HeroSectionSchema,
-	GymdeskExternalWidgetSettingsSchema,
-	GfoOfferSectionSchema,
-	GallerySectionSchema,
-	GYMDESK_WIDGET_SCRIPT_URL,
-	GLOBAL_SITE_EDITOR_TARGETS,
-	FormValuesSchema,
-	FormValueSchema,
-	FormSubmissionResponseSchema,
-	FormSubmissionRequestSchema,
-	FormSectionSchema,
-	FormPlacementSchema,
-	FormFieldSchema,
-	FaqsSectionSchema,
-	FORM_LOCATION_FIELD,
-	FORM_IFRAME_POLICY,
-	ExternalWidgetSectionSchema,
-	ExternalWidgetSectionPropsSchema,
-	EnrollResponseSchema,
-	EnrollRequestSchema,
-	EnrollQuoteSchema,
-	EnrollQuoteRequestSchema,
-	DocumentSignatureRequestSchema,
-	ContactFormSectionSchema,
-	CompareSectionSchema,
-	CheckoutAdditionalFeeSchema,
-	CONSENT_FIELDS,
-	BuiltinPageIdSchema,
-	BottomCtaSectionSchema,
-	BottomCtaFormSectionSchema,
-	BlogPostsApiResponseSchema,
-	BlogPostSummarySchema,
-	BlogPostSchema,
-	BlogListingSchema,
-	BlogListingEmbedSchema,
-	BlogIframeSchema,
-	BlogHtmlEmbedSchema,
-	AboutSectionSchema
+	AboutSectionSchema, applySiteLocationOverride, BlogHtmlEmbedSchema, BlogIframeSchema, BlogListingEmbedSchema, BlogListingSchema, BlogPostsApiResponseSchema, BlogPostSchema, BlogPostSummarySchema, BottomCtaFormSectionSchema, BottomCtaSectionSchema, BuiltinPageIdSchema, CheckoutAdditionalFeeSchema, CompareSectionSchema, CONSENT_FIELDS, ContactFormSectionSchema, createSitePreset, decodeBlogHtmlEmbed, decodeBlogIframe, DocumentSignatureRequestSchema, encodeBlogHtmlEmbed, encodeBlogIframe, EnrollQuoteRequestSchema, EnrollQuoteSchema, EnrollRequestSchema, EnrollResponseSchema, ExternalWidgetSectionPropsSchema, ExternalWidgetSectionSchema, FaqsSectionSchema, FORM_IFRAME_POLICY, FORM_LOCATION_FIELD, formatSiteLocationAddress, FormFieldSchema, FormPlacementSchema, FormSectionSchema, FormSubmissionRequestSchema, FormSubmissionResponseSchema, FormValueSchema, FormValuesSchema, GallerySectionSchema, getFormPlacement, getFormValidationErrors, getNativeFormPlacement, getSiteSectionTemplate, GfoOfferSectionSchema, GLOBAL_SITE_EDITOR_TARGETS, GYMDESK_WIDGET_SCRIPT_URL, GymdeskExternalWidgetSettingsSchema, HeroSectionSchema, HowToStartSectionSchema, HttpsUrlSchema, IframeEmbedSectionSchema, IframeFormPlacementSchema, isFormFieldVisible, isIframeUrlAllowed, legacyDraftToPublicSiteConfig, locationById, locationBySlug, LocationFailureSchema, manualLocationForDisplay, materializeSitePageTemplate, MAX_SITE_CUSTOM_EMBED_BYTES, MAX_SITE_SANDBOXED_EMBED_BYTES, MediaSectionBaseSchema, NativeSiteFormSchema, NavigationItemSchema, normalizeSiteConfigV2, normalizeSitePageTemplateV2, normalizeStoredLocationConnections, NotSureSectionSchema, orderedAllowedLocations, OrderedIdsSchema, parseGymdeskScheduleSnippet, parsePublicSiteConfig, parseRuntimeSite, parseStoredSiteConfig, PaymentMethodsApiResponseSchema,
+	PaymentMethodSchema, PlanPricingSchema, PlanProgramSchema, PlansApiResponseSchema, plansQueryKey, PlansQuerySchema, PlansSectionPropsSchema, PlansSectionSchema, PricingFormSectionSchema, ProductImageSchema, ProductsApiResponseSchema,
+	ProductVariantSchema, ProgramDetailSectionSchema, ProgramsSectionSchema, publicSiteConfigFromStored, PublicSiteConfigSchema, PublishableStoredSiteConfigSchema, RedirectRuleSchema, RenderedSiteLocationSchema, RenderedTenantContextSchema, resolveFormRedirect, resolveRenderedTenantContext, resolveSelectedLocation, resolveSitePageHeader, RichTextSectionSchema, safeSameOriginPath, SandboxedEmbedSectionSchema, ScheduleApiResponseSchema, scheduleQueryKey, ScheduleQuerySchema, ScheduleSessionSchema, SchedulesSectionPropsSchema, SchedulesSectionSchema, SectionBaseSchema, SectionHeadingSchema, SectionIdentifierSchema, SectionImageFitSchema, SectionImageOverrideSchema, SectionImagePositionSchema, sectionImageTargetKey, SectionImageTargetSchema, SectionPresentationSchema, ShopCheckoutQuoteSchema, SITE_FOOTER_EDITOR_TARGET_ID, SITE_SECTION_TEMPLATES, SiteAssetSrcSchema, SiteBuiltinPageSchema, SiteCacheInvalidationSchema, SiteCapabilitiesSchema, SiteColorSchema, SiteContentSchema, SiteCustomEmbedEntrySchema, siteCustomEmbedPartsByteLength, SiteCustomEmbedPartSchema, SiteCustomExternalScriptPartSchema, SiteCustomInlineScriptPartSchema, SiteCustomMarkupPartSchema, SiteDateSchema, SiteFaqSchema, SiteFormSchema, SiteGoogleTagEntrySchema, SiteGtmEntrySchema, SiteHeaderActionSchema, SiteHrefSchema, SiteImageSchema, SiteImageTargetSchema, SiteLinkSchema, SiteLocationConnectionSchema, SiteLocationLeadRoutingSchema, SiteLocationOverrideSchema, siteLocationReferences, SiteLocationSchema, SiteLocationSlugSchema, SiteManualLocationSchema, SiteMetaPixelEntrySchema, SiteOpeningHoursSchema, SitePageHeaderSchema, SitePageSchema, SitePageTemplateSchema, SitePlanSchema, SitePostalAddressSchema, SiteProductSchema, SiteProgramSchema, SiteSandboxedEmbedEntrySchema, SiteScriptEntrySchema, SiteScriptPlacementSchema, SiteScriptPurposeSchema, SiteScriptsAndEmbedsSchema, SiteSectionSchema, SiteSectionsPageSchema, SiteTeamMemberSchema, SiteTestimonialSchema, SiteThemeSchema, SiteTikTokPixelEntrySchema, storedLocationConnectionsArePublishable, storedSiteConfigFromStored, StoredSiteConfigSchema, StoredSiteLocationConnectionSchema, TeamSectionSchema, TenantContextSchema, TestimonialsSectionSchema, TextIframeSectionSchema, ThreeBoxSectionSchema, toGhlFormContact, TopReviewSectionSchema, toPublicSiteConfig, toVideoEmbedUrl, validateFormValues, withLocationSlug, withManualLocations, withStoredLocationConnections
 };
+
