@@ -3,7 +3,6 @@ import { strict as assert } from "node:assert";
 import type { PaymentType } from "@subtrees/types";
 import type { Currency } from "@subtrees/types/currency";
 import { db } from "@/db/db";
-import { scheduleRenewalRepair } from "@/queues/subscriptions";
 import { integrations, locationState, memberInvoices, memberPackages, memberSubscriptions, transactions } from "@subtrees/schemas";
 import { and, eq, sql } from "drizzle-orm";
 import Stripe from "stripe";
@@ -54,7 +53,6 @@ export async function handleStripePlanCharge({
     if (success && !stripeAccountId) throw new Error("Stripe webhook is missing connected account binding");
     let authoritative: Stripe.PaymentIntent | undefined;
     let reconciledAttemptId: string | undefined;
-    let renewalRepairDueAt: Date | null = null;
     if (success && paymentIntentId && stripeAccountId) {
         const snapshot = await db.query.memberInvoices.findFirst({
             where: eq(memberInvoices.id, invoiceId),
@@ -163,15 +161,7 @@ export async function handleStripePlanCharge({
         }
         const expectedPaymentIntentId = currentAttemptPaymentIntentId ?? persistedPaymentIntentId;
         if (paymentIntentId && expectedPaymentIntentId && expectedPaymentIntentId !== paymentIntentId) return;
-        if (current.paid || current.status === "paid") {
-            if (success && !memberPlanId.startsWith("pkg_")) {
-                renewalRepairDueAt = current.forPeriodEnd;
-            }
-            return;
-        }
-        if (success && !memberPlanId.startsWith("pkg_")) {
-            renewalRepairDueAt = current.forPeriodEnd;
-        }
+        if (current.paid || current.status === "paid") return;
         const [invoice] = await tx.update(memberInvoices).set({
             status: success ? "paid" : "unpaid",
             paid: success,
@@ -246,7 +236,4 @@ export async function handleStripePlanCharge({
             sql`${memberSubscriptions.parentId} is null`,
         ));
     });
-    if (renewalRepairDueAt) {
-        await scheduleRenewalRepair(memberPlanId, locationId, renewalRepairDueAt);
-    }
 }

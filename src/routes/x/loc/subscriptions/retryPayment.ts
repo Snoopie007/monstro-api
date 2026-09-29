@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { getStripeMigration } from "@subtrees/utils/subscriptionBilling";
 import { scheduleRenewalRepair } from "@/queues/subscriptions";
 import { paymentQueue } from "@/queues/payments";
 import { RetrySubPaymentSchema } from "@subtrees/bullmq";
@@ -14,7 +15,7 @@ export async function retrySubscriptionPaymentRoutes(app: Elysia) {
 
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid)),
-            columns: { id: true, memberId: true, status: true, cancelAt: true, parentId: true, currentPeriodEnd: true },
+            columns: { id: true, memberId: true, status: true, cancelAt: true, parentId: true, currentPeriodEnd: true, metadata: true },
         });
 
         if (!sub) {
@@ -77,12 +78,13 @@ export async function retrySubscriptionPaymentRoutes(app: Elysia) {
                 columns: { id: true, forPeriodEnd: true },
             });
             if (paidInvoice) {
-                await scheduleRenewalRepair(sid, lid, paidInvoice.forPeriodEnd);
+                const importedStripeRoot = Boolean(getStripeMigration(sub.metadata));
+                if (importedStripeRoot) await scheduleRenewalRepair(sid, lid, paidInvoice.forPeriodEnd);
                 await db.update(memberSubscriptions).set({ status: "active", updated: new Date() }).where(and(
                     eq(memberSubscriptions.id, sid),
                     eq(memberSubscriptions.status, "past_due"),
                 ));
-                return status(200, { enqueued: true, repairOnly: true, invoiceId: paidInvoice.id });
+                return status(200, { enqueued: importedStripeRoot, repairOnly: true, invoiceId: paidInvoice.id });
             }
             return status(400, {
                 error: "No failed transaction found for this subscription",

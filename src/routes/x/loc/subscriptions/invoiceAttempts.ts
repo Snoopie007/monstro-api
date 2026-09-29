@@ -1,8 +1,7 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions } from "@subtrees/schemas";
+import { memberInvoices } from "@subtrees/schemas";
 import type { SubscriptionBillingAttempt } from "@subtrees/types/subscriptionBilling";
-import { getStripeMigration } from "@subtrees/utils/subscriptionBilling";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export type InvoiceAttemptClaim =
     | { ok: true; invoiceId: string; attempt: SubscriptionBillingAttempt; attemptCount: number }
@@ -99,79 +98,5 @@ export async function saveInvoiceAttemptResult(input: {
             metadata: { ...metadata, billingAttempt },
             updated: new Date(),
         }).where(eq(memberInvoices.id, input.invoiceId));
-    });
-}
-
-
-export async function advanceRenewalCycleAfterMigrationGate(input: {
-    subscriptionId: string;
-    invoiceId: string;
-    attemptKey: string;
-    periodStart: Date;
-    nextPeriodEnd: Date;
-}): Promise<boolean> {
-    return db.transaction(async (tx) => {
-        const [invoice] = await tx.select({
-            metadata: memberInvoices.metadata,
-        }).from(memberInvoices).where(eq(memberInvoices.id, input.invoiceId)).for("update");
-        if (!invoice) throw new Error(`Invoice ${input.invoiceId} not found`);
-        const metadata = (invoice.metadata as Record<string, unknown> | null) ?? {};
-        const attempt = readAttempt(metadata);
-        if (attempt?.id !== input.attemptKey) return false;
-
-        const cycle = metadata.renewalCycle;
-        if (!cycle || typeof cycle !== "object" || Array.isArray(cycle)) return true;
-        if (!("state" in cycle) || !("periodStart" in cycle) || !("periodEnd" in cycle)
-            || typeof cycle.state !== "string"
-            || typeof cycle.periodStart !== "string"
-            || typeof cycle.periodEnd !== "string") return false;
-        const cycleStart = new Date(cycle.periodStart);
-        const cycleEnd = new Date(cycle.periodEnd);
-        if (!Number.isFinite(cycleStart.getTime()) || !Number.isFinite(cycleEnd.getTime())
-            || cycleStart.getTime() !== input.periodStart.getTime()
-            || cycleEnd.getTime() !== input.nextPeriodEnd.getTime()) return false;
-
-        const [subscription] = await tx.select({
-            id: memberSubscriptions.id,
-            parentId: memberSubscriptions.parentId,
-            currentPeriodEnd: memberSubscriptions.currentPeriodEnd,
-            metadata: memberSubscriptions.metadata,
-        }).from(memberSubscriptions)
-            .where(eq(memberSubscriptions.id, input.subscriptionId))
-            .for("update");
-        if (!subscription || subscription.parentId || !subscription.currentPeriodEnd) return false;
-        const migration = getStripeMigration(subscription.metadata);
-        if (migration?.state !== "armed" && migration?.state !== "first_payment_verified") return false;
-
-        if (cycle.state === "advanced") {
-            if (subscription.currentPeriodEnd.getTime() !== cycleEnd.getTime()) return false;
-            if (metadata.migrationGateAttemptId !== input.attemptKey) {
-                await tx.update(memberInvoices).set({
-                    metadata: { ...metadata, migrationGateAttemptId: input.attemptKey },
-                    updated: new Date(),
-                }).where(eq(memberInvoices.id, input.invoiceId));
-            }
-            return true;
-        }
-        if (cycle.state !== "pending_migration_gate"
-            || subscription.currentPeriodEnd.getTime() !== cycleStart.getTime()) return false;
-
-        await tx.update(memberSubscriptions).set({
-            currentPeriodStart: cycleStart,
-            currentPeriodEnd: cycleEnd,
-            updated: new Date(),
-        }).where(and(
-            eq(memberSubscriptions.id, input.subscriptionId),
-            isNull(memberSubscriptions.parentId),
-        ));
-        await tx.update(memberInvoices).set({
-            metadata: {
-                ...metadata,
-                migrationGateAttemptId: input.attemptKey,
-                renewalCycle: { ...cycle, state: "advanced" },
-            },
-            updated: new Date(),
-        }).where(eq(memberInvoices.id, input.invoiceId));
-        return true;
     });
 }

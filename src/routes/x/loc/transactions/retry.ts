@@ -1,4 +1,5 @@
 import { db } from "@/db/db";
+import { getStripeMigration } from "@subtrees/utils/subscriptionBilling";
 import { paymentQueue } from "@/queues/payments";
 import { scheduleRenewalRepair } from "@/queues/subscriptions";
 import { memberSubscriptions } from "@subtrees/schemas";
@@ -47,7 +48,7 @@ export async function retryTransactionRoutes(app: Elysia) {
 
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (s, { and, eq }) => and(eq(s.id, subId), eq(s.locationId, lid), eq(s.memberId, memberId)),
-            columns: { id: true, status: true, cancelAt: true, parentId: true, currentPeriodEnd: true },
+            columns: { id: true, status: true, cancelAt: true, parentId: true, currentPeriodEnd: true, metadata: true },
         });
 
         if (!sub) {
@@ -80,9 +81,12 @@ export async function retryTransactionRoutes(app: Elysia) {
         }
 
         if (paid) {
-            const repairDueAt = tx.invoice.forPeriodEnd
+            const importedStripeRoot = Boolean(getStripeMigration(sub.metadata));
+            const repairDueAt = importedStripeRoot
+                && tx.invoice.forPeriodEnd
                 && tx.invoice.forPeriodEnd.getTime() === sub.currentPeriodEnd?.getTime()
-                ? tx.invoice.forPeriodEnd : null;
+                ? tx.invoice.forPeriodEnd
+                : null;
             if (repairDueAt) {
                 await scheduleRenewalRepair(sub.id, lid, repairDueAt);
                 await db.update(memberSubscriptions).set({ status: "active", updated: new Date() }).where(and(

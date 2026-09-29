@@ -48,6 +48,12 @@ export async function createInvoiceRoutes(app: Elysia) {
             });
             return status(404, { error: "Member not found" });
         }
+        if (type === "one-off" && subscriptionId && collectionMethod === "charge_automatically") {
+            return status(400, {
+                error: "Subscription-linked automatic invoices must use the subscription payment retry flow",
+                code: "SUBSCRIPTION_RETRY_REQUIRED",
+            });
+        }
 
         if (type === "from-subscription") {
             // Subscription-generated invoices should use the subscription's own billing state.
@@ -93,6 +99,12 @@ export async function createInvoiceRoutes(app: Elysia) {
             }
             if (!sub.pricing && !sub.billingItems?.length) {
                 return status(404, { error: "Subscription billing definition not found" });
+            }
+            if (collectionMethod === "charge_automatically") {
+                return status(400, {
+                    error: "Subscription-linked automatic invoices must use the subscription payment retry flow",
+                    code: "SUBSCRIPTION_RETRY_REQUIRED",
+                });
             }
 
             const quote = await buildSubscriptionInvoiceQuote({
@@ -184,6 +196,12 @@ export async function createInvoiceRoutes(app: Elysia) {
                 return status(400, {
                     error: "Only root subscriptions can generate recurring invoices",
                     code: "SUBSCRIPTION_CHILD",
+                });
+            }
+            if (collectionMethod === "charge_automatically") {
+                return status(400, {
+                    error: "Subscription-linked automatic invoices must use the subscription payment retry flow",
+                    code: "SUBSCRIPTION_RETRY_REQUIRED",
                 });
             }
         }

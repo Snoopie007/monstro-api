@@ -14,7 +14,7 @@ import { BillingContextError, findInFlightSubscriptionAttempt, resolveSubscripti
 import type { PromoDiscount } from "./shared";
 import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate } from "./shared";
-import { getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
 export async function resumeSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/resume", async ({ params, body, status }) => {
         const { lid, sid } = params as { lid: string; sid: string };
@@ -96,42 +96,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         const nextBillingAt = resumeAt ? new Date(resumeAt) : getNextBillingDate(sub);
 
 
-        const billingQuote = getSubscriptionBillingQuote({
-            id: sub.id,
-            parentId: sub.parentId,
-            locationId: sub.locationId,
-            isParticipant: sub.isParticipant,
-            memberPlanPricingId: sub.memberPlanPricingId,
-            promoId: sub.promoId,
-            metadata: sub.metadata,
-            pricing: sub.pricing
-                ? {
-                    id: sub.pricing.id,
-                    name: sub.pricing.name,
-                    price: sub.pricing.price,
-                    interval: sub.pricing.interval,
-                    intervalThreshold: sub.pricing.intervalThreshold,
-                    plan: sub.pricing.plan ? { locationId: sub.pricing.plan.locationId } : null,
-                }
-                : null,
-            billingItems: sub.billingItems?.map((item) => ({
-                rootSubscriptionId: item.rootSubscriptionId,
-                participantSubscriptionId: item.participantSubscriptionId,
-                pricingId: item.pricingId,
-                quantity: item.quantity,
-                pricing: item.pricing
-                    ? {
-                        id: item.pricing.id,
-                        name: item.pricing.name,
-                        price: item.pricing.price,
-                        interval: item.pricing.interval,
-                        intervalThreshold: item.pricing.intervalThreshold,
-                        plan: item.pricing.plan ? { locationId: item.pricing.plan.locationId } : null,
-                    }
-                    : null,
-                participant: item.participant,
-            })),
-        });
+        const billingQuote = getSubscriptionBillingQuote(sub);
 
         const resumedStatus = sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active";
         await db.transaction(async (tx) => {
@@ -168,7 +133,9 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     interval: billingQuote.interval,
                     intervalThreshold: billingQuote.intervalThreshold,
                 },
-                expectedDueAt: nextBillingAt.toISOString(),
+                ...(billingContext.gateway.service === "stripe" && getStripeMigration(sub.metadata)
+                    ? { expectedDueAt: nextBillingAt.toISOString() }
+                    : {}),
                 ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
             };
 

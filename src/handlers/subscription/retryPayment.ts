@@ -2,10 +2,10 @@ import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { db } from "@/db/db";
 import { BillingContextError, assertImportedSubscriptionRetrySafe, resolveSubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";
 import {
-    advanceRenewalCycleAfterMigrationGate,
     claimInvoiceAttempt,
     saveInvoiceAttemptResult,
 } from "@/routes/x/loc/subscriptions/invoiceAttempts";
+import { getStripeMigration } from "@subtrees/utils/subscriptionBilling";
 import { scheduleRenewalRepair } from "@/queues/subscriptions";
 import type { SubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";
 import { chargeWithGateway, stripePaymentIntentFromError, type ChargeWithGatewayResult } from "@/utils/checkoutUtil";
@@ -104,6 +104,7 @@ export async function retrySubscriptionPayment(props: {
     if (sub.cancelAt && sub.cancelAt.getTime() <= Date.now()) {
         return fail("SUBSCRIPTION_CANCELED", "This subscription is canceled and cannot be retried.");
     }
+    const importedStripeRoot = Boolean(getStripeMigration(sub.metadata));
 
     const invoice = await db.query.memberInvoices.findFirst({
         where: (i, { and, eq: eqCol }) => and(
@@ -127,7 +128,7 @@ export async function retrySubscriptionPayment(props: {
     const transaction = invoice.transaction;
     if (!transaction) return fail("TRANSACTION_NOT_FOUND", "Transaction not found");
     if (invoice.paid || invoice.status === "paid") {
-        await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
+        if (importedStripeRoot) await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
         return {
             ok: true,
             subscriptionId: sub.id,
@@ -139,6 +140,9 @@ export async function retrySubscriptionPayment(props: {
     const renewalCycleState = renewalCycle && typeof renewalCycle === "object" && !Array.isArray(renewalCycle)
         ? (renewalCycle as { state?: unknown }).state
         : null;
+    if (renewalCycleState === "pending_migration_gate") {
+        return fail("CHARGE_FAILED", "Subscription renewal is held for worker/support migration recovery");
+    }
     if ((renewalCycleState === "pending_migration_gate" || renewalCycleState === "advanced")
         && (!invoice.forPeriodStart || !invoice.forPeriodEnd)) {
         return fail("CHARGE_FAILED", "Subscription renewal period metadata is incomplete");
@@ -212,7 +216,9 @@ export async function retrySubscriptionPayment(props: {
                     sql`coalesce(${memberSubscriptions.metadata}->'stripeMigration'->>'state', '') <> 'armed'`,
                 ));
             });
-            await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
+            if (importedStripeRoot && billingContext.gateway.service === "stripe") {
+                await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
+            }
             return {
                 ok: true,
                 subscriptionId: sub.id,
@@ -262,35 +268,6 @@ export async function retrySubscriptionPayment(props: {
             "CHARGE_FAILED",
             error instanceof Error ? error.message : "Subscription retry is blocked by migration safety checks",
         );
-    }
-    if (invoice.forPeriodStart && invoice.forPeriodEnd) {
-        let advanced = false;
-        try {
-            advanced = await advanceRenewalCycleAfterMigrationGate({
-                subscriptionId: sub.id,
-                invoiceId: invoice.id,
-                attemptKey: attemptId,
-                periodStart: invoice.forPeriodStart,
-                nextPeriodEnd: invoice.forPeriodEnd,
-            });
-        } catch (error) {
-            await saveInvoiceAttemptResult({
-                invoiceId: invoice.id,
-                attemptId,
-                status: "failed",
-                retryable: false,
-            });
-            return fail("CHARGE_FAILED", error instanceof Error ? error.message : "Subscription migration gate failed");
-        }
-        if (!advanced) {
-            await saveInvoiceAttemptResult({
-                invoiceId: invoice.id,
-                attemptId,
-                status: "failed",
-                retryable: false,
-            });
-            return fail("CHARGE_FAILED", "Subscription migration gate is not ready for retry");
-        }
     }
 
     let charge: ChargeWithGatewayResult;
@@ -399,7 +376,7 @@ export async function retrySubscriptionPayment(props: {
         }
     });
 
-    if (attemptStatus === "succeeded") {
+    if (attemptStatus === "succeeded" && importedStripeRoot && billingContext.gateway.service === "stripe") {
         await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
     }
     if (attemptStatus !== "succeeded") {

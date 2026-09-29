@@ -23,7 +23,7 @@ import Stripe from "stripe";
 import { BillingContextError, resolveSubscriptionBillingContext } from "./billingContext";
 import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
-import { getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
 type GatewayService = "stripe" | "square";
 type SquarePaymentResult = { id?: string; status?: string; receiptUrl?: string };
 
@@ -141,42 +141,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             : undefined;
         const location = sub.location;
         const currency = getCurrency(location.country);
-        const billingQuote = getSubscriptionBillingQuote({
-            id: sub.id,
-            parentId: sub.parentId,
-            locationId: sub.locationId,
-            isParticipant: sub.isParticipant,
-            memberPlanPricingId: sub.memberPlanPricingId,
-            promoId: sub.promoId,
-            metadata: sub.metadata,
-            pricing: sub.pricing
-                ? {
-                    id: sub.pricing.id,
-                    name: sub.pricing.name,
-                    price: sub.pricing.price,
-                    interval: sub.pricing.interval,
-                    intervalThreshold: sub.pricing.intervalThreshold,
-                    plan: sub.pricing.plan ? { locationId: sub.pricing.plan.locationId } : null,
-                }
-                : null,
-            billingItems: sub.billingItems?.map((item) => ({
-                rootSubscriptionId: item.rootSubscriptionId,
-                participantSubscriptionId: item.participantSubscriptionId,
-                pricingId: item.pricingId,
-                quantity: item.quantity,
-                pricing: item.pricing
-                    ? {
-                        id: item.pricing.id,
-                        name: item.pricing.name,
-                        price: item.pricing.price,
-                        interval: item.pricing.interval,
-                        intervalThreshold: item.pricing.intervalThreshold,
-                        plan: item.pricing.plan ? { locationId: item.pricing.plan.locationId } : null,
-                    }
-                    : null,
-                participant: item.participant,
-            })),
-        });
+        const billingQuote = getSubscriptionBillingQuote(sub);
 
         if (sub.status === "trialing" && sub.trialEnd && isFuture(sub.trialEnd)) {
             const payload = buildRenewalPayload({
@@ -188,7 +153,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
                 promoMeta,
                 billingQuote,
-                expectedDueAt: nextBillingAt,
+                expectedDueAt: gatewayService === "stripe" && getStripeMigration(sub.metadata) ? nextBillingAt : undefined,
             });
 
             await db.update(memberSubscriptions).set({
@@ -237,12 +202,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 taxRate: sub.location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
                 promoMeta,
                 billingQuote,
-                expectedDueAt: firstBillingAt,
+                expectedDueAt: gatewayService === "stripe" && getStripeMigration(sub.metadata) ? firstBillingAt : undefined,
             });
 
             await db.update(memberSubscriptions).set({
-                currentPeriodStart: firstBillingAt,
-                currentPeriodEnd: firstBillingAt,
                 gatewayPaymentId: paymentMethod.value.id,
                 metadata: {
                     ...(sub.metadata || {}),
@@ -550,7 +513,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             taxRate: taxRate?.percentage || 0,
             promoMeta,
             billingQuote,
-            expectedDueAt: nextBillingAt,
+            expectedDueAt: gatewayService === "stripe" && getStripeMigration(sub.metadata) ? nextBillingAt : undefined,
             discountAlreadyApplied: true,
         });
 
@@ -670,7 +633,7 @@ function buildRenewalPayload({
             interval: renewalPricing.interval as "day" | "week" | "month" | "year",
             intervalThreshold: renewalPricing.intervalThreshold!,
         },
-        ...((expectedDueAt ?? sub.currentPeriodEnd) ? { expectedDueAt: (expectedDueAt ?? sub.currentPeriodEnd)!.toISOString() } : {}),
+        ...((expectedDueAt && getStripeMigration(sub.metadata)) ? { expectedDueAt: expectedDueAt.toISOString() } : {}),
         ...(promoMeta?.discount && remainingDiscountPayments > 0
             ? {
                 discount: {
