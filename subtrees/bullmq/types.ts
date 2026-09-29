@@ -60,6 +60,7 @@ export const DiscountSchema = z.object({
 export const SubscriptionJobSchema = z.object({
     sid: z.string(),
     lid: z.string(),
+    expectedDueAt: z.string().datetime().optional(),
     member: MemberSchema,
     location: LocationSchema,
     taxRate: z.coerce.number(),

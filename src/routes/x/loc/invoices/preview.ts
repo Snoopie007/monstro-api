@@ -55,14 +55,17 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 },
             });
             if (!sub || !sub.pricing) {
-                return status(404, { error: "Subscription not found" });
+                return status(404, { error: "Subscription billing definition not found" });
             }
 
             const quote = await buildSubscriptionInvoiceQuote({
                 locationId: lid,
                 subscriptionId: sub.id,
+                parentId: sub.parentId,
                 subscriptionMetadata: sub.metadata,
                 pricing: sub.pricing,
+                memberPlanPricingId: sub.memberPlanPricingId,
+                promoId: sub.promoId,
                 location: sub.location,
                 discount,
             });
@@ -74,7 +77,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
                     currency: quote.currency,
                     formatted_lines: quote.items.map((item) => ({
                         description: item.name,
-                        amount: item.price * item.quantity - (item.discount ?? 0),
+                        amount: item.price * item.quantity - ("discount" in item ? (item.discount ?? 0) : 0),
                         quantity: item.quantity,
                         currency: quote.currency,
                     })),

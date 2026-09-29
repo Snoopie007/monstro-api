@@ -19,6 +19,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
     let schedulingFails = false;
     let chargeState: "approved" | "failed" | "uncertain" = "approved";
     let chargeAmount = 1000;
+    let methodType = "card";
     const schedule = async () => { if (schedulingFails) throw new Error("Scheduler unavailable"); };
     class CheckoutError extends Error {
         constructor(public status: number, message: string) { super(message); }
@@ -28,6 +29,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
         if (!["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname) || parsed.search) throw new Error("Local Postgres required");
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
+        await sql`alter table member_invoices add column if not exists renewal_key text`;
         mock.module("@/db/db", () => ({ db }));
         mock.module("@/utils", () => ({
             CheckoutError,
@@ -51,7 +53,10 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
             },
         }));
         mock.module("@/libs/PaymentGateway", () => ({
-            StripePaymentGateway: class { createChargeWithoutLineItems = async () => { throw new Error("No real charge allowed"); }; },
+            StripePaymentGateway: class {
+                retrievePaymentMethod = async (_customerId: string, id: string) => ({ id, type: methodType });
+                createChargeWithoutLineItems = async () => { throw new Error("No real charge allowed"); };
+            },
             SquarePaymentGateway: class {},
         }));
         mock.module("@/queues/subscriptions", () => ({
@@ -73,7 +78,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
         await admin.end();
     });
     beforeEach(async () => {
-        schedulingFails = false; chargeState = "approved"; chargeAmount = 1000;
+        schedulingFails = false; chargeState = "approved"; chargeAmount = 1000; methodType = "card";
         for (const table of tables) await sql`truncate ${sql(namespace)}.${sql(table)}`;
         await sql`insert into locations(id,name,slug,vendor_id,timezone,country) values('location','Trial School','trial-school','vendor','UTC','US')`;
         await sql`insert into location_state(location_id,plan_id,payment_gateway_id) values('location',2,'gateway')`;
@@ -95,7 +100,10 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
     const post = (path: string, body: unknown = {}) => app.handle(new Request("http://localhost/locations/location/" + path, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
     }));
-    const activate = (paymentType = "card") => post("subscriptions/subscription/activate", { paymentMethodId: "pm_test", paymentType });
+    const activate = (paymentType = "card") => {
+        methodType = paymentType;
+        return post("subscriptions/subscription/activate", { paymentMethodId: "pm_test", paymentType });
+    };
     const checkout = (trialDays = 7) => enroll({ lid: "location", mid: "member", priceId: "price", paymentMethodId: "pm_test", paymentType: "card", trialDays });
     const runs = () => db.select().from(schema.workflowQueues);
 
@@ -145,9 +153,9 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
         expect((await post("subscriptions/subscription/activate-cash")).status).toBe(200);
         expect(await runs()).toHaveLength(0);
     });
-    test.each(["card", "cash"])("family child %s activation does not count as a new checkout", async type => {
+    test.each(["card", "cash"])("family child %s activation is rejected without a new checkout", async type => {
         await sql`update member_subscriptions set parent_id='parent',payment_type=${type}`;
-        expect((await (type === "card" ? activate() : post("subscriptions/subscription/activate-cash"))).status).toBe(200);
+        expect((await (type === "card" ? activate() : post("subscriptions/subscription/activate-cash"))).status).toBe(400);
         expect(await runs()).toHaveLength(0);
     });
     test.each([1000, 0])("successful trial enrollment at amount %s emits after setup", async amount => {

@@ -10,9 +10,11 @@ import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
-import { type PromoDiscount } from "./shared";
-import { getCurrency } from "@/utils";
-
+import { BillingContextError, findInFlightSubscriptionAttempt, resolveSubscriptionBillingContext } from "./billingContext";
+import type { PromoDiscount } from "./shared";
+import type { SubscriptionBillingContext } from "./billingContext";
+import { getNextBillingDate } from "./shared";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
 export async function resumeSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/resume", async ({ params, body, status }) => {
         const { lid, sid } = params as { lid: string; sid: string };
@@ -28,7 +30,11 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                         email: true,
                     },
                 },
-                pricing: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    },
+                },
                 location: {
                     with: {
                         taxRates: true,
@@ -44,33 +50,64 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             },
         });
 
-        if (!sub || !sub.pricing || !sub.member || !sub.location) {
-            return status(404, { error: "Subscription not found" });
+        if (!sub || !sub.member || !sub.location || !sub.pricing) {
+            return status(404, { error: "Subscription billing definition not found" });
+        }
+        if (sub.parentId) {
+            return status(400, { error: "Only root subscriptions can be resumed", code: "SUBSCRIPTION_CHILD" });
+        }
+        if (sub.status === "canceled" || (sub.cancelAt && sub.cancelAt.getTime() <= Date.now())) {
+            return status(400, { error: "Canceled subscriptions cannot be resumed", code: "SUBSCRIPTION_CANCELED" });
+        }
+        const inFlight = await findInFlightSubscriptionAttempt(sub.id);
+        if (inFlight) {
+            return status(409, {
+                error: "A payment attempt is still in flight; resolve it before resuming",
+                code: "PAYMENT_ATTEMPT_IN_FLIGHT",
+                invoiceId: inFlight.invoice?.id,
+                attemptStatus: inFlight.status,
+            });
         }
 
+        let billingContext: SubscriptionBillingContext | null = null;
+        if (sub.paymentType !== "cash") {
+            try {
+                billingContext = await resolveSubscriptionBillingContext(sub);
+            } catch (error) {
+                if (error instanceof BillingContextError) {
+                    return status(400, { error: error.message, code: error.code });
+                }
+                throw error;
+            }
+        }
         const location = sub.location;
-        const currency = getCurrency(location.country);
-        const nextBillingAt = resumeAt ? new Date(resumeAt) : sub.currentPeriodEnd ?? new Date();
+        const nextBillingAt = resumeAt ? new Date(resumeAt) : getNextBillingDate(sub);
+        if (
+            billingContext?.gateway.service === "stripe"
+            && getStripeMigration(sub.metadata)
+            && nextBillingAt.getTime() !== getNextBillingDate(sub).getTime()
+        ) {
+            return status(400, {
+                error: "Imported subscriptions must resume on their existing billing due date. Clear the date override.",
+            });
+        }
 
-        const memberLocation = await db.query.memberLocations.findFirst({
-            where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
-            columns: {
-                gatewayCustomerId: true,
-            },
+
+        const billingQuote = getSubscriptionBillingQuote(sub);
+
+        const resumedStatus = sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active";
+        await db.transaction(async (tx) => {
+            const values = {
+                status: resumedStatus,
+                cancelAt: null,
+                cancelAtPeriodEnd: false,
+                updated: new Date(),
+            } as const;
+            await tx.update(memberSubscriptions).set(values).where(eq(memberSubscriptions.id, sid));
+            await tx.update(memberSubscriptions).set(values).where(eq(memberSubscriptions.parentId, sid));
         });
 
-        if (sub.paymentType !== "cash" && !memberLocation?.gatewayCustomerId) {
-            return status(400, { error: "Member location is missing gateway customer" });
-        }
-
-        await db.update(memberSubscriptions).set({
-            status: sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active",
-            cancelAt: null,
-            cancelAtPeriodEnd: false,
-            updated: new Date(),
-        }).where(eq(memberSubscriptions.id, sid));
-
-        if (sub.paymentType !== "cash" && memberLocation?.gatewayCustomerId) {
+        if (sub.paymentType !== "cash" && billingContext) {
             const promoMeta = sub.metadata?.promo as { discount?: PromoDiscount } | undefined;
             const payload: SubscriptionJobData = {
                 sid: sub.id,
@@ -88,19 +125,22 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                 },
                 taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
                 pricing: {
-                    name: sub.pricing.name,
-                    price: sub.pricing.price,
-                    interval: sub.pricing.interval!,
-                    intervalThreshold: sub.pricing.intervalThreshold!,
+                    name: billingQuote.name,
+                    price: billingQuote.price,
+                    interval: billingQuote.interval,
+                    intervalThreshold: billingQuote.intervalThreshold,
                 },
+                ...(billingContext.gateway.service === "stripe" && getStripeMigration(sub.metadata)
+                    ? { expectedDueAt: nextBillingAt.toISOString() }
+                    : {}),
                 ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
             };
 
             await removeRenewalJobs(sub.id);
-            if (["month", "year"].includes(sub.pricing.interval || "") && sub.pricing.intervalThreshold === 1) {
+            if (["month", "year"].includes(billingQuote.interval) && billingQuote.intervalThreshold === 1) {
                 await scheduleCronBasedRenewal({
                     startDate: nextBillingAt,
-                    interval: sub.pricing.interval as "month" | "year",
+                    interval: billingQuote.interval as "month" | "year",
                     data: payload,
                 });
             } else {

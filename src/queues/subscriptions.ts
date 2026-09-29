@@ -1,11 +1,22 @@
 
+import { db } from "@/db/db";
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
 import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@subtrees/bullmq/types";
+import { getStripeMigration, getSubscriptionBillingQuote } from "@subtrees/utils/subscriptionBilling";
 import { sleep } from "bun";
 
 const MAX_SCHEDULER_ATTEMPTS = 3;
 const SCHEDULER_RETRY_DELAY_MS = 500;
+const EXACT_RENEWAL_JOB_OPTIONS = {
+    attempts: 12,
+    backoff: {
+        type: "exponential" as const,
+        delay: 24 * 60 * 60 * 1000,
+    },
+    removeOnFail: false,
+    removeOnComplete: true,
+};
 
 export const subQueue = new Queue('subscriptions', {
     connection: redisConfig,
@@ -37,6 +48,19 @@ export async function scheduleCronBasedRenewal({
     data,
 }: ScheduleRenewalProps) {
     const { sid } = data;
+    if (data.expectedDueAt) {
+        const dueAt = new Date(data.expectedDueAt);
+        if (!Number.isFinite(dueAt.getTime())) throw new Error("Invalid expectedDueAt");
+        await subQueue.add("renewal:recursive", {
+            ...data,
+            recurrenceCount: 1,
+        }, {
+            ...EXACT_RENEWAL_JOB_OPTIONS,
+            jobId: `renewal-exact-${sid}-${dueAt.getTime()}`,
+            delay: Math.max(0, dueAt.getTime() - Date.now()),
+        });
+        return;
+    }
     const UTCDate = startDate.getUTCDate();
     const UTCHour = startDate.getUTCHours();
     const UTCMinute = startDate.getUTCMinutes();
@@ -83,11 +107,22 @@ export async function scheduleRecursiveRenewal({
 }) {
     const { sid } = data;
     let lastError: Error | null = null;
+    const exactDueAt = data.expectedDueAt ? new Date(data.expectedDueAt) : null;
+    if (exactDueAt && !Number.isFinite(exactDueAt.getTime())) {
+        throw new Error("Invalid expectedDueAt");
+    }
+    const jobId = exactDueAt
+        ? `renewal-exact-${sid}-${exactDueAt.getTime()}`
+        : `renewal:recursive:${sid}`;
+    const delay = exactDueAt
+        ? Math.max(0, exactDueAt.getTime() - Date.now())
+        : Math.max(0, startDate.getTime() - Date.now());
     for (let attempt = 1; attempt <= MAX_SCHEDULER_ATTEMPTS; attempt++) {
         try {
-            await subQueue.add('renewal:recursive', data, {
-                jobId: `renewal:recursive:${sid}`,
-                delay: Math.max(0, startDate.getTime() - Date.now()),
+            await subQueue.add("renewal:recursive", data, {
+                ...(exactDueAt ? EXACT_RENEWAL_JOB_OPTIONS : {}),
+                jobId,
+                delay,
             });
             return;
         } catch (error) {
@@ -99,6 +134,75 @@ export async function scheduleRecursiveRenewal({
         }
     }
     throw lastError ?? new Error("scheduleRecursiveRenewal failed");
+}
+
+export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
+    if (!dueAt) return;
+    const dueAtMs = dueAt.getTime();
+    if (!Number.isFinite(dueAtMs)) throw new Error("Invalid renewal repair dueAt");
+
+    const sub = await db.query.memberSubscriptions.findFirst({
+        where: (row, { and, eq }) => and(eq(row.id, sid), eq(row.locationId, lid)),
+        with: {
+            member: {
+                columns: {
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                },
+            },
+            pricing: {
+                with: {
+                    plan: true,
+                },
+            },
+            location: {
+                with: {
+                    taxRates: true,
+                },
+                columns: {
+                    name: true,
+                    email: true,
+                    phone: true,
+                    address: true,
+                },
+            },
+        },
+    });
+    if (!sub || sub.parentId || sub.paymentType === "cash" || !sub.pricing || !sub.member || !sub.location) return;
+
+    const migration = getStripeMigration(sub.metadata);
+    if (!migration || !["armed", "first_payment_verified"].includes(migration.state)) return;
+
+    const billingQuote = getSubscriptionBillingQuote(sub);
+    const payload: SubscriptionJobData = {
+        sid: sub.id,
+        lid,
+        expectedDueAt: dueAt.toISOString(),
+        member: {
+            firstName: sub.member.firstName,
+            lastName: sub.member.lastName,
+            email: sub.member.email,
+        },
+        location: {
+            name: sub.location.name,
+            email: sub.location.email,
+            phone: sub.location.phone,
+            address: sub.location.address,
+        },
+        taxRate: sub.location.taxRates?.find((tax) => tax.isDefault)?.percentage || 0,
+        pricing: {
+            name: billingQuote.name,
+            price: billingQuote.price,
+            interval: billingQuote.interval,
+            intervalThreshold: billingQuote.intervalThreshold,
+        },
+    };
+    await subQueue.add("renewal:static", payload, {
+        ...EXACT_RENEWAL_JOB_OPTIONS,
+        jobId: `renewal-exact-${sid}-${dueAtMs}-recovery`,
+        delay: Math.max(0, dueAtMs - Date.now()),
+    });
 }
 
 export async function removeRenewalJobs(sid: string) {
@@ -126,5 +230,9 @@ export async function removeRenewalJobs(sid: string) {
         if (job) {
             await job.remove();
         }
+    }
+    const exactJobs = await subQueue.getJobs(["delayed", "waiting", "active"]);
+    for (const job of exactJobs) {
+        if (job.id?.startsWith(`renewal-exact-${sid}-`)) await job.remove();
     }
 }

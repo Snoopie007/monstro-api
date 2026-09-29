@@ -23,7 +23,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                         email: true,
                     },
                 },
-                pricing: true,
+                pricing: { with: { plan: true } },
                 location: {
                     with: {
                         taxRates: true,
@@ -41,8 +41,11 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             },
         });
 
-        if (!sub || !sub.pricing || !sub.member || !sub.location) {
-            return status(404, { error: "Subscription not found" });
+        if (!sub || !sub.member || !sub.location || !sub.pricing) {
+            return status(404, { error: "Subscription billing definition not found" });
+        }
+        if (sub.parentId) {
+            return status(400, { error: "Only root subscriptions can be activated", code: "SUBSCRIPTION_CHILD" });
         }
 
         const isTrialing = !!(sub.trialEnd && isFuture(sub.trialEnd));
@@ -70,8 +73,11 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                 const quote = await buildSubscriptionInvoiceQuote({
                     locationId: lid,
                     subscriptionId: sid,
+                    parentId: sub.parentId,
                     subscriptionMetadata: sub.metadata,
                     pricing: sub.pricing,
+                    memberPlanPricingId: sub.memberPlanPricingId,
+                    promoId: sub.promoId,
                     location: sub.location,
                     discount,
                 });

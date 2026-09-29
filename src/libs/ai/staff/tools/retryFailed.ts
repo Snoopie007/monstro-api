@@ -14,11 +14,14 @@ import {
 
 const retryToolMessage: Record<RetryPaymentErrorCode, string> = {
     SUBSCRIPTION_NOT_FOUND: "We couldn't retry that subscription.",
+    SUBSCRIPTION_CHILD: "Only the main subscription can be retried.",
     SUBSCRIPTION_CANCELED: "This subscription is canceled and cannot be retried.",
     NO_PAYMENT_METHOD: "This subscription has no card on file.",
     INVOICE_NOT_FOUND: "No unpaid invoice found for this subscription.",
     TRANSACTION_NOT_FOUND: "No unpaid invoice found for this subscription.",
     LOCATION_INACTIVE: "This location isn't accepting payments right now.",
+    PAYMENT_IN_FLIGHT: "A payment retry is already in progress.",
+    PAYMENT_UNKNOWN: "The payment outcome is unknown; check the gateway before retrying.",
     CHARGE_FAILED: "Payment retry failed.",
 };
 
