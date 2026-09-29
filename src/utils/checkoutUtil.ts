@@ -56,6 +56,8 @@ export type ChargeWithGatewayResult =
 		}
 		| {
 			status: "uncertain";
+			paymentIntentId?: string;
+			paymentIntentStatus?: string;
 			message: string;
 			gatewayMetadata: Record<string, unknown>;
 		});
@@ -84,6 +86,9 @@ function displayFromStripePaymentMethod(
 			last4: pm.us_bank_account.last4 ?? undefined,
 		};
 	}
+	if (pm.type === "link" || pm.type === "cashapp") {
+		return { paymentType: pm.type };
+	}
 	return {};
 }
 
@@ -96,6 +101,18 @@ function displayFromSquarePayment(payment: Payment | undefined | null): PaymentM
 		last4: card.last4 ? String(card.last4) : undefined,
 	};
 }
+export function stripePaymentIntentFromError(error: unknown): { id: string; status?: string } | null {
+	if (!error || typeof error !== "object") return null;
+	const candidate = (error as { payment_intent?: unknown }).payment_intent;
+	if (candidate && typeof candidate === "object") {
+		const id = (candidate as { id?: unknown }).id;
+		const status = (candidate as { status?: unknown }).status;
+		if (typeof id === "string") return { id, ...(typeof status === "string" ? { status } : {}) };
+	}
+	if (typeof candidate === "string") return { id: candidate };
+	return null;
+}
+
 
 export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<ChargeWithGatewayResult> {
 	const {
@@ -198,6 +215,19 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			},
 		);
 		const display = displayFromStripePaymentMethod(paymentResult.payment_method);
+		if (paymentResult.status !== "succeeded") {
+			return {
+				status: "uncertain",
+				paymentIntentId: paymentResult.id,
+				paymentIntentStatus: paymentResult.status,
+				message: `Stripe payment intent is ${paymentResult.status}`,
+				gatewayMetadata: {
+					gatewayService: gateway.service,
+					paymentIntentStatus: paymentResult.status,
+				},
+				...display,
+			};
+		}
 		return {
 			status: "approved",
 			paymentIntentId: paymentResult.id,

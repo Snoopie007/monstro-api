@@ -1,12 +1,16 @@
 import { strict as assert } from "node:assert";
+import { invoiceQueue } from "@/queues";
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { memberInvoices, transactions } from "@subtrees/schemas";
+import type { PaymentType } from "@subtrees/types";
 import { scheduleInvoiceReminderAndOverdue } from "./shared";
+import { BillingContextError, resolveSubscriptionBillingContext } from "../subscriptions/billingContext";
+import type { SubscriptionBillingContext } from "../subscriptions/billingContext";
 import type { Currency } from "square";
 
 type InvoiceChargeMetadata = {
@@ -81,26 +85,70 @@ export async function sendInvoiceRoutes(app: Elysia) {
         if (invoice.status !== "draft") {
             return status(400, { error: "Invoice must be draft to send" });
         }
+        const ml = await db.query.memberLocations.findFirst({
+            where: (memberLocation, { eq, and }) => and(
+                eq(memberLocation.locationId, lid),
+                eq(memberLocation.memberId, invoice.memberId),
+            ),
+            columns: { gatewayCustomerId: true },
+        });
+        const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
+        const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
+        const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
         const linkedTransaction = invoice.transactionId
             ? await db.query.transactions.findFirst({
                 where: (transaction, { eq }) => eq(transaction.id, invoice.transactionId!),
                 columns: { feeAmount: true },
             })
             : undefined;
-        const ml = await db.query.memberLocations.findFirst({
-            where: (ml, { eq, and }) => and(eq(ml.locationId, lid), eq(ml.memberId, invoice?.memberId)),
-            columns: {
-                gatewayCustomerId: true,
-            },
-        });
-        if (!ml || !ml.gatewayCustomerId) {
+        const linkedSubscription = invoice.memberPlanId
+            ? await db.query.memberSubscriptions.findFirst({
+                where: (sub, { and, eq }) => and(
+                    eq(sub.id, invoice.memberPlanId!),
+                    eq(sub.locationId, lid),
+                    eq(sub.memberId, invoice.memberId),
+                ),
+                columns: {
+                    id: true,
+                    memberId: true,
+                    locationId: true,
+                    parentId: true,
+                    metadata: true,
+                    gatewayPaymentId: true,
+                },
+            })
+            : null;
+        if (invoice.memberPlanId && !linkedSubscription) {
+            return status(404, { error: "Linked subscription not found", code: "SUBSCRIPTION_NOT_FOUND" });
+        }
+        if (linkedSubscription?.parentId) {
+            return status(400, { error: "Only a root subscription can collect payment", code: "SUBSCRIPTION_CHILD" });
+        }
+        if (!linkedSubscription && !ml) {
             return status(404, { error: "Member location or gateway customer not found" });
         }
-        const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
-        const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
-        const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
+        let billingContext: SubscriptionBillingContext | null = null;
+        let billingCustomerId = ml?.gatewayCustomerId || "";
+        if (linkedSubscription && shouldAutoCharge) {
+            try {
+                billingContext = await resolveSubscriptionBillingContext(linkedSubscription, {
+                    paymentMethodId,
+                    requirePaymentMethod: true,
+                });
+                billingCustomerId = billingContext.gatewayCustomerId;
+            } catch (error) {
+                if (error instanceof BillingContextError) {
+                    const statusCode = ["GATEWAY_NOT_FOUND", "GATEWAY_NOT_CONFIGURED"].includes(error.code) ? 404 : 400;
+                    return status(statusCode, { error: error.message, code: error.code });
+                }
+                throw error;
+            }
+        }
 
         if (shouldAutoCharge) {
+            if (!billingCustomerId) {
+                return status(404, { error: "Subscription billing customer not found" });
+            }
             const additionalFeeTax = (invoice.items || []).reduce(
                 (total, item) => item.feeId ? total + (item.tax || 0) : total,
                 0,
@@ -115,21 +163,105 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     planId: invoice.location?.locationState?.planId ?? 0,
                     additionalFees: [],
                 }).feesAmount;
-            const integration = invoice.location?.integrations?.find((candidate) => {
+            const integration = billingContext?.gateway ?? invoice.location?.integrations?.find((candidate) => {
                 if (invoiceMetadata?.gatewayService) return candidate.service === invoiceMetadata.gatewayService;
                 return candidate.id === invoice.location?.locationState?.paymentGatewayId;
             }) ?? invoice.location?.integrations?.[0];
             if (!integration || !integration.accessToken) {
                 return status(404, { error: "Payment gateway integration not found" });
             }
+            if (billingContext && linkedSubscription) {
+                const selectedPaymentMethodId = billingContext.paymentMethodId;
+                const paymentType = billingContext.paymentMethodType as PaymentType | null;
+                if (!selectedPaymentMethodId || !paymentType) {
+                    return status(400, { error: "Subscription payment method is missing", code: "PAYMENT_METHOD_MISSING" });
+                }
+                if (!invoice.member || !invoice.location) {
+                    return status(404, { error: "Invoice member or location not found" });
+                }
+                const now = new Date();
+                const preparedInvoice = await db.transaction(async (tx) => {
+                    const [current] = await tx.select({
+                        status: memberInvoices.status,
+                        paid: memberInvoices.paid,
+                        metadata: memberInvoices.metadata,
+                    }).from(memberInvoices)
+                        .where(eq(memberInvoices.id, iid))
+                        .for("update");
+                    if (!current || current.status !== "draft" || current.paid) return null;
+                    const currentMetadata = current.metadata && typeof current.metadata === "object"
+                        ? current.metadata as Record<string, unknown>
+                        : {};
+                    if ("billingAttempt" in currentMetadata) return null;
+                    const metadata = {
+                        ...currentMetadata,
+                        collectionMethod: "charge_automatically" as const,
+                        paymentMethodId: selectedPaymentMethodId,
+                        gatewayService: integration.service as "stripe" | "square",
+                        platformFeeAmount,
+                    };
+                    const [updated] = await tx.update(memberInvoices).set({
+                        paymentType,
+                        metadata,
+                        updated: new Date(),
+                    }).where(and(
+                        eq(memberInvoices.id, iid),
+                        eq(memberInvoices.status, "draft"),
+                    )).returning({ id: memberInvoices.id });
+                    return updated ?? null;
+                });
+                if (!preparedInvoice) {
+                    return status(409, { error: "Invoice is no longer pending send", code: "INVOICE_STATE_CHANGED" });
+                }
+
+                const jobId = `invoice-subscription-${iid}`;
+                await invoiceQueue.add("subscription:invoice", {
+                    invoiceId: iid,
+                    memberId: invoice.memberId,
+                    locationId: lid,
+                    member: {
+                        firstName: invoice.member.firstName,
+                        lastName: invoice.member.lastName,
+                        email: invoice.member.email,
+                    },
+                    location: {
+                        name: invoice.location.name,
+                        email: invoice.location.email,
+                        phone: invoice.location.phone,
+                    },
+                }, {
+                    jobId,
+                    attempts: 3,
+                    backoff: { type: "exponential", delay: 5000 },
+                });
+
+                await db.update(memberInvoices).set({
+                    status: "unpaid",
+                    paid: false,
+                    sentAt: now,
+                    updated: new Date(),
+                }).where(and(
+                    eq(memberInvoices.id, iid),
+                    eq(memberInvoices.status, "draft"),
+                    eq(memberInvoices.paid, false),
+                ));
+                return status(202, {
+                    success: true,
+                    message: "Invoice charge queued",
+                    invoice: { id: iid, status: "unpaid" },
+                    jobId,
+                });
+            }
 
             if (integration.service === "square") {
-                const selectedPaymentMethodId = paymentMethodId || invoiceMetadata?.paymentMethodId;
+                const selectedPaymentMethodId = billingContext?.paymentMethodId
+                    ?? paymentMethodId
+                    ?? invoiceMetadata?.paymentMethodId;
                 if (!selectedPaymentMethodId) {
                     return status(400, { error: "Selected Square payment method is required for automatic charging" });
                 }
 
-                if (ml.gatewayCustomerId.startsWith("cus_")) {
+                if (billingCustomerId.startsWith("cus_")) {
                     return status(400, { error: "Member location does not have a Square customer ID" });
                 }
 
@@ -141,7 +273,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 const square = new SquarePaymentGateway(integration.accessToken);
 
                 try {
-                    const payment = await square.createCharge(ml.gatewayCustomerId, selectedPaymentMethodId, {
+                    const payment = await square.createCharge(billingCustomerId, selectedPaymentMethodId, {
                         total: invoice.total,
                         feesAmount: platformFeeAmount,
                         currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
@@ -269,14 +401,19 @@ export async function sendInvoiceRoutes(app: Elysia) {
 
             let paymentMethod: { id: string; type: string } | undefined;
 
-            if (paymentMethodId) {
+            if (billingContext?.paymentMethodId && billingContext.paymentMethodType) {
+                paymentMethod = {
+                    id: billingContext.paymentMethodId,
+                    type: billingContext.paymentMethodType,
+                };
+            } else if (paymentMethodId) {
                 try {
-                    paymentMethod = await stripe.retrievePaymentMethod(ml.gatewayCustomerId, paymentMethodId);
+                    paymentMethod = await stripe.retrievePaymentMethod(billingCustomerId, paymentMethodId);
                 } catch {
                     return status(400, { error: "Selected payment method cannot be used for automatic charging" });
                 }
             } else {
-                const customer = await stripe.getCustomer(ml.gatewayCustomerId);
+                const customer = await stripe.getCustomer(billingCustomerId);
                 if (!customer) {
                     return status(404, { error: "Stripe customer not found" });
                 }
@@ -288,7 +425,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
 
                 if (typeof defaultPaymentMethod === "string") {
                     try {
-                        paymentMethod = await stripe.retrievePaymentMethod(ml.gatewayCustomerId, defaultPaymentMethod);
+                        paymentMethod = await stripe.retrievePaymentMethod(billingCustomerId, defaultPaymentMethod);
                     } catch {
                         return status(400, { error: "Default payment method cannot be used for automatic charging" });
                     }
@@ -296,12 +433,10 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     paymentMethod = defaultPaymentMethod;
                 }
             }
-
             if (!paymentMethod) {
                 return status(400, { error: "No default payment method found for automatic charging" });
             }
-
-            if (paymentMethod.type !== "card" && paymentMethod.type !== "us_bank_account") {
+            if (!["card", "us_bank_account", "link", "cashapp"].includes(paymentMethod.type)) {
                 return status(400, {
                     error: paymentMethodId
                         ? "Selected payment method cannot be used for automatic charging"
@@ -309,15 +444,12 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 });
             }
 
-            const selectedPaymentMethod: {
-                id: string;
-                type: "card" | "us_bank_account";
-            } = {
+            const selectedPaymentMethod = {
                 id: paymentMethod.id,
-                type: paymentMethod.type,
+                type: paymentMethod.type as "card" | "us_bank_account" | "link" | "cashapp",
             };
 
-            const { id: paymentIntentId } = await stripe.createCharge(ml.gatewayCustomerId, selectedPaymentMethod.id, {
+            const { id: paymentIntentId } = await stripe.createCharge(billingCustomerId, selectedPaymentMethod.id, {
                 total: invoice.total,
                 unitCost: invoice.subTotal,
                 tax: invoice.tax,

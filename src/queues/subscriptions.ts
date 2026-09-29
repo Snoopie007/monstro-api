@@ -6,6 +6,15 @@ import { sleep } from "bun";
 
 const MAX_SCHEDULER_ATTEMPTS = 3;
 const SCHEDULER_RETRY_DELAY_MS = 500;
+const EXACT_RENEWAL_JOB_OPTIONS = {
+    attempts: 12,
+    backoff: {
+        type: "exponential" as const,
+        delay: 24 * 60 * 60 * 1000,
+    },
+    removeOnFail: false,
+    removeOnComplete: true,
+};
 
 export const subQueue = new Queue('subscriptions', {
     connection: redisConfig,
@@ -37,6 +46,19 @@ export async function scheduleCronBasedRenewal({
     data,
 }: ScheduleRenewalProps) {
     const { sid } = data;
+    if (data.expectedDueAt) {
+        const dueAt = new Date(data.expectedDueAt);
+        if (!Number.isFinite(dueAt.getTime())) throw new Error("Invalid expectedDueAt");
+        await subQueue.add("renewal:recursive", {
+            ...data,
+            recurrenceCount: 1,
+        }, {
+            ...EXACT_RENEWAL_JOB_OPTIONS,
+            jobId: `renewal-exact-${sid}-${dueAt.getTime()}`,
+            delay: Math.max(0, dueAt.getTime() - Date.now()),
+        });
+        return;
+    }
     const UTCDate = startDate.getUTCDate();
     const UTCHour = startDate.getUTCHours();
     const UTCMinute = startDate.getUTCMinutes();
@@ -83,11 +105,22 @@ export async function scheduleRecursiveRenewal({
 }) {
     const { sid } = data;
     let lastError: Error | null = null;
+    const exactDueAt = data.expectedDueAt ? new Date(data.expectedDueAt) : null;
+    if (exactDueAt && !Number.isFinite(exactDueAt.getTime())) {
+        throw new Error("Invalid expectedDueAt");
+    }
+    const jobId = exactDueAt
+        ? `renewal-exact-${sid}-${exactDueAt.getTime()}`
+        : `renewal:recursive:${sid}`;
+    const delay = exactDueAt
+        ? Math.max(0, exactDueAt.getTime() - Date.now())
+        : Math.max(0, startDate.getTime() - Date.now());
     for (let attempt = 1; attempt <= MAX_SCHEDULER_ATTEMPTS; attempt++) {
         try {
-            await subQueue.add('renewal:recursive', data, {
-                jobId: `renewal:recursive:${sid}`,
-                delay: Math.max(0, startDate.getTime() - Date.now()),
+            await subQueue.add("renewal:recursive", data, {
+                ...(exactDueAt ? EXACT_RENEWAL_JOB_OPTIONS : {}),
+                jobId,
+                delay,
             });
             return;
         } catch (error) {
@@ -99,6 +132,20 @@ export async function scheduleRecursiveRenewal({
         }
     }
     throw lastError ?? new Error("scheduleRecursiveRenewal failed");
+}
+
+export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
+    if (!dueAt) return;
+    if (!Number.isFinite(dueAt.getTime())) throw new Error("Invalid renewal repair dueAt");
+    await subQueue.add("renewal:repair", {
+        sid,
+        lid,
+        expectedDueAt: dueAt.toISOString(),
+    }, {
+        ...EXACT_RENEWAL_JOB_OPTIONS,
+        jobId: `renewal-repair-${sid}-${dueAt.getTime()}`,
+        delay: Math.max(0, dueAt.getTime() - Date.now()),
+    });
 }
 
 export async function removeRenewalJobs(sid: string) {
@@ -126,5 +173,9 @@ export async function removeRenewalJobs(sid: string) {
         if (job) {
             await job.remove();
         }
+    }
+    const exactJobs = await subQueue.getJobs(["delayed", "waiting", "active"]);
+    for (const job of exactJobs) {
+        if (job.id?.startsWith(`renewal-exact-${sid}-`) || job.id?.startsWith(`renewal-repair-${sid}-`)) await job.remove();
     }
 }

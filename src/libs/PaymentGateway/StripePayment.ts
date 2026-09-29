@@ -8,20 +8,21 @@ const STRIPE_API_VERSION = '2026-03-25.dahlia';
 
 export type PaymentMethodOptions = {
     limit?: number;
-    type?: "card" | "us_bank_account";
+    type?: "card" | "us_bank_account" | "link" | "cashapp";
 };
-
 
 export type StripeChargeOptions = ChargeOptions & {
     unitCost: number,
     tax: number,
     productName?: string,
     quantity?: number,
+    offSession?: boolean,
 };
 
 export function stripePaymentIntentRequestOptions(idempotencyKey?: string): Stripe.RequestOptions | undefined {
     return idempotencyKey ? { idempotencyKey } : undefined;
 }
+
 
 
 
@@ -133,6 +134,23 @@ export class StripePaymentGateway {
         });
     }
 
+    async retrievePaymentIntent(paymentIntentId: string) {
+        return await this._client.paymentIntents.retrieve(paymentIntentId);
+    }
+
+    async getSubscription(subscriptionId: string) {
+        return await this._client.subscriptions.retrieve(subscriptionId);
+    }
+
+    async listSubscriptionInvoices(customerId: string, subscriptionId: string) {
+        const invoices = await this._client.invoices.list({
+            customer: customerId,
+            subscription: subscriptionId,
+            limit: 100,
+        });
+        return invoices.data;
+
+    }
     async retrievePaymentMethod(customerId: string, paymentMethodId: string) {
         const paymentMethod = await this._client.paymentMethods.retrieve(paymentMethodId);
         const owner = typeof paymentMethod.customer === "string"
@@ -158,8 +176,6 @@ export class StripePaymentGateway {
     }
 
     async createCharge(customerId: string, paymentMethodId: string, options: StripeChargeOptions) {
-
-
         const {
             description,
             total,
@@ -171,14 +187,17 @@ export class StripePaymentGateway {
             currency,
             tax,
             feesAmount,
-            idempotencyKey
+            idempotencyKey,
+            offSession,
         } = options || {};
 
-
-
         const url = `${BASE_MONSTRO_X_URL}/account/location/${metadata?.lid}/purchase/confirm`;
+        let paymentMethodType: string | undefined;
+        if (paymentMethodId) {
+            paymentMethodType = (await this.retrievePaymentMethod(customerId, paymentMethodId)).type;
+        }
         const option: Stripe.PaymentIntentCreateParams = {
-            payment_method_types: ['card', 'us_bank_account'],
+            ...(paymentMethodType ? { payment_method_types: [paymentMethodType as NonNullable<Stripe.PaymentIntentCreateParams["payment_method_types"]>[number]] } : {}),
             customer: customerId,
             amount: total,
             currency,
@@ -193,47 +212,50 @@ export class StripePaymentGateway {
                     },
                 }],
             },
-            description: description,
+            description,
             confirm: true,
+            ...(offSession ? { off_session: true } : {}),
             ...(feesAmount ? { application_fee_amount: feesAmount } : {}),
             payment_method: paymentMethodId || undefined,
             capture_method: authorizeOnly ? "manual" : "automatic",
             return_url: url,
             expand: ["payment_method"],
-            metadata: metadata || undefined
-        }
+            metadata: metadata || undefined,
+        };
 
         const requestOptions = stripePaymentIntentRequestOptions(idempotencyKey);
-        const { id, client_secret } = requestOptions
+        const paymentIntent = requestOptions
             ? await this._client.paymentIntents.create(option, requestOptions)
             : await this._client.paymentIntents.create(option);
-
         return {
-            id,
-            clientSecret: client_secret,
+            id: paymentIntent.id,
+            clientSecret: paymentIntent.client_secret,
+            status: paymentIntent.status,
         };
     }
 
-    async createChargeWithoutLineItems(customerId: string, paymentMethodId: string, options: ChargeOptions) {
-        const { total, currency, metadata, feesAmount, description, idempotencyKey } = options || {};
+    async createChargeWithoutLineItems(customerId: string, paymentMethodId: string, options: ChargeOptions & { offSession?: boolean }) {
+        const { total, currency, metadata, feesAmount, description, idempotencyKey, offSession } = options || {};
         const option: Stripe.PaymentIntentCreateParams = {
             customer: customerId,
             amount: total,
             payment_method: paymentMethodId,
             ...(feesAmount ? { application_fee_amount: feesAmount } : {}),
-            currency: currency,
+            currency,
             confirm: true,
+            ...(offSession ? { off_session: true } : {}),
             capture_method: "automatic",
             return_url: `${BASE_MONSTRO_X_URL}/account/location/${metadata?.lid}/purchase/confirm`,
             description: description || `Payment for order ${metadata?.orderId}`,
             metadata: metadata || undefined,
             expand: ["payment_method"],
-        }
+        };
         const requestOptions = stripePaymentIntentRequestOptions(idempotencyKey);
         return requestOptions
             ? this._client.paymentIntents.create(option, requestOptions)
             : this._client.paymentIntents.create(option);
     }
+
 
     async createRefund(paymentIntentId: string, amount: number, currency: string) {
         return this._client.refunds.create({

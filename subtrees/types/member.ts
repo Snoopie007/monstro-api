@@ -16,6 +16,7 @@ import type { FamilyMember } from './FamilyMember'
 import type { MemberInvoice } from './invoices'
 import type { Location } from './location'
 import type { MigrateMember } from './MigrateMember'
+import type { SubscriptionBillingItem } from './subscriptionBilling'
 import type { PlanProgram, Program } from './program'
 import type { User } from './user'
 
@@ -41,7 +42,8 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
 	child?: MemberSubscription
 	invoices?: MemberInvoice[]
 	plan?: MemberPlan
-	pricing?: MemberPlanPricing
+	pricing?: MemberPlanPricing | null
+	billingItems?: SubscriptionBillingItem[]
 	contract?: MemberContract
 	member?: Member
 	paymentType: PaymentType

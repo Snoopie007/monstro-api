@@ -1,5 +1,4 @@
 import { beforeEach, expect, mock, test } from "bun:test";
-import { RetrySubPaymentSchema } from "@subtrees/bullmq";
 import { Elysia } from "elysia";
 
 const queueAdd = mock(async (
@@ -9,20 +8,25 @@ const queueAdd = mock(async (
 ) => ({ id: "retry-job" }));
 let transactionInvoice: { id: string } | null = { id: "invoice-1" };
 let selectedInvoiceId: string | null = "invoice-1";
+let attemptStatus: string | undefined;
 
 const failedTransaction = {
     id: "transaction-1",
-    paymentIntentId: "payment-1",
+    memberId: "member-1",
+    paymentIntentId: "payment-1" as string | null,
     metadata: {
         gatewayService: "stripe",
-        subscriptionId: "subscription-1",
     },
 };
 
 const leftJoin = mock(() => ({
     where: mock(() => ({
         orderBy: mock(() => ({
-            limit: mock(async () => [{ ...failedTransaction, invoiceId: selectedInvoiceId }]),
+            limit: mock(async () => selectedInvoiceId ? [{
+                ...failedTransaction,
+                invoiceId: selectedInvoiceId,
+                invoiceMetadata: { billingAttempt: { status: attemptStatus } },
+            }] : []),
         })),
     })),
 }));
@@ -34,14 +38,27 @@ const db = {
                 ...failedTransaction,
                 type: "inbound",
                 status: "failed",
-                invoice: transactionInvoice,
+                invoice: transactionInvoice ? {
+                    ...transactionInvoice,
+                    memberId: "member-1",
+                    locationId: "location-1",
+                    memberPlanId: "subscription-1",
+                    metadata: { billingAttempt: { status: attemptStatus } },
+                } : null,
             })),
         },
         memberSubscriptions: {
             findFirst: mock(async () => ({
                 id: "subscription-1",
+                memberId: "member-1",
                 status: "past_due",
                 cancelAt: null,
+                parentId: null,
+            })),
+        },
+        memberInvoices: {
+            findFirst: mock(async () => ({
+                id: "invoice-1", metadata: { billingAttempt: { status: attemptStatus } },
             })),
         },
     },
@@ -53,6 +70,9 @@ const db = {
 mock.module("@/db/db", () => ({ db }));
 mock.module("@/queues/payments", () => ({
     paymentQueue: { add: queueAdd },
+}));
+mock.module("@/queues/subscriptions", () => ({
+    scheduleRenewalRepair: mock(async () => {}),
 }));
 
 const { retryTransactionRoutes } = await import("../transactions/retry");
@@ -69,41 +89,46 @@ beforeEach(() => {
     mock.clearAllMocks();
     transactionInvoice = { id: "invoice-1" };
     selectedInvoiceId = "invoice-1";
+    failedTransaction.paymentIntentId = "payment-1";
+    attemptStatus = undefined;
 });
 
-test("transaction retry queues the linked invoice using the worker contract", async () => {
-    const response = await transactionApp.handle(new Request(
-        "http://localhost/x/loc/location-1/transactions/transaction-1/retry",
-        { method: "POST" },
-    ));
-
-    expect(response.status).toBe(200);
-    const data = queueAdd.mock.calls[0]?.[1];
-    expect(RetrySubPaymentSchema.safeParse(data).success).toBe(true);
-    expect(data).toEqual({
-        invoiceId: "invoice-1",
-        attempts: 0,
-        subId: "subscription-1",
-        lid: "location-1",
+for (const [name, app, path] of [
+    ["transaction", transactionApp, "transactions/transaction-1/retry"],
+    ["subscription", subscriptionApp, "subscriptions/subscription-1/payment/retry"],
+] as const) {
+    test(`${name} permits explicit retry after a known failure without an intent`, async () => {
+        failedTransaction.paymentIntentId = null;
+        attemptStatus = "failed";
+        const response = await app.handle(new Request(
+            `http://localhost/x/loc/location-1/${path}`, { method: "POST" },
+        ));
+        expect(response.status).toBe(200);
+        expect(await response.json()).toMatchObject({ enqueued: true });
     });
-});
 
-test("subscription retry queues the linked invoice using the worker contract", async () => {
-    const response = await subscriptionApp.handle(new Request(
-        "http://localhost/x/loc/location-1/subscriptions/subscription-1/payment/retry",
-        { method: "POST" },
-    ));
+    test.each(["in_flight", "unknown", "processing", "requires_action"])(
+        `${name} holds %s rather than replacing an unresolved payment`,
+        async (state) => {
+            failedTransaction.paymentIntentId = null;
+            attemptStatus = state;
+            const response = await app.handle(new Request(
+                `http://localhost/x/loc/location-1/${path}`, { method: "POST" },
+            ));
+            expect(response.status).toBe(409);
+            expect(queueAdd).not.toHaveBeenCalled();
+        },
+    );
 
-    expect(response.status).toBe(200);
-    const data = queueAdd.mock.calls[0]?.[1];
-    expect(RetrySubPaymentSchema.safeParse(data).success).toBe(true);
-    expect(data).toEqual({
-        invoiceId: "invoice-1",
-        attempts: 0,
-        subId: "subscription-1",
-        lid: "location-1",
+    test(`${name} does not assume a legacy missing-intent failure is safe`, async () => {
+        failedTransaction.paymentIntentId = null;
+        const response = await app.handle(new Request(
+            `http://localhost/x/loc/location-1/${path}`, { method: "POST" },
+        ));
+        expect(response.status).toBe(400);
+        expect(queueAdd).not.toHaveBeenCalled();
     });
-});
+}
 
 test("transaction retry rejects a failed payment without an invoice", async () => {
     transactionInvoice = null;
@@ -127,6 +152,6 @@ test("subscription retry rejects a failed payment without an invoice", async () 
     ));
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual(expect.objectContaining({ code: "INVOICE_NOT_FOUND" }));
+    expect(await response.json()).toEqual(expect.objectContaining({ code: "FAILED_TRANSACTION_NOT_FOUND" }));
     expect(queueAdd).not.toHaveBeenCalled();
 });

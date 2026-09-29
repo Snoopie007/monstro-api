@@ -2,6 +2,7 @@ import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
 let gatewayService: "stripe" | "square" = "stripe";
+const insertedValues: Record<string, unknown>[] = [];
 const calculateChargeDetails = mock(() => ({ feesAmount: 999 }));
 const stripeCreateCharge = mock(async () => ({ id: "stripe-payment-1" }));
 const squareCreateCharge = mock(async () => ({
@@ -10,7 +11,6 @@ const squareCreateCharge = mock(async () => ({
     receiptUrl: "https://example.com/receipt",
 }));
 const retrievePaymentMethod = mock(async () => ({ id: "payment-method-1", type: "card" }));
-const insertedValues: Record<string, unknown>[] = [];
 
 const db = {
     query: {
@@ -18,7 +18,7 @@ const db = {
             findFirst: mock(async () => ({
                 id: "invoice-1",
                 memberId: "member-1",
-                memberPlanId: "subscription-1",
+                memberPlanId: null,
                 locationId: "location-1",
                 transactionId: null,
                 description: "Monthly membership",
@@ -60,7 +60,6 @@ const db = {
                 },
             })),
         },
-        transactions: { findFirst: mock(async () => undefined) },
         memberLocations: {
             findFirst: mock(async () => ({
                 gatewayCustomerId: gatewayService === "stripe"

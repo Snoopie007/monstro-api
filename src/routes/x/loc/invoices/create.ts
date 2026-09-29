@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, eq } from "drizzle-orm";
-import { memberInvoices, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
 import {
     calcTotals,
     createInvoiceBody,
@@ -70,18 +70,41 @@ export async function createInvoiceRoutes(app: Elysia) {
                             plan: true,
                         },
                     },
+                    billingItems: {
+                        with: {
+                            pricing: { with: { plan: true } },
+                            participant: {
+                                columns: {
+                                    parentId: true,
+                                    locationId: true,
+                                    memberPlanPricingId: true,
+                                },
+                            },
+                        },
+                    },
                 },
             });
 
-            if (!sub || !sub.pricing) {
-                return status(404, { error: "Subscription not found" });
+            if (!sub) {
+                return status(404, { error: "Subscription billing definition not found" });
+            }
+            if (sub.parentId) {
+                return status(400, { error: "Only root subscriptions can generate recurring invoices", code: "SUBSCRIPTION_CHILD" });
+            }
+            if (!sub.pricing && !sub.billingItems?.length) {
+                return status(404, { error: "Subscription billing definition not found" });
             }
 
             const quote = await buildSubscriptionInvoiceQuote({
                 locationId: lid,
                 subscriptionId: sub.id,
+                parentId: sub.parentId,
                 subscriptionMetadata: sub.metadata,
                 pricing: sub.pricing,
+                billingItems: sub.billingItems,
+                memberPlanPricingId: sub.memberPlanPricingId,
+                isParticipant: sub.isParticipant,
+                promoId: sub.promoId,
                 location: sub.location,
                 discount,
             });
@@ -143,6 +166,26 @@ export async function createInvoiceRoutes(app: Elysia) {
             }
 
             return status(201, { invoice });
+        }
+
+        if (type === "recurring" && subscriptionId) {
+            const recurringSubscription = await db.query.memberSubscriptions.findFirst({
+                where: (subscription, { and, eq }) => and(
+                    eq(subscription.id, subscriptionId),
+                    eq(subscription.locationId, lid),
+                    eq(subscription.memberId, memberId),
+                ),
+                columns: { parentId: true },
+            });
+            if (!recurringSubscription) {
+                return status(404, { error: "Subscription not found" });
+            }
+            if (recurringSubscription.parentId) {
+                return status(400, {
+                    error: "Only root subscriptions can generate recurring invoices",
+                    code: "SUBSCRIPTION_CHILD",
+                });
+            }
         }
 
         if (!items || items.length === 0) {

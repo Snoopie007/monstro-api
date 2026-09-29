@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { chargeWithGateway } from "./checkoutUtil";
+import { chargeWithGateway, stripePaymentIntentFromError } from "./checkoutUtil";
 
 const originalFetch = globalThis.fetch;
 const originalApiUrl = process.env.AUTHORIZE_API_URL;
@@ -160,4 +160,9 @@ describe("chargeWithGateway Authorize.net", () => {
         expect(result).not.toHaveProperty("paymentIntentId");
         expect(result.gatewayMetadata).not.toHaveProperty("authorizeTransactionId");
     });
+});
+test("extracts the payment intent from a Stripe confirmation error", () => {
+    expect(stripePaymentIntentFromError({
+        payment_intent: { id: "pi-1", status: "requires_action" },
+    })).toEqual({ id: "pi-1", status: "requires_action" });
 });

@@ -46,6 +46,18 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid), eq(s.memberId, memberId)),
                 with: {
                     pricing: { with: { plan: true } },
+                    billingItems: {
+                        with: {
+                            pricing: { with: { plan: true } },
+                            participant: {
+                                columns: {
+                                    parentId: true,
+                                    locationId: true,
+                                    memberPlanPricingId: true,
+                                },
+                            },
+                        },
+                    },
                     location: {
                         with: {
                             locationState: true,
@@ -54,15 +66,20 @@ export async function previewInvoiceRoutes(app: Elysia) {
                     },
                 },
             });
-            if (!sub || !sub.pricing) {
-                return status(404, { error: "Subscription not found" });
+            if (!sub || (!sub.pricing && !sub.billingItems?.length)) {
+                return status(404, { error: "Subscription billing definition not found" });
             }
 
             const quote = await buildSubscriptionInvoiceQuote({
                 locationId: lid,
                 subscriptionId: sub.id,
+                parentId: sub.parentId,
                 subscriptionMetadata: sub.metadata,
                 pricing: sub.pricing,
+                billingItems: sub.billingItems,
+                memberPlanPricingId: sub.memberPlanPricingId,
+                isParticipant: sub.isParticipant,
+                promoId: sub.promoId,
                 location: sub.location,
                 discount,
             });
@@ -74,7 +91,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
                     currency: quote.currency,
                     formatted_lines: quote.items.map((item) => ({
                         description: item.name,
-                        amount: item.price * item.quantity - (item.discount ?? 0),
+                        amount: item.price * item.quantity - ("discount" in item ? (item.discount ?? 0) : 0),
                         quantity: item.quantity,
                         currency: quote.currency,
                     })),

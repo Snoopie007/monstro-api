@@ -193,6 +193,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                             const quote = await buildSubscriptionInvoiceQuote({
                                 locationId: lid,
                                 subscriptionId: sub.id,
+                                parentId: sub.parentId,
                                 subscriptionMetadata: sub.metadata,
                                 pricing: sub.pricing,
                                 location,

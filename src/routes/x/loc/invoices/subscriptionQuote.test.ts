@@ -44,9 +44,12 @@ const subscription = {
     currentPeriodStart: new Date("2026-08-01T00:00:00Z"),
     currentPeriodEnd: new Date("2026-09-01T00:00:00Z"),
     pricing: {
+        id: "pricing-1",
         name: "Monthly",
         price: 10_000,
-        plan: { name: "Unlimited" },
+        interval: "month" as const,
+        intervalThreshold: 1,
+        plan: { name: "Unlimited", locationId: "location-1" },
     },
     location: {
         country: "US",
@@ -109,9 +112,12 @@ const baseInput = {
     subscriptionId: "subscription-1",
     subscriptionMetadata: {},
     pricing: {
+        id: "pricing-1",
         name: "Monthly",
         price: 10_000,
-        plan: { name: "Unlimited" },
+        interval: "month" as const,
+        intervalThreshold: 1,
+        plan: { name: "Unlimited", locationId: "location-1" },
     },
     location: {
         country: "US",
@@ -165,6 +171,44 @@ test("treats imported subscriptions as renewals without searching invoice histor
 
     expect(quote.additionalFeeTotal).toBe(500);
     expect(findPaidInvoice).not.toHaveBeenCalled();
+});
+
+test("quotes a combined root from persisted participant billing items", async () => {
+    const quote = await buildSubscriptionInvoiceQuote({
+        ...baseInput,
+        pricing: null,
+        memberPlanPricingId: null,
+        isParticipant: false,
+        billingItems: [
+            {
+                rootSubscriptionId: "subscription-1",
+                participantSubscriptionId: "participant-1",
+                pricingId: "pricing-james",
+                quantity: 1,
+                pricing: {
+                    id: "pricing-james",
+                    name: "James",
+                    price: 12_500,
+                    interval: "month",
+                    intervalThreshold: 1,
+                    plan: { locationId: "location-1" },
+                },
+                participant: {
+                    parentId: "subscription-1",
+                    locationId: "location-1",
+                    memberPlanPricingId: "pricing-james",
+                },
+            },
+        ],
+    });
+
+    expect(quote.items[0]).toMatchObject({
+        name: "James",
+        quantity: 1,
+        price: 12_500,
+    });
+    const firstItem = quote.items[0];
+    expect(firstItem && "discount" in firstItem ? firstItem.discount : undefined).toBeUndefined();
 });
 
 test("previews subscription invoices with their applied fee lines", async () => {
