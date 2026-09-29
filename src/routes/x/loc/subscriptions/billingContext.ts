@@ -27,24 +27,11 @@ type SubscriptionLike = {
     gatewayPaymentId?: string | null;
 };
 
-function metadataString(metadata: Record<string, unknown> | null | undefined, key: string) {
-    const value = metadata?.[key];
-    return typeof value === "string" && value.length > 0 ? value : null;
-}
-
-export function isCollectingSubscription(subscription: Pick<SubscriptionLike, "parentId">) {
-    return !subscription.parentId;
-}
-
-export function subscriptionGatewayCustomerId(subscription: SubscriptionLike, fallback: string | null | undefined) {
-    return metadataString(subscription.metadata, "gatewayCustomerId") ?? fallback ?? null;
-}
-
 export async function resolveSubscriptionBillingContext(
     subscription: SubscriptionLike,
     options: { paymentMethodId?: string; requirePaymentMethod?: boolean } = {},
 ): Promise<SubscriptionBillingContext> {
-    if (!isCollectingSubscription(subscription)) {
+    if (subscription.parentId) {
         throw new BillingContextError("Only a root subscription can collect payment", "SUBSCRIPTION_CHILD");
     }
     if (!subscription.locationId) {
@@ -66,7 +53,9 @@ export async function resolveSubscriptionBillingContext(
     ]);
 
     const metadata = subscription.metadata ?? {};
-    const gatewayId = metadataString(metadata, "gatewayIntegrationId") ?? state?.paymentGatewayId;
+    const gatewayId = typeof metadata.gatewayIntegrationId === "string" && metadata.gatewayIntegrationId.length > 0
+        ? metadata.gatewayIntegrationId
+        : state?.paymentGatewayId;
     const gateway = gatewayId
         ? await db.query.integrations.findFirst({
             where: (row, { eq: equals }) => equals(row.id, gatewayId),
@@ -82,7 +71,9 @@ export async function resolveSubscriptionBillingContext(
         : await db.query.integrations.findFirst({
             where: (row, { eq: equals, and: andFn }) => andFn(
                 equals(row.locationId, subscription.locationId!),
-                equals(row.service, metadataString(metadata, "gatewayService") ?? "stripe"),
+                equals(row.service, typeof metadata.gatewayService === "string" && metadata.gatewayService.length > 0
+                    ? metadata.gatewayService
+                    : "stripe"),
             ),
             columns: {
                 id: true,
@@ -101,14 +92,18 @@ export async function resolveSubscriptionBillingContext(
         throw new BillingContextError("Payment gateway integration is not configured", "GATEWAY_NOT_CONFIGURED");
     }
 
-    const gatewayCustomerId = subscriptionGatewayCustomerId(subscription, memberLocation?.gatewayCustomerId);
+    const gatewayCustomerId = typeof metadata.gatewayCustomerId === "string" && metadata.gatewayCustomerId.length > 0
+        ? metadata.gatewayCustomerId
+        : memberLocation?.gatewayCustomerId ?? null;
     if (!gatewayCustomerId) {
         throw new BillingContextError("Subscription billing customer is missing", "CUSTOMER_MISSING");
     }
 
     const selectedMethodId = options.paymentMethodId
         ?? subscription.gatewayPaymentId
-        ?? metadataString(metadata, "paymentMethodId");
+        ?? (typeof metadata.paymentMethodId === "string" && metadata.paymentMethodId.length > 0
+            ? metadata.paymentMethodId
+            : null);
     if (gateway.service === "stripe") {
         if (!selectedMethodId && options.requirePaymentMethod !== false) {
             throw new BillingContextError("Subscription payment method is missing", "PAYMENT_METHOD_MISSING");

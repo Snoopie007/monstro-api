@@ -37,6 +37,7 @@ writes or OAuth refreshes.
 
 - Apply the matching monorepo migration, `20260928000000_saved_wallet_subscription_billing.sql`, before deploying these API and worker changes.
 - Imported subscriptions retain their connected account, customer, saved payment method, exact billing anchor, and final price. Grouped bills use explicit billing items; child subscriptions never collect.
+- Billing-context metadata overrides must be nonempty strings; otherwise existing defaults apply. Saved-method selection keeps request override → subscription method → metadata precedence, with customer ownership checked before charging.
 - Payment attempts are persisted on the invoice. A timeout is not a decline: reconcile a known Stripe intent before retrying, and hold an unknown outcome without an intent ID.
 - Imported Stripe roots use exact-due renewals and retained explicit repair jobs; ordinary subscriptions keep the existing scheduler.
 - Mobile payment-method/setup responses remain card/bank-only. Existing customer bindings are reused; ambiguous bindings return `409`. Access requires the member, a verified guardian relationship, or the internal service role.
