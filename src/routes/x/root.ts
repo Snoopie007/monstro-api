@@ -11,7 +11,6 @@ import { xSubscriptions } from './loc/subscriptions/root';
 import { xPromos } from './loc/promos/root';
 import { xTransactions } from './loc/transactions/root';
 import { xMigrations } from './loc/migrate/root';
-import { xAssistant } from './loc/assistant/root';
 import { xMerchandise } from './loc/merchandise/root';
 import { xPrograms } from './loc/programs/root';
 import { xEvents } from './loc/events/root';
@@ -38,7 +37,6 @@ export const XRoutes = new Elysia()
         app.use(xEvents);
         app.use(xCourses);
         app.use(locationEnrollRoutes);
-        app.use(xAssistant);
         app.use(xAdditionalFees);
         app.use(xGoogleAds);
         app.group('/members', (app) => app.use(locMembers));
