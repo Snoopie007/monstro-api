@@ -94,6 +94,15 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         }
         const location = sub.location;
         const nextBillingAt = resumeAt ? new Date(resumeAt) : getNextBillingDate(sub);
+        if (
+            billingContext?.gateway.service === "stripe"
+            && getStripeMigration(sub.metadata)
+            && nextBillingAt.getTime() !== getNextBillingDate(sub).getTime()
+        ) {
+            return status(400, {
+                error: "Imported subscriptions must resume on their existing billing due date. Clear the date override.",
+            });
+        }
 
 
         const billingQuote = getSubscriptionBillingQuote(sub);
