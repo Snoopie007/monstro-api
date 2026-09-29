@@ -143,6 +143,7 @@ export async function executeCancelSession(args: ToolArgs, lid: string): Promise
         },
         with: {
             attendance: true,
+            program: { columns: { sessionMode: true } },
             memberSubscription: {
                 columns: { id: true },
                 with: {
@@ -165,6 +166,9 @@ export async function executeCancelSession(args: ToolArgs, lid: string): Promise
         };
     }
 
+    if (reservation.program?.sessionMode === "one_on_one") {
+        return pauseAsk("Cancel 1-on-1 lessons from the vendor calendar.");
+    }
     if (reservation.attendance) {
         return {
             content: jsonResult({

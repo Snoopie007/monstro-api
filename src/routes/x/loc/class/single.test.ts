@@ -28,9 +28,16 @@ const findSession = mock(async () => ({
     nextReservationJobId: activePointer,
     program: { locationId: "location-1" },
 }));
+const findException = mock(async (): Promise<{ startsAt: Date; isCancelled: boolean } | undefined> => undefined);
 mock.module("@/queues/tasks", () => ({ classQueue: { add: queueAdd, getJob } }));
 mock.module("@/db/db", () => ({
-    db: { query: { programSessions: { findFirst: findSession } } },
+    db: {
+        query: { programSessions: { findFirst: findSession } },
+        transaction: async (callback: (tx: unknown) => unknown) => callback({
+            execute: mock(async () => undefined),
+            query: { sessionExceptions: { findFirst: findException } },
+        }),
+    },
 }));
 
 const { singleNextRoutes } = await import("./single");
@@ -71,6 +78,7 @@ async function post(body: unknown, locationId = "location-1", path = "single/nex
 beforeEach(() => {
     mock.clearAllMocks();
     activePointer = singleNextJobId(payload);
+    findException.mockResolvedValue(undefined);
     jobState = "delayed";
     changeDelay.mockImplementation(async (delay) => {
         if (delay === 0) jobState = "waiting";
@@ -89,6 +97,16 @@ test("queues the next 1-on-1 reservation", async () => {
         attempts: 3,
         removeOnComplete: true,
     });
+});
+
+test("schedules the first job against an earlier existing exception", async () => {
+    const startsAt = new Date("2026-09-03T15:00:00Z");
+    findException.mockResolvedValue({ startsAt, isCancelled: false });
+    expect((await post(payload)).status).toBe(200);
+    expect(queueAdd.mock.calls[0]?.[2]).toMatchObject({
+        jobId: singleNextJobId(payload), delay: singleNextDelay(startsAt, now),
+    });
+    expect(queueAdd.mock.calls[0]?.[1]).toEqual(payload);
 });
 
 test("rejects non-service callers", async () => {
