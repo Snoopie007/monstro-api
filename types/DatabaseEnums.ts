@@ -21,7 +21,7 @@ export enum PackageStatus {
 
 export type PlanType = 'recurring' | 'one-time';
 export type Interval = 'day' | 'week' | 'month' | 'year';
-export type PaymentType = 'card' | 'cash' | 'us_bank_account' | 'paypal' | 'apple_pay' | 'google_pay';
+export type PaymentType = 'card' | 'cash' | 'us_bank_account' | 'paypal' | 'apple_pay' | 'google_pay' | 'link' | 'cashapp';
 export type InvoiceStatus = 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'void';
 export type MemberRelationship = 'parent' | 'spouse' | 'child' | 'sibling' | 'extended';
 export type ContractType = 'contract' | 'waiver';

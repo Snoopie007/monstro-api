@@ -8,6 +8,7 @@ import {
 	text,
 	timestamp,
 	uuid,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { promos } from "./promos";
 import {
@@ -20,10 +21,10 @@ import { memberPlanPricing } from "./MemberPlan";
 import { memberContracts, members } from "./members";
 
 export const memberSubscriptions = pgTable("member_subscriptions", {
-	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+	id: text("id").primaryKey().notNull().default(sql`uuid_base62('sub_')`),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	parentId: text("parent_id"),
-	memberPlanPricingId: text("member_plan_pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "set null" }),
+	memberPlanPricingId: text("member_plan_pricing_id").references(() => memberPlanPricing.id, { onDelete: "set null" }),
 	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
@@ -37,6 +38,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	classCredits: integer("class_credits").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
 	gatewayPaymentId: text("gateway_payment_id"),
+	isParticipant: boolean("is_participant").notNull().default(true),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	makeUpCredits: integer("make_up_credits").notNull().default(0),
 	allowMakeUpCarryOver: boolean("allow_make_up_carry_over").notNull().default(false),
@@ -50,8 +52,12 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 			foreignColumns: [table.id],
 			name: "parent_child_fk",
 		}),
+		uniqueIndex("member_subscriptions_stripe_source_item_uq")
+			.on(table.locationId, sql`${table.metadata}->'stripeMigration'->>'connectedAccountId'`, sql`${table.metadata}->'stripeMigration'->>'sourceSubscriptionId'`, sql`${table.metadata}->'stripeMigration'->>'sourceSubscriptionItemId'`)
+			.where(sql`${table.metadata}->'stripeMigration' is not null`),
 	]
 );
+
 
 export const memberPackages = pgTable("member_packages", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),

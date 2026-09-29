@@ -1,4 +1,4 @@
-import type { StoredSiteConfigSchema } from "@/subtrees/site-config";
+import type { StoredSiteConfigSchema } from "../site-config";
 import {
 	websiteSiteDomains,
 	websiteSiteDrafts,
