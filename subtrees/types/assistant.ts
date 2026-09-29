@@ -178,6 +178,7 @@ export type AssistantStreamEvent =
     threadId: string;
     messageId: string;
     message: string;
+    code?: string;
     ts: number;
   }
   | {
