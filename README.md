@@ -43,10 +43,5 @@ writes or OAuth refreshes.
 - Customer migration and arming are a separate post-merge operation. This change adds no migration endpoint and performs no customer cutover.
 - Staff sends for a root subscription validate its payer/method binding, persist the actual method type, and enqueue `subscription:invoice`; the route returns `202` while the durable worker attempt is pending. Children and missing linked roots are rejected before any ordinary charge path.
 
-The invoice-claim race check uses a dedicated local database and removes its synthetic tenant:
-
-```bash
-BILLING_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/billing_test \
-  bun --no-env-file src/routes/x/loc/subscriptions/invoiceAttempts.check.ts
-```
+Validate billing changes end to end with the local API, disposable PostgreSQL/Redis, a local payment-provider simulator, and the vendor UI. Exercise payer ownership, mobile customer reuse, duplicate attempts, unknown outcomes, and manual retry without production credentials or real charges.
 
