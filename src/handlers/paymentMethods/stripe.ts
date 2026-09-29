@@ -4,94 +4,31 @@ import { memberLocations } from "@subtrees/schemas";
 import type { PaymentMethod, PaymentType } from "@subtrees/types";
 import { eq } from "drizzle-orm";
 
-
-type StripeCardPaymentMethod = {
-    brand: string;
-    last4: string;
-    exp_month: number;
-    exp_year: number;
-};
-
-type StripeUsBankAccountPaymentMethod = {
-    bank_name: string | null;
-    last4: string | null;
-    account_type: string | null;
-};
-
-function mapStripePaymentMethod(method: {
-    id?: string;
-    type: string;
-    card?: StripeCardPaymentMethod;
-    us_bank_account?: StripeUsBankAccountPaymentMethod;
-}): PaymentMethod | null {
-    if (!method.id) return null;
-
-    if (method.type === "card" && method.card) {
-        const card = method.card;
-        return {
-            id: method.id,
-            source: "stripe",
-            type: method.type as PaymentType,
-            isDefault: false,
-            card: {
-                brand: card.brand,
-                last4: card.last4,
-                expMonth: card.exp_month,
-                expYear: card.exp_year,
-            },
-            usBankAccount: undefined,
-        };
-    }
-
-    if (method.type === "us_bank_account" && method.us_bank_account) {
-        const bank = method.us_bank_account;
-        return {
-            id: method.id,
-            source: "stripe",
-            type: method.type as PaymentType,
-            isDefault: false,
-            usBankAccount: {
-                bankName: bank.bank_name,
-                last4: bank.last4,
-                accountType: bank.account_type,
-            },
-            card: undefined,
-        };
-    }
-
-    return null;
-}
-
-type StripeCustomerBinding = {
-    customerId: string | null;
-    integrationId: string | null;
-    hasImportedBinding: boolean;
-};
-
-type StripeSubscriptionBinding = {
-    id: string;
-    parentId: string | null;
-    memberId: string;
-    metadata: Record<string, unknown> | null;
-};
-
-async function resolveKnownStripeCustomer(
-    mid: string,
-    lid: string,
-    currentCustomer: string | null | undefined,
-    currentIntegrationId: string | null | undefined = null,
-): Promise<StripeCustomerBinding> {
+export async function getStripePaymentMethods(mid: string, lid: string): Promise<PaymentMethod[]> {
+    const [ml, locationState] = await Promise.all([
+        db.query.memberLocations.findFirst({
+            where: (memberLocation, { eq: equals, and: andFn }) => andFn(
+                eq(memberLocation.memberId, mid),
+                eq(memberLocation.locationId, lid),
+            ),
+            columns: { gatewayCustomerId: true },
+        }),
+        db.query.locationState.findFirst({
+            where: (row, { eq: equals }) => equals(row.locationId, lid),
+            columns: { paymentGatewayId: true },
+        }),
+    ]);
     const subscriptions = await db.query.memberSubscriptions.findMany({
         where: (subscription, { eq: equals }) => equals(subscription.locationId, lid),
         columns: { id: true, parentId: true, memberId: true, metadata: true },
-    }) as StripeSubscriptionBinding[];
-    const subscriptionsById = new Map(subscriptions.map((subscription) => [subscription.id, subscription]));
-    const collectingRoots = new Map<string, StripeSubscriptionBinding>();
+    });
+    const subscriptionsById = new Map(subscriptions.map((subscription) => [subscription.id, subscription] as const));
+    const collectingRoots = new Map<typeof subscriptions[number]["id"], typeof subscriptions[number]>();
 
     for (const subscription of subscriptions) {
         if (subscription.memberId !== mid) continue;
         const visited = new Set<string>();
-        let current: StripeSubscriptionBinding | undefined = subscription;
+        let current: (typeof subscriptions)[number] | undefined = subscription;
         while (current?.parentId) {
             if (visited.has(current.id)) {
                 current = undefined;
@@ -112,44 +49,24 @@ async function resolveKnownStripeCustomer(
         })
         .filter((binding): binding is { customerId: string | null; integrationId: string | null } => binding !== null);
     const bindings = [
-        ...(currentCustomer ? [{ customerId: currentCustomer, integrationId: currentIntegrationId ?? null }] : []),
+        ...(ml?.gatewayCustomerId ? [{
+            customerId: ml.gatewayCustomerId,
+            integrationId: locationState?.paymentGatewayId ?? null,
+        }] : []),
         ...importedBindings,
     ];
     const distinctBindings = new Map(
-        bindings.map((binding) => [`${binding.integrationId ?? ""}:${binding.customerId ?? ""}`, binding]),
+        bindings.map((binding) => [`${binding.integrationId ?? ""}:${binding.customerId ?? ""}`, binding] as const),
     );
     if (distinctBindings.size > 1) {
         throw new Error("Multiple Stripe billing customers require support");
     }
-    const binding = distinctBindings.values().next().value as { customerId: string | null; integrationId: string | null } | undefined;
-    return {
-        customerId: binding?.customerId ?? null,
-        integrationId: binding?.integrationId ?? null,
+    const distinctBinding = distinctBindings.values().next().value;
+    const binding = {
+        customerId: distinctBinding?.customerId ?? null,
+        integrationId: distinctBinding?.integrationId ?? null,
         hasImportedBinding: importedBindings.length > 0,
     };
-}
-
-
-export async function getStripePaymentMethods(mid: string, lid: string): Promise<PaymentMethod[]> {
-    const [ml, locationState] = await Promise.all([
-        db.query.memberLocations.findFirst({
-            where: (memberLocation, { eq: equals, and: andFn }) => andFn(
-                eq(memberLocation.memberId, mid),
-                eq(memberLocation.locationId, lid),
-            ),
-            columns: { gatewayCustomerId: true },
-        }),
-        db.query.locationState.findFirst({
-            where: (row, { eq: equals }) => equals(row.locationId, lid),
-            columns: { paymentGatewayId: true },
-        }),
-    ]);
-    const binding = await resolveKnownStripeCustomer(
-        mid,
-        lid,
-        ml?.gatewayCustomerId,
-        locationState?.paymentGatewayId,
-    );
     const stripeIntegration = binding.integrationId
         ? await db.query.integrations.findFirst({
             where: (integration, { eq: equals, and: andFn }) => andFn(
@@ -173,7 +90,44 @@ export async function getStripePaymentMethods(mid: string, lid: string): Promise
     const stripe = new StripePaymentGateway(stripeIntegration.accessToken);
     const stripePaymentMethods = await stripe.getPaymentMethods(binding.customerId);
     return stripePaymentMethods
-        .map(mapStripePaymentMethod)
+        .map((method) => {
+            if (!method.id) return null;
+
+            if (method.type === "card" && method.card) {
+                const card = method.card;
+                return {
+                    id: method.id,
+                    source: "stripe",
+                    type: method.type as PaymentType,
+                    isDefault: false,
+                    card: {
+                        brand: card.brand,
+                        last4: card.last4,
+                        expMonth: card.exp_month,
+                        expYear: card.exp_year,
+                    },
+                    usBankAccount: undefined,
+                };
+            }
+
+            if (method.type === "us_bank_account" && method.us_bank_account) {
+                const bank = method.us_bank_account;
+                return {
+                    id: method.id,
+                    source: "stripe",
+                    type: method.type as PaymentType,
+                    isDefault: false,
+                    usBankAccount: {
+                        bankName: bank.bank_name,
+                        last4: bank.last4,
+                        accountType: bank.account_type,
+                    },
+                    card: undefined,
+                };
+            }
+
+            return null;
+        })
         .filter((pm): pm is PaymentMethod => pm !== null);
 }
 
@@ -199,12 +153,55 @@ export async function getStripeSetupIntent(input: {
     ]);
     if (!locationState) throw new Error("Location state not found");
 
-    const binding = await resolveKnownStripeCustomer(
-        mid,
-        lid,
-        ml?.gatewayCustomerId,
-        locationState.paymentGatewayId,
+    const subscriptions = await db.query.memberSubscriptions.findMany({
+        where: (subscription, { eq: equals }) => equals(subscription.locationId, lid),
+        columns: { id: true, parentId: true, memberId: true, metadata: true },
+    });
+    const subscriptionsById = new Map(subscriptions.map((subscription) => [subscription.id, subscription] as const));
+    const collectingRoots = new Map<typeof subscriptions[number]["id"], typeof subscriptions[number]>();
+
+    for (const subscription of subscriptions) {
+        if (subscription.memberId !== mid) continue;
+        const visited = new Set<string>();
+        let current: (typeof subscriptions)[number] | undefined = subscription;
+        while (current?.parentId) {
+            if (visited.has(current.id)) {
+                current = undefined;
+                break;
+            }
+            visited.add(current.id);
+            current = subscriptionsById.get(current.parentId);
+        }
+        if (current) collectingRoots.set(current.id, current);
+    }
+
+    const importedBindings = [...collectingRoots.values()]
+        .map((subscription) => {
+            const metadata = subscription.metadata ?? {};
+            const customerId = typeof metadata.gatewayCustomerId === "string" ? metadata.gatewayCustomerId : null;
+            const integrationId = typeof metadata.gatewayIntegrationId === "string" ? metadata.gatewayIntegrationId : null;
+            return customerId || integrationId ? { customerId, integrationId } : null;
+        })
+        .filter((binding): binding is { customerId: string | null; integrationId: string | null } => binding !== null);
+    const bindings = [
+        ...(ml?.gatewayCustomerId ? [{
+            customerId: ml.gatewayCustomerId,
+            integrationId: locationState.paymentGatewayId ?? null,
+        }] : []),
+        ...importedBindings,
+    ];
+    const distinctBindings = new Map(
+        bindings.map((binding) => [`${binding.integrationId ?? ""}:${binding.customerId ?? ""}`, binding] as const),
     );
+    if (distinctBindings.size > 1) {
+        throw new Error("Multiple Stripe billing customers require support");
+    }
+    const distinctBinding = distinctBindings.values().next().value;
+    const binding = {
+        customerId: distinctBinding?.customerId ?? null,
+        integrationId: distinctBinding?.integrationId ?? null,
+        hasImportedBinding: importedBindings.length > 0,
+    };
     if (!binding.customerId && binding.hasImportedBinding) {
         throw new Error("Imported billing customer is missing; support is required");
     }

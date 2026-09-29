@@ -138,19 +138,6 @@ export class StripePaymentGateway {
         return await this._client.paymentIntents.retrieve(paymentIntentId);
     }
 
-    async getSubscription(subscriptionId: string) {
-        return await this._client.subscriptions.retrieve(subscriptionId);
-    }
-
-    async listSubscriptionInvoices(customerId: string, subscriptionId: string) {
-        const invoices = await this._client.invoices.list({
-            customer: customerId,
-            subscription: subscriptionId,
-            limit: 100,
-        });
-        return invoices.data;
-
-    }
     async retrievePaymentMethod(customerId: string, paymentMethodId: string) {
         const paymentMethod = await this._client.paymentMethods.retrieve(paymentMethodId);
         const owner = typeof paymentMethod.customer === "string"

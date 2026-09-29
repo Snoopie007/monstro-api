@@ -175,9 +175,8 @@ export async function resolveSubscriptionBillingContext(
 
     throw new BillingContextError("Unsupported payment gateway for subscriptions", "GATEWAY_UNSUPPORTED");
 }
-const LEGACY_COLLECTING_STATUSES = new Set(["active", "trialing", "past_due", "unpaid"]);
-const LEGACY_TERMINAL_INVOICES = new Set(["void", "uncollectible"]);
-
+// The cutover script stops the old collector and checks invoice overlap before arming.
+// Runtime keeps only local readiness, account, and cutoff checks.
 export async function assertImportedSubscriptionRetrySafe(
     subscription: SubscriptionLike,
     gateway: SubscriptionBillingContext["gateway"],
@@ -196,30 +195,6 @@ export async function assertImportedSubscriptionRetrySafe(
     }
     if (!periodStart || periodStart.getTime() !== new Date(migration.cutoffAt).getTime()) {
         throw new BillingContextError("Imported subscription retry is outside the migration cutoff", "MIGRATION_BLOCKED");
-    }
-    const stripe = new StripePaymentGateway(gateway.accessToken);
-    const legacy = await stripe.getSubscription(migration.sourceSubscriptionId);
-    if (LEGACY_COLLECTING_STATUSES.has(legacy.status)) {
-        throw new BillingContextError("Legacy Stripe subscription is still collecting", "MIGRATION_BLOCKED");
-    }
-    const legacyEndSeconds = legacy.items.data[0]?.current_period_end;
-    const legacyEnd = legacyEndSeconds ? new Date(legacyEndSeconds * 1000) : null;
-    if (!legacyEnd || legacyEnd.getTime() > periodStart.getTime()) {
-        throw new BillingContextError("Legacy Stripe subscription overlaps imported retry", "MIGRATION_BLOCKED");
-    }
-    const customerId = typeof legacy.customer === "string" ? legacy.customer : legacy.customer?.id;
-    if (!customerId) {
-        throw new BillingContextError("Legacy Stripe subscription has no customer", "MIGRATION_BLOCKED");
-    }
-    const invoices = await stripe.listSubscriptionInvoices(customerId, migration.sourceSubscriptionId);
-    const overlaps = invoices.some((invoice) => {
-        if (LEGACY_TERMINAL_INVOICES.has(invoice.status || "")) return false;
-        const start = invoice.period_start ? new Date(invoice.period_start * 1000).getTime() : 0;
-        const end = invoice.period_end ? new Date(invoice.period_end * 1000).getTime() : Number.POSITIVE_INFINITY;
-        return start <= periodStart.getTime() && end > periodStart.getTime();
-    });
-    if (overlaps) {
-        throw new BillingContextError("Legacy Stripe invoice overlaps imported retry", "MIGRATION_BLOCKED");
     }
 }
 

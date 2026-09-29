@@ -40,7 +40,7 @@ writes or OAuth refreshes.
 - Payment attempts are persisted on the invoice. A timeout is not a decline: reconcile a known Stripe intent before retrying, and hold an unknown outcome without an intent ID.
 - Imported Stripe roots use exact-due renewals and retained explicit repair jobs; ordinary subscriptions keep the existing scheduler.
 - Mobile payment-method/setup responses remain card/bank-only. Existing customer bindings are reused; ambiguous bindings return `409`. Access requires the member, a verified guardian relationship, or the internal service role.
-- Customer migration and arming are a separate post-merge operation. This change adds no migration endpoint and performs no customer cutover.
+- Customer migration and arming are a separate post-merge operation. The cutover script must stop the legacy Stripe collector and resolve overlapping invoices before arming; the API checks local readiness/account/cutoff but does not re-read legacy Stripe subscriptions or invoices. This change adds no migration endpoint and performs no customer cutover.
 - Subscription-linked electronic automatic invoice sends are rejected; use the existing subscription payment retry flow. Children and missing linked roots are rejected before any ordinary charge path.
 
 Validate billing changes end to end with the local API, disposable PostgreSQL/Redis, a local payment-provider simulator, and the vendor UI. Exercise payer ownership, mobile customer reuse, duplicate attempts, unknown outcomes, and manual retry without production credentials or real charges.
