@@ -3,6 +3,7 @@ import {
     timestamp,
     pgTable,
     unique,
+    boolean,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { locations } from './locations'
@@ -16,6 +17,7 @@ export const staffs = pgTable('staffs', {
     email: text('email').notNull().unique(),
     phone: text('phone').notNull(),
     userId: text('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+    installedStaffApp: boolean('installed_staff_app').notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 })

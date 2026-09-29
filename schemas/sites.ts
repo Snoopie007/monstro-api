@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { vendors } from "./vendors";
+import type { WebsiteConfig } from "../types/website";
 
 export const websiteSites = pgTable(
   "website_sites",
@@ -25,6 +26,7 @@ export const websiteSites = pgTable(
     slug: text("slug").notNull(),
     plan: text("plan").notNull(),
     status: text("status").notNull().default("draft"),
+    paused: boolean("paused").notNull().default(false),
     publishedRevisionId: text("published_revision_id"),
     createdBy: text("created_by").notNull(),
     migrationSource: text("migration_source"),
@@ -314,7 +316,7 @@ export const websiteSiteRevisions = pgTable(
     schemaVersion: integer("schema_version").notNull(),
     status: text("status").notNull().default("draft"),
     config: jsonb("config")
-      .$type<Record<string, unknown>>()
+      .$type<WebsiteConfig>()
       .notNull(),
     baseRevisionId: text("base_revision_id").references(
       (): AnyPgColumn => websiteSiteRevisions.id,

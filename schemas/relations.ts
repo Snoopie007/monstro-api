@@ -6,6 +6,7 @@ import { additionalFees } from "./additionalFees";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
+import { adsSettings } from "./ads";
 import { eventRegistrations, eventTickets, locationEvents } from "./event";
 import { integrations } from "./integrations";
 import { memberInvoices } from "./invoice";
@@ -63,13 +64,9 @@ import {
 	userFeeds,
 } from "./chat";
 
-
-// Support tables
-import { supportAssistants } from "./SupportAssistants";
-import { supportConversations, supportMessages } from "./SupportConversations";
-import { supportTriggers } from "./SupportTriggers";
 import { vendorLevels } from "./VendorProgress";
 import { vendorReferrals } from "./VendorReferrals";
+import { bots, botMessages } from "./bots";
 
 // Ecommerce tables
 import { orders, products, productImages, productVariants } from "./ecommerce";
@@ -945,6 +942,17 @@ export const integrationRelations = relations(integrations, ({ one }) => ({
 		fields: [integrations.locationId],
 		references: [locations.id],
 	}),
+	adsSettings: one(adsSettings, {
+		fields: [integrations.id],
+		references: [adsSettings.integrationId],
+	}),
+}));
+
+export const adsSettingsRelations = relations(adsSettings, ({ one }) => ({
+	integration: one(integrations, {
+		fields: [adsSettings.integrationId],
+		references: [integrations.id],
+	}),
 }));
 
 // ============================================================================
@@ -1222,43 +1230,24 @@ export const friendsRelations = relations(friends, ({ one }) => ({
 }));
 
 // ============================================================================
-// SUPPORT RELATIONS
+// BOT RELATIONS
 // ============================================================================
 
-export const supportAssistantsRelations = relations(
-	supportAssistants,
-	({ one, many }) => ({
-		location: one(locations, {
-			fields: [supportAssistants.locationId],
-			references: [locations.id],
-		}),
-		conversations: many(supportConversations),
-		triggers: many(supportTriggers),
-	})
-);
-
-export const supportConversationsRelations = relations(supportConversations, ({ one, many }) => ({
-	assistant: one(supportAssistants, {
-		fields: [supportConversations.supportAssistantId],
-		references: [supportAssistants.id],
+export const botsRelations = relations(bots, ({ one, many }) => ({
+	location: one(locations, {
+		fields: [bots.locationId],
+		references: [locations.id],
 	}),
-	member: one(members, {
-		fields: [supportConversations.memberId],
-		references: [members.id],
+	user: one(users, {
+		fields: [bots.userId],
+		references: [users.id],
 	}),
-	messages: many(supportMessages),
+	messages: many(botMessages),
 }));
 
-export const supportMessagesRelations = relations(supportMessages, ({ one }) => ({
-	conversation: one(supportConversations, {
-		fields: [supportMessages.conversationId],
-		references: [supportConversations.id],
-	}),
-}));
-
-export const supportTriggersRelations = relations(supportTriggers, ({ one }) => ({
-	assistant: one(supportAssistants, {
-		fields: [supportTriggers.supportAssistantId],
-		references: [supportAssistants.id],
+export const botMessagesRelations = relations(botMessages, ({ one }) => ({
+	bot: one(bots, {
+		fields: [botMessages.botId],
+		references: [bots.id],
 	}),
 }));

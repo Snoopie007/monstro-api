@@ -40,7 +40,6 @@ export const programSessions = pgTable("program_sessions", {
 	staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),
 	reservedMemberId: text("reserved_member_id").references(() => members.id, { onDelete: "set null" }),
 	nextReservationJobId: text("next_reservation_job_id"),
-	canceled: boolean("canceled").notNull().default(false),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
