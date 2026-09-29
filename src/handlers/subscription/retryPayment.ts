@@ -1,3 +1,4 @@
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { db } from "@/db/db";
 import { BillingContextError, assertImportedSubscriptionRetrySafe, resolveSubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";
@@ -300,6 +301,7 @@ export async function retrySubscriptionPayment(props: {
             status: attemptStatus,
             paymentIntentId: paymentIntent?.id,
             retryable: attemptStatus === "failed",
+            workflowDecline: !!paymentFailureFromError(error),
         });
         return fail(
             attemptStatus === "failed" ? "CHARGE_FAILED" : "PAYMENT_UNKNOWN",
@@ -334,6 +336,7 @@ export async function retrySubscriptionPayment(props: {
         status: attemptStatus,
         paymentIntentId: "paymentIntentId" in charge ? charge.paymentIntentId : undefined,
         retryable: attemptStatus === "failed",
+        workflowDecline: charge.status === "failed" && isPaymentDecline(billingContext.gateway.service, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode),
     });
     const migration = sub.metadata?.stripeMigration;
     const importedMigrationArmed = migration

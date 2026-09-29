@@ -1,5 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import type { PaymentType } from "@/subtrees/types";
 import { orders, transactions } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
@@ -47,5 +49,6 @@ export async function handleSquareOrderFail({ orderId, paymentMethodId, paymentI
             transactionId: transaction.id,
             updated: new Date(),
         }).where(eq(orders.id, orderId));
+        if (isPaymentDecline("square", failedCode)) await dispatchPaymentFailed(tx, transaction.id);
     });
 }

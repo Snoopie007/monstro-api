@@ -1,7 +1,7 @@
 export * from "./accounts";
 export * from "./additionalFees";
 export * from "./achievements";
-export * from "./Ads";
+export * from "./ads";
 export * from "./attendances";
 export * from "./bots";
 export * from "./chat";
@@ -43,3 +43,4 @@ export * from "./verifications";
 export * from "./relations";
 export * from "./wallets";
 export * from "./WebsiteContents";
+export * from "./workflow";

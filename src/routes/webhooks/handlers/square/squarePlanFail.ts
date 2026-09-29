@@ -1,6 +1,8 @@
 import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import { eq } from "drizzle-orm";
 import type { PaymentType } from "@/subtrees/types";
 import type { Currency } from "@/subtrees/types/currency";
@@ -67,11 +69,20 @@ export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
         };
 
         if (invoice.transactionId) {
+            const previous = await tx.query.transactions.findFirst({
+                where: eq(transactions.id, invoice.transactionId),
+                columns: { status: true, failedReason: true, failedCode: true },
+            });
             await tx.update(transactions).set(values).where(eq(transactions.id, invoice.transactionId));
+            if (isPaymentDecline("square", failedCode, squarePaymentStatus)
+                && (previous?.status === "pending" || (previous?.status === "failed" && !previous.failedCode && !previous.failedReason))) {
+                await dispatchPaymentFailed(tx, invoice.transactionId);
+            }
         } else {
             const [transaction] = await tx.insert(transactions).values(values).returning({ id: transactions.id });
             assert(transaction);
             await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoiceId));
+            if (isPaymentDecline("square", failedCode, squarePaymentStatus)) await dispatchPaymentFailed(tx, transaction.id);
         }
 
         if (invoice.memberPlanId?.startsWith("pkg_") === false) {

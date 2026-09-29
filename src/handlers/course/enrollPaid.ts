@@ -1,3 +1,5 @@
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import { db } from "@/db/db";
 import {
     calculateChargeDetails,
@@ -80,6 +82,11 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
         description,
         note: `enrollmentId:${enrollmentId}|mid:${mid}|locationId:${lid}|courseId:${courseId}`,
         metadata: { memberId: mid, locationId: lid, transactionId },
+    }).catch((error) => {
+        // Only explicit declines enter the existing failure branch. Other errors keep their behavior.
+        const failure = paymentFailureFromError(error);
+        if (!failure) throw error;
+        return failure;
     });
 
     switch (charge.status) {
@@ -138,36 +145,42 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
             });
             return result;
         }
-        case "failed": {
-            const now = new Date();
-            await db.insert(transactions).values({
-                id: transactionId,
-                description,
-                total,
-                subTotal,
-                tax,
-                type: "inbound",
-                status: "failed",
-                locationId: lid,
-                memberId: mid,
-                paymentMethodId,
-                paymentType,
-                feeAmount: feesAmount,
-                items,
-                currency,
-                chargeDate: now,
-                paymentIntentId: charge.paymentIntentId,
-                failedReason: charge.failureReason,
-                failedCode: charge.failureCode,
-                metadata: { ...metadata, ...charge.gatewayMetadata },
-                activities: [{
-                    at: now.toISOString(),
-                    reason: `Payment failed: ${charge.failureReason}`,
-                    paymentType: charge.paymentType ?? paymentType,
-                    brand: charge.brand,
-                    last4: charge.last4,
-                }],
-            }).onConflictDoNothing({ target: transactions.id });
+            case "failed": {
+                const now = new Date();
+                await db.transaction(async (tx) => {
+                    const [created] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    description,
+                    total,
+                    subTotal,
+                    tax,
+                    type: "inbound",
+                    status: "failed",
+                    locationId: lid,
+                    memberId: mid,
+                    paymentMethodId,
+                    paymentType,
+                    feeAmount: feesAmount,
+                    items,
+                    currency,
+                    chargeDate: now,
+                    paymentIntentId: charge.paymentIntentId,
+                    failedReason: charge.failureReason,
+                    failedCode: charge.failureCode,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: `Payment failed: ${charge.failureReason}`,
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                // Held/configuration failures keep their billing status, but do not start workflows.
+                if (created && isPaymentDecline(charge.gatewayMetadata.gatewayService, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode)) {
+                    await dispatchPaymentFailed(tx, created.id);
+                }
+            });
             throw new CourseEnrollError(400, charge.failureReason, charge.failureCode);
         }
         case "uncertain":

@@ -230,10 +230,11 @@ export type SubscriptionJobData = z.infer<typeof SubscriptionJobSchema>;
 export type CashSubscriptionJobData = z.infer<typeof CashSubscriptionJobSchema>;
 export type RecursiveSubscriptionJobData = z.infer<typeof RecursiveSubscriptionJobSchema>;
 
+export const RANK_QUEUE = "ranks";
+
+// Read the member, location, and duration from the saved check-in, not a job snapshot.
 export const RankAttendanceTriggerSchema = z.object({
-    mid: z.string(),
-    lid: z.string(),
-    duration: z.coerce.number().optional(),
-});
+    attendanceId: z.string().trim().min(1),
+}).strict();
 
 export type RankAttendanceTriggerData = z.infer<typeof RankAttendanceTriggerSchema>;

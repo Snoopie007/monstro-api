@@ -6,8 +6,24 @@ import {
 } from "@/handlers/event";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
+import type { AuthContext } from "@/middlewares/AuthMW";
+import { canAccessLocation } from "@/utils/locationAccess";
+
+// A staff ID in the URL is not proof that the caller owns that staff account.
+async function canRegisterAsStaff(actor: AuthContext, staffId: string, locationId: string) {
+    if (actor.isServiceRole === true) return true;
+    if (!actor.userId) return false;
+    const staff = await db.query.staffs.findFirst({
+        where: (row, { eq }) => eq(row.id, staffId),
+        columns: { userId: true },
+    });
+    if (!staff || staff.userId !== actor.userId) return false;
+    return (await canAccessLocation(locationId, undefined, staffId)).allowed;
+}
 
 const EventRegisterParams = t.Object({
+    // Included by the parent /staff/:staffId route.
+    staffId: t.String(),
     lid: t.String(),
     eventId: t.String(),
 });
@@ -71,7 +87,11 @@ export async function locationEventRoutes(app: Elysia) {
                 staffId: t.String(),
             }),
         });
-        app.post('/register/free', async ({ params, body, status }) => {
+        app.post('/register/free', async (context) => {
+            const { params, body, status } = context;
+            if (!(await canRegisterAsStaff(context as typeof context & AuthContext, params.staffId, params.lid))) {
+                return status(403, { error: "Cannot register members at this location" });
+            }
             const { eventId, lid } = params;
             const { mid, ticketId } = body;
 
@@ -90,7 +110,11 @@ export async function locationEventRoutes(app: Elysia) {
             params: EventRegisterParams,
             body: EventRegisterBody,
         });
-        app.post('/register', async ({ params, body, status }) => {
+        app.post('/register', async (context) => {
+            const { params, body, status } = context;
+            if (!(await canRegisterAsStaff(context as typeof context & AuthContext, params.staffId, params.lid))) {
+                return status(403, { error: "Cannot register members at this location" });
+            }
             const { eventId, lid } = params;
             const { mid, ticketId, paymentMethodId, paymentType, attemptId } = body;
 

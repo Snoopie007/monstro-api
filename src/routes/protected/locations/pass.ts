@@ -1,8 +1,10 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import { memberLocations, memberPackages, memberPasses } from "@/subtrees/schemas";
 import { calculateThresholdDate } from "@/utils";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 const LocationPassProps = {
     params: t.Object({
@@ -90,6 +92,17 @@ export function locationPass(app: Elysia) {
                 // Wrap transaction correctly and use the passed-in connection
                 const pkg = await db.transaction(async (tx) => {
 
+                    // Only one claimant can win, even when requests arrive together.
+                    const [claimed] = await tx.update(memberPasses).set({
+                        claimedBy: memberId,
+                        claimedOn: new Date(),
+                    }).where(and(
+                        eq(memberPasses.id, passId),
+                        eq(memberPasses.locationId, lid),
+                        isNull(memberPasses.claimedBy),
+                    )).returning({ id: memberPasses.id });
+                    if (!claimed) return null;
+
                     await tx.insert(memberLocations).values({
                         memberId,
                         locationId: lid,
@@ -119,15 +132,18 @@ export function locationPass(app: Elysia) {
                         expireDate,
                     }).returning();
 
-                    await tx.update(memberPasses).set({
-                        claimedBy: memberId,
-                        claimedOn: new Date(),
-                    }).where(eq(memberPasses.id, passId));
+                    if (!insertedPackages[0]) throw new Error("Pass package was not created");
+                    // A claimed pass already provides an active trial package. No separate activation follows.
+                    await dispatchWorkflowTrigger(tx, {
+                        type: WorkflowEvents.trial.CHECKED_OUT,
+                        locationId: lid,
+                        memberId,
+                    });
                     return insertedPackages;
                 });
 
                 if (!pkg) {
-                    return status(500, { error: 'Failed to create package' });
+                    return status(400, { error: 'This pass has already been claimed.' });
                 }
 
                 return status(200, pkg);

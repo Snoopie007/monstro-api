@@ -1,4 +1,7 @@
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger, dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import type { Promo } from "@/subtrees/types";
 import {
     calculateOrderTotals,
@@ -153,6 +156,11 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
         description,
         note: `orderId:${orderId}|mid:${mid}|locationId:${lid}`,
         metadata: { memberId: mid, locationId: lid, orderId, transactionId },
+    }).catch((error) => {
+        // Only explicit declines enter the existing failure branch. Other errors keep their behavior.
+        const failure = paymentFailureFromError(error);
+        if (!failure) throw error;
+        return failure;
     });
 
     switch (charge.status) {
@@ -222,39 +230,63 @@ export async function handleMercCheckout(input: MercCheckoutInput) {
                     gatewayPaymentId: charge.paymentIntentId,
                 }).returning();
                 if (!order) throw new Error("Failed to create order");
+                // The existing-transaction branch above returns without dispatch.
+                // A separate new order, even from a retried request, is a new event.
+                try {
+                    // Payment is already approved. A savepoint isolates workflow SQL
+                    // errors so they cannot undo the payment record, order, or stock.
+                    await tx.transaction(workflowTx => dispatchWorkflowTrigger(workflowTx, {
+                        type: WorkflowEvents.order.CREATED,
+                        locationId: lid,
+                        memberId: mid,
+                        orderId: order.id,
+                    }));
+                } catch (error) {
+                    // Best effort: no run exists to recover if this insert fails.
+                    // The outer transaction must still commit the purchase.
+                    console.error("[Workflow] Order dispatch failed after payment approval", {
+                        orderId: order.id, transactionId, locationId: lid, memberId: mid, error,
+                    });
+                }
                 return order;
             });
         }
-        case "failed": {
-            const now = new Date();
-            await db.insert(transactions).values({
-                id: transactionId,
-                memberId: mid,
-                locationId: lid,
-                description,
-                type: "inbound",
-                paymentType,
-                paymentMethodId,
-                total,
-                subTotal: subtotal,
-                tax,
-                feeAmount: platformFeeAmount,
-                items: transactionItems,
-                currency,
-                status: "failed",
-                chargeDate: now,
-                paymentIntentId: charge.paymentIntentId,
-                failedReason: charge.failureReason,
-                failedCode: charge.failureCode,
-                metadata: { ...metadata, ...charge.gatewayMetadata },
-                activities: [{
-                    at: now.toISOString(),
-                    reason: `Payment failed: ${charge.failureReason}`,
-                    paymentType: charge.paymentType ?? paymentType,
-                    brand: charge.brand,
-                    last4: charge.last4,
-                }],
-            }).onConflictDoNothing({ target: transactions.id });
+            case "failed": {
+                const now = new Date();
+                await db.transaction(async (tx) => {
+                    const [created] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    memberId: mid,
+                    locationId: lid,
+                    description,
+                    type: "inbound",
+                    paymentType,
+                    paymentMethodId,
+                    total,
+                    subTotal: subtotal,
+                    tax,
+                    feeAmount: platformFeeAmount,
+                    items: transactionItems,
+                    currency,
+                    status: "failed",
+                    chargeDate: now,
+                    paymentIntentId: charge.paymentIntentId,
+                    failedReason: charge.failureReason,
+                    failedCode: charge.failureCode,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: `Payment failed: ${charge.failureReason}`,
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                // Held/configuration failures keep their billing status, but do not start workflows.
+                if (created && isPaymentDecline(charge.gatewayMetadata.gatewayService, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode)) {
+                    await dispatchPaymentFailed(tx, created.id);
+                }
+            });
             throw new PaymentChargeError(charge.failureReason, charge.failureCode);
         }
         case "uncertain":

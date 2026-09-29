@@ -8,6 +8,8 @@ import {
     createEventRegistration,
 } from "@/handlers/event/shared";
 import { db } from "@/db/db";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
@@ -577,6 +579,10 @@ export function authorizeWebhookRoutes(app: Elysia) {
             }
             if (terminalTransition && paymentStatus === "failed" && metadata.checkoutKind === "event") {
                 await cancelPendingEventRegistration(tx, current.id);
+            }
+            if (paymentStatus === "failed" && isPaymentDecline("authorize", undefined, details.transactionStatus, String(details.responseCode ?? ""))
+                && (current.status === "pending" || (current.status === "failed" && !current.failedCode && !current.failedReason))) {
+                await dispatchPaymentFailed(tx, current.id);
             }
             if (paymentStatus !== "paid" || !terminalTransition) return;
 
