@@ -138,20 +138,22 @@ export const TOOLS_DEFINITIONS = [
         type: "function",
         function: {
             name: "report",
-            description: "Get a report of the data for the location. Call this when the user asks for a report.",
+            description: "Look up a location metric. Call this immediately for active members, revenue, average MRR, or top paying members. Do not clarify.",
             parameters: {
                 type: "object",
-            },
-            properties: {
-                metric: {
-                    type: "string",
-                    description: "Metric name such as attendance, revenue, active_members",
+                additionalProperties: false,
+                properties: {
+                    kind: {
+                        type: "string",
+                        enum: ["active_members", "monthly_revenue", "average_mrr", "top_payers"],
+                        description: "active_members for the current count, monthly_revenue for paid transaction totals, average_mrr for average monthly subscription revenue, top_payers for the five members who paid the most",
+                    },
+                    range: {
+                        type: "string",
+                        description: "Time phrase for monthly_revenue and top_payers, such as this month, last month, last 6 months, or this year. Omit for this month. Ignored for active_members and average_mrr.",
+                    },
                 },
-                range: {
-                    type: "string",
-                    description: "Time range for report retrieval, for example last 30 days",
-                },
-                required: ["metric", "range"],
+                required: ["kind"],
             },
         },
     },
