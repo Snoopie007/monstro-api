@@ -1,5 +1,7 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
+export const WorkflowStatusEnum = pgEnum("workflow_status", ["draft", "active", "pause", "deleted"]);
+
 export const LocationStatusEnum = pgEnum("location_status", [
   "incomplete",
   "active",
@@ -47,4 +49,3 @@ export const RankRequirementTypeEnum = pgEnum("rank_requirement_type", [
 ]);
 
 export const EventTicketPricingMethodEnum = pgEnum("event_ticket_pricing_method", ["free", "fixed"]);
-export const WorkflowStatusEnum = pgEnum("workflow_status", ["draft", "active", "pause", "deleted"]);
