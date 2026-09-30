@@ -1,4 +1,6 @@
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import {
     eventRegistrations,
     eventTickets,
@@ -107,6 +109,7 @@ export async function createEventRegistration(
         registrationId,
         status,
     }: EventRegistrationInput,
+    workflowDispatch: "required" | "best-effort" = "required",
 ) {
     const eventId = event.id;
     const ticketId = ticket.id;
@@ -157,6 +160,31 @@ export async function createEventRegistration(
         throw new EventRegistrationError(500, "Unable to create registration");
     }
 
+    // Pending seats are not registrations yet. Free and approved paid entries count.
+    if (status === "registered") {
+        const workflowEvent = {
+            type: WorkflowEvents.event.REGISTERED,
+            locationId: lid,
+            memberId: mid,
+            eventId,
+            registrationId: registration.id,
+        } as const;
+        if (workflowDispatch === "best-effort") {
+            try {
+                // Only the approved-payment caller opts in. The savepoint isolates
+                // workflow failure without rolling back the paid registration.
+                await tx.transaction(workflowTx => dispatchWorkflowTrigger(workflowTx, workflowEvent));
+            } catch (error) {
+                // Log the missed automation. Recovery cannot retry a run never saved.
+                console.error("[Workflow] Event dispatch failed after payment approval", {
+                    registrationId: registration.id, transactionId, locationId: lid, memberId: mid, error,
+                });
+            }
+        } else {
+            // Free registrations keep their existing all-or-nothing behavior.
+            await dispatchWorkflowTrigger(tx, workflowEvent);
+        }
+    }
     return registration;
 }
 
@@ -167,7 +195,17 @@ export async function completePendingEventRegistration(tx: RegistrationTx, trans
     }).where(and(
         eq(eventRegistrations.transactionId, transactionId),
         eq(eventRegistrations.status, "pending"),
-    )).returning({ id: eventRegistrations.id });
+    )).returning();
+    // Only the call that changes pending to registered can start a workflow.
+    if (registration) {
+        await dispatchWorkflowTrigger(tx, {
+            type: WorkflowEvents.event.REGISTERED,
+            locationId: registration.locationId,
+            memberId: registration.memberId,
+            eventId: registration.eventId,
+            registrationId: registration.id,
+        });
+    }
     return registration;
 }
 

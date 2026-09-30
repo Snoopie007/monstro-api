@@ -2,6 +2,13 @@ import type { ExtendedVendorUser } from '@/subtrees/types/auth';
 import { Elysia } from 'elysia';
 import { errors, jwtVerify } from 'jose';
 
+/** Identity supplied by AuthMiddleware after verifying the mobile/service token. */
+export type AuthContext = {
+    memberId: string | null;
+    userId: string | null;
+    isServiceRole: boolean;
+};
+
 type MobileTokenReturnType = {
     ok: boolean;
     data: {

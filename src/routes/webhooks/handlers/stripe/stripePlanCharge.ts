@@ -6,6 +6,8 @@ import { db } from "@/db/db";
 import { integrations, locationState, memberInvoices, memberPackages, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { and, eq, sql } from "drizzle-orm";
 import Stripe from "stripe";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 
 
 interface HandleStripePlanChargeProps {
@@ -211,11 +213,28 @@ export async function handleStripePlanCharge({
         };
 
         if (invoice.transactionId) {
+            const previous = await tx.query.transactions.findFirst({
+                where: eq(transactions.id, invoice.transactionId),
+                columns: { status: true, failedReason: true, failedCode: true, paymentIntentId: true },
+            });
+            // A previous decline does not cover a different payment. Require both
+            // IDs so missing provider data does not change the existing policy.
+            const differentFailedPayment = previous?.status === "failed"
+                && !!previous.paymentIntentId && !!paymentIntentId
+                && previous.paymentIntentId !== paymentIntentId;
             await tx.update(transactions).set(values).where(eq(transactions.id, invoice.transactionId));
+            // Skip a failure already recorded by the charge operation. Unpaid placeholders still count.
+            if (!success && isPaymentDecline("stripe", failedCode)
+                && (previous?.status === "pending"
+                    || (previous?.status === "failed" && !previous.failedCode && !previous.failedReason)
+                    || differentFailedPayment)) {
+                await dispatchPaymentFailed(tx, invoice.transactionId);
+            }
         } else {
             const [transaction] = await tx.insert(transactions).values(values).returning({ id: transactions.id });
             assert(transaction);
             await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoiceId));
+            if (!success && isPaymentDecline("stripe", failedCode)) await dispatchPaymentFailed(tx, transaction.id);
         }
 
         if (memberPlanId.startsWith("pkg_")) {

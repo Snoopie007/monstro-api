@@ -1,5 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import { memberInvoices, memberLocations, memberSubscriptions, promos, transactions } from "@/subtrees/schemas";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
@@ -134,6 +136,15 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                 } : {}),
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sid));
+
+            // A staff-assigned trial needs no charge, but its activation must commit.
+            if (isTrialing && !sub.parentId) {
+                await dispatchWorkflowTrigger(tx, {
+                    type: WorkflowEvents.trial.CHECKED_OUT,
+                    locationId: lid,
+                    memberId: sub.memberId,
+                });
+            }
 
             if (!isTrialing) {
                 await tx.update(memberLocations).set({

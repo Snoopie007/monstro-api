@@ -1,4 +1,6 @@
-import { addDays } from "date-fns";
+import { dispatchPaymentFailed, dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
+import { addDays, isFuture } from "date-fns";
 import type { PaymentType } from "@/subtrees/types";
 import {
     calculateThresholdDate,
@@ -20,6 +22,7 @@ import {
 import type { SubscriptionJobData } from "@/subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
 import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -215,6 +218,11 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         description,
         note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
         metadata: { locationId: lid, memberId: mid, transactionId },
+    }).catch((error) => {
+        // Only explicit declines enter the existing failure branch. Other errors keep their behavior.
+        const failure = paymentFailureFromError(error);
+        if (!failure) throw error;
+        return failure;
     });
 
     switch (charge.status) {
@@ -310,7 +318,9 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             });
 
             const member = ml.member;
+            const isTrialCheckout = !!(subscription.trialEnd && isFuture(subscription.trialEnd) && subscription.trialEnd > subscription.startDate);
             const nextBillingDate = new Date(subscription.currentPeriodEnd);
+            let renewal: Promise<unknown> | undefined;
             if (["month", "year"].includes(pricing.interval)) {
                 const promoDuration = discount?.duration === "once"
                     ? 1
@@ -345,7 +355,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         duration: remainingPromoPayments,
                     } : undefined,
                 };
-                const renewal = pricing.intervalThreshold === 1
+                renewal = pricing.intervalThreshold === 1
                     ? scheduleCronBasedRenewal({
                         startDate: nextBillingDate,
                         interval: pricing.interval,
@@ -355,7 +365,23 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         startDate: nextBillingDate,
                         data: { ...payload, recurrenceCount: 1 },
                     });
-                renewal.catch((error) => console.error("Error scheduling renewal:", error));
+                // Ordinary enrollment keeps its existing background scheduling.
+                if (!isTrialCheckout) renewal.catch((error) => console.error("Error scheduling renewal:", error));
+            }
+            if (isTrialCheckout) {
+                try {
+                    // No workflow until required renewal setup has finished.
+                    await renewal;
+                    await db.transaction(tx => dispatchWorkflowTrigger(tx, {
+                        type: WorkflowEvents.trial.CHECKED_OUT,
+                        locationId: lid,
+                        memberId: mid,
+                    }));
+                } catch (error) {
+                    console.error("Trial payment saved but setup incomplete:", subscription.id, error);
+                    // Payment already succeeded. A normal retry could charge again.
+                    throw new CheckoutError(202, `Trial setup is incomplete for ${subscription.id}. Payment was saved; do not repeat checkout.`);
+                }
             }
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(member.userId, achievement);
@@ -364,34 +390,40 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         }
         case "failed": {
             const now = new Date();
-            await db.insert(transactions).values({
-                id: transactionId,
-                total: chargeDetails.total,
-                subTotal: chargeDetails.subTotal,
-                tax: chargeDetails.tax,
-                feeAmount: chargeDetails.feesAmount,
-                items,
-                description,
-                currency,
-                locationId: lid,
-                memberId: mid,
-                type: "inbound",
-                status: "failed",
-                paymentMethodId,
-                paymentType,
-                chargeDate: now,
-                paymentIntentId: charge.paymentIntentId,
-                failedReason: charge.failureReason,
-                failedCode: charge.failureCode,
-                metadata: { ...metadata, ...charge.gatewayMetadata },
-                activities: [{
-                    at: now.toISOString(),
-                    reason: `Payment failed: ${charge.failureReason}`,
-                    paymentType: charge.paymentType ?? paymentType,
-                    brand: charge.brand,
-                    last4: charge.last4,
-                }],
-            }).onConflictDoNothing({ target: transactions.id });
+            await db.transaction(async (tx) => {
+                const [created] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    total: chargeDetails.total,
+                    subTotal: chargeDetails.subTotal,
+                    tax: chargeDetails.tax,
+                    feeAmount: chargeDetails.feesAmount,
+                    items,
+                    description,
+                    currency,
+                    locationId: lid,
+                    memberId: mid,
+                    type: "inbound",
+                    status: "failed",
+                    paymentMethodId,
+                    paymentType,
+                    chargeDate: now,
+                    paymentIntentId: charge.paymentIntentId,
+                    failedReason: charge.failureReason,
+                    failedCode: charge.failureCode,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: `Payment failed: ${charge.failureReason}`,
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                // Held/configuration failures keep their billing status, but do not start workflows.
+                if (created && isPaymentDecline(charge.gatewayMetadata.gatewayService, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode)) {
+                    await dispatchPaymentFailed(tx, created.id);
+                }
+            });
             throw new CheckoutError(400, charge.failureReason);
         }
         case "uncertain":

@@ -1,5 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
 import type { PaymentType } from "@/subtrees/types";
 import { orders, transactions } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
@@ -84,6 +86,9 @@ export async function handleStripeOrderCharge({
             updated: new Date(),
         }).where(eq(orders.id, orderId)).returning();
         assert(updatedOrder);
+        if (!success && isPaymentDecline("stripe", failedCode)) {
+            await dispatchPaymentFailed(tx, transaction.id);
+        }
         return updatedOrder;
     });
 

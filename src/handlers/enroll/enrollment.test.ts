@@ -266,7 +266,8 @@ for (const [name, enroll] of [
         });
         await expect(enroll(enrollmentInput)).rejects.toThrow("Declined");
         expect(updateTargets).toHaveLength(0);
-        expect(db.transaction).not.toHaveBeenCalled();
+        expect(inserted).toHaveLength(1);
+        expect(inserted[0]).toEqual(expect.objectContaining({ status: "failed" }));
     });
 
     test(`${name} uncertain payment does not activate the member`, async () => {

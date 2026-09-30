@@ -1,5 +1,7 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
+import { paymentFailureFromError } from "@/subtrees/utils/workflowPayments";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type Elysia from "elysia";
@@ -280,13 +282,18 @@ export async function sendInvoiceRoutes(app: Elysia) {
                         updated: new Date(),
                     };
 
-                    if (invoice.transactionId) {
-                        await db.update(transactions).set(transactionValues).where(eq(transactions.id, invoice.transactionId));
-                    } else {
-                        const [transaction] = await db.insert(transactions).values(transactionValues).returning({ id: transactions.id });
-                        assert(transaction);
-                        await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
-                    }
+                    await db.transaction(async (tx) => {
+                        let transactionId = invoice.transactionId;
+                        if (transactionId) {
+                            await tx.update(transactions).set(transactionValues).where(eq(transactions.id, transactionId));
+                        } else {
+                            const [transaction] = await tx.insert(transactions).values(transactionValues).returning({ id: transactions.id });
+                            assert(transaction);
+                            transactionId = transaction.id;
+                            await tx.update(memberInvoices).set({ transactionId }).where(eq(memberInvoices.id, invoice.id));
+                        }
+                        if (paymentFailureFromError(error)) await dispatchPaymentFailed(tx, transactionId);
+                    });
 
                     return status(400, { error: failure.detail, code: failure.code });
                 }
@@ -362,6 +369,32 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 },
                 productName: invoice.description || "Invoice",
                 currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
+            }).catch(async (error) => {
+                const failure = paymentFailureFromError(error);
+                if (!failure) throw error;
+                // Record the explicit decline before preserving the route's original error response.
+                await db.transaction(async (tx) => {
+                    const values = {
+                        memberId: invoice.memberId, locationId: lid, type: "inbound" as const,
+                        status: "failed" as const, total: invoice.total, subTotal: invoice.subTotal,
+                        tax: invoice.tax, currency: invoice.currency || "USD",
+                        paymentType: selectedPaymentMethod.type, paymentMethodId: selectedPaymentMethod.id,
+                        paymentIntentId: failure.paymentIntentId,
+                        failedReason: failure.failureReason, failedCode: failure.failureCode,
+                        metadata: { ...invoiceMetadata, ...failure.gatewayMetadata },
+                    };
+                    let transactionId = invoice.transactionId;
+                    if (transactionId) {
+                        await tx.update(transactions).set(values).where(eq(transactions.id, transactionId));
+                    } else {
+                        const [created] = await tx.insert(transactions).values(values).returning({ id: transactions.id });
+                        assert(created);
+                        transactionId = created.id;
+                        await tx.update(memberInvoices).set({ transactionId }).where(eq(memberInvoices.id, invoice.id));
+                    }
+                    await dispatchPaymentFailed(tx, transactionId);
+                });
+                throw error;
             });
 
             await db.update(memberInvoices).set({

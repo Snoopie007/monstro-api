@@ -2,6 +2,7 @@ import { db } from "@/db/db";
 import { memberInvoices } from "@/subtrees/schemas";
 import type { SubscriptionBillingAttempt } from "@/subtrees/types/subscriptionBilling";
 import { and, eq, sql } from "drizzle-orm";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 
 export type InvoiceAttemptClaim =
     | { ok: true; invoiceId: string; attempt: SubscriptionBillingAttempt; attemptCount: number }
@@ -74,10 +75,13 @@ export async function saveInvoiceAttemptResult(input: {
     status: SubscriptionBillingAttempt["status"];
     paymentIntentId?: string;
     retryable?: boolean;
+    // Provider evidence for workflow eligibility only; never changes billing state.
+    workflowDecline?: boolean;
 }) {
     await db.transaction(async (tx) => {
         const [invoice] = await tx.select({
             metadata: memberInvoices.metadata,
+            transactionId: memberInvoices.transactionId,
             paid: memberInvoices.paid,
             status: memberInvoices.status,
         }).from(memberInvoices)
@@ -98,5 +102,9 @@ export async function saveInvoiceAttemptResult(input: {
             metadata: { ...metadata, billingAttempt },
             updated: new Date(),
         }).where(eq(memberInvoices.id, input.invoiceId));
+        // Keep workflow dispatch behind the same stale-attempt/paid guards.
+        if (input.status !== "succeeded" && input.workflowDecline && invoice.transactionId) {
+            await dispatchPaymentFailed(tx, invoice.transactionId);
+        }
     });
 }
