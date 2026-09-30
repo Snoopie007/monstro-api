@@ -1,7 +1,12 @@
 import { beforeEach, expect, mock, test } from "bun:test";
+import { PgDialect } from "drizzle-orm/pg-core";
+import type { SQL } from "drizzle-orm";
+import { memberLocations } from "@/subtrees/schemas";
+import type { ChargeWithGatewayResult } from "@/utils/checkoutUtil";
 
 const inserted: Record<string, unknown>[] = [];
 const updated: Record<string, unknown>[] = [];
+const updateTargets: { table: unknown; condition: SQL }[] = [];
 
 const tx = {
     insert: mock(() => ({
@@ -12,28 +17,31 @@ const tx = {
                 : inserted.length === 2
                     ? "package-1"
                     : "invoice-1";
-            const returning = mock(async () => [{ id }]);
+            const returning = mock(async () => [{ ...values, id }]);
             return {
                 returning,
                 onConflictDoNothing: mock(() => ({ returning })),
             };
         }),
     })),
-    update: mock(() => ({
+    update: mock((table: unknown) => ({
         set: mock((values: Record<string, unknown>) => {
             updated.push(values);
-            return { where: mock(async () => undefined) };
+            return { where: mock(async (condition: SQL) => { updateTargets.push({ table, condition }); }) };
         }),
     })),
 };
 
 const db = {
+    insert: tx.insert,
     query: {
         memberPlanPricing: {
             findFirst: mock(async () => ({
                 id: "pricing-1",
                 name: "Eight classes",
                 price: 1000,
+                interval: "month",
+                intervalThreshold: 1,
                 expireThreshold: null,
                 expireInterval: null,
                 plan: {
@@ -60,7 +68,7 @@ class CheckoutError extends Error {
     }
 }
 
-const chargeWithGateway = mock(async () => ({
+const chargeWithGateway = mock(async (): Promise<ChargeWithGatewayResult> => ({
     status: "approved" as const,
     paymentIntentId: "payment-1",
     paymentType: "card" as const,
@@ -123,6 +131,7 @@ mock.module("@/utils", () => ({
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs: mock(async () => []),
+    recoverEnrollUnsignedDocs: mock(async () => []),
     fetchPromoDiscount: mock(async () => ({ type: "fixed_amount", value: 0 })),
     getAdditionalFeesForCheckout: mock(async () => [{ id: "fee-1" }]),
     getCheckoutContext,
@@ -132,12 +141,19 @@ mock.module("@/utils", () => ({
 mock.module("@/libs/broadcast/achievements", () => ({
     broadcastAchievement: mock(() => undefined),
 }));
+mock.module("@/queues/subscriptions", () => ({
+    scheduleCronBasedRenewal: mock(async () => undefined),
+    scheduleRecursiveRenewal: mock(async () => undefined),
+}));
 
 const { handleEnrollPackage } = await import("./pkg");
+const { handleEnrollSubscription } = await import("./sub");
 
 beforeEach(() => {
     inserted.length = 0;
     updated.length = 0;
+    updateTargets.length = 0;
+    db.transaction.mockClear();
     chargeWithGateway.mockClear();
     getCheckoutContext.mockClear();
     getMemberCheckoutContext.mockClear();
@@ -177,7 +193,11 @@ test("cash package checkout persists the same fee snapshot without calling a gat
         items: expect.arrayContaining([additionalFeeLine]),
         paid: true,
     }));
-    expect(updated).toEqual([{ redemptionCount: expect.anything() }]);
+    expect(updated).toEqual([
+        { redemptionCount: expect.anything() },
+        { status: "active", updated: expect.any(Date) },
+    ]);
+    expectMemberActivated();
 });
 
 test("paid package checkout still charges through the configured gateway", async () => {
@@ -205,4 +225,62 @@ test("paid package checkout still charges through the configured gateway", async
         paymentIntentId: "payment-1",
         paymentType: "card",
     }));
+    expectMemberActivated();
 });
+
+function expectMemberActivated() {
+    const index = updateTargets.findIndex(({ table }) => table === memberLocations);
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(updated[index]).toEqual({ status: "active", updated: expect.any(Date) });
+    const query = new PgDialect().sqlToQuery(updateTargets[index]!.condition);
+    expect(query.sql).toContain('"member_locations"."member_id" = $1');
+    expect(query.sql).toContain('and "member_locations"."location_id" = $2');
+    expect(query.params).toEqual(["member-1", "location-1"]);
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+}
+
+const enrollmentInput = {
+    lid: "location-1",
+    mid: "member-1",
+    priceId: "pricing-1",
+    paymentMethodId: "payment-method-1",
+    paymentType: "card" as const,
+    attemptId: "attempt-1",
+};
+
+test("successful subscription checkout activates the member at the matching location", async () => {
+    expect(await handleEnrollSubscription(enrollmentInput)).toEqual({ ok: true, unsignedDocs: [] });
+    expectMemberActivated();
+});
+
+for (const [name, enroll] of [
+    ["package", handleEnrollPackage],
+    ["subscription", handleEnrollSubscription],
+] as const) {
+    test(`${name} declined payment does not activate the member`, async () => {
+        chargeWithGateway.mockResolvedValueOnce({
+            status: "failed",
+            failureReason: "Declined",
+            failureCode: "DECLINED",
+            gatewayMetadata: {},
+        });
+        await expect(enroll(enrollmentInput)).rejects.toThrow("Declined");
+        expect(updateTargets).toHaveLength(0);
+        expect(inserted).toHaveLength(1);
+        expect(inserted[0]).toEqual(expect.objectContaining({ status: "failed" }));
+    });
+
+    test(`${name} uncertain payment does not activate the member`, async () => {
+        chargeWithGateway.mockResolvedValueOnce({ status: "uncertain", message: "Timed out", gatewayMetadata: {} });
+        await expect(enroll(enrollmentInput)).rejects.toThrow("Payment status is unknown");
+        expect(updateTargets).toHaveLength(0);
+        expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    test(`${name} quote does not activate the member`, async () => {
+        await enroll({ ...enrollmentInput, quoteOnly: true });
+        expect(updateTargets).toHaveLength(0);
+        expect(db.transaction).not.toHaveBeenCalled();
+        expect(chargeWithGateway).not.toHaveBeenCalled();
+    });
+}
