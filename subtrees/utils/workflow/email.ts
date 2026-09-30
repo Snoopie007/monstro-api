@@ -1,14 +1,7 @@
+// Same fixed sender used by Monstro's existing API and worker EmailSender.
 export const DEFAULT_WORKFLOW_SENDER = 'no-reply@mymonstro.com';
 export const MAX_NOTIFICATION_RECIPIENTS = 100;
 export class WorkflowRecipientError extends Error {}
-
-/** Vendor and workers must use the same WORKFLOW_EMAIL_APPROVED_SENDERS setting. */
-export function workflowSenderSettings(configured?: string) {
-    const approved = [...new Set((configured ?? '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean))];
-    if (!approved.length) approved.push(DEFAULT_WORKFLOW_SENDER);
-    if (approved.some(email => !validWorkflowEmail(email))) throw new Error('Workflow sender configuration contains an invalid email');
-    return { sender: approved[0]!, approved };
-}
 
 export function validWorkflowEmail(value: string) {
     return /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(value.trim());
