@@ -7,7 +7,7 @@ import { integrations, locationState, memberInvoices, memberPackages, memberSubs
 import { and, eq, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
-import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
+import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 
 
 interface HandleStripePlanChargeProps {

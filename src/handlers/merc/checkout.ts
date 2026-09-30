@@ -1,4 +1,4 @@
-import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { db } from "@/db/db";
 import { WorkflowEvents } from "@/subtrees/constants/workflow";
 import { dispatchWorkflowTrigger, dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";

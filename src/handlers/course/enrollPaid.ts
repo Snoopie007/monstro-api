@@ -1,5 +1,5 @@
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
-import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { db } from "@/db/db";
 import {
     calculateChargeDetails,

@@ -1,6 +1,7 @@
 // Node settings and the typed graph used by the builder and worker.
 import type { BaseNodeData } from "./workflow";
 import type { MemberField } from "../member";
+import type { ConditionVariable } from "../../utils/workflow/variables";
 
 export type Path = {
 	isDefault: boolean;
@@ -8,9 +9,10 @@ export type Path = {
 	label: string;
 	// Stable custom-field identity; names are display-only and may change.
 	fieldId?: string;
+	variable?: ConditionVariable;
 	operator?: string;
 	value?: string;
-	type?: "string" | "number" | "boolean";
+	type?: "string" | "number" | "boolean" | "list";
 };
 
 export type StartNodeData = BaseNodeData;
