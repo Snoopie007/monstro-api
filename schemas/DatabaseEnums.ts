@@ -1,5 +1,7 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
+export const WorkflowStatusEnum = pgEnum("workflow_status", ["draft", "active", "pause", "deleted"]);
+
 export const LocationStatusEnum = pgEnum("location_status", [
   "incomplete",
   "active",

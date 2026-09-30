@@ -1,4 +1,41 @@
 import { relations } from "drizzle-orm";
+import { workflows, workflowTriggers, workflowQueues, workflowLogs } from "./workflow";
+
+export const workflowsRelations = relations(workflows, ({ one, many }) => ({
+	location: one(locations, {
+		fields: [workflows.locationId],
+		references: [locations.id],
+	}),
+	triggers: many(workflowTriggers),
+	queues: many(workflowQueues),
+	logs: many(workflowLogs),
+}));
+
+export const workflowTriggersRelations = relations(workflowTriggers, ({ one }) => ({
+	workflow: one(workflows, {
+		fields: [workflowTriggers.workflowId],
+		references: [workflows.id],
+	}),
+}));
+
+export const workflowQueuesRelations = relations(workflowQueues, ({ one, many }) => ({
+	workflow: one(workflows, {
+		fields: [workflowQueues.workflowId],
+		references: [workflows.id],
+	}),
+	logs: many(workflowLogs),
+}));
+
+export const workflowLogsRelations = relations(workflowLogs, ({ one }) => ({
+	workflow: one(workflows, {
+		fields: [workflowLogs.workflowId],
+		references: [workflows.id],
+	}),
+	queue: one(workflowQueues, {
+		fields: [workflowLogs.queueId],
+		references: [workflowQueues.id],
+	}),
+}));
 
 // Import all table definitions
 import { accounts } from "./accounts";
@@ -323,6 +360,7 @@ export const memberCustomFieldsRelations = relations(memberCustomFields, ({ one 
 // ============================================================================
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
+	workflows: many(workflows),
 	additionalFees: many(additionalFees),
 	memberLocations: many(memberLocations),
 	integrations: many(integrations),
