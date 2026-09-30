@@ -47,7 +47,9 @@ export type EmailNodeData = BaseNodeData & {
 };
 
 export type NotificationNodeData = BaseNodeData & {
-	toEmail: string;
+	// Legacy fixed-address nodes remain supported until explicitly converted.
+	toEmail?: string;
+	recipientUserIds?: string[];
 	subject: string;
 	message: string;
 };
