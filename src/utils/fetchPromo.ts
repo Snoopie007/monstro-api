@@ -40,7 +40,7 @@ export async function fetchEligiblePromo({
         !pricing.plan ||
         pricing.plan.locationId !== locationId ||
         pricing.plan.archived ||
-        !promo.allowedPlans?.includes(pricing.id) ||
+        (promo.allowedPlans && promo.allowedPlans.length > 0 && !promo.allowedPlans.includes(pricing.id)) ||
         (!!promo.maxRedemptions && promo.redemptionCount >= promo.maxRedemptions)
     ) {
         throw new PromoValidationError();
