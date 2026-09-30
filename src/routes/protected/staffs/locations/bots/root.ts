@@ -26,7 +26,7 @@ export const slBots = new Elysia({ prefix: "/bots" })
 				userId: staff.userId,
 				role: "staff",
 				purpose: "member_ops",
-				name: "Chief Operations Officer",
+				name: "Frank",
 			}).returning();
 			return status(200, created);
 		} catch (error) {
