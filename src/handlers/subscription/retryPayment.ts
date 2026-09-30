@@ -1,4 +1,4 @@
-import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflowPayments";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { db } from "@/db/db";
 import { BillingContextError, assertImportedSubscriptionRetrySafe, resolveSubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";

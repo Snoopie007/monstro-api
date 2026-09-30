@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import { paymentFailureFromError } from "@/subtrees/utils/workflowPayments";
+import { paymentFailureFromError } from "@/subtrees/utils/workflow/payments";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { calculateChargeDetails } from "@/utils/enrollUtils";

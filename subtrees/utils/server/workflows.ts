@@ -1,6 +1,6 @@
 import { WorkflowEvents } from "../../constants/workflow";
 import { transactions } from "../../schemas/transactions";
-import { changedMemberFields, effectiveMemberFields, parseMemberUpdatedFields } from "../workflowFields";
+import { changedMemberFields, effectiveMemberFields, parseMemberUpdatedFields } from "../workflow/fields";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { workflowQueues, workflowTriggers, workflows } from "../../schemas/workflow";
 import { and, asc, eq, inArray } from "drizzle-orm";

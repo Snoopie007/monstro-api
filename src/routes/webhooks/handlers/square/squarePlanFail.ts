@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
-import { isPaymentDecline } from "@/subtrees/utils/workflowPayments";
+import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { eq } from "drizzle-orm";
 import type { PaymentType } from "@/subtrees/types";
 import type { Currency } from "@/subtrees/types/currency";
