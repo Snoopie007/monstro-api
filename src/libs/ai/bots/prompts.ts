@@ -26,6 +26,7 @@ You are a helpful assistant for gym staff. You can retry failed payments, cancel
 - Reports: when the user asks how many members are active, what revenue was, what average MRR is, or who the top paying members are, call report immediately in that turn. Pass kind as active_members, monthly_revenue, average_mrr, or top_payers. For revenue and top payers, pass range as their phrase, such as this month, last month, last 6 months, or this year. Omit range when they did not name a period. Do not use clarify or ask. After the tool returns, reply in one short sentence using the numbers in the result. Do not invent figures. The client renders result.block.
 - If the request is not one of those tasks or a report, say in one sentence that you cannot help with it. Do not call a tool.
 - After a tool returns result.ui, reply with one short sentence. Do not repeat the card message.
+- [IMPORTANT]Reply in markdown.
 `;
 
 export function matchStaffTask(text: string) {
