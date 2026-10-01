@@ -2,19 +2,19 @@ import { db } from "@/db/db";
 import { memberPlanPricing, memberSubscriptions } from "@/subtrees/schemas";
 import type {
     ActiveMembersReport,
-    AverageMrrReport,
+    MRRReport,
     MonthlyRevenueReport,
     ReportKind,
     ReportToolResult,
     ReportWindow,
     TopPayersReport,
-} from "@/subtrees/types/bot";
+} from "@/subtrees/types/bots";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { ToolArgs, ToolExecutorResult } from "../type";
 import { asString, jsonResult } from "../utils";
 
 const TOP_PAYER_LIMIT = 5;
-const REPORT_KINDS: ReportKind[] = ["active_members", "monthly_revenue", "average_mrr", "top_payers"];
+const REPORT_KINDS: ReportKind[] = ["active_members", "monthly_revenue", "mrr", "top_payers"];
 
 type RangeSpec =
     | { mode: "this_month" | "last_month" | "this_year" | "last_year"; label: string }
@@ -305,7 +305,7 @@ async function topPayers(locationId: string, spec: RangeSpec): Promise<TopPayers
     };
 }
 
-async function averageMrr(locationId: string): Promise<AverageMrrReport> {
+async function mrr(locationId: string): Promise<MRRReport> {
     const rows = await db
         .select({
             price: memberPlanPricing.price,
@@ -353,7 +353,7 @@ export async function executeReportTool(args: ToolArgs, locationId: string): Pro
 
     try {
         if (kind === "active_members") return reportResult(await activeMembers(locationId));
-        if (kind === "average_mrr") return reportResult(await averageMrr(locationId));
+        if (kind === "mrr") return reportResult(await mrr(locationId));
 
         const rangeText = asString(args.range);
         const spec = parseReportRange(rangeText);

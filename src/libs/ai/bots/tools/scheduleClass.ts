@@ -155,7 +155,7 @@ async function countMemberSessionInPeriod(props: {
     return Number(row?.n ?? 0);
 }
 
-export async function executeScheduleSession(args: ToolArgs, lid: string): Promise<ToolExecutorResult> {
+export async function executeScheduleClass(args: ToolArgs, lid: string): Promise<ToolExecutorResult> {
     const { memberId, name } = memberFromArgs(args);
     let programId = asString(args.programId);
     const programName = asString(args.program);
@@ -546,7 +546,7 @@ export async function executeScheduleSession(args: ToolArgs, lid: string): Promi
             ui: actionCard(
                 "success",
                 `Done. ${name} is booked into ${displayTime} ${program.name}.`,
-                "session-booked",
+                "class-booked",
                 { sessionId: selectedSession.id, reservationId },
             ),
         }),

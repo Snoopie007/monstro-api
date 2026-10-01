@@ -4,7 +4,7 @@ export * from "./achievement";
 export * from "./additionalFees";
 export * from "./ads";
 export * from "./attendance";
-export * from "./bot";
+export * from "./bots";
 export * from "./chat";
 export * from "./contract";
 export * from "./course";

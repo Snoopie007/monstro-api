@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { attendances, memberPackages, memberSubscriptions, reservations } from "@/subtrees/schemas";
+import { memberPackages, memberSubscriptions, reservations } from "@/subtrees/schemas";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { and, eq, gt, sql } from "drizzle-orm";
@@ -45,7 +45,7 @@ function creditKind(reservation: {
     return null;
 }
 
-export async function executeCancelSession(args: ToolArgs, lid: string): Promise<ToolExecutorResult> {
+export async function executeCancelClass(args: ToolArgs, lid: string): Promise<ToolExecutorResult> {
     const { memberId, name } = memberFromArgs(args);
     const program = asString(args.program);
     const time = parseTime(asString(args.time));
@@ -238,7 +238,7 @@ export async function executeCancelSession(args: ToolArgs, lid: string): Promise
             ui: actionCard(
                 "success",
                 `Done. ${when} has been canceled.`,
-                "session-cancelled",
+                "class-cancelled",
                 {
                     lid,
                     memberId: reservation.memberId,
