@@ -233,6 +233,10 @@ export async function removeRenewalJobs(sid: string) {
     }
     const exactJobs = await subQueue.getJobs(["delayed", "waiting", "active"]);
     for (const job of exactJobs) {
+        if (job.id?.startsWith(`cashInvoiceDue_${sid}_`)) {
+            if (await job.getState() !== "active") await job.remove();
+            continue;
+        }
         if (job.id?.startsWith(`renewal-exact-${sid}-`)) await job.remove();
     }
 }

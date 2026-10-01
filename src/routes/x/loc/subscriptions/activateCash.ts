@@ -1,13 +1,13 @@
-import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { WorkflowEvents } from "@/subtrees/constants/workflow";
 import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
-import { memberInvoices, memberLocations, memberSubscriptions, promos, transactions } from "@/subtrees/schemas";
+import { memberLocations, memberSubscriptions, promos } from "@/subtrees/schemas";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { and, eq, sql } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
 import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
+import { ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
@@ -62,67 +62,16 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             : undefined;
 
         if (!isTrialing) {
-            const existingDraft = await db.query.memberInvoices.findFirst({
-                where: (inv, { and, eq }) => and(
-                    eq(inv.memberPlanId, sid),
-                    eq(inv.status, "draft")
-                ),
+            const quote = await buildSubscriptionInvoiceQuote({
+                locationId: lid, subscriptionId: sid, parentId: sub.parentId,
+                subscriptionMetadata: sub.metadata, pricing: sub.pricing,
+                memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId,
+                location: sub.location, discount,
             });
-
-            if (!existingDraft) {
-                const quote = await buildSubscriptionInvoiceQuote({
-                    locationId: lid,
-                    subscriptionId: sid,
-                    parentId: sub.parentId,
-                    subscriptionMetadata: sub.metadata,
-                    pricing: sub.pricing,
-                    memberPlanPricingId: sub.memberPlanPricingId,
-                    promoId: sub.promoId,
-                    location: sub.location,
-                    discount,
-                });
-                const [invoice] = await db.insert(memberInvoices).values({
-                    memberId: sub.memberId,
-                    locationId: lid,
-                    memberPlanId: sid,
-                    description: quote.invoiceDescription,
-                    items: quote.items,
-                    subTotal: quote.subTotal,
-                    total: quote.total,
-                    tax: quote.tax,
-                    currency: quote.currency,
-                    status: "draft",
-                    dueDate: new Date(sub.currentPeriodEnd),
-                    paymentType: "cash",
-                    invoiceType: "recurring",
-                    forPeriodStart: new Date(sub.currentPeriodStart),
-                    forPeriodEnd: new Date(sub.currentPeriodEnd),
-                    metadata: {
-                        type: "from-subscription",
-                        subscriptionId: sid,
-                        platformFeeAmount: quote.platformFeeAmount,
-                    },
-                }).returning();
-
-                if (invoice) {
-                    const [transaction] = await db.insert(transactions).values({
-                        memberId: sub.memberId,
-                        locationId: lid,
-                        description: quote.transactionDescription,
-                        type: "inbound",
-                        status: "failed",
-                        paymentType: "cash",
-                        total: quote.total,
-                        subTotal: quote.subTotal,
-                        tax: quote.tax,
-                        feeAmount: quote.platformFeeAmount,
-                        items: quote.items,
-                        currency: quote.currency,
-                    }).returning({ id: transactions.id });
-                    assert(transaction);
-                    await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
-                }
-            }
+            await db.transaction(tx => ensureCashInvoice(tx, {
+                subscriptionId: sid, locationId: lid, memberId: sub.memberId,
+                periodStart: new Date(sub.currentPeriodStart), periodEnd: new Date(sub.currentPeriodEnd), quote,
+            }));
         }
 
         await db.transaction(async (tx) => {

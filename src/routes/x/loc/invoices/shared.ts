@@ -75,6 +75,8 @@ export const createInvoiceBody = t.Object({
     paymentMethodId: t.Optional(t.String()),
     subscriptionId: t.Optional(t.String()),
     selectedSubscriptionId: t.Optional(t.String()),
+    periodStart: t.Optional(t.String()),
+    periodEnd: t.Optional(t.String()),
     items: t.Optional(t.Array(invoiceItemBody)),
     dueDate: t.Optional(t.String()),
     description: t.Optional(t.String()),

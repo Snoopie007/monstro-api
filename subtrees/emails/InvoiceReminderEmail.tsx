@@ -16,6 +16,7 @@ import {
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
 import { format, formatDistanceStrict } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import type { Member, Location } from '../types';
 type InvoiceItem = {
 	name: string;
@@ -32,10 +33,13 @@ interface InvoiceReminderEmailProps {
 		dueDate: Date;
 		description: string | null;
 		items: InvoiceItem[];
+		currency?: string;
+		paymentType?: string;
 	};
 	location: Pick<Location, 'name' | 'address' | 'email' | 'phone'>;
 	payInvoiceUrl?: string;
 	downloadInvoiceUrl?: string;
+	timezone?: string;
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -54,6 +58,7 @@ export default function InvoiceReminderEmail({
 	location,
 	payInvoiceUrl,
 	downloadInvoiceUrl,
+	timezone,
 }: InvoiceReminderEmailProps) {
 
 
@@ -72,13 +77,14 @@ export default function InvoiceReminderEmail({
 				<Container style={styles.container}>
 					<Section style={styles.content}>
 						<Text style={styles.paragraph}>
-							Hi {member.firstName}, your invoice from {location.name} is due in {formatDistanceStrict(new Date(invoice.dueDate), new Date(), { addSuffix: true })}.
+							Hi {member.firstName}, your invoice from {location.name} is due {formatDistanceStrict(new Date(invoice.dueDate), new Date(), { addSuffix: true })}.
 						</Text>
+						{invoice.paymentType === 'cash' && <Text style={styles.paragraph}>Please arrange your cash payment directly with {location.name}.</Text>}
 
 						<EmailInvoiceBox>
 							<EmailInvoiceLabel label={`Invoice from ${location.name}`} />
-							<EmailInvoiceAmount amount={invoice.total} />
-							<EmailInvoiceLabel label={`Due ${format(new Date(invoice.dueDate), 'MMM d, yyyy')}`} />
+							<EmailInvoiceAmount amount={invoice.total} currency={invoice.currency} />
+							<EmailInvoiceLabel label={`Due ${timezone ? formatInTimeZone(new Date(invoice.dueDate), timezone, 'MMM d, yyyy') : format(new Date(invoice.dueDate), 'MMM d, yyyy')}`} />
 							<EmailInvoiceBoxDivider />
 							{downloadInvoiceUrl && (
 								<EmailInvoiceDownloadLink href={downloadInvoiceUrl} />
@@ -93,7 +99,7 @@ export default function InvoiceReminderEmail({
 							<EmailInvoiceLabel label={`Invoice #${invoice.id}`} style={{
 								margin: '0 0 16px 0',
 							}} />
-							<EmailInvoiceItemsTable items={invoice.items} total={invoice.total} />
+							<EmailInvoiceItemsTable items={invoice.items} total={invoice.total} currency={invoice.currency} />
 							<Text style={styles.contactLine}>
 								Questions? Contact us at{' '}
 								<Link href={`mailto:${location.email}`} style={styles.link}>
@@ -129,4 +135,3 @@ InvoiceReminderEmail.PreviewProps = {
 		],
 	},
 };
-

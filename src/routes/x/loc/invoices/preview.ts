@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { calcTotals } from "./shared";
-import { getCurrency } from "@/utils";
+import { getCurrency } from "@/utils/getCurrency";
 import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
 
 export async function previewInvoiceRoutes(app: Elysia) {
@@ -67,7 +67,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 memberPlanPricingId: sub.memberPlanPricingId,
                 promoId: sub.promoId,
                 location: sub.location,
-                discount,
+                discount: sub.paymentType === "cash" ? undefined : discount,
             });
             return status(200, {
                 preview: {

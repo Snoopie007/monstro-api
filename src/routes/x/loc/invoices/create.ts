@@ -11,9 +11,12 @@ import {
     PENDING_TRANSACTION_STATUS,
 } from "./shared";
 import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
+import { CashInvoiceError, ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
+import { canEditLocationMember } from "@/utils/locationAccess";
 
 export async function createInvoiceRoutes(app: Elysia) {
-    return app.post("/", async ({ body, params, status }) => {
+    return app.post("/", async ctx => {
+        const { body, params, status } = ctx;
         const { lid } = params as { lid: string };
         const payload = Array.isArray(body) ? body[0] : body;
         if (!payload) {
@@ -28,6 +31,8 @@ export async function createInvoiceRoutes(app: Elysia) {
             paymentMethodId,
             subscriptionId,
             selectedSubscriptionId,
+            periodStart,
+            periodEnd,
             items,
             dueDate,
             description,
@@ -95,6 +100,33 @@ export async function createInvoiceRoutes(app: Elysia) {
                 });
             }
 
+            if (sub.paymentType === "cash") {
+                const actor = ctx as typeof ctx & { vendorId?: string; staffId?: string; userId?: string };
+                if (!await canEditLocationMember(lid, actor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
+                const now = new Date();
+                if (!["active", "past_due", "unpaid"].includes(sub.status) || sub.startDate > now
+                    || (sub.trialEnd && sub.trialEnd > now) || (sub.cancelAt && sub.cancelAt <= now)) {
+                    return status(400, { error: "This subscription is not available for cash collection", code: "SUBSCRIPTION_NOT_COLLECTING" });
+                }
+                const start = new Date(periodStart ?? sub.currentPeriodStart);
+                const end = new Date(periodEnd ?? sub.currentPeriodEnd);
+                if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return status(400, { error: "Invalid billing period" });
+                const quote = await buildSubscriptionInvoiceQuote({
+                    locationId: lid, subscriptionId: sub.id, parentId: sub.parentId,
+                    subscriptionMetadata: sub.metadata, pricing: sub.pricing,
+                    memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId, location: sub.location,
+                });
+                try {
+                    const result = await db.transaction(tx => ensureCashInvoice(tx, {
+                        subscriptionId: sub.id, memberId, locationId: lid, periodStart: start, periodEnd: end, quote,
+                    }));
+                    return status(result.created ? 201 : 200, result);
+                } catch (error) {
+                    if (error instanceof CashInvoiceError) return status(409, { error: error.message, code: error.code });
+                    throw error;
+                }
+            }
+
             const quote = await buildSubscriptionInvoiceQuote({
                 locationId: lid,
                 subscriptionId: sub.id,
@@ -137,30 +169,6 @@ export async function createInvoiceRoutes(app: Elysia) {
                     subscriptionId: sub.id,
                 });
                 return status(500, { error: "Failed to create invoice" });
-            }
-
-            if (sub.paymentType === "cash") {
-                const [transaction] = await db.insert(transactions).values({
-                    memberId,
-                    locationId: lid,
-                    description: description || quote.transactionDescription,
-                    type: "inbound",
-                    status: PENDING_TRANSACTION_STATUS,
-                    paymentType: PENDING_TRANSACTION_PAYMENT_TYPE,
-                    total: quote.total,
-                    subTotal: quote.subTotal,
-                    tax: quote.tax,
-                    feeAmount: quote.platformFeeAmount,
-                    items: quote.items,
-                    currency: quote.currency,
-                    metadata: {
-                        intendedPaymentType: sub.paymentType,
-                        collectionMethod,
-                    },
-                }).returning({ id: transactions.id });
-                assert(transaction);
-                await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
-                invoice.transactionId = transaction.id;
             }
 
             return status(201, { invoice });

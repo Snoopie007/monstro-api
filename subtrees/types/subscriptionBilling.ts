@@ -1,4 +1,6 @@
 import type { Interval, PaymentType } from "./DatabaseEnums";
+import type { Currency } from "./currency";
+import type { MemberInvoice } from "./invoices";
 
 export type StripeSubscriptionMigration = {
   sourceSubscriptionId: string;
@@ -53,4 +55,61 @@ export type SubscriptionBillingQuote = {
     quantity: number;
     pricingId: string;
   }[];
+};
+
+export type CashBillingCycle = {
+  periodStart: string;
+  periodEnd: string;
+};
+
+export type CashBilling = CashBillingCycle & {
+  dueAt: string;
+  timezone: string;
+  state: "scheduled" | "due" | "overdue" | "paid" | "blocked";
+  action: "create" | "send" | "collect" | "view" | null;
+  invoice: {
+    id: string;
+    status: MemberInvoice["status"];
+    paid: boolean;
+    total: number;
+    currency: string;
+  } | null;
+};
+
+export type UpcomingPayment = {
+  id: string;
+  subscriptionId: string;
+  member: { id: string; name: string };
+  membershipName: string;
+  dueAt: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  amountMinor: number | null;
+  currency: Currency;
+  collection: "automatic" | "manual";
+  source: "invoice" | "estimate";
+  state: "scheduled" | "processing" | "blocked";
+  reason: string | null;
+  invoice: Pick<MemberInvoice, "id" | "status"> | null;
+  canMarkPaid: boolean;
+};
+
+type UpcomingPaymentPage = {
+  rows: UpcomingPayment[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+export type UpcomingPaymentsResponse = {
+  window: {
+    from: string;
+    untilExclusive: string;
+    timezone: string;
+    refreshAt: string;
+  };
+  totals: Array<{ currency: Currency; amountMinor: number }>;
+  preview: UpcomingPayment[];
+  manual: UpcomingPaymentPage;
+  automatic: UpcomingPaymentPage;
 };
