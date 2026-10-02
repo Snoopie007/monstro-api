@@ -11,13 +11,13 @@ import { defaultRepeatStrategy } from "bullmq";
 import { and, count, eq, gte, isNotNull, isNull, lt, or } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { quoteSubscriptionInvoice } from "../invoices/subscriptionQuote";
+import { quoteSubscriptionInvoice } from "../../invoices/subscriptionQuote";
 import {
     calculateUpcomingPayments,
     remainingMonthWindow,
     type UpcomingSchedule,
     type UpcomingSubscription,
-} from "./upcomingPayments";
+} from "./payments";
 
 type ScheduleSubscription = Pick<UpcomingSubscription,
     "id" | "locationId" | "parentId" | "paymentType" | "status" | "startDate" | "trialEnd" | "currentPeriodEnd"

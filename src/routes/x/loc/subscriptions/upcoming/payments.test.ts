@@ -5,7 +5,7 @@ import {
     type UpcomingInvoice,
     type UpcomingSchedule,
     type UpcomingSubscription,
-} from "./upcomingPayments";
+} from "./payments";
 
 const date = (value: string) => new Date(`${value}T12:00:00.000Z`);
 const now = date("2026-10-02");
@@ -84,6 +84,72 @@ function forecast(
 }
 
 describe("remaining membership payments", () => {
+    test("keeps earlier rows when a later cycle has invalid cadence", () => {
+        const result = forecast({
+            schedules: new Map([
+                [
+                    "sub1",
+                    {
+                        dueAt: date("2026-10-03"),
+                        cycleCount: 1,
+                        nextDueAt: (after) => {
+                            if (
+                                after.getTime() === date("2026-10-03").getTime()
+                            )
+                                return date("2026-10-10");
+                            throw new Error("Invalid schedule");
+                        },
+                    },
+                ],
+            ]),
+        });
+        expect(result.automatic.rows).toHaveLength(2);
+        expect(result.automatic.rows[1]).toMatchObject({
+            dueAt: date("2026-10-10").toISOString(),
+            state: "blocked",
+            amountMinor: null,
+            periodStart: null,
+            periodEnd: null,
+            reason: "Membership billing cadence is unavailable",
+        });
+        expect(result.totals).toEqual([
+            { currency: "USD", amountMinor: 10000 },
+        ]);
+    });
+
+    test("stops at a quote failure and retains an unknown amount", () => {
+        const result = forecast({
+            quote: () => {
+                throw new Error("Missing price");
+            },
+        });
+        expect(result.automatic.rows).toHaveLength(1);
+        expect(result.automatic.rows[0]).toMatchObject({
+            state: "blocked",
+            amountMinor: null,
+            reason: "Membership billing amount is unavailable",
+        });
+    });
+
+    test("blocks a schedule that does not advance", () => {
+        const result = forecast({
+            schedules: new Map([
+                [
+                    "sub1",
+                    {
+                        dueAt: date("2026-10-03"),
+                        cycleCount: 1,
+                        nextDueAt: (after) => after,
+                    },
+                ],
+            ]),
+        });
+        expect(result.automatic.rows).toHaveLength(1);
+        expect(result.automatic.rows[0]?.reason).toBe(
+            "Membership billing cadence is unavailable",
+        );
+    });
+
     test("uses the location's day and month boundaries, including DST", () => {
         expect(
             remainingMonthWindow(
@@ -307,18 +373,36 @@ describe("remaining membership payments", () => {
 
     test("does not restore a once-only promotion exhausted during activation", () => {
         const result = forecast({
-            subscriptions: [subscription({ metadata: { promo: { discount: { amount: 2500, duration: 1 } } } })],
+            subscriptions: [
+                subscription({
+                    metadata: {
+                        promo: { discount: { amount: 2500, duration: 1 } },
+                    },
+                }),
+            ],
             paidCounts: new Map([["sub1", 1]]),
         });
-        expect(result.preview.map(row => row.amountMinor)).toEqual([10000, 10000, 10000, 10000, 10000]);
+        expect(result.preview.map((row) => row.amountMinor)).toEqual([
+            10000, 10000, 10000, 10000, 10000,
+        ]);
     });
 
     test("cash uses its original promotion and paid count, not a worker inspection discount", () => {
         const result = forecast({
-            subscriptions: [subscription({ paymentType: "cash", metadata: { promo: { discount: { amount: 2500, duration: 2 } } } })],
-            schedules: new Map(), paidCounts: new Map([["sub1", 1]]),
+            subscriptions: [
+                subscription({
+                    paymentType: "cash",
+                    metadata: {
+                        promo: { discount: { amount: 2500, duration: 2 } },
+                    },
+                }),
+            ],
+            schedules: new Map(),
+            paidCounts: new Map([["sub1", 1]]),
         });
-        expect(result.preview.map(row => row.amountMinor)).toEqual([7500, 10000, 10000, 10000, 10000]);
+        expect(result.preview.map((row) => row.amountMinor)).toEqual([
+            7500, 10000, 10000, 10000, 10000,
+        ]);
     });
 
     test.each(["processing", "in_flight", "unknown"])(

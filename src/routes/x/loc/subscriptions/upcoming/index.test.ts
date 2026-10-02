@@ -5,7 +5,7 @@ const getJob = mock(async (_id: string): Promise<any> => undefined);
 // Deliberately expose only keyed queue reads: global scans are not supported.
 mock.module("@/queues/subscriptions", () => ({ subQueue: { getJobScheduler, getJob } }));
 mock.module("@/db/db", () => ({ db: {} }));
-const { loadSchedules } = await import("./upcoming");
+const { loadSchedules } = await import("./index");
 const dueAt = new Date("2026-10-08T12:00:00Z");
 const subscription = {
     id: "sub", locationId: "loc", parentId: null, paymentType: "card", status: "active",
