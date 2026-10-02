@@ -1,6 +1,6 @@
-import type { botMessages, bots } from "../schemas/bots";
-import type { Location } from "./location";
-import type { User } from "./user";
+import type { botMessages, bots } from "../../schemas/bots";
+import type { Location } from "../location";
+import type { User } from "../user";
 
 type BotSSEPayloads = {
 	start: { ts?: number; message?: string; locationId?: string; threadId?: string };
@@ -20,8 +20,6 @@ export type BOTSSEEvent = {
 	[K in keyof BotSSEPayloads]: { event: K; data: BotSSEPayloads[K] };
 }[keyof BotSSEPayloads];
 
-
-
 export type SessionBookedToolArgs = {
 	memberId: string;
 	memberName?: string;
@@ -29,8 +27,6 @@ export type SessionBookedToolArgs = {
 	reservationId?: string;
 	lid?: string;
 };
-
-
 
 export type ToolPayload = {
 	ok?: boolean
@@ -52,12 +48,11 @@ export type BotClarify = {
 	options: BotClarifyOption[]
 }
 
-export type SessionAction = "session-booked" | "session-cancelled";
+export type ClassAction = "class-booked" | "class-cancelled";
 
-
-/** Tool result the agent attaches when a session was booked or cancelled. */
+/** Tool result the agent attaches when a class was booked or cancelled. */
 export type BotActionUI = {
-	action: SessionAction;
+	action: ClassAction;
 	message: string;
 	args: Record<string, unknown>;
 };
@@ -68,7 +63,7 @@ export type BotToolResult = {
 
 export type BotToolCard = {
 	id: string;
-	action: SessionAction;
+	action: ClassAction;
 	message: string;
 	args: Record<string, unknown>;
 };
@@ -95,3 +90,6 @@ export type BotMessage = typeof botMessages.$inferSelect & {
 
 export type NewBot = typeof bots.$inferInsert;
 export type NewBotMessage = typeof botMessages.$inferInsert;
+
+export * from "./memberSessions";
+export * from "./report";
