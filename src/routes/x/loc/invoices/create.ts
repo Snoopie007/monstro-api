@@ -1,3 +1,4 @@
+import { getNextCashCycle } from "@/subtrees/utils/cashBilling";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
@@ -108,13 +109,15 @@ export async function createInvoiceRoutes(app: Elysia) {
                     || (sub.trialEnd && sub.trialEnd > now) || (sub.cancelAt && sub.cancelAt <= now)) {
                     return status(400, { error: "This subscription is not available for cash collection", code: "SUBSCRIPTION_NOT_COLLECTING" });
                 }
-                const start = new Date(periodStart ?? sub.currentPeriodStart);
-                const end = new Date(periodEnd ?? sub.currentPeriodEnd);
+                const renewal = sub.currentPeriodEnd <= now ? getNextCashCycle(sub) : null;
+                const start = new Date(periodStart ?? renewal?.periodStart ?? sub.currentPeriodStart);
+                const end = new Date(periodEnd ?? renewal?.periodEnd ?? sub.currentPeriodEnd);
                 if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return status(400, { error: "Invalid billing period" });
                 const quote = await buildSubscriptionInvoiceQuote({
                     locationId: lid, subscriptionId: sub.id, parentId: sub.parentId,
                     subscriptionMetadata: sub.metadata, pricing: sub.pricing,
                     memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId, location: sub.location,
+                    billingPhase: start.getTime() === sub.currentPeriodEnd.getTime() && sub.status !== "trialing" ? "renewal" : undefined,
                 });
                 try {
                     const result = await db.transaction(tx => ensureCashInvoice(tx, {

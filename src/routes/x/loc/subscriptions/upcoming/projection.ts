@@ -25,7 +25,7 @@ type ProjectionInput = {
     now: Date;
     window: UpcomingPaymentsResponse["window"];
 };
-type BillingCycle = { due: Date; anchor: Date; previous: Date };
+type BillingCycle = { due: Date; anchor: Date };
 type BillingPeriod = { due: Date; start: Date; end: Date; index: number };
 
 export function getInvoiceBillingState(
@@ -114,10 +114,10 @@ export function calculateSubscriptionPayments(
 
 function getFirstBillingCycle(input: ProjectionInput): BillingCycle | null {
     const { subscription: sub, schedule, now, window } = input;
-    if (
-        !["active", "trialing", "incomplete"].includes(sub.status) ||
-        sub.cancelAtPeriodEnd
-    )
+    const collectingStatuses = sub.paymentType === "cash"
+        ? ["active", "trialing", "past_due", "unpaid"]
+        : ["active", "trialing", "incomplete"];
+    if (!collectingStatuses.includes(sub.status) || sub.cancelAtPeriodEnd)
         return null;
     if (sub.status === "incomplete" && !schedule) return null;
     if (sub.paymentType !== "cash" && !schedule) {
@@ -138,7 +138,6 @@ function getFirstBillingCycle(input: ProjectionInput): BillingCycle | null {
     return {
         due,
         anchor: getBillingAnchor(sub, due),
-        previous: sub.currentPeriodStart ?? sub.startDate,
     };
 }
 
@@ -158,7 +157,7 @@ function* getBillingPeriods(
     const { subscription: sub, schedule, window } = input;
     const until = new Date(window.untilExclusive);
     const { anchor } = cycle;
-    let { due, previous } = cycle;
+    let { due } = cycle;
     // A month contains at most 31 daily charges. Also bound malformed schedules.
     for (let index = 0; index < 32 && due < until; index++) {
         if (sub.cancelAt && due >= sub.cancelAt) return;
@@ -179,14 +178,12 @@ function* getBillingPeriods(
             yield { unavailableAt: due };
             return;
         }
-        const cash = sub.paymentType === "cash";
         yield {
             due,
-            start: cash ? previous : due,
-            end: cash ? due : next,
+            start: due,
+            end: next,
             index,
         };
-        previous = due;
         due = next;
     }
 }
@@ -224,6 +221,7 @@ function calculateScheduledPayment(
             : null;
     try {
         const phase =
+            (cash && sub.status !== "trialing") ||
             paidCount + period.index > 0 ||
             sub.metadata?.additionalFeesStartAtRenewal === true
                 ? "renewal"

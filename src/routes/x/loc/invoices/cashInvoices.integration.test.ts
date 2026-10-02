@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "@/subtrees/schemas";
+import { resolveCashBilling } from "@/subtrees/utils/cashBilling";
 import { ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
 
 describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation and email", () => {
@@ -14,6 +15,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
     const tables = ["member_invoices", "transactions", "member_subscriptions", "member_plan_pricing", "member_plans", "members", "locations", "location_state", "tax_rates"];
     const periodStart = new Date(Date.now() - 8 * 86400000);
     const periodEnd = new Date(Date.now() - 86400000);
+    const nextEnd = new Date(periodEnd.getTime() + 7 * 86400000);
     const queued = new Map<string, unknown>();
     let allowed = true;
     let failEmail = false;
@@ -63,15 +65,15 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
     const request = (path: string, body = {}, location = "loc") => app.handle(new Request(`http://localhost/loc/${location}/invoices${path}`, {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
     }));
-    const create = (body = {}) => request("/", { memberId: "member", subscriptionId: "sub", type: "from-subscription", paymentType: "cash", ...body });
+    const create = (body = {}) => request("/", { periodStart: periodEnd.toISOString(), periodEnd: nextEnd.toISOString(), memberId: "member", subscriptionId: "sub", type: "from-subscription", paymentType: "cash", ...body });
     const created = async (response: Response) => await response.json() as { invoice: { id: string; total: number; dueDate: string } };
     const prepare = () => db.transaction(tx => ensureCashInvoice(tx, {
-        subscriptionId: "sub", memberId: "member", locationId: "loc", periodStart, periodEnd,
+        subscriptionId: "sub", memberId: "member", locationId: "loc", periodStart: periodEnd, periodEnd: nextEnd,
         quote: { items: [{ name: "Weekly", quantity: 1, price: 10000 }], total: 10000, subTotal: 10000, tax: 0,
             currency: "USD", platformFeeAmount: 0, invoiceDescription: "Weekly", transactionDescription: "Weekly" },
     }));
     const count = async (table: string) => (await sql`select count(*)::int as total from ${sql(table)}`)[0]!.total;
-    const unchangedPeriod = async () => expect(new Date((await sql`select current_period_end from member_subscriptions where id='sub'`)[0]!.current_period_end)).toEqual(periodEnd);
+    const advancedPeriod = async () => expect(new Date((await sql`select current_period_end from member_subscriptions where id='sub'`)[0]!.current_period_end)).toEqual(nextEnd);
 
     test("concurrent UI and worker writers reuse one invoice and transaction", async () => {
         const [response, worker] = await Promise.all([create(), prepare()]);
@@ -79,7 +81,12 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect((await created(response)).invoice.id).toBe(worker.invoice.id);
         expect(await count("member_invoices")).toBe(1);
         expect(await count("transactions")).toBe(1);
-        await unchangedPeriod();
+        await advancedPeriod();
+        const subscription = await db.query.memberSubscriptions.findFirst({ with: { pricing: true } });
+        const invoices = await db.query.memberInvoices.findMany();
+        const billing = resolveCashBilling(subscription!, invoices, "America/New_York");
+        expect(billing?.action).toBe("send");
+        expect(billing?.invoice?.id).toBe(worker.invoice.id);
     });
     test("repeated creation preserves the invoice's authoritative amount", async () => {
         const first = await created(await create());
@@ -101,7 +108,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect((await created(await create())).invoice.id).toBe(invoice.id);
         expect(await count("member_invoices")).toBe(1);
     });
-    test("an expired cash trial can create and send its invoice without advancing the cycle", async () => {
+    test("an expired cash trial can create and send its invoice and start its first paid period", async () => {
         await sql`update member_subscriptions set status='trialing',trial_end=${periodEnd.toISOString()} where id='sub'`;
         const response = await create();
         expect(response.status).toBe(201);
@@ -109,7 +116,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect((await request(`/${invoice.id}/send`)).status).toBe(200);
         expect(enqueue).toHaveBeenCalledTimes(1);
         expect((await sql`select status from member_invoices where id=${invoice.id}`)[0]!.status).toBe("sent");
-        await unchangedPeriod();
+        await advancedPeriod();
     });
     test("an ongoing cash trial cannot create an invoice", async () => {
         const trialEnd = new Date(Date.now() + 86400000);
@@ -119,7 +126,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect(await response.json()).toMatchObject({ code: "SUBSCRIPTION_NOT_COLLECTING" });
         expect(await count("member_invoices")).toBe(0);
         expect(enqueue).not.toHaveBeenCalled();
-        await unchangedPeriod();
+        expect(new Date((await sql`select current_period_end from member_subscriptions`)[0]!.current_period_end)).toEqual(periodEnd);
     });
     test("a stale selected billing period cannot create an invoice", async () => {
         const response = await create({ periodStart: periodStart.toISOString(), periodEnd: new Date(periodEnd.getTime() + 7 * 86400000).toISOString() });
@@ -141,7 +148,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect(queued.get(`cashInvoiceEmail_${invoice.id}`)).toMatchObject({ template: "InvoiceReminderEmail", to: "jasper@example.test",
             metadata: { invoice: { id: invoice.id, paymentType: "cash", total: 10000 }, timezone: "America/New_York" } });
         expect((await sql`select status from member_invoices where id=${invoice.id}`)[0]!.status).toBe("sent");
-        await unchangedPeriod();
+        await advancedPeriod();
     });
     test("email queue failure leaves a draft retryable", async () => {
         const { invoice } = await prepare();
@@ -157,7 +164,24 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         await sql`update member_invoices set status='unpaid' where id=${invoice.id}`;
         expect((await request(`/${invoice.id}/mark-paid`, { paymentType: "cash" })).status).toBe(200);
         expect((await sql`select status from member_invoices where id=${invoice.id}`)[0]!.status).toBe("paid");
-        expect((await sql`select count(*)::int as total from member_invoices where status='draft'`)[0]!.total).toBe(1);
+        expect((await sql`select count(*)::int as total from member_invoices where status='draft'`)[0]!.total).toBe(0);
+    });
+    test("free plans can manually start a period and send its invoice", async () => {
+        await sql`update location_state set plan_id=1`;
+        const response = await create();
+        expect(response.status).toBe(201);
+        const { invoice } = await created(response);
+        expect((await request(`/${invoice.id}/send`)).status).toBe(200);
+        expect(enqueue).toHaveBeenCalledTimes(1);
+        await advancedPeriod();
+    });
+    test("renewal retains older unpaid debt and creates one invoice for the next period", async () => {
+        await sql`insert into member_invoices (id,member_id,location_id,member_plan_id,payment_type,status,total,subtotal,tax,due_date,for_period_start,for_period_end) values ('old','member','loc','sub','cash','unpaid',10000,10000,0,${periodStart.toISOString()},${periodStart.toISOString()},${periodEnd.toISOString()})`;
+        const first = await created(await create());
+        expect(first.invoice.id).not.toBe("old");
+        expect((await created(await create())).invoice.id).toBe(first.invoice.id);
+        expect(await count("member_invoices")).toBe(2);
+        await advancedPeriod();
     });
     test("invoice and transaction inserts roll back together", async () => {
         await sql`alter table transactions add constraint reject_cash check (payment_type <> 'cash')`;

@@ -3,15 +3,10 @@ import { db } from "@/db/db";
 import { Wallet } from "@/libs/wallet";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, lte } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
-import { PENDING_TRANSACTION_STATUS } from "./shared";
-import { quoteSubscriptionInvoice } from "./subscriptionQuote";
 import type { Currency } from "@/subtrees/types/currency";
 import { canEditLocationMember } from "@/utils/locationAccess";
-import { getAdditionalFeesForCheckout } from "@/utils/additionalFees";
-import { ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
-import { nextBillingBoundary } from "@/subtrees/utils/subscriptionBilling";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
@@ -78,7 +73,6 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 },
             })
             : undefined;
-        const renewalFees = sub?.paymentType === "cash" ? await getAdditionalFeesForCheckout(lid, "subscription", "renewal") : [];
 
         if (sub?.paymentType === "cash") {
             if (!sub.pricing) {
@@ -189,70 +183,18 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 updated: new Date(),
             }).where(eq(memberInvoices.id, iid));
             if (invoice.memberPlanId) {
-                await tx.select({ id: memberSubscriptions.id }).from(memberSubscriptions)
+                const [sub] = await tx.select().from(memberSubscriptions)
                     .where(and(eq(memberSubscriptions.id, invoice.memberPlanId), eq(memberSubscriptions.locationId, lid))).for("update");
-                const sub = await tx.query.memberSubscriptions.findFirst({
-                    where: and(eq(memberSubscriptions.id, invoice.memberPlanId), eq(memberSubscriptions.locationId, lid)),
-                    with: { pricing: { with: { plan: true } } },
-                });
-                const matchesPeriod = sub?.currentPeriodStart && sub.currentPeriodEnd && (invoice.forPeriodStart && invoice.forPeriodEnd
-                    ? invoice.forPeriodStart.getTime() === sub.currentPeriodStart.getTime() && invoice.forPeriodEnd.getTime() === sub.currentPeriodEnd.getTime()
-                    : invoice.dueDate.getTime() === sub.currentPeriodEnd.getTime());
-                if (sub?.pricing && sub.paymentType === "cash" && matchesPeriod &&
-                    ["active", "past_due", "unpaid", "trialing"].includes(sub.status) && !sub.cancelAtPeriodEnd &&
-                    (!sub.cancelAt || sub.currentPeriodEnd < sub.cancelAt)) {
-                    const nextStart = new Date(sub.currentPeriodEnd);
-                    const storedAnchor = typeof sub.metadata.cashBillingAnchor === "string" ? new Date(sub.metadata.cashBillingAnchor) : nextStart;
-                    const anchor = Number.isFinite(storedAnchor.getTime()) ? storedAnchor : nextStart;
-                    const nextEnd = nextBillingBoundary(anchor, nextStart, sub.pricing.interval || "month", sub.pricing.intervalThreshold || 1);
-
+                if (sub?.paymentType === "cash" && ["active", "past_due", "unpaid", "trialing"].includes(sub.status)) {
+                    const [outstanding] = await tx.select({ id: memberInvoices.id }).from(memberInvoices).where(and(
+                        eq(memberInvoices.memberPlanId, sub.id), eq(memberInvoices.locationId, lid),
+                        eq(memberInvoices.paid, false), inArray(memberInvoices.status, ["draft", "sent", "unpaid"]),
+                        lte(memberInvoices.dueDate, new Date()),
+                    )).limit(1);
+                    // Settling an invoice never advances dates or erases another period's debt.
                     await tx.update(memberSubscriptions).set({
-                        status: "active",
-                        currentPeriodStart: nextStart,
-                        currentPeriodEnd: nextEnd,
-                        metadata: { ...sub.metadata, cashBillingAnchor: anchor.toISOString() },
-                        makeUpCredits: sub.allowMakeUpCarryOver ? sub.makeUpCredits : 0,
-                        updated: new Date(),
+                        status: outstanding ? "past_due" : "active", updated: new Date(),
                     }).where(eq(memberSubscriptions.id, sub.id));
-
-                    if (!sub.cancelAt || nextEnd < sub.cancelAt) {
-                        const promo = sub.metadata?.promo as {
-                            discount?: {
-                                amount: number;
-                                duration: number;
-                                type?: "fixed_amount" | "percentage";
-                                value?: number;
-                            };
-                        } | undefined;
-                        const paidInvoices = await tx.query.memberInvoices.findMany({
-                            where: (candidate, { and, eq }) => and(
-                                eq(candidate.memberPlanId, sub.id),
-                                eq(candidate.paid, true),
-                            ),
-                            columns: { id: true },
-                        });
-                        const discount = promo?.discount && paidInvoices.length < promo.discount.duration
-                            ? {
-                                type: promo.discount.type ?? "fixed_amount",
-                                value: promo.discount.value ?? promo.discount.amount,
-                            }
-                            : undefined;
-                        const quote = quoteSubscriptionInvoice({
-                            locationId: lid,
-                            subscriptionId: sub.id,
-                            parentId: sub.parentId,
-                            subscriptionMetadata: sub.metadata,
-                            pricing: sub.pricing,
-                            location,
-                            billingPhase: "renewal",
-                            discount,
-                            additionalFees: renewalFees,
-                        });
-                        await ensureCashInvoice(tx, {
-                            subscriptionId: sub.id, locationId: lid, memberId: sub.memberId,
-                            periodStart: nextStart, periodEnd: nextEnd, quote,
-                        });
-                    }
                 }
             }
             return "paid";

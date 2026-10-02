@@ -68,6 +68,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 promoId: sub.promoId,
                 location: sub.location,
                 discount: sub.paymentType === "cash" ? undefined : discount,
+                billingPhase: sub.paymentType === "cash" && sub.currentPeriodEnd <= new Date() && sub.status !== "trialing" ? "renewal" : undefined,
             });
             return status(200, {
                 preview: {

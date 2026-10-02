@@ -70,6 +70,7 @@ export type CashBillingCycle = {
 /** Derived collection state for staff actions. Invoice status alone cannot tell
  * whether a subscription is eligible, overdue, or still needs an invoice. */
 export type CashBilling = CashBillingCycle & {
+  renewal: CashBillingCycle | null;
   dueAt: string;
   timezone: string;
   state: "scheduled" | "due" | "overdue" | "paid" | "blocked";

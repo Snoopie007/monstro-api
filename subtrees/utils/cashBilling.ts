@@ -1,4 +1,6 @@
 import type { CashBilling, CashBillingCycle } from "../types/subscriptionBilling";
+import { nextBillingBoundary } from "./subscriptionBilling";
+import type { Interval } from "../types/DatabaseEnums";
 import type { MemberInvoice } from "../types/invoices";
 
 type DateValue = Date | string;
@@ -12,7 +14,23 @@ type CashSubscription = {
   startDate: DateValue;
   trialEnd?: DateValue | null;
   cancelAt?: DateValue | null;
+  cancelAtPeriodEnd?: boolean;
+  metadata?: Record<string, unknown> | null;
+  pricing?: { interval: Interval | null; intervalThreshold: number | null } | null;
 };
+
+export function getNextCashCycle(sub: Pick<CashSubscription, "currentPeriodEnd" | "metadata" | "pricing">): CashBillingCycle | null {
+  if (!sub.currentPeriodEnd || !sub.pricing?.interval || !sub.pricing.intervalThreshold) return null;
+  const start = new Date(sub.currentPeriodEnd);
+  const stored = typeof sub.metadata?.cashBillingAnchor === "string" ? new Date(sub.metadata.cashBillingAnchor) : start;
+  const anchor = Number.isFinite(stored.getTime()) ? stored : start;
+  try {
+    const end = nextBillingBoundary(anchor, start, sub.pricing.interval, sub.pricing.intervalThreshold);
+    return { periodStart: start.toISOString(), periodEnd: end.toISOString() };
+  } catch {
+    return null;
+  }
+}
 
 export type CashInvoice = Pick<MemberInvoice, "id" | "memberPlanId" | "status" | "paid" | "total" | "currency"> & {
   dueDate: DateValue;
@@ -28,7 +46,7 @@ export function invoiceMatchesCycle(invoice: Pick<CashInvoice, "dueDate" | "forP
       && timestamp(invoice.forPeriodEnd) === timestamp(cycle.periodEnd);
   }
   return !invoice.forPeriodStart && !invoice.forPeriodEnd
-    && timestamp(invoice.dueDate) === timestamp(cycle.periodEnd);
+    && timestamp(invoice.dueDate) === timestamp(cycle.periodStart);
 }
 
 function calendarDay(date: DateValue, timezone: string) {
@@ -69,12 +87,15 @@ export function resolveCashBilling(
     }
   }
   const invoice = candidates.sort((a, b) => Number(b.paid || b.status === "paid") - Number(a.paid || a.status === "paid"))[0];
-  const dueAt = new Date(invoice?.dueDate ?? periodEnd).toISOString();
+  const dueAt = new Date(invoice?.dueDate ?? periodStart).toISOString();
   const paid = invoice?.paid || invoice?.status === "paid";
   const eligible = ["active", "past_due", "unpaid", "trialing"].includes(sub.status)
     && timestamp(sub.startDate) <= now.getTime()
     && (!sub.trialEnd || timestamp(sub.trialEnd) <= now.getTime())
     && (!sub.cancelAt || timestamp(sub.cancelAt) > now.getTime());
+  const nextCycle = getNextCashCycle(sub);
+  const renewal = eligible && !sub.cancelAtPeriodEnd && nextCycle && timestamp(nextCycle.periodStart) <= now.getTime()
+    ? nextCycle : null;
   const invalidInvoice = invoice && !["draft", "sent", "unpaid", "paid"].includes(invoice.status);
   const state: CashBilling["state"] = paid ? "paid"
     : invalidInvoice || !eligible || (selected?.invoiceId && !invoice) ? "blocked"
@@ -86,7 +107,7 @@ export function resolveCashBilling(
     : invoice ? state === "blocked" ? "view" : invoice.status === "draft" ? "send" : "collect"
     : eligible && isCurrentCycle && ["due", "overdue"].includes(state) ? "create" : null;
   return {
-    ...cycle, dueAt, timezone, state, action,
+    ...cycle, dueAt, timezone, state, action, renewal,
     invoice: invoice ? { id: invoice.id, status: invoice.status, paid: invoice.paid, total: invoice.total, currency: invoice.currency || "USD" } : null,
   };
 }

@@ -57,6 +57,7 @@ export async function reminderInvoiceRoutes(app: Elysia) {
 
                 await invoiceQueue.add('reminder', {
                     invoiceId,
+                    manual: true,
                     data: {
                         member: {
                             firstName: invoice.member.firstName,

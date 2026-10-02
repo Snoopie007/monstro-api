@@ -1,10 +1,11 @@
 import { and, eq, isNull, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { memberInvoices } from "../../schemas/invoice";
-import { memberSubscriptions } from "../../schemas";
+import { memberPlanPricing, memberSubscriptions } from "../../schemas";
 import { transactions } from "../../schemas/transactions";
 import { members } from "../../schemas/members";
 import { locations } from "../../schemas/locations";
+import { nextBillingBoundary } from "../subscriptionBilling";
 
 type CashInvoiceDatabase = Pick<PostgresJsDatabase, "select" | "insert" | "update">;
 type InvoiceValues = typeof memberInvoices.$inferInsert;
@@ -42,25 +43,29 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   if (!["active", "past_due", "unpaid", "incomplete", "trialing"].includes(sub.status)) {
     throw new CashInvoiceError("This subscription is not collecting cash payments", "SUBSCRIPTION_NOT_COLLECTING");
   }
-  if (!sub.currentPeriodStart || !sub.currentPeriodEnd || sub.currentPeriodStart.getTime() !== periodStart.getTime() || sub.currentPeriodEnd.getTime() !== periodEnd.getTime()) {
-    throw new CashInvoiceError("The billing period changed. Refresh the subscription.", "BILLING_PERIOD_CHANGED");
-  }
+  const renewing = sub.currentPeriodEnd.getTime() === periodStart.getTime();
   const renewalKey = `${subscriptionId}:${periodStart.toISOString()}`;
   const existing = await tx.select().from(memberInvoices).where(and(
     eq(memberInvoices.locationId, locationId), eq(memberInvoices.memberId, memberId),
     eq(memberInvoices.memberPlanId, subscriptionId),
     or(eq(memberInvoices.renewalKey, renewalKey),
       and(eq(memberInvoices.forPeriodStart, periodStart), eq(memberInvoices.forPeriodEnd, periodEnd)),
-      and(isNull(memberInvoices.forPeriodStart), isNull(memberInvoices.forPeriodEnd), eq(memberInvoices.dueDate, periodEnd))),
+      and(isNull(memberInvoices.forPeriodStart), isNull(memberInvoices.forPeriodEnd), eq(memberInvoices.dueDate, periodStart))),
   ));
   if (existing.length) {
     const invoice = existing.find(invoice => invoice.paid || invoice.status === "paid")
       ?? existing.find(invoice => ["sent", "unpaid"].includes(invoice.status)) ?? existing[0]!;
+    if (renewing) await advanceCashPeriod(tx, sub, periodStart, periodEnd, invoice.paid || invoice.status === "paid");
     return { invoice, created: false };
+  }
+  if (renewing) {
+    await advanceCashPeriod(tx, sub, periodStart, periodEnd);
+  } else if (sub.currentPeriodStart.getTime() !== periodStart.getTime() || sub.currentPeriodEnd.getTime() !== periodEnd.getTime()) {
+    throw new CashInvoiceError("The billing period changed. Refresh the subscription.", "BILLING_PERIOD_CHANGED");
   }
   const [invoice] = await tx.insert(memberInvoices).values({
     memberId, locationId, memberPlanId: subscriptionId, renewalKey,
-    forPeriodStart: periodStart, forPeriodEnd: periodEnd, dueDate: periodEnd,
+    forPeriodStart: periodStart, forPeriodEnd: periodEnd, dueDate: periodStart,
     description: quote.invoiceDescription, items: quote.items,
     subTotal: quote.subTotal, total: quote.total, tax: quote.tax, currency: quote.currency,
     status: "draft", paymentType: "cash", invoiceType: "recurring",
@@ -76,6 +81,27 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   if (!transaction) throw new Error("Failed to create cash invoice transaction");
   await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
   return { invoice: { ...invoice, transactionId: transaction.id }, created: true };
+}
+
+/** Renew on the calendar boundary, even while a previous period is unpaid.
+ * The caller inserts the new invoice in this same transaction. */
+async function advanceCashPeriod(tx: CashInvoiceDatabase, sub: typeof memberSubscriptions.$inferSelect, start: Date, end: Date, paid = false) {
+  const now = new Date();
+  if (start > now || sub.cancelAtPeriodEnd || (sub.cancelAt && sub.cancelAt <= start) || (sub.trialEnd && sub.trialEnd > now)) {
+    throw new CashInvoiceError("This subscription cannot renew yet", "SUBSCRIPTION_NOT_COLLECTING");
+  }
+  const [pricing] = await tx.select().from(memberPlanPricing).where(eq(memberPlanPricing.id, sub.memberPlanPricingId!));
+  if (!pricing?.interval || !pricing.intervalThreshold) throw new CashInvoiceError("Missing billing cadence", "BILLING_PERIOD_CHANGED");
+  const stored = typeof sub.metadata.cashBillingAnchor === "string" ? new Date(sub.metadata.cashBillingAnchor) : start;
+  const anchor = Number.isFinite(stored.getTime()) ? stored : start;
+  if (nextBillingBoundary(anchor, start, pricing.interval, pricing.intervalThreshold).getTime() !== end.getTime()) {
+    throw new CashInvoiceError("The billing period changed. Refresh the subscription.", "BILLING_PERIOD_CHANGED");
+  }
+  await tx.update(memberSubscriptions).set({
+    currentPeriodStart: start, currentPeriodEnd: end, status: paid ? sub.status : "past_due",
+    metadata: { ...sub.metadata, cashBillingAnchor: anchor.toISOString() },
+    makeUpCredits: sub.allowMakeUpCarryOver ? sub.makeUpCredits : 0, updated: now,
+  }).where(eq(memberSubscriptions.id, sub.id));
 }
 
 export type CashInvoiceEmail = {

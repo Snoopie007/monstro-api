@@ -102,7 +102,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
                 ),
             );
 
-        test("concurrent confirmations record one transaction and advance one cycle", async () => {
+        test("concurrent confirmations record one transaction without advancing the cycle", async () => {
             const responses = await Promise.all([pay(), pay()]);
             expect(responses.map((response) => response.status)).toEqual([
                 200, 200,
@@ -123,12 +123,12 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
                         await sql`select current_period_end from member_subscriptions where id='sub'`
                     )[0]!.current_period_end,
                 ),
-            ).toEqual(new Date("2026-10-10T12:00:00Z"));
+            ).toEqual(new Date("2026-10-03T12:00:00Z"));
             expect(
                 (
                     await sql`select count(*)::int as total from member_invoices where status='draft'`
                 )[0]?.total,
-            ).toBe(1);
+            ).toBe(0);
             expect((await pay()).status).toBe(200);
             expect(
                 (
@@ -184,14 +184,15 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
             ).toBe("sent");
         });
 
-        test("an unrelated draft does not suppress the next period invoice", async () => {
+        test("paying one invoice preserves overdue debt from another period", async () => {
             await sql`insert into member_invoices (id,member_id,location_id,member_plan_id,payment_type,status,total,subtotal,tax,due_date,for_period_start,for_period_end) values ('older-draft','member','loc','sub','cash','draft',10000,10000,0,'2026-09-19T12:00:00Z','2026-09-12T12:00:00Z','2026-09-19T12:00:00Z')`;
             expect((await pay()).status).toBe(200);
             expect(
                 (
                     await sql`select count(*)::int as total from member_invoices where for_period_start='2026-10-03T12:00:00Z'`
                 )[0]?.total,
-            ).toBe(1);
+            ).toBe(0);
+            expect((await sql`select status from member_subscriptions`)[0]!.status).toBe("past_due");
         });
 
         test("wallet failure leaves the invoice, transaction, and subscription unchanged", async () => {
