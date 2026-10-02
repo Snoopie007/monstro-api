@@ -104,7 +104,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                 const actor = ctx as typeof ctx & { vendorId?: string; staffId?: string; userId?: string };
                 if (!await canEditLocationMember(lid, actor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
                 const now = new Date();
-                if (!["active", "past_due", "unpaid"].includes(sub.status) || sub.startDate > now
+                if (!["active", "past_due", "unpaid", "trialing"].includes(sub.status) || sub.startDate > now
                     || (sub.trialEnd && sub.trialEnd > now) || (sub.cancelAt && sub.cancelAt <= now)) {
                     return status(400, { error: "This subscription is not available for cash collection", code: "SUBSCRIPTION_NOT_COLLECTING" });
                 }

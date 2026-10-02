@@ -27,6 +27,20 @@ describe("cash collection state", () => {
         expect(resolve([{ ...invoice, status }])).toMatchObject({ action: "collect", invoice: { id: "invoice" } });
     });
     test("a draft is reused for sending", () => expect(resolve([invoice])?.action).toBe("send"));
+    test("an expired cash trial exposes creation for its due cycle", () => {
+        expect(resolve([], { status: "trialing", trialEnd: sub.currentPeriodEnd }))
+            .toMatchObject({ state: "due", action: "create" });
+    });
+    test("an expired cash trial exposes collection for its sent invoice", () => {
+        expect(resolve([{ ...invoice, status: "sent" }], { status: "trialing", trialEnd: sub.currentPeriodEnd }))
+            .toMatchObject({ state: "due", action: "collect", invoice: { id: invoice.id } });
+    });
+    test("an ongoing cash trial cannot create or collect an invoice", () => {
+        const trial = { status: "trialing", trialEnd: "2026-10-03T16:00:00Z" };
+        expect(resolve([], trial)).toMatchObject({ state: "blocked", action: null });
+        expect(resolve([{ ...invoice, status: "sent" }], trial))
+            .toMatchObject({ state: "blocked", action: "view" });
+    });
     test("paying this cycle clears its warning", () => expect(resolve([{ ...invoice, paid: true, status: "paid" }])).toMatchObject({ state: "paid", action: null }));
     test("an older outstanding invoice wins over a future draft", () => {
         expect(resolve([{ ...invoice, id: "old", status: "unpaid", dueDate: "2026-09-25T16:00:00Z", forPeriodStart: "2026-09-19T16:00:00Z", forPeriodEnd: sub.currentPeriodStart }, invoice]))

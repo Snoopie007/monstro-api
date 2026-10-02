@@ -71,7 +71,7 @@ export function resolveCashBilling(
   const invoice = candidates.sort((a, b) => Number(b.paid || b.status === "paid") - Number(a.paid || a.status === "paid"))[0];
   const dueAt = new Date(invoice?.dueDate ?? periodEnd).toISOString();
   const paid = invoice?.paid || invoice?.status === "paid";
-  const eligible = ["active", "past_due", "unpaid"].includes(sub.status)
+  const eligible = ["active", "past_due", "unpaid", "trialing"].includes(sub.status)
     && timestamp(sub.startDate) <= now.getTime()
     && (!sub.trialEnd || timestamp(sub.trialEnd) <= now.getTime())
     && (!sub.cancelAt || timestamp(sub.cancelAt) > now.getTime());

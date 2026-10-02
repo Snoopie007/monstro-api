@@ -101,6 +101,26 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect((await created(await create())).invoice.id).toBe(invoice.id);
         expect(await count("member_invoices")).toBe(1);
     });
+    test("an expired cash trial can create and send its invoice without advancing the cycle", async () => {
+        await sql`update member_subscriptions set status='trialing',trial_end=${periodEnd.toISOString()} where id='sub'`;
+        const response = await create();
+        expect(response.status).toBe(201);
+        const { invoice } = await created(response);
+        expect((await request(`/${invoice.id}/send`)).status).toBe(200);
+        expect(enqueue).toHaveBeenCalledTimes(1);
+        expect((await sql`select status from member_invoices where id=${invoice.id}`)[0]!.status).toBe("sent");
+        await unchangedPeriod();
+    });
+    test("an ongoing cash trial cannot create an invoice", async () => {
+        const trialEnd = new Date(Date.now() + 86400000);
+        await sql`update member_subscriptions set status='trialing',trial_end=${trialEnd.toISOString()} where id='sub'`;
+        const response = await create();
+        expect(response.status).toBe(400);
+        expect(await response.json()).toMatchObject({ code: "SUBSCRIPTION_NOT_COLLECTING" });
+        expect(await count("member_invoices")).toBe(0);
+        expect(enqueue).not.toHaveBeenCalled();
+        await unchangedPeriod();
+    });
     test("a stale selected billing period cannot create an invoice", async () => {
         const response = await create({ periodStart: periodStart.toISOString(), periodEnd: new Date(periodEnd.getTime() + 7 * 86400000).toISOString() });
         expect(response.status).toBe(409);

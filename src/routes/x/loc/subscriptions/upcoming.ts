@@ -16,56 +16,64 @@ import {
     calculateUpcomingPayments,
     remainingMonthWindow,
     type UpcomingSchedule,
+    type UpcomingSubscription,
 } from "./upcomingPayments";
 
-export async function loadSchedules(subscriptionIds: Set<string>) {
-    const [schedulers, pending, failed] = await Promise.all([
-        subQueue.getJobSchedulers(0, -1, true),
-        subQueue.getJobs(
-            ["delayed", "waiting", "active", "prioritized"],
-            0,
-            -1,
-            true,
-        ),
-        subQueue.getJobs(["failed"], 0, -1, true),
-    ]);
+type ScheduleSubscription = Pick<UpcomingSubscription,
+    "id" | "locationId" | "parentId" | "paymentType" | "status" | "startDate" | "trialEnd" | "currentPeriodEnd"
+>;
+
+export async function loadSchedules(subscriptions: ScheduleSubscription[], locationId: string) {
     const schedules = new Map<string, UpcomingSchedule>();
-    for (const scheduler of schedulers) {
-        const data = scheduler.template?.data;
-        if (!data?.sid || !subscriptionIds.has(data.sid) || !scheduler.next)
-            continue;
-        schedules.set(data.sid, {
-            dueAt: new Date(scheduler.next),
-            cycleCount: (scheduler.iterationCount ?? 0) + 1,
-            discount: data.discount,
-            nextDueAt: scheduler.pattern
-                ? (after) => {
-                      const next = defaultRepeatStrategy(after.getTime(), {
-                          pattern: scheduler.pattern,
-                          tz: scheduler.tz,
-                          utc: true,
-                      });
-                      return next ? new Date(next) : null;
-                  }
-                : undefined,
-        });
-    }
-    for (const job of [...pending, ...failed]) {
-        const data = job.data;
-        if (!data?.sid || !subscriptionIds.has(data.sid)) continue;
-        const dueAt = data.expectedDueAt
-            ? new Date(data.expectedDueAt)
-            : new Date(job.timestamp + (job.opts.delay ?? job.delay ?? 0));
-        if (!Number.isFinite(dueAt.getTime())) continue;
-        const current = schedules.get(data.sid);
-        if (failed.includes(job) && current && !current.blocked) continue;
-        if (current && current.dueAt <= dueAt) continue;
-        schedules.set(data.sid, {
-            dueAt,
-            cycleCount: data.recurrenceCount ?? current?.cycleCount ?? 1,
-            discount: data.discount,
-            blocked: failed.includes(job),
-        });
+    const eligible = subscriptions.filter(sub => sub.locationId === locationId && !sub.parentId
+        && sub.paymentType !== "cash" && ["active", "trialing", "incomplete"].includes(sub.status));
+    for (let offset = 0; offset < eligible.length; offset += 10) {
+        await Promise.all(eligible.slice(offset, offset + 10).map(async sub => {
+            const due = sub.status === "trialing" && sub.trialEnd ? sub.trialEnd
+                : sub.status === "incomplete" ? sub.startDate : sub.currentPeriodEnd;
+            const jobIds = [`renewal:recursive:${sub.id}`];
+            if (due && Number.isFinite(due.getTime())) {
+                const exactId = `renewal-exact-${sub.id}-${due.getTime()}`;
+                jobIds.push(exactId, `${exactId}-recovery`);
+            }
+            const [scheduler, jobs] = await Promise.all([
+                subQueue.getJobScheduler(`renewal:static:${sub.id}`),
+                Promise.all(jobIds.map(id => subQueue.getJob(id))),
+            ]);
+            let current: UpcomingSchedule | undefined;
+            const data = scheduler?.template?.data;
+            if (data?.sid === sub.id && data.lid === locationId && scheduler?.next && Number.isFinite(scheduler.next)) {
+                current = {
+                    dueAt: new Date(scheduler.next),
+                    cycleCount: (scheduler.iterationCount ?? 0) + 1,
+                    discount: data.discount,
+                    nextDueAt: scheduler.pattern ? after => {
+                        const next = defaultRepeatStrategy(after.getTime(), {
+                            pattern: scheduler.pattern, tz: scheduler.tz, utc: true,
+                        });
+                        return next ? new Date(next) : null;
+                    } : undefined,
+                };
+            }
+            const candidates = await Promise.all(jobs.map(async job => {
+                if (!job || job.data?.sid !== sub.id || job.data.lid !== locationId) return null;
+                if (job.data.expectedDueAt && (!due || new Date(job.data.expectedDueAt).getTime() !== due.getTime())) return null;
+                const state = await job.getState();
+                if (!["delayed", "waiting", "active", "prioritized", "failed"].includes(state)) return null;
+                const dueAt = job.data.expectedDueAt ? new Date(job.data.expectedDueAt)
+                    : new Date(job.timestamp + (job.opts.delay ?? job.delay ?? 0));
+                if (!Number.isFinite(dueAt.getTime())) return null;
+                return { dueAt, cycleCount: job.data.recurrenceCount ?? current?.cycleCount ?? 1,
+                    discount: job.data.discount, blocked: state === "failed" };
+            }));
+            // A retained failed attempt must not hide its live recovery job.
+            for (const candidate of candidates.filter(candidate => candidate !== null)
+                .sort((a, b) => Number(a.blocked) - Number(b.blocked) || a.dueAt.getTime() - b.dueAt.getTime())) {
+                if (current && ((!current.blocked && candidate.blocked) || current.dueAt <= candidate.dueAt)) continue;
+                current = candidate;
+            }
+            if (current) schedules.set(sub.id, current);
+        }));
     }
     return schedules;
 }
@@ -163,15 +171,7 @@ export async function upcomingRoutes(app: Elysia) {
                     }),
                     canEditLocationMember(lid, actor),
                 ]);
-            const schedules = subscriptions.some(
-                (sub) =>
-                    sub.paymentType !== "cash" &&
-                    ["active", "trialing", "incomplete"].includes(sub.status),
-            )
-                ? await loadSchedules(
-                      new Set(subscriptions.map((sub) => sub.id)),
-                  )
-                : new Map<string, UpcomingSchedule>();
+            const schedules = await loadSchedules(subscriptions, lid);
             const result = calculateUpcomingPayments({
                 subscriptions,
                 invoices,

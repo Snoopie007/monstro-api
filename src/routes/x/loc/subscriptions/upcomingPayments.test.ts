@@ -305,6 +305,22 @@ describe("remaining membership payments", () => {
         expect(result.totals[0]?.amountMinor).toBe(47500);
     });
 
+    test("does not restore a once-only promotion exhausted during activation", () => {
+        const result = forecast({
+            subscriptions: [subscription({ metadata: { promo: { discount: { amount: 2500, duration: 1 } } } })],
+            paidCounts: new Map([["sub1", 1]]),
+        });
+        expect(result.preview.map(row => row.amountMinor)).toEqual([10000, 10000, 10000, 10000, 10000]);
+    });
+
+    test("cash uses its original promotion and paid count, not a worker inspection discount", () => {
+        const result = forecast({
+            subscriptions: [subscription({ paymentType: "cash", metadata: { promo: { discount: { amount: 2500, duration: 2 } } } })],
+            schedules: new Map(), paidCounts: new Map([["sub1", 1]]),
+        });
+        expect(result.preview.map(row => row.amountMinor)).toEqual([7500, 10000, 10000, 10000, 10000]);
+    });
+
     test.each(["processing", "in_flight", "unknown"])(
         "does not count a %s charge as another upcoming collection",
         (status) => {

@@ -254,7 +254,7 @@ export function calculateUpcomingPayments({
         const promo = sub.metadata?.promo as
             | { discount?: UpcomingSchedule["discount"] }
             | undefined;
-        const promotion = schedule?.discount ?? promo?.discount;
+        const promotion = cash ? promo?.discount : schedule?.discount;
         const ownInvoices = invoicesBySubscription.get(sub.id) ?? [];
 
         // At most 31 daily charges can fall in the remaining month. The bound
