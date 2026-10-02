@@ -123,7 +123,7 @@ function parseJsonObject(content: string) {
     }
 }
 
-const TASK_TOOLS = new Set(["retry_failed", "cancel_session", "schedule_session"]);
+const TASK_TOOLS = new Set(["retry_failed", "cancel_class", "schedule_class", "member_sessions"]);
 
 export function lastPausedTask(stored: BaseMessage[]): PausedTask | null {
     const last = stored.at(-1);
@@ -192,7 +192,7 @@ export function mergeResumeArgs(paused: PausedTask, message: string): ToolArgs {
         return next;
     }
     if (paused.kind === "ask" || (paused.options.length === 0 && /\s/.test(text) && !text.includes("·"))) {
-        if (paused.name === "schedule_session" && argString(next, "memberId", "mid")) {
+        if (paused.name === "schedule_class" && argString(next, "memberId", "mid")) {
             if (/\btime\b/i.test(paused.question)) {
                 next.time = text;
             } else {
@@ -201,7 +201,7 @@ export function mergeResumeArgs(paused: PausedTask, message: string): ToolArgs {
             }
             return next;
         }
-        if (paused.name === "cancel_session" && argString(next, "memberId", "mid")) {
+        if (paused.name === "cancel_class" && argString(next, "memberId", "mid")) {
             next.program = text;
             return next;
         }
@@ -213,8 +213,8 @@ export function mergeResumeArgs(paused: PausedTask, message: string): ToolArgs {
         return next;
     }
     if (paused.name === "retry_failed") next.subscriptionId = id;
-    else if (paused.name === "cancel_session") next.reservationId = id;
-    else if (paused.name === "schedule_session") {
+    else if (paused.name === "cancel_class") next.reservationId = id;
+    else if (paused.name === "schedule_class") {
         if (argString(next, "memberId", "mid") && !asString(next.programId)) next.programId = id;
         else next.sessionId = id;
     }
