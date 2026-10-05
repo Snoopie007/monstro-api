@@ -254,7 +254,7 @@ type InvoiceQuoteInput = Parameters<typeof quoteSubscriptionInvoice>[0];
 async function previewDeferredEnrollment({ locationId, pricing, location, deferredBilling, discount }: {
     locationId: string;
     pricing: InvoiceQuoteInput["pricing"];
-    location: InvoiceQuoteInput["location"];
+    location: InvoiceQuoteInput["location"] & { timezone: string };
     deferredBilling: DeferredBilling | null;
     discount?: PromoDiscount;
 }) {
@@ -268,7 +268,7 @@ async function previewDeferredEnrollment({ locationId, pricing, location, deferr
     });
     return httpStatus(200, { billingPreview: {
         dueToday: 0, firstPaymentAt: deferredBilling.firstPaymentAt,
-        timezone: deferredBilling.timezone, firstChargeTotal: quote.total, prorationAmount: deferredBilling.prorationAmount,
+        timezone: location.timezone, firstChargeTotal: quote.total, prorationAmount: deferredBilling.prorationAmount,
         currency: quote.currency, recurringAmount: pricing.price, interval: pricing.interval, intervalThreshold: pricing.intervalThreshold,
     } });
 }

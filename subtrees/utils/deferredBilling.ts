@@ -6,7 +6,6 @@ export type DeferredBilling = {
   version: 1;
   firstPaymentAt: string;
   accessStartDate: string;
-  timezone: string;
   prorate: boolean;
   prorationAmount: number;
   pausedAt?: string | null;
@@ -21,12 +20,12 @@ export function getDeferredBilling(metadata: Record<string, unknown> | null | un
   if (!raw || typeof raw !== "object") throw new Error("Invalid deferred billing schedule");
 
   const {
-    version, firstPaymentAt, accessStartDate, timezone, prorate, prorationAmount,
+    version, firstPaymentAt, accessStartDate, prorate, prorationAmount,
   } = raw as Record<string, unknown>;
 
   // JSON metadata is untrusted. Check the required fields before using dates or amounts.
   if (version !== 1 || typeof firstPaymentAt !== "string"
-    || typeof accessStartDate !== "string" || typeof timezone !== "string"
+    || typeof accessStartDate !== "string"
     || typeof prorate !== "boolean" || typeof prorationAmount !== "number") {
     throw new Error("Invalid deferred billing schedule");
   }
@@ -41,12 +40,12 @@ export function getDeferredBilling(metadata: Record<string, unknown> | null | un
 
   const pauseFields = getPauseFields(raw as Record<string, unknown>);
 
-  // Compare calendar dates in the location timezone, validating the date and timezone too.
+  // Validate the stored access date. Exact local-day ordering is checked at enrollment.
   const access = calendarDate(accessStartDate);
-  const first = calendarDate(formatInTimeZone(new Date(firstPaymentAt), timezone, "yyyy-MM-dd"));
+  const first = new Date(firstPaymentAt);
   if (first <= access) throw new Error("First payment must be after access starts");
   return {
-    version, firstPaymentAt, accessStartDate, timezone, prorate, prorationAmount,
+    version, firstPaymentAt, accessStartDate, prorate, prorationAmount,
     ...pauseFields,
   };
 }
@@ -105,7 +104,7 @@ export function createDeferredBilling(input: {
     ? calculateProrationAmount(input.price, access, date, input.interval, input.intervalThreshold)
     : 0;
   return { version: 1, firstPaymentAt: firstPaymentAt.toISOString(), accessStartDate,
-    timezone: input.timezone, prorate: !!input.prorateBeforeFirstPayment, prorationAmount };
+    prorate: !!input.prorateBeforeFirstPayment, prorationAmount };
 }
 
 function calculateProrationAmount(price: number, access: Date, date: Date, interval: Interval, threshold: number) {
@@ -126,11 +125,11 @@ function calculateProrationAmount(price: number, access: Date, date: Date, inter
 }
 
 /** Advance in local wall-clock time so DST does not shift the collection hour. */
-export function nextDeferredBillingBoundary(schedule: DeferredBilling, periodStart: Date, interval: Interval, threshold: number) {
+export function nextDeferredBillingBoundary(schedule: DeferredBilling, periodStart: Date, interval: Interval, threshold: number, timezone: string) {
   // Temporarily encode local clock fields as UTC for the shared calendar arithmetic.
-  const local = (date: Date) => new Date(`${formatInTimeZone(date, schedule.timezone, "yyyy-MM-dd'T'HH:mm:ss.SSS")}Z`);
+  const local = (date: Date) => new Date(`${formatInTimeZone(date, timezone, "yyyy-MM-dd'T'HH:mm:ss.SSS")}Z`);
   const next = nextBillingBoundary(local(new Date(schedule.firstPaymentAt)), local(periodStart), interval, threshold);
-  return fromZonedTime(next.toISOString().slice(0, 23), schedule.timezone);
+  return fromZonedTime(next.toISOString().slice(0, 23), timezone);
 }
 
 /** The first paid period starts at the chosen billing anchor, after the initial access period. */
@@ -146,9 +145,9 @@ export function deferredChargeAmount(schedule: DeferredBilling | null, periodSta
 }
 
 /** Exclude only paused calendar days that overlap access before the first bill. */
-export function resumeDeferredBilling(schedule: DeferredBilling, now: Date): DeferredBilling {
+export function resumeDeferredBilling(schedule: DeferredBilling, now: Date, timezone: string): DeferredBilling {
   if (!schedule.pausedAt) return schedule;
-  const day = (date: Date) => calendarDate(formatInTimeZone(date, schedule.timezone, "yyyy-MM-dd")).getTime();
+  const day = (date: Date) => calendarDate(formatInTimeZone(date, timezone, "yyyy-MM-dd")).getTime();
   const accessStart = calendarDate(schedule.accessStartDate).getTime();
   const firstPayment = day(new Date(schedule.firstPaymentAt));
   // Clip the pause to [access start, first bill), excluding time before access begins.

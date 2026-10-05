@@ -110,7 +110,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                     || (sub.trialEnd && sub.trialEnd > now) || (sub.cancelAt && sub.cancelAt <= now)) {
                     return status(400, { error: "This subscription is not available for cash collection", code: "SUBSCRIPTION_NOT_COLLECTING" });
                 }
-                const renewal = sub.currentPeriodEnd <= now ? getNextCashCycle(sub) : null;
+                const renewal = sub.currentPeriodEnd <= now ? getNextCashCycle(sub, sub.location!.timezone) : null;
                 const start = new Date(periodStart ?? renewal?.periodStart ?? sub.currentPeriodStart);
                 const end = new Date(periodEnd ?? renewal?.periodEnd ?? sub.currentPeriodEnd);
                 if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return status(400, { error: "Invalid billing period" });

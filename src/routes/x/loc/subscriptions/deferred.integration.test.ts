@@ -68,6 +68,7 @@ describe.skipIf(!url)("deferred enrollment", () => {
         const rows = await db.select().from(schema.memberSubscriptions);
         expect(rows).toHaveLength(1);
         const sub = rows[0]!;
+        expect(sub.metadata.deferredBilling).not.toHaveProperty("timezone");
         expect(sub.currentPeriodEnd.toISOString()).toBe("2090-10-15T13:00:00.000Z");
         const activated = await request(`/${sub.id}/activate-cash`, {});
         expect(activated.status).toBe(200);

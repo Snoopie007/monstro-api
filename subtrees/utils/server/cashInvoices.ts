@@ -105,7 +105,9 @@ async function advanceCashPeriod(tx: CashInvoiceDatabase, sub: typeof memberSubs
   const stored = typeof sub.metadata.cashBillingAnchor === "string" ? new Date(sub.metadata.cashBillingAnchor) : start;
   const anchor = Number.isFinite(stored.getTime()) ? stored : start;
   const deferred = getDeferredBilling(sub.metadata);
-  const boundary = deferred ? nextDeferredBillingBoundary(deferred, start, pricing.interval, pricing.intervalThreshold) : nextBillingBoundary(anchor, start, pricing.interval, pricing.intervalThreshold);
+  const [location] = deferred ? await tx.select({ timezone: locations.timezone }).from(locations).where(eq(locations.id, sub.locationId)) : [];
+  if (deferred && !location) throw new CashInvoiceError("Billing location not found", "BILLING_PERIOD_CHANGED");
+  const boundary = deferred ? nextDeferredBillingBoundary(deferred, start, pricing.interval, pricing.intervalThreshold, location!.timezone) : nextBillingBoundary(anchor, start, pricing.interval, pricing.intervalThreshold);
   if (boundary.getTime() !== end.getTime()) {
     throw new CashInvoiceError("The billing period changed. Refresh the subscription.", "BILLING_PERIOD_CHANGED");
   }

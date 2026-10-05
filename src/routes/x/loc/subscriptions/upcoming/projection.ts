@@ -168,7 +168,7 @@ function* getBillingPeriods(
             if (!sub.pricing?.interval || !sub.pricing.intervalThreshold)
                 throw new Error("Missing billing cadence");
             const deferred = getDeferredBilling(sub.metadata);
-            next = deferred ? nextDeferredBillingBoundary(deferred, due, sub.pricing.interval, sub.pricing.intervalThreshold) :
+            next = deferred ? nextDeferredBillingBoundary(deferred, due, sub.pricing.interval, sub.pricing.intervalThreshold, window.timezone) :
                 schedule?.nextDueAt?.(due) ??
                 nextBillingBoundary(
                     anchor,
