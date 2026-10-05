@@ -39,6 +39,7 @@ export type ChargeWithGatewayInput = {
 	note: string;
 	metadata: Record<string, string>;
 	paymentType: PaymentType;
+	deferredBilling?: boolean;
 };
 
 export type ChargeWithGatewayResult =
@@ -145,7 +146,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		}
 		const authorize = new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey);
 		try {
-			const billingAttemptId = metadata.billingAttemptId;
+			const billingAttemptId = input.deferredBilling ? metadata.billingAttemptId : undefined;
 			const charge = await authorize.createCharge(gatewayCustomerId, paymentMethodId, {
 				total,
 				currency,
@@ -169,6 +170,13 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 						gatewayMetadata,
 					};
 				case "held":
+					// TODO(billing): handle held payments as pending across ordinary checkout in a separate PR.
+					// Keep the existing failure result unless this is a deferred subscription payment.
+					if (!input.deferredBilling) return {
+						status: "failed",
+						failureReason: charge.responseMessage ?? "Authorize.net held the transaction for review",
+						failureCode: "4", paymentType: "card", gatewayMetadata,
+					};
 					return {
 						status: "uncertain",
 						paymentIntentId: charge.transactionId,

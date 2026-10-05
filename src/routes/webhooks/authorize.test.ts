@@ -62,6 +62,9 @@ const tx = {
     query: {
         transactions: { findFirst: mock(async () => transaction) },
         memberInvoices: { findFirst: mock(async () => existingInvoice) },
+        memberSubscriptions: { findFirst: mock(async (): Promise<{ metadata: Record<string, unknown> }> => ({ metadata: {
+            deferredBilling: { version: 1, firstPaymentAt: "2026-02-01T09:00:00Z", prorate: false, prorationAmount: 0 },
+        } })) },
         memberPlanPricing: { findFirst: mock(async () => pricing) },
         memberLocations: { findFirst: mock(async () => memberLocation) },
         eventRegistrations: { findFirst: mock(async () => existingEventRegistration) },
@@ -357,6 +360,15 @@ describe("Authorize.net webhook", () => {
         const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
         expect(response.status).toBe(200);
         expect(updates).toHaveLength(0);
+    });
+    test("ordinary billing attempt retains previous Authorize callback behavior", async () => {
+        tx.query.memberSubscriptions.findFirst.mockResolvedValueOnce({ metadata: {} });
+        existingInvoice = { id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1",
+            metadata: { billingAttempt: { id: "old-attempt", status: "processing", paymentIntentId: "another-provider-id" } } };
+        const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
+        expect(response.status).toBe(200);
+        expect(updates).toContainEqual(expect.objectContaining({ paid: true }));
+        expect(updates.some(value => (value.metadata as Record<string, unknown> | undefined)?.billingAttempt)).toBe(false);
     });
     test("billing attempt recovers its current response-lost payment using the provider reference", async () => {
         findTransaction.mockResolvedValueOnce(undefined);

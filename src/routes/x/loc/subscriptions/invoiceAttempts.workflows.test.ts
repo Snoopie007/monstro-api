@@ -9,7 +9,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
     const admin = postgres(url, { max: 1, onnotice: () => {} });
     const sql = postgres(url, { max: 4, prepare: false, connection: { search_path: `${namespace},public,extensions` }, onnotice: () => {} });
     const db = drizzle(sql, { schema });
-    const tables = ["member_invoices", "transactions", "members", "workflows", "workflow_triggers", "workflow_queues"];
+    const tables = ["member_subscriptions", "member_invoices", "transactions", "members", "workflows", "workflow_triggers", "workflow_queues"];
     let save: typeof import("./invoiceAttempts").saveInvoiceAttemptResult;
     let claim: typeof import("./invoiceAttempts").claimInvoiceAttempt;
     let squareSuccess: typeof import("@/routes/webhooks/handlers/square/squarePlanSuccess").handleSquarePlanSuccess;
@@ -38,7 +38,12 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         ] });
         await db.insert(schema.workflowTriggers).values({ workflowId: "workflow", type: "payment::failed", data: { label: "Decline" } });
         await db.insert(schema.transactions).values({ id: "txn", memberId: "member", locationId: "location", type: "inbound", status: "failed", paymentType: "card" });
-        await db.insert(schema.memberInvoices).values({ id: "invoice", memberId: "member", locationId: "location", transactionId: "txn", status: "unpaid", tax: 0, total: 100, subTotal: 100, metadata: { billingAttempt: { id: "attempt", status: "in_flight", paymentType: "card" } } });
+        await db.insert(schema.memberSubscriptions).values({
+            id: "sub", memberId: "member", locationId: "location", status: "active", paymentType: "card",
+            startDate: new Date("2026-01-01"), currentPeriodStart: new Date("2026-01-01"), currentPeriodEnd: new Date("2026-02-01"),
+            metadata: { deferredBilling: { version: 1, firstPaymentAt: "2026-02-01T09:00:00Z", prorate: true, prorationAmount: 40 } },
+        });
+        await db.insert(schema.memberInvoices).values({ id: "invoice", memberPlanId: "sub", memberId: "member", locationId: "location", transactionId: "txn", status: "unpaid", tax: 0, total: 100, subTotal: 100, metadata: { billingAttempt: { id: "attempt", status: "in_flight", paymentType: "card" } } });
     });
     const squarePayment = {
         invoiceId: "invoice", paymentType: "card" as const, paymentMethodId: undefined,
@@ -93,6 +98,22 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         const [transaction] = await db.select().from(schema.transactions);
         expect(transaction?.metadata).toMatchObject({ gatewayService: "square", squarePaymentId: "sq_current" });
         expect(transaction?.metadata?.billingAttempt).toBeUndefined();
+    });
+    test.each(["succeeded", "failed"] as const)("ordinary Square %s retains previous callback behavior", async outcome => {
+        await db.update(schema.memberSubscriptions).set({ status: "paused", metadata: {} });
+        await db.update(schema.memberInvoices).set({ paid: true, metadata: {
+            billingAttempt: { id: "old-attempt", status: "succeeded", paymentIntentId: "old-payment" },
+        } });
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await settle({ ...squarePayment, paymentMethodId: "legacy-method", amount: 101 });
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe(outcome === "succeeded" ? "active" : "past_due");
+        expect((await db.select().from(schema.memberInvoices))[0]?.metadata).toMatchObject({ billingAttempt: { status: "succeeded", paymentIntentId: "old-payment" } });
+    });
+    test.each(["succeeded", "failed"] as const)("deferred Square %s does not change a paused subscription", async outcome => {
+        await db.update(schema.memberSubscriptions).set({ status: "paused" });
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await settle({ ...squarePayment, paymentMethodId: "saved-method" });
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("paused");
     });
     test("held provider payments block another billing attempt", async () => {
         await save({ invoiceId: "invoice", attemptId: "attempt", status: "processing", paymentIntentId: "held-id", retryable: false });

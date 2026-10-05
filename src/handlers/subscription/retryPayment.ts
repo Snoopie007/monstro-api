@@ -279,6 +279,7 @@ export async function retrySubscriptionPayment(props: {
             gatewayCustomerId: billingContext.gatewayCustomerId,
             paymentMethodId,
             transactionId: attemptId,
+            deferredBilling: !!getDeferredBilling(sub.metadata),
             total: invoice.total,
             feesAmount: transaction.feeAmount,
             currency: transaction.currency,

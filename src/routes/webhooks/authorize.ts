@@ -1,4 +1,4 @@
-import { prepareAuthorizeInvoiceAttempt } from "@/utils/invoiceAttempts";
+import { getDeferredInvoiceBilling, prepareAuthorizeInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -542,7 +542,10 @@ export function authorizeWebhookRoutes(app: Elysia) {
             // Then check the attempt: a delayed webhook may belong to an older payment.
             const [invoice] = await tx.select().from(memberInvoices)
                 .where(eq(memberInvoices.transactionId, current.id)).for("update");
-            const attemptResult = prepareAuthorizeInvoiceAttempt(invoice, {
+            const deferred = await getDeferredInvoiceBilling(tx, invoice?.memberPlanId);
+            // TODO(billing): review payment-attempt matching for ordinary payments in a separate PR.
+            // Keep their existing webhook behavior until that follow-up is implemented.
+            const attemptResult = prepareAuthorizeInvoiceAttempt(deferred ? invoice : undefined, {
                 id: providerTransactionId, invoiceNumber: details.order?.invoiceNumber, status: paymentStatus,
             });
             if (!attemptResult) return;
@@ -580,7 +583,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
                     updated: new Date(),
                 }).where(and(
                     eq(memberSubscriptions.id, subscriptionId),
-                    notInArray(memberSubscriptions.status, ["canceled", "paused", "archived", "incomplete_expired"]),
+                    notInArray(memberSubscriptions.status, ["canceled", "paused", "incomplete_expired"]),
                 )).returning({ id: memberSubscriptions.id });
                 if (updatedSubscription && paymentStatus === "paid" && current.memberId) {
                     await tx.update(memberLocations).set({ status: "active", updated: new Date() })

@@ -1,4 +1,17 @@
+import type { db } from "@/db/db";
+import { memberSubscriptions } from "@/subtrees/schemas";
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
+import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
+
+/** Read the subscription settings so new callback rules apply only to deferred billing. */
+export async function getDeferredInvoiceBilling(tx: Pick<typeof db, "query">, subscriptionId: string | null | undefined) {
+    if (!subscriptionId) return null;
+    const subscription = await tx.query.memberSubscriptions.findFirst({
+        where: eq(memberSubscriptions.id, subscriptionId), columns: { metadata: true },
+    });
+    return getDeferredBilling(subscription?.metadata);
+}
 
 type AttemptMetadata = Record<string, unknown>;
 type InvoiceMetadata = Record<string, unknown> | null | undefined;

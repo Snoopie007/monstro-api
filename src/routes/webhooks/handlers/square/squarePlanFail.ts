@@ -1,4 +1,4 @@
-import { prepareSquareInvoiceAttempt } from "@/utils/invoiceAttempts";
+import { getDeferredInvoiceBilling, prepareSquareInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
@@ -38,7 +38,10 @@ export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
     await db.transaction(async (tx) => {
         const [priorInvoice] = await tx.select().from(memberInvoices).where(eq(memberInvoices.id, invoiceId)).for("update");
         assert(priorInvoice, "Invoice not found");
-        const attemptResult = prepareSquareInvoiceAttempt(priorInvoice, amount, squarePaymentId, "failed");
+        const deferred = await getDeferredInvoiceBilling(tx, priorInvoice.memberPlanId);
+        // TODO(billing): review stale callbacks and subscription status guards for ordinary payments separately.
+        // Only deferred subscriptions use the new attempt checks and status guards in this PR.
+        const attemptResult = prepareSquareInvoiceAttempt(deferred ? priorInvoice : { ...priorInvoice, metadata: null }, amount, squarePaymentId, "failed");
         if (!attemptResult) return;
         const { paymentMethodId: attemptedMethodId, ...attemptUpdate } = attemptResult;
         const [invoice] = await tx.update(memberInvoices).set({
@@ -97,7 +100,7 @@ export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
             await tx.update(memberSubscriptions).set({
                 gatewayPaymentId: paymentMethodId,
                 status: "past_due",
-            }).where(and(eq(memberSubscriptions.id, invoice.memberPlanId), notInArray(memberSubscriptions.status, ["canceled", "paused", "archived", "incomplete_expired"])));
+            }).where(and(eq(memberSubscriptions.id, invoice.memberPlanId), deferred ? notInArray(memberSubscriptions.status, ["canceled", "paused", "incomplete_expired"]) : undefined));
         }
     });
 
