@@ -14,38 +14,60 @@ export type DeferredBilling = {
   originalProrationAmount?: number;
 };
 
+/** Missing metadata means ordinary billing; malformed schedules must never fall back to charging normally. */
 export function getDeferredBilling(metadata: Record<string, unknown> | null | undefined): DeferredBilling | null {
-  const raw = metadata?.deferredBilling;
+  const { deferredBilling: raw } = metadata ?? {};
   if (raw === undefined) return null;
   if (!raw || typeof raw !== "object") throw new Error("Invalid deferred billing schedule");
-  const value = raw as Record<string, unknown>;
-  if (value.version !== 1 || typeof value.firstPaymentAt !== "string"
-    || !Number.isFinite(new Date(value.firstPaymentAt).getTime())
-    || typeof value.accessStartDate !== "string" || typeof value.timezone !== "string"
-    || typeof value.prorate !== "boolean" || typeof value.prorationAmount !== "number"
-    || !Number.isSafeInteger(value.prorationAmount) || value.prorationAmount < 0
-    || (!value.prorate && value.prorationAmount !== 0)
-    || (value.pausedAt != null && (typeof value.pausedAt !== "string" || !Number.isFinite(new Date(value.pausedAt).getTime())))
-    || (value.pausedDays !== undefined && (typeof value.pausedDays !== "number" || !Number.isSafeInteger(value.pausedDays) || value.pausedDays < 0))
-    || (value.originalProrationAmount !== undefined && (typeof value.originalProrationAmount !== "number" || !Number.isSafeInteger(value.originalProrationAmount) || value.originalProrationAmount < 0))) {
+
+  const {
+    version, firstPaymentAt, accessStartDate, timezone, prorate, prorationAmount,
+    pausedAt, pausedDays, originalProrationAmount,
+  } = raw as Record<string, unknown>;
+
+  // JSON metadata is untrusted. Check the required fields before using dates or amounts.
+  if (version !== 1 || typeof firstPaymentAt !== "string"
+    || typeof accessStartDate !== "string" || typeof timezone !== "string"
+    || typeof prorate !== "boolean" || typeof prorationAmount !== "number") {
     throw new Error("Invalid deferred billing schedule");
   }
-  const access = calendarDate(value.accessStartDate);
-  const first = calendarDate(formatInTimeZone(new Date(value.firstPaymentAt), value.timezone, "yyyy-MM-dd"));
+  if (!Number.isFinite(new Date(firstPaymentAt).getTime())) {
+    throw new Error("Invalid deferred billing schedule");
+  }
+
+  // Money is stored in whole cents. Disabling proration must leave no extra charge.
+  if (!Number.isSafeInteger(prorationAmount) || prorationAmount < 0 || (!prorate && prorationAmount !== 0)) {
+    throw new Error("Invalid deferred billing schedule");
+  }
+
+  // Pause bookkeeping is optional until the first pause; null means no active pause.
+  if (pausedAt != null) {
+    if (typeof pausedAt !== "string" || !Number.isFinite(new Date(pausedAt).getTime())) {
+      throw new Error("Invalid deferred billing schedule");
+    }
+  }
+  if (pausedDays !== undefined) {
+    if (typeof pausedDays !== "number" || !Number.isSafeInteger(pausedDays) || pausedDays < 0) {
+      throw new Error("Invalid deferred billing schedule");
+    }
+  }
+  if (originalProrationAmount !== undefined) {
+    if (typeof originalProrationAmount !== "number" || !Number.isSafeInteger(originalProrationAmount) || originalProrationAmount < 0) {
+      throw new Error("Invalid deferred billing schedule");
+    }
+  }
+
+  // Compare calendar dates in the location timezone, validating the date and timezone too.
+  const access = calendarDate(accessStartDate);
+  const first = calendarDate(formatInTimeZone(new Date(firstPaymentAt), timezone, "yyyy-MM-dd"));
   if (first <= access) throw new Error("First payment must be after access starts");
   return {
-    version: 1,
-    firstPaymentAt: value.firstPaymentAt,
-    accessStartDate: value.accessStartDate,
-    timezone: value.timezone,
-    prorate: value.prorate,
-    prorationAmount: value.prorationAmount,
-    pausedAt: value.pausedAt,
-    pausedDays: value.pausedDays,
-    originalProrationAmount: value.originalProrationAmount,
+    version, firstPaymentAt, accessStartDate, timezone, prorate, prorationAmount,
+    pausedAt, pausedDays, originalProrationAmount,
   };
 }
 
+// Represent a calendar date at UTC midnight so day counts are unaffected by DST.
 function calendarDate(value: string) {
   const date = new Date(`${value}T00:00:00.000Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
@@ -66,12 +88,15 @@ export function createDeferredBilling(input: {
   }
   if (input.trialDays) throw new Error("A delayed first payment cannot be combined with trial days");
   const date = calendarDate(input.firstPaymentDate ?? "");
+  // Collection starts at 9 a.m. in the location timezone on the selected billing date.
   const firstPaymentAt = fromZonedTime(`${input.firstPaymentDate}T09:00:00`, input.timezone);
   const accessStartDate = formatInTimeZone(input.startDate, input.timezone, "yyyy-MM-dd");
   const access = calendarDate(accessStartDate);
   if (date <= access || firstPaymentAt <= (input.now ?? new Date())) throw new Error("First payment must be after access starts and in the future");
   if (input.cancelAt && firstPaymentAt >= input.cancelAt) throw new Error("First payment must be before the subscription ends");
   if (!Number.isSafeInteger(input.intervalThreshold) || input.intervalThreshold < 1) throw new Error("Invalid billing interval");
+  // Use the interval before the first bill as the proration denominator.
+  // Clamp month/year anchors to the last valid day, e.g. March 31 back to February 28.
   const previous = new Date(date);
   if (input.interval === "month" || input.interval === "year") {
     const month = date.getUTCMonth() - input.intervalThreshold * (input.interval === "year" ? 12 : 1);
@@ -80,6 +105,7 @@ export function createDeferredBilling(input: {
   } else {
     previous.setUTCDate(date.getUTCDate() - input.intervalThreshold * (input.interval === "week" ? 7 : 1));
   }
+  // Charge recurring price × initial access days / full interval days, rounded once to cents.
   const prorationAmount = input.prorateBeforeFirstPayment
     ? Math.round(input.price * (date.getTime() - access.getTime()) / (date.getTime() - previous.getTime())) : 0;
   if (!Number.isSafeInteger(prorationAmount) || prorationAmount < 0 || prorationAmount > 2_147_483_647) throw new Error("Prorated amount is out of range");
@@ -87,21 +113,25 @@ export function createDeferredBilling(input: {
     timezone: input.timezone, prorate: !!input.prorateBeforeFirstPayment, prorationAmount };
 }
 
+/** Advance in local wall-clock time so DST does not shift the collection hour. */
 export function nextDeferredBillingBoundary(schedule: DeferredBilling, periodStart: Date, interval: Interval, threshold: number) {
+  // Temporarily encode local clock fields as UTC for the shared calendar arithmetic.
   const local = (date: Date) => new Date(`${formatInTimeZone(date, schedule.timezone, "yyyy-MM-dd'T'HH:mm:ss.SSS")}Z`);
   const next = nextBillingBoundary(local(new Date(schedule.firstPaymentAt)), local(periodStart), interval, threshold);
   return fromZonedTime(next.toISOString().slice(0, 23), schedule.timezone);
 }
 
+/** The first paid period starts at the chosen billing anchor, after the initial access period. */
 export function isDeferredFirstPeriod(schedule: DeferredBilling | null, periodStart: Date | string) {
   return !!schedule && new Date(periodStart).getTime() === new Date(schedule.firstPaymentAt).getTime();
 }
 
+/** Add initial-access proration only once; later periods always use the recurring price. */
 export function deferredChargeAmount(schedule: DeferredBilling | null, periodStart: Date | string, price: number, downpayment?: number | null) {
+  // Preserve the existing convention that a zero downpayment falls back to the full price.
   return schedule && isDeferredFirstPeriod(schedule, periodStart)
     ? (downpayment || price) + schedule.prorationAmount : price;
 }
-
 
 /** Exclude only paused calendar days that overlap access before the first bill. */
 export function resumeDeferredBilling(schedule: DeferredBilling, now: Date): DeferredBilling {
@@ -109,10 +139,12 @@ export function resumeDeferredBilling(schedule: DeferredBilling, now: Date): Def
   const day = (date: Date) => calendarDate(formatInTimeZone(date, schedule.timezone, "yyyy-MM-dd")).getTime();
   const accessStart = calendarDate(schedule.accessStartDate).getTime();
   const firstPayment = day(new Date(schedule.firstPaymentAt));
+  // Clip the pause to [access start, first bill), excluding time before access begins.
   const pausedStart = Math.max(accessStart, day(new Date(schedule.pausedAt)));
   const pausedEnd = Math.min(firstPayment, day(now));
   const daysInAccess = (firstPayment - accessStart) / 86_400_000;
   const pausedDays = Math.min(daysInAccess, (schedule.pausedDays ?? 0) + Math.max(0, pausedEnd - pausedStart) / 86_400_000);
+  // Recalculate from the original amount so repeated pauses do not compound rounding.
   const originalProrationAmount = schedule.originalProrationAmount ?? schedule.prorationAmount;
   return {
     ...schedule,
