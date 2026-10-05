@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { broadcastNewFeeds } from "@/libs/broadcast/feeds";
-import { sendNotifications } from "@/libs/expo";
+import { sendNotifications } from "@/subtrees/utils/server/expo";
 import S3Bucket from "@/libs/s3";
 import { ServerState } from "@/state";
 import { groupMembers, groupPosts, groups, media, userFeeds } from "@/subtrees/schemas";

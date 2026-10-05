@@ -17,7 +17,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { ALLOWED_IMAGE_TYPES } from "@/subtrees/constants/data";
 import { ServerState } from '@/state';
-import { sendNotifications } from "@/libs/expo";
+import { sendNotifications } from "@/subtrees/utils/server/expo";
 const MessageProps = {
     params: t.Object({
         cid: t.String(),
