@@ -104,7 +104,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         const billingQuote = getSubscriptionBillingQuote(sub);
 
         const resumedMetadata = deferred
-            ? { ...sub.metadata, deferredBilling: resumeDeferredBilling(deferred, new Date(), sub.location.timezone) }
+            ? { ...sub.metadata, deferredBilling: resumeDeferredBilling(deferred, new Date(), sub.location.timezone, sub.startDate) }
             : sub.metadata;
 
         const resumedStatus = sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active";

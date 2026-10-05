@@ -69,6 +69,7 @@ describe.skipIf(!url)("deferred enrollment", () => {
         expect(rows).toHaveLength(1);
         const sub = rows[0]!;
         expect(sub.metadata.deferredBilling).not.toHaveProperty("timezone");
+        expect(sub.metadata.deferredBilling).not.toHaveProperty("accessStartDate");
         expect(sub.currentPeriodEnd.toISOString()).toBe("2090-10-15T13:00:00.000Z");
         const activated = await request(`/${sub.id}/activate-cash`, {});
         expect(activated.status).toBe(200);
@@ -100,7 +101,7 @@ describe.skipIf(!url)("deferred enrollment", () => {
         const [sub] = await db.select().from(schema.memberSubscriptions);
         const deferredBilling = sub!.metadata.deferredBilling as Record<string, unknown>;
         await db.update(schema.memberSubscriptions).set({ status: "paused", metadata: {
-            ...sub!.metadata, note: "retain", deferredBilling: { ...deferredBilling, pausedAt: "2090-10-01T13:00:00Z" },
+            ...sub!.metadata, note: "retain", deferredBilling: { ...deferredBilling, accessStartDate: "2090-01-01", pausedAt: "2090-10-01T13:00:00Z" },
         } });
         setSystemTime(new Date("2090-10-02T13:00:00Z"));
         expect((await request(`/${sub!.id}/resume`, {})).status).toBe(200);
