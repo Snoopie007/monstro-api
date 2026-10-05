@@ -124,4 +124,22 @@ describe.skipIf(!url)("deferred enrollment", () => {
         expect(schedule).not.toHaveBeenCalled();
     });
 
+    test("expired drafts cannot activate", async () => {
+        expect((await request("/", enrollment())).status).toBe(201);
+        const [sub] = await db.select().from(schema.memberSubscriptions);
+        setSystemTime(new Date("2090-10-16T13:00:00Z"));
+        expect((await request(`/${sub!.id}/activate-cash`, {})).status).toBe(409);
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("incomplete");
+        expect(schedule).not.toHaveBeenCalled();
+    });
+    test("queue failure rolls back activation and the same draft can be retried", async () => {
+        expect((await request("/", enrollment())).status).toBe(201);
+        const [sub] = await db.select().from(schema.memberSubscriptions);
+        schedule.mockImplementationOnce(async () => { throw new Error("Queue unavailable"); });
+        expect((await request(`/${sub!.id}/activate-cash`, {})).status).toBe(500);
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("incomplete");
+        expect((await request(`/${sub!.id}/activate-cash`, {})).status).toBe(200);
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("active");
+    });
+
 });

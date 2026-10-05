@@ -54,17 +54,18 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         const deferred = getDeferredBilling(sub.metadata);
         if (deferred) {
             if (!["incomplete", "active"].includes(sub.status)) return status(409, { error: "This subscription cannot be activated" });
+            if (sub.status === "incomplete" && new Date(sub.currentPeriodEnd).getTime() <= Date.now()) return status(409, { error: "The first payment date has passed. Create a new enrollment.", code: "FIRST_PAYMENT_DATE_PASSED" });
             const pricing = getSubscriptionBillingQuote(sub);
             const due = new Date(sub.currentPeriodEnd);
-            await scheduleCashRenewal(due, {
-                sid, lid, pricing, vendorId: sub.location.vendorId,
-                member: sub.member, location: sub.location,
-                taxRate: sub.location.taxRates.find(rate => rate.isDefault)?.percentage ?? 0,
-            });
             await db.transaction(async tx => {
                 await tx.update(memberSubscriptions).set({ status: "active", updated: new Date() }).where(eq(memberSubscriptions.id, sid));
                 await tx.update(memberLocations).set({ status: "active", updated: new Date() }).where(and(
                     eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
+                await scheduleCashRenewal(due, {
+                    sid, lid, pricing, vendorId: sub.location.vendorId,
+                    member: sub.member, location: sub.location,
+                    taxRate: sub.location.taxRates.find(rate => rate.isDefault)?.percentage ?? 0,
+                });
             });
             return status(200, { status: "active", nextBillingAt: due, scheduledJobKey: `cashInvoiceDue_${sid}_${due.getTime()}` });
         }

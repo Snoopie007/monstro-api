@@ -10,6 +10,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
     const sql = postgres(url, { max: 4, prepare: false, connection: { search_path: `${namespace},public,extensions` }, onnotice: () => {} });
     const db = drizzle(sql, { schema });
     const tables = ["member_subscriptions", "member_invoices", "transactions", "members", "workflows", "workflow_triggers", "workflow_queues"];
+    const repair = mock(async (..._args: unknown[]) => {});
     let save: typeof import("./invoiceAttempts").saveInvoiceAttemptResult;
     let claim: typeof import("./invoiceAttempts").claimInvoiceAttempt;
     let squareSuccess: typeof import("@/routes/webhooks/handlers/square/squarePlanSuccess").handleSquarePlanSuccess;
@@ -20,6 +21,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         await sql`alter table member_invoices add column if not exists renewal_key text`;
         mock.module("@/db/db", () => ({ db }));
+        mock.module("@/queues/subscriptions", () => ({ scheduleRenewalRepair: repair }));
         ({ saveInvoiceAttemptResult: save, claimInvoiceAttempt: claim } = await import("./invoiceAttempts"));
         ({ handleSquarePlanSuccess: squareSuccess } = await import("@/routes/webhooks/handlers/square/squarePlanSuccess"));
         ({ handleSquarePlanFail: squareFailure } = await import("@/routes/webhooks/handlers/square/squarePlanFail"));
@@ -30,6 +32,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         await admin.end();
     });
     beforeEach(async () => {
+        repair.mockReset();
         for (const table of tables) await sql`truncate ${sql(namespace)}.${sql(table)}`;
         await sql`insert into members (id,user_id,first_name,email) values ('member','user','QA','qa@example.invalid')`;
         await db.insert(schema.workflows).values({ id: "workflow", locationId: "location", name: "Decline", status: "active", nodes: [
@@ -50,6 +53,16 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         feeAmount: 0, squarePaymentId: "sq_current", squarePaymentStatus: "COMPLETED",
         amount: 100, receiptUrl: null, failedCode: null, failedReason: null,
     };
+    test("late Square success repairs renewal again after an enqueue failure", async () => {
+        const dueAt = new Date("2026-02-01T00:00:00Z");
+        await db.update(schema.memberInvoices).set({ forPeriodEnd: dueAt });
+        repair.mockRejectedValueOnce(new Error("Queue unavailable"));
+        await expect(squareSuccess(squarePayment)).rejects.toThrow("Queue unavailable");
+        expect((await db.select().from(schema.memberInvoices))[0]?.paid).toBe(true);
+        await squareSuccess(squarePayment);
+        expect(repair).toHaveBeenCalledTimes(2);
+        expect(repair).toHaveBeenLastCalledWith("sub", "location", dueAt);
+    });
     test.each(["succeeded", "failed"] as const)("Square %s settles the current attempt and preserves invoice metadata", async outcome => {
         await db.update(schema.memberInvoices).set({ metadata: {
             collectionPolicy: "deferred", billingAttempt: {

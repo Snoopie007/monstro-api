@@ -24,7 +24,7 @@ let providerDetails: Record<string, unknown>;
 const updates: Array<Record<string, unknown>> = [];
 const inserts: Array<Record<string, unknown>> = [];
 let existingInvoice: {
-    id: string; transactionId?: string; memberPlanId?: string; paid?: boolean;
+    locationId?: string; forPeriodEnd?: Date; id: string; transactionId?: string; memberPlanId?: string; paid?: boolean;
     metadata?: Record<string, unknown>;
 } | undefined = { id: "invoice-1" };
 let existingEventRegistration: { id: string; status: "pending" | "registered" } | undefined;
@@ -103,7 +103,9 @@ const db = {
 
 mock.module("@/db/db", () => ({ db }));
 mock.module("@/utils", () => ({ createEnrollUnsignedDocs: mock(async () => []) }));
+const repairRenewal = mock(async (..._args: unknown[]) => {});
 mock.module("@/queues/subscriptions", () => ({
+    scheduleRenewalRepair: repairRenewal,
     scheduleCronBasedRenewal: mock(async () => undefined),
     scheduleRecursiveRenewal: mock(async () => undefined),
 }));
@@ -134,6 +136,7 @@ function request(payload: unknown = event, validSignature = true) {
 
 describe("Authorize.net webhook", () => {
     beforeEach(() => {
+    repairRenewal.mockReset();
         mock.clearAllMocks();
         updates.length = 0;
         inserts.length = 0;
@@ -378,6 +381,20 @@ describe("Authorize.net webhook", () => {
         const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
         expect(response.status).toBe(200);
         expect(updates).toContainEqual(expect.objectContaining({ paid: true, metadata: expect.objectContaining({ billingAttempt: expect.objectContaining({ status: "succeeded", paymentIntentId: "authorize-transaction-1" }) }) }));
+    });
+
+    test("paid deferred Authorize redelivery retries renewal scheduling", async () => {
+        transaction.status = "paid";
+        const dueAt = new Date("2026-02-01T00:00:00Z");
+        existingInvoice = { id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1", paid: true,
+            locationId: "location-1", forPeriodEnd: dueAt,
+            metadata: { billingAttempt: { id: "attempt", status: "succeeded", paymentIntentId: "authorize-transaction-1" } } };
+        repairRenewal.mockRejectedValueOnce(new Error("Queue unavailable"));
+        expect((await authorizeWebhookRoutes(new Elysia()).handle(request())).status).toBe(500);
+        expect((await authorizeWebhookRoutes(new Elysia()).handle(request())).status).toBe(200);
+        expect(repairRenewal).toHaveBeenCalledTimes(2);
+        expect(repairRenewal).toHaveBeenLastCalledWith("sub-1", "location-1", dueAt);
+        expect(updates).toHaveLength(0);
     });
 
 });

@@ -1,3 +1,4 @@
+import { scheduleRenewalRepair } from "@/queues/subscriptions";
 import { getDeferredInvoiceBilling, prepareSquareInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@/subtrees/schemas";
@@ -31,6 +32,7 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
     } = props;
     const now = new Date();
 
+    let repair: { sid: string; lid: string; dueAt: Date | null } | undefined;
     await db.transaction(async (tx) => {
         const [priorInvoice] = await tx.select().from(memberInvoices).where(eq(memberInvoices.id, invoiceId)).for("update");
         assert(priorInvoice, "Invoice not found");
@@ -38,7 +40,11 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
         // TODO(billing): review stale callbacks and subscription status guards for ordinary payments separately.
         // Only deferred subscriptions use the new attempt checks and status guards in this PR.
         const attemptResult = prepareSquareInvoiceAttempt(deferred ? priorInvoice : { ...priorInvoice, metadata: null }, amount, squarePaymentId, "succeeded");
+        if (deferred && priorInvoice.paid && priorInvoice.memberPlanId && amount === priorInvoice.total) {
+            repair = { sid: priorInvoice.memberPlanId, lid: priorInvoice.locationId, dueAt: priorInvoice.forPeriodEnd };
+        }
         if (!attemptResult) return;
+        if (deferred && priorInvoice.memberPlanId) repair = { sid: priorInvoice.memberPlanId, lid: priorInvoice.locationId, dueAt: priorInvoice.forPeriodEnd };
         const { paymentMethodId: attemptedMethodId, ...attemptUpdate } = attemptResult;
         const [invoice] = await tx.update(memberInvoices).set({
             status: "paid",
@@ -93,6 +99,8 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
             }).where(and(eq(memberSubscriptions.id, invoice.memberPlanId), deferred ? notInArray(memberSubscriptions.status, ["canceled", "paused", "incomplete_expired"]) : undefined));
         }
     });
+
+    if (repair) await scheduleRenewalRepair(repair.sid, repair.lid, repair.dueAt);
 
     console.log("[SQUARE WEBHOOK] Payment completed for invoice", invoiceId);
 }

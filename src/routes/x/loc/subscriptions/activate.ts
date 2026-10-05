@@ -137,20 +137,22 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         if (getDeferredBilling(sub.metadata)) {
             if (sub.status === "active" && sub.gatewayPaymentId !== paymentMethod.value.id) return status(409, { error: "Use the subscription payment method editor to change its payment method" });
             if (!["incomplete", "active"].includes(sub.status)) return status(409, { error: "This subscription cannot be activated" });
+            if (sub.status === "incomplete" && new Date(sub.currentPeriodEnd).getTime() <= Date.now()) return status(409, { error: "The first payment date has passed. Create a new enrollment.", code: "FIRST_PAYMENT_DATE_PASSED" });
             const payload = buildRenewalPayload({ sub, lid, location,
                 memberLocationGatewayCustomerId: billingContext.gatewayCustomerId, currency,
                 taxRate: location.taxRates?.find(t => t.isDefault)?.percentage || 0,
                 promoMeta, billingQuote, expectedDueAt: nextBillingAt });
-            await db.update(memberSubscriptions).set({
-                gatewayPaymentId: paymentMethod.value.id,
-                metadata: { ...sub.metadata, paymentMethodId: paymentMethod.value.id, gatewayService,
-                    gatewayIntegrationId: integration.id, gatewayCustomerId: billingContext.gatewayCustomerId },
-            }).where(eq(memberSubscriptions.id, sid));
-            await scheduleRecursiveRenewal({ startDate: nextBillingAt, data: { ...payload, recurrenceCount: 1 } });
             await db.transaction(async tx => {
-                await tx.update(memberSubscriptions).set({ status: "active", updated: new Date() }).where(eq(memberSubscriptions.id, sid));
+                await tx.update(memberSubscriptions).set({
+                    gatewayPaymentId: paymentMethod.value.id,
+                    metadata: { ...sub.metadata, paymentMethodId: paymentMethod.value.id, gatewayService,
+                        gatewayIntegrationId: integration.id, gatewayCustomerId: billingContext.gatewayCustomerId },
+                    status: "active", updated: new Date(),
+                }).where(eq(memberSubscriptions.id, sid));
+
                 await tx.update(memberLocations).set({ status: "active", updated: new Date() }).where(and(
                     eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
+                await scheduleRecursiveRenewal({ startDate: nextBillingAt, data: { ...payload, recurrenceCount: 1 } });
             });
             return status(200, { status: "active", nextBillingAt, scheduledJobKey: `renewal:${sid}` });
         }

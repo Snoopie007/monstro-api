@@ -12,7 +12,7 @@ import { db } from "@/db/db";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
-import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
+import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, scheduleRenewalRepair } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
     courseEnrollments,
@@ -500,6 +500,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
         }
 
         let renewal: Renewal | undefined;
+        let repair: { sid: string; lid: string; dueAt: Date | null } | undefined;
         await db.transaction(async (tx) => {
             await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${transaction.id}))`);
             const current = await tx.query.transactions.findFirst({
@@ -548,6 +549,9 @@ export function authorizeWebhookRoutes(app: Elysia) {
             const attemptResult = prepareAuthorizeInvoiceAttempt(deferred ? invoice : undefined, {
                 id: providerTransactionId, invoiceNumber: details.order?.invoiceNumber, status: paymentStatus,
             });
+            if (deferred && invoice?.memberPlanId && paymentStatus === "paid" && (attemptResult || invoice.paid)) {
+                repair = { sid: invoice.memberPlanId, lid: invoice.locationId, dueAt: invoice.forPeriodEnd };
+            }
             if (!attemptResult) return;
             const metadata: Record<string, unknown> = {
                 ...currentMetadata,
@@ -671,6 +675,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
             }
         });
         if (renewal) await scheduleRenewal(renewal);
+        if (repair) await scheduleRenewalRepair(repair.sid, repair.lid, repair.dueAt);
 
         return status(200, { message: "Authorize.net event processed" });
     }, { parse: "none" });

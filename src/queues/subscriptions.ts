@@ -187,6 +187,12 @@ export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Dat
     const migration = getStripeMigration(sub.metadata);
     if (!getDeferredBilling(sub.metadata) && (!migration || !["armed", "first_payment_verified"].includes(migration.state))) return;
 
+    if (getDeferredBilling(sub.metadata) && (
+        !["active", "past_due"].includes(sub.status)
+        || sub.currentPeriodEnd.getTime() !== dueAtMs
+        || (sub.cancelAt && sub.cancelAt.getTime() <= Date.now())
+    )) return;
+
     const billingQuote = getSubscriptionBillingQuote(sub);
     const payload: SubscriptionJobData = {
         sid: sub.id,
