@@ -1,3 +1,4 @@
+import type { integrations } from "@/subtrees/schemas";
 import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { StripePaymentGateway, SquarePaymentGateway, AuthorizePaymentGateway } from "@/libs/PaymentGateway";
@@ -106,16 +107,7 @@ export async function resolveSubscriptionBillingContext(
             ? metadata.paymentMethodId
             : null);
     if (gateway.service === "authorize" && getDeferredBilling(subscription.metadata)) {
-        if (!gateway.apiKey || !gateway.secretKey || !selectedMethodId) {
-            throw new BillingContextError("Authorize.net payment setup is missing", "PAYMENT_METHOD_MISSING");
-        }
-        const profile = await new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey).getCustomerProfile(gatewayCustomerId);
-        const profiles = Array.isArray(profile.paymentProfiles) ? profile.paymentProfiles : profile.paymentProfiles ? [profile.paymentProfiles] : [];
-        if (!profiles.some(method => method.customerPaymentProfileId === selectedMethodId)) {
-            throw new BillingContextError("Payment method does not belong to subscription customer", "PAYMENT_METHOD_OWNER_MISMATCH");
-        }
-        return { gateway: { ...gateway, integrationId: gateway.id, accessToken: gateway.accessToken ?? "" },
-            gatewayCustomerId, paymentMethodId: selectedMethodId, paymentMethodType: "card" };
+        return resolveAuthorizePaymentMethod(gateway, gatewayCustomerId, selectedMethodId);
     }
 
     if (gateway.service === "stripe") {
@@ -184,6 +176,28 @@ export async function resolveSubscriptionBillingContext(
 
     throw new BillingContextError("Unsupported payment gateway for subscriptions", "GATEWAY_UNSUPPORTED");
 }
+
+type AuthorizeGateway = Pick<typeof integrations.$inferSelect,
+    "id" | "locationId" | "service" | "accessToken" | "accountId" | "metadata" | "apiKey" | "secretKey">;
+
+/** Authorize uses saved customer profiles rather than Stripe/Square access tokens. */
+async function resolveAuthorizePaymentMethod(
+    gateway: AuthorizeGateway,
+    gatewayCustomerId: string,
+    selectedMethodId: string | null,
+): Promise<SubscriptionBillingContext> {
+    if (!gateway.apiKey || !gateway.secretKey || !selectedMethodId) {
+        throw new BillingContextError("Authorize.net payment setup is missing", "PAYMENT_METHOD_MISSING");
+    }
+    const profile = await new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey).getCustomerProfile(gatewayCustomerId);
+    const profiles = Array.isArray(profile.paymentProfiles) ? profile.paymentProfiles : profile.paymentProfiles ? [profile.paymentProfiles] : [];
+    if (!profiles.some(method => method.customerPaymentProfileId === selectedMethodId)) {
+        throw new BillingContextError("Payment method does not belong to subscription customer", "PAYMENT_METHOD_OWNER_MISMATCH");
+    }
+    return { gateway: { ...gateway, integrationId: gateway.id, accessToken: gateway.accessToken ?? "" },
+        gatewayCustomerId, paymentMethodId: selectedMethodId, paymentMethodType: "card" };
+}
+
 // The cutover script stops the old collector and checks invoice overlap before arming.
 // Runtime keeps only local readiness, account, and cutoff checks.
 export async function assertImportedSubscriptionRetrySafe(

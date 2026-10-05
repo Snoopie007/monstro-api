@@ -44,10 +44,7 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   if (!["active", "past_due", "unpaid", "incomplete", "trialing"].includes(sub.status)) {
     throw new CashInvoiceError("This subscription is not collecting cash payments", "SUBSCRIPTION_NOT_COLLECTING");
   }
-  const deferred = getDeferredBilling(sub.metadata);
-  if (deferred && (periodStart < new Date(deferred.firstPaymentAt) || new Date() < new Date(deferred.firstPaymentAt))) {
-    throw new CashInvoiceError("First payment is not due yet", "SUBSCRIPTION_NOT_COLLECTING");
-  }
+  assertCashCollectionStarted(sub.metadata, periodStart);
   const renewing = sub.currentPeriodEnd.getTime() === periodStart.getTime();
   const renewalKey = `${subscriptionId}:${periodStart.toISOString()}`;
   const existing = await tx.select().from(memberInvoices).where(and(
@@ -86,6 +83,14 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   if (!transaction) throw new Error("Failed to create cash invoice transaction");
   await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
   return { invoice: { ...invoice, transactionId: transaction.id }, created: true };
+}
+
+/** Check deferred eligibility after the subscription lock, before reusing or writing invoices. */
+function assertCashCollectionStarted(metadata: Record<string, unknown> | null, periodStart: Date) {
+  const deferred = getDeferredBilling(metadata);
+  if (deferred && (periodStart < new Date(deferred.firstPaymentAt) || new Date() < new Date(deferred.firstPaymentAt))) {
+    throw new CashInvoiceError("First payment is not due yet", "SUBSCRIPTION_NOT_COLLECTING");
+  }
 }
 
 /** Renew on the calendar boundary, even while a previous period is unpaid.

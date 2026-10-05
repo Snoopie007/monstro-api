@@ -1,4 +1,5 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { prepareAuthorizeInvoiceAttempt } from "@/utils/invoiceAttempts";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
 
@@ -541,17 +542,10 @@ export function authorizeWebhookRoutes(app: Elysia) {
             // distinguish a delayed callback from an earlier payment attempt.
             const [invoice] = await tx.select().from(memberInvoices)
                 .where(eq(memberInvoices.transactionId, current.id)).for("update");
-            const invoiceMetadata = metadataOf(invoice?.metadata);
-            const attempt = metadataOf(invoiceMetadata.billingAttempt);
-            if (typeof attempt.id === "string") {
-                if (invoice?.paid || attempt.status === "succeeded") return;
-                if (typeof attempt.paymentIntentId === "string") {
-                    if (attempt.paymentIntentId !== providerTransactionId) return;
-                } else {
-                    const reference = createHash("sha256").update(attempt.id).digest("hex").slice(0, 20);
-                    if (details.order?.invoiceNumber !== reference) return;
-                }
-            }
+            const attemptResult = prepareAuthorizeInvoiceAttempt(invoice, {
+                id: providerTransactionId, invoiceNumber: details.order?.invoiceNumber, status: paymentStatus,
+            });
+            if (!attemptResult) return;
             const metadata: Record<string, unknown> = {
                 ...currentMetadata,
                 authorizeTransactionId: providerTransactionId,
@@ -573,17 +567,13 @@ export function authorizeWebhookRoutes(app: Elysia) {
                     status: paymentStatus === "paid" ? "paid" : "unpaid",
                     paid: paymentStatus === "paid",
                     paymentType: "card",
-                    ...(attempt.id ? { metadata: { ...invoiceMetadata, billingAttempt: {
-                        ...attempt,
-                        status: paymentStatus === "paid" ? "succeeded" : "failed",
-                        paymentIntentId: providerTransactionId,
-                    } } } : {}),
+                    ...attemptResult.invoiceUpdate,
                     updated: new Date(),
                 }).where(eq(memberInvoices.id, invoice.id));
             }
             const subscriptionId = typeof metadata.memberSubscriptionId === "string"
                 ? metadata.memberSubscriptionId
-                : attempt.id ? invoice?.memberPlanId : null;
+                : attemptResult.subscriptionId;
             if (subscriptionId && terminalTransition) {
                 const [updatedSubscription] = await tx.update(memberSubscriptions).set({
                     status: paymentStatus === "paid" ? "active" : "past_due",

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, setSystemTime, test } from "bun:test";
 import { Elysia } from "elysia";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -27,14 +27,20 @@ describe.skipIf(!url)("deferred enrollment", () => {
         const { calculateThresholdDate } = await import("@/utils/enrollUtils");
         mock.module("@/utils", () => ({ calculateThresholdDate }));
         mock.module("@/utils/additionalFees", () => ({ getAdditionalFeesForCheckout: async () => [] }));
-        mock.module("@/queues/subscriptions", () => ({ scheduleCashRenewal: schedule }));
+        mock.module("@/queues/subscriptions", () => ({
+            scheduleCashRenewal: schedule, removeRenewalJobs: async () => {},
+            scheduleCronBasedRenewal: async () => {}, scheduleRecursiveRenewal: async () => {},
+        }));
         const { createSubscriptionRoutes } = await import("./create");
         const { activateCashSubscriptionRoutes } = await import("./activateCash");
+        const { resumeSubscriptionRoutes } = await import("./resume");
+        const resume = await resumeSubscriptionRoutes(new Elysia());
         const create = await createSubscriptionRoutes(new Elysia());
         const activate = await activateCashSubscriptionRoutes(new Elysia());
-        app = new Elysia().group("/loc/:lid/subscriptions", group => group.use(create).use(activate));
+        app = new Elysia().group("/loc/:lid/subscriptions", group => group.use(create).use(activate).use(resume));
     });
     afterAll(async () => { await sql.end(); await admin`drop schema if exists ${admin(namespace)} cascade`; await admin.end(); });
+    afterEach(() => setSystemTime());
     beforeEach(async () => {
         schedule.mockClear();
         for (const table of tables) await sql`truncate ${sql(namespace)}.${sql(table)}`;
@@ -76,4 +82,44 @@ describe.skipIf(!url)("deferred enrollment", () => {
         expect((await request("/", body)).status).toBe(201);
         expect((await request("/", { ...body, prorateBeforeFirstPayment: false })).status).toBe(409);
     });
+    test("ordinary trial enrollment retains its existing period and proration setting", async () => {
+        const response = await request("/", {
+            memberId: "member", pricingId: "price", paymentType: "cash", startDate: "2090-10-03T00:00:00Z",
+            trialDays: 7, allowProration: true,
+        });
+        expect(response.status).toBe(201);
+        const [sub] = await db.select().from(schema.memberSubscriptions);
+        expect(sub).toMatchObject({ status: "trialing", metadata: { allowProration: true } });
+        expect(sub!.metadata.deferredBilling).toBeUndefined();
+        expect(sub!.trialEnd?.toISOString()).toBe("2090-10-10T00:00:00.000Z");
+        expect(await db.select().from(schema.memberInvoices)).toHaveLength(0);
+    });
+    test("resume preserves proration when the pause ends before access starts", async () => {
+        await request("/", { ...enrollment(), startDate: "2090-10-10" });
+        const [sub] = await db.select().from(schema.memberSubscriptions);
+        const deferredBilling = sub!.metadata.deferredBilling as Record<string, unknown>;
+        await db.update(schema.memberSubscriptions).set({ status: "paused", metadata: {
+            ...sub!.metadata, note: "retain", deferredBilling: { ...deferredBilling, pausedAt: "2090-10-01T13:00:00Z" },
+        } });
+        setSystemTime(new Date("2090-10-02T13:00:00Z"));
+        expect((await request(`/${sub!.id}/resume`, {})).status).toBe(200);
+        expect((await db.select().from(schema.memberSubscriptions))[0]).toMatchObject({
+            status: "active", currentPeriodEnd: sub!.currentPeriodEnd,
+            metadata: { note: "retain", deferredBilling: { prorationAmount: deferredBilling.prorationAmount, pausedDays: 0, pausedAt: null } },
+        });
+        expect(schedule.mock.calls[0]?.[0]).toEqual(sub!.currentPeriodEnd);
+    });
+    test.each([
+        ["2090-10-16T13:00:00Z", undefined, 409],
+        ["2090-10-06T13:00:00Z", "2090-10-20T13:00:00Z", 400],
+    ] as const)("resume rejects a missed or changed anchor at %s", async (now, resumeAt, expectedStatus) => {
+        await request("/", enrollment());
+        const [sub] = await db.select().from(schema.memberSubscriptions);
+        await db.update(schema.memberSubscriptions).set({ status: "paused" });
+        setSystemTime(new Date(now));
+        expect((await request(`/${sub!.id}/resume`, { resumeAt })).status).toBe(expectedStatus);
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("paused");
+        expect(schedule).not.toHaveBeenCalled();
+    });
+
 });

@@ -1,3 +1,4 @@
+import { prepareSquareInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
@@ -37,14 +38,13 @@ export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
     await db.transaction(async (tx) => {
         const [priorInvoice] = await tx.select().from(memberInvoices).where(eq(memberInvoices.id, invoiceId)).for("update");
         assert(priorInvoice, "Invoice not found");
-        const priorMetadata = priorInvoice.metadata as Record<string, unknown> | null;
-        const attempt = priorMetadata?.billingAttempt as { id?: string; status?: string; paymentIntentId?: string; paymentMethodId?: string } | undefined;
-        if (attempt && (priorInvoice.paid || attempt.status === "succeeded" || (attempt.paymentIntentId && attempt.paymentIntentId !== squarePaymentId))) return;
-        if (attempt && amount !== priorInvoice.total) throw new Error("Square payment amount does not match invoice");
+        const attemptResult = prepareSquareInvoiceAttempt(priorInvoice, amount, squarePaymentId, "failed");
+        if (!attemptResult) return;
+        const { paymentMethodId: attemptedMethodId, ...attemptUpdate } = attemptResult;
         const [invoice] = await tx.update(memberInvoices).set({
             status: "unpaid",
             paid: false,
-            ...(attempt ? { metadata: { ...priorMetadata, billingAttempt: { ...attempt, status: "failed", paymentIntentId: squarePaymentId } } } : {}),
+            ...attemptUpdate,
             updated: now,
         }).where(eq(memberInvoices.id, invoiceId)).returning();
         assert(invoice, "Invoice not found");
@@ -60,14 +60,14 @@ export async function handleSquarePlanFail(props: HandleSquarePlanFailProps) {
             items: invoice.items || [],
             type: "inbound" as const,
             status: "failed" as const,
-            paymentMethodId: paymentMethodId ?? attempt?.paymentMethodId ?? null,
+            paymentMethodId: paymentMethodId ?? attemptedMethodId ?? null,
             paymentType,
             chargeDate: now,
             feeAmount,
             failedReason,
             failedCode,
             metadata: {
-                ...(attempt ? { ...priorMetadata, billingAttempt: { ...attempt, status: "failed", paymentIntentId: squarePaymentId } } : {}),
+                ...attemptUpdate.metadata,
                 gatewayService: "square" as const,
                 squarePaymentId,
                 squarePaymentStatus,

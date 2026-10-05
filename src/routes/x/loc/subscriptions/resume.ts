@@ -1,4 +1,4 @@
-import { getDeferredBilling, resumeDeferredBilling } from "@/subtrees/utils/deferredBilling";
+import { getDeferredBilling, resumeDeferredBilling, type DeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import {
     removeRenewalJobs,
@@ -63,12 +63,8 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             return status(400, { error: "Canceled subscriptions cannot be resumed", code: "SUBSCRIPTION_CANCELED" });
         }
         const deferred = getDeferredBilling(sub.metadata);
-        if (deferred && sub.currentPeriodEnd <= new Date()) {
-            return status(409, { error: "A billing date passed while this subscription was paused. Cancel it and enroll again with a new first payment date to avoid charging for paused access." });
-        }
-        if (deferred && resumeAt && new Date(resumeAt).getTime() !== sub.currentPeriodEnd.getTime()) {
-            return status(400, { error: "Clear the date override to preserve the chosen billing schedule" });
-        }
+        const resumeError = getDeferredResumeError(deferred, sub.currentPeriodEnd, resumeAt);
+        if (resumeError) return status(resumeError.status, { error: resumeError.error });
         const inFlight = await findInFlightSubscriptionAttempt(sub.id);
         if (inFlight) {
             return status(409, {
@@ -91,6 +87,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             }
         }
         const location = sub.location;
+        const taxRate = location.taxRates?.find(rate => rate.isDefault)?.percentage || 0;
         const nextBillingAt = resumeAt ? new Date(resumeAt) : getNextBillingDate(sub);
         if (
             billingContext?.gateway.service === "stripe"
@@ -139,7 +136,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     phone: location.phone,
                     address: location.address,
                 },
-                taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
+                taxRate,
                 pricing: {
                     name: billingQuote.name,
                     price: billingQuote.price,
@@ -173,7 +170,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         if (sub.paymentType === "cash" && deferred) {
             await scheduleCashRenewal(nextBillingAt, {
                 sid, lid, vendorId: location.vendorId, member: sub.member, location,
-                pricing: billingQuote, taxRate: location.taxRates?.find(t => t.isDefault)?.percentage || 0,
+                pricing: billingQuote, taxRate,
             });
         }
 
@@ -187,4 +184,16 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             resumeAt: t.Optional(t.String()),
         }),
     });
+}
+
+/** A deferred schedule keeps its original anchor and cannot bill a missed paused period. */
+function getDeferredResumeError(schedule: DeferredBilling | null, dueAt: Date, resumeAt?: string) {
+    if (!schedule) return null;
+    if (dueAt <= new Date()) {
+        return { status: 409 as const, error: "A billing date passed while this subscription was paused. Cancel it and enroll again with a new first payment date to avoid charging for paused access." };
+    }
+    if (resumeAt && new Date(resumeAt).getTime() !== dueAt.getTime()) {
+        return { status: 400 as const, error: "Clear the date override to preserve the chosen billing schedule" };
+    }
+    return null;
 }
