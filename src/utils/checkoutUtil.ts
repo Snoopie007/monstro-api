@@ -1,4 +1,5 @@
 
+import { createHash } from "node:crypto";
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import type { CheckoutContext } from "./getCheckoutContext";
 import type { PaymentType } from "@/subtrees/types";
@@ -144,12 +145,13 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		}
 		const authorize = new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey);
 		try {
+			const billingAttemptId = metadata.billingAttemptId;
 			const charge = await authorize.createCharge(gatewayCustomerId, paymentMethodId, {
 				total,
 				currency,
 				idempotencyKey: transactionId,
-				referenceId: transactionId,
-				orderDescription: description,
+				referenceId: billingAttemptId ? createHash("sha256").update(billingAttemptId).digest("hex").slice(0, 20) : transactionId,
+				orderDescription: billingAttemptId && metadata.invoiceId ? `monstro-invoice:${metadata.invoiceId}` : description,
 			});
 			const gatewayMetadata = {
 				gatewayService: "authorize",
@@ -168,9 +170,10 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 					};
 				case "held":
 					return {
-						status: "failed",
-						failureReason: charge.responseMessage ?? "Authorize.net held the transaction for review",
-						failureCode: "4",
+						status: "uncertain",
+						paymentIntentId: charge.transactionId,
+						paymentIntentStatus: "processing",
+						message: charge.responseMessage ?? "Authorize.net held the transaction for review",
 						paymentType: "card",
 						gatewayMetadata,
 					};

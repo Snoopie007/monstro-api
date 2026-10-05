@@ -121,9 +121,10 @@ export async function locationReservations(app: Elysia) {
                     classLimitReached = pkg ? pkg.totalClassAttended >= pkg.totalClassLimit : false;
                 } else {
                     sub = await db.query.memberSubscriptions.findFirst({
-                        where: (ms, { eq, and }) => and(
+                        where: (ms, { eq, and, lte }) => and(
                             eq(ms.id, memberPlanId),
-                            eq(ms.status, "active")
+                            eq(ms.status, "active"),
+                            lte(ms.startDate, new Date(session.utcStartTime))
                         ),
                         with: {
                             member: {

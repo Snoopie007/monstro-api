@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
 
@@ -175,6 +175,16 @@ async function transactionForDetails(
         if (original) return original;
     }
     if (direct) return direct;
+
+    const invoiceMatch = typeof details.order?.description === "string"
+        ? /^monstro-invoice:([A-Za-z0-9_-]{1,128})$/.exec(details.order.description) : null;
+    if (invoiceMatch?.[1]) {
+        const invoice = await db.query.memberInvoices.findFirst({ where: and(
+            eq(memberInvoices.id, invoiceMatch[1]), eq(memberInvoices.locationId, integration.locationId)) });
+        if (invoice?.transactionId && metadataOf(invoice.metadata).gatewayService === "authorize") {
+            return db.query.transactions.findFirst({ where: and(eq(transactions.id, invoice.transactionId), eq(transactions.locationId, integration.locationId)) });
+        }
+    }
 
     const match = typeof details.order?.description === "string"
         ? /^monstro:([A-Za-z0-9_-]{1,128})$/.exec(details.order.description)
@@ -527,6 +537,21 @@ export function authorizeWebhookRoutes(app: Elysia) {
 
             const paymentStatus = authorizePaymentState(details);
             if (!paymentStatus) throw new Error("Unknown Authorize.net transaction status");
+            // Serialize with manual retry claims. Invoice correlation alone cannot
+            // distinguish a delayed callback from an earlier payment attempt.
+            const [invoice] = await tx.select().from(memberInvoices)
+                .where(eq(memberInvoices.transactionId, current.id)).for("update");
+            const invoiceMetadata = metadataOf(invoice?.metadata);
+            const attempt = metadataOf(invoiceMetadata.billingAttempt);
+            if (typeof attempt.id === "string") {
+                if (invoice?.paid || attempt.status === "succeeded") return;
+                if (typeof attempt.paymentIntentId === "string") {
+                    if (attempt.paymentIntentId !== providerTransactionId) return;
+                } else {
+                    const reference = createHash("sha256").update(attempt.id).digest("hex").slice(0, 20);
+                    if (details.order?.invoiceNumber !== reference) return;
+                }
+            }
             const metadata: Record<string, unknown> = {
                 ...currentMetadata,
                 authorizeTransactionId: providerTransactionId,
@@ -543,27 +568,29 @@ export function authorizeWebhookRoutes(app: Elysia) {
                 updated: new Date(),
             }).where(eq(transactions.id, current.id));
 
-            const invoice = await tx.query.memberInvoices.findFirst({
-                where: eq(memberInvoices.transactionId, current.id),
-            });
             if (invoice && terminalTransition) {
                 await tx.update(memberInvoices).set({
                     status: paymentStatus === "paid" ? "paid" : "unpaid",
                     paid: paymentStatus === "paid",
                     paymentType: "card",
+                    ...(attempt.id ? { metadata: { ...invoiceMetadata, billingAttempt: {
+                        ...attempt,
+                        status: paymentStatus === "paid" ? "succeeded" : "failed",
+                        paymentIntentId: providerTransactionId,
+                    } } } : {}),
                     updated: new Date(),
                 }).where(eq(memberInvoices.id, invoice.id));
             }
             const subscriptionId = typeof metadata.memberSubscriptionId === "string"
                 ? metadata.memberSubscriptionId
-                : null;
+                : attempt.id ? invoice?.memberPlanId : null;
             if (subscriptionId && terminalTransition) {
                 const [updatedSubscription] = await tx.update(memberSubscriptions).set({
                     status: paymentStatus === "paid" ? "active" : "past_due",
                     updated: new Date(),
                 }).where(and(
                     eq(memberSubscriptions.id, subscriptionId),
-                    notInArray(memberSubscriptions.status, ["canceled", "paused", "incomplete_expired"]),
+                    notInArray(memberSubscriptions.status, ["canceled", "paused", "archived", "incomplete_expired"]),
                 )).returning({ id: memberSubscriptions.id });
                 if (updatedSubscription && paymentStatus === "paid" && current.memberId) {
                     await tx.update(memberLocations).set({ status: "active", updated: new Date() })

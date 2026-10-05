@@ -1,3 +1,6 @@
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
+import { scheduleCashRenewal } from "@/queues/subscriptions";
+import { getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { db } from "@/db/db";
 import { WorkflowEvents } from "@/subtrees/constants/workflow";
 import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
@@ -46,6 +49,24 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
         }
         if (sub.parentId) {
             return status(400, { error: "Only root subscriptions can be activated", code: "SUBSCRIPTION_CHILD" });
+        }
+
+        const deferred = getDeferredBilling(sub.metadata);
+        if (deferred) {
+            if (!["incomplete", "active"].includes(sub.status)) return status(409, { error: "This subscription cannot be activated" });
+            const pricing = getSubscriptionBillingQuote(sub);
+            const due = new Date(sub.currentPeriodEnd);
+            await scheduleCashRenewal(due, {
+                sid, lid, pricing, vendorId: sub.location.vendorId,
+                member: sub.member, location: sub.location,
+                taxRate: sub.location.taxRates.find(rate => rate.isDefault)?.percentage ?? 0,
+            });
+            await db.transaction(async tx => {
+                await tx.update(memberSubscriptions).set({ status: "active", updated: new Date() }).where(eq(memberSubscriptions.id, sid));
+                await tx.update(memberLocations).set({ status: "active", updated: new Date() }).where(and(
+                    eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
+            });
+            return status(200, { status: "active", nextBillingAt: due, scheduledJobKey: `cashInvoiceDue_${sid}_${due.getTime()}` });
         }
 
         const isTrialing = !!(sub.trialEnd && isFuture(sub.trialEnd));

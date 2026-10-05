@@ -198,4 +198,27 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect(enqueue).not.toHaveBeenCalled();
         expect((await sql`select status from member_invoices where id=${invoice.id}`)[0]!.status).toBe("draft");
     });
+    test("deferred access cannot be invoiced early or charged as a billing period", async () => {
+        const future = new Date(Date.now() + 86400000);
+        const metadata = { deferredBilling: { version: 1, firstPaymentAt: future.toISOString(), accessStartDate: "2026-01-01", timezone: "UTC", prorate: true, prorationAmount: 4000 } };
+        await sql`update member_subscriptions set current_period_end=${future.toISOString()}, metadata=${JSON.stringify(metadata)}::jsonb where id='sub'`;
+        const response = await create({ periodStart: periodStart.toISOString(), periodEnd: future.toISOString() });
+        expect(response.status).toBe(409);
+        expect(await count("member_invoices")).toBe(0);
+    });
+    test("deferred first invoice includes proration exactly once", async () => {
+        const metadata = { deferredBilling: { version: 1, firstPaymentAt: periodEnd.toISOString(), accessStartDate: "2026-01-01", timezone: "UTC", prorate: true, prorationAmount: 4000 } };
+        await sql`update member_subscriptions set metadata=${JSON.stringify(metadata)}::jsonb where id='sub'`;
+        const responses = await Promise.all([create(), create()]);
+        expect(responses.every(r => [200, 201].includes(r.status))).toBe(true);
+        const invoice = (await created(responses[0]!)).invoice;
+        expect(invoice.total).toBe(14000);
+        expect(await count("member_invoices")).toBe(1);
+        const { quoteSubscriptionInvoice } = await import("./subscriptionQuote");
+        const quote = quoteSubscriptionInvoice({ locationId: "loc", subscriptionId: "sub", subscriptionMetadata: metadata,
+            pricing: { id: "price", name: "Weekly", price: 10000, interval: "week", intervalThreshold: 1, plan: { locationId: "loc" } },
+            location: { country: "US", taxRates: [], locationState: { planId: 2 } }, billingPhase: "renewal", additionalFees: [], periodStart: nextEnd });
+        expect(quote.total).toBe(10000);
+    });
+
 });

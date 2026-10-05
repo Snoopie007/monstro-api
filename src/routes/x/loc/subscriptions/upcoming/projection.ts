@@ -1,3 +1,4 @@
+import { getDeferredBilling, isDeferredFirstPeriod, nextDeferredBillingBoundary } from "@/subtrees/utils/deferredBilling";
 import type {
     CheckoutDiscount,
     UpcomingPayment,
@@ -20,6 +21,7 @@ type ProjectionInput = {
         sub: UpcomingSubscription,
         phase: "initial" | "renewal",
         discount?: CheckoutDiscount,
+        periodStart?: Date,
     ) => { total: number; currency: Currency };
     currency: Currency;
     now: Date;
@@ -165,7 +167,8 @@ function* getBillingPeriods(
         try {
             if (!sub.pricing?.interval || !sub.pricing.intervalThreshold)
                 throw new Error("Missing billing cadence");
-            next =
+            const deferred = getDeferredBilling(sub.metadata);
+            next = deferred ? nextDeferredBillingBoundary(deferred, due, sub.pricing.interval, sub.pricing.intervalThreshold) :
                 schedule?.nextDueAt?.(due) ??
                 nextBillingBoundary(
                     anchor,
@@ -221,12 +224,12 @@ function calculateScheduledPayment(
             : null;
     try {
         const phase =
-            (cash && sub.status !== "trialing") ||
+            (cash && sub.status !== "trialing" && !isDeferredFirstPeriod(getDeferredBilling(sub.metadata), period.start)) ||
             paidCount + period.index > 0 ||
             sub.metadata?.additionalFeesStartAtRenewal === true
                 ? "renewal"
                 : "initial";
-        const result = quote(sub, phase, getCycleDiscount(input, period.index));
+        const result = quote(sub, phase, getCycleDiscount(input, period.index), period.start);
         amount = result.total;
         rowCurrency = result.currency;
     } catch {

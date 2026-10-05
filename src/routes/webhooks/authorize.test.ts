@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
@@ -23,7 +23,10 @@ const transaction = {
 let providerDetails: Record<string, unknown>;
 const updates: Array<Record<string, unknown>> = [];
 const inserts: Array<Record<string, unknown>> = [];
-let existingInvoice: { id: string } | undefined = { id: "invoice-1" };
+let existingInvoice: {
+    id: string; transactionId?: string; memberPlanId?: string; paid?: boolean;
+    metadata?: Record<string, unknown>;
+} | undefined = { id: "invoice-1" };
 let existingEventRegistration: { id: string; status: "pending" | "registered" } | undefined;
 const pricing = {
     id: "pricing-1",
@@ -55,6 +58,7 @@ const update = mock(() => ({
     }),
 }));
 const tx = {
+    select: () => ({ from: () => ({ where: () => ({ for: async () => existingInvoice ? [existingInvoice] : [] }) }) }),
     query: {
         transactions: { findFirst: mock(async () => transaction) },
         memberInvoices: { findFirst: mock(async () => existingInvoice) },
@@ -78,6 +82,7 @@ const tx = {
 const findTransaction = mock(async (): Promise<typeof transaction | undefined> => transaction);
 const db = {
     query: {
+        memberInvoices: { findFirst: async () => existingInvoice },
         transactions: { findFirst: findTransaction },
         integrations: {
             findFirst: mock(async () => ({
@@ -337,4 +342,30 @@ describe("Authorize.net webhook", () => {
         expect(response.status).toBe(200);
         expect(updates).toContainEqual(expect.objectContaining({ status: "cancelled" }));
     });
+    test.each(["paid", "processing", "in_flight"])("billing attempt ignores obsolete callback while current state is %s", async currentState => {
+        findTransaction.mockResolvedValueOnce(undefined);
+        transaction.status = currentState === "paid" ? "paid" : "pending";
+        existingInvoice = {
+            id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1", paid: currentState === "paid",
+            metadata: { gatewayService: "authorize", billingAttempt: {
+                id: "billing-invoice-1-2", status: currentState === "paid" ? "succeeded" : currentState,
+                ...(currentState === "processing" ? { paymentIntentId: "new-provider-id" } : {}),
+            } },
+        };
+        providerDetails = { ...providerDetails, responseCode: 2, transactionStatus: "declined",
+            order: { description: "monstro-invoice:invoice-1", invoiceNumber: createHash("sha256").update("billing-invoice-1-1").digest("hex").slice(0, 20) } };
+        const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
+        expect(response.status).toBe(200);
+        expect(updates).toHaveLength(0);
+    });
+    test("billing attempt recovers its current response-lost payment using the provider reference", async () => {
+        findTransaction.mockResolvedValueOnce(undefined);
+        existingInvoice = { id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1",
+            metadata: { gatewayService: "authorize", billingAttempt: { id: "billing-invoice-1-2", status: "unknown" } } };
+        providerDetails.order = { description: "monstro-invoice:invoice-1", invoiceNumber: createHash("sha256").update("billing-invoice-1-2").digest("hex").slice(0, 20) };
+        const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
+        expect(response.status).toBe(200);
+        expect(updates).toContainEqual(expect.objectContaining({ paid: true, metadata: expect.objectContaining({ billingAttempt: expect.objectContaining({ status: "succeeded", paymentIntentId: "authorize-transaction-1" }) }) }));
+    });
+
 });

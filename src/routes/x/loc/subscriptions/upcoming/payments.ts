@@ -113,6 +113,7 @@ export function calculateUpcomingPayments({
         sub: UpcomingSubscription,
         phase: "initial" | "renewal",
         discount?: CheckoutDiscount,
+        periodStart?: Date,
     ) => { total: number; currency: Currency };
     currency: Currency;
     timezone: string;

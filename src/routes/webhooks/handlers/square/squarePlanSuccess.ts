@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import type { PaymentType } from "@/subtrees/types";
 import type { Currency } from "@/subtrees/types/currency";
 
@@ -31,10 +31,17 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
     const now = new Date();
 
     await db.transaction(async (tx) => {
+        const [priorInvoice] = await tx.select().from(memberInvoices).where(eq(memberInvoices.id, invoiceId)).for("update");
+        assert(priorInvoice, "Invoice not found");
+        const priorMetadata = priorInvoice.metadata as Record<string, unknown> | null;
+        const attempt = priorMetadata?.billingAttempt as { id?: string; status?: string; paymentIntentId?: string; paymentMethodId?: string } | undefined;
+        if (attempt && (priorInvoice.paid || attempt.status === "succeeded" || (attempt.paymentIntentId && attempt.paymentIntentId !== squarePaymentId))) return;
+        if (attempt && amount !== priorInvoice.total) throw new Error("Square payment amount does not match invoice");
         const [invoice] = await tx.update(memberInvoices).set({
             status: "paid",
             paid: true,
             receiptUrl,
+            ...(attempt ? { metadata: { ...priorMetadata, billingAttempt: { ...attempt, status: "succeeded", paymentIntentId: squarePaymentId } } } : {}),
             updated: now,
         }).where(eq(memberInvoices.id, invoiceId)).returning();
         assert(invoice, "Invoice not found");
@@ -50,11 +57,12 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
             items: invoice.items || [],
             type: "inbound" as const,
             status: "paid" as const,
-            paymentMethodId: paymentMethodId ?? null,
+            paymentMethodId: paymentMethodId ?? attempt?.paymentMethodId ?? null,
             paymentType,
             chargeDate: now,
             feeAmount,
             metadata: {
+                ...(attempt ? { ...priorMetadata, billingAttempt: { ...attempt, status: "succeeded", paymentIntentId: squarePaymentId } } : {}),
                 gatewayService: "square" as const,
                 squarePaymentId,
                 squarePaymentStatus,
@@ -79,7 +87,7 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
             await tx.update(memberSubscriptions).set({
                 gatewayPaymentId: paymentMethodId,
                 status: "active",
-            }).where(eq(memberSubscriptions.id, invoice.memberPlanId));
+            }).where(and(eq(memberSubscriptions.id, invoice.memberPlanId), notInArray(memberSubscriptions.status, ["canceled", "paused", "archived", "incomplete_expired"])));
         }
     });
 

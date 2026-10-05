@@ -1,6 +1,8 @@
+import { getDeferredBilling, resumeDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import {
     removeRenewalJobs,
+    scheduleCashRenewal,
     scheduleCronBasedRenewal,
     scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
@@ -45,6 +47,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                         phone: true,
                         address: true,
                         country: true,
+                        vendorId: true,
                     },
                 },
             },
@@ -58,6 +61,13 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         }
         if (sub.status === "canceled" || (sub.cancelAt && sub.cancelAt.getTime() <= Date.now())) {
             return status(400, { error: "Canceled subscriptions cannot be resumed", code: "SUBSCRIPTION_CANCELED" });
+        }
+        const deferred = getDeferredBilling(sub.metadata);
+        if (deferred && sub.currentPeriodEnd <= new Date()) {
+            return status(409, { error: "A billing date passed while this subscription was paused. Cancel it and enroll again with a new first payment date to avoid charging for paused access." });
+        }
+        if (deferred && resumeAt && new Date(resumeAt).getTime() !== sub.currentPeriodEnd.getTime()) {
+            return status(400, { error: "Clear the date override to preserve the chosen billing schedule" });
         }
         const inFlight = await findInFlightSubscriptionAttempt(sub.id);
         if (inFlight) {
@@ -95,16 +105,22 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
 
         const billingQuote = getSubscriptionBillingQuote(sub);
 
+        const resumedMetadata = deferred
+            ? { ...sub.metadata, deferredBilling: resumeDeferredBilling(deferred, new Date()) }
+            : sub.metadata;
+
         const resumedStatus = sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active";
         await db.transaction(async (tx) => {
             const values = {
                 status: resumedStatus,
-                cancelAt: null,
+                metadata: resumedMetadata,
+                cancelAt: deferred ? sub.cancelAt : null,
                 cancelAtPeriodEnd: false,
                 updated: new Date(),
             } as const;
             await tx.update(memberSubscriptions).set(values).where(eq(memberSubscriptions.id, sid));
-            await tx.update(memberSubscriptions).set(values).where(eq(memberSubscriptions.parentId, sid));
+            const { metadata: _metadata, ...accessValues } = values;
+            await tx.update(memberSubscriptions).set(accessValues).where(eq(memberSubscriptions.parentId, sid));
         });
 
         if (sub.paymentType !== "cash" && billingContext) {
@@ -130,7 +146,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     interval: billingQuote.interval,
                     intervalThreshold: billingQuote.intervalThreshold,
                 },
-                ...(billingContext.gateway.service === "stripe" && getStripeMigration(sub.metadata)
+                ...((billingContext.gateway.service === "stripe" && getStripeMigration(sub.metadata)) || deferred
                     ? { expectedDueAt: nextBillingAt.toISOString() }
                     : {}),
                 ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
@@ -152,6 +168,13 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     },
                 });
             }
+        }
+
+        if (sub.paymentType === "cash" && deferred) {
+            await scheduleCashRenewal(nextBillingAt, {
+                sid, lid, vendorId: location.vendorId, member: sub.member, location,
+                pricing: billingQuote, taxRate: location.taxRates?.find(t => t.isDefault)?.percentage || 0,
+            });
         }
 
         return status(200, {

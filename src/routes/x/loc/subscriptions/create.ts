@@ -1,3 +1,7 @@
+import { fromZonedTime } from "date-fns-tz";
+import { quoteSubscriptionInvoice } from "../invoices/subscriptionQuote";
+import { getAdditionalFeesForCheckout } from "@/utils/additionalFees";
+import { createDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { calculateThresholdDate } from "@/utils";
 import { memberSubscriptions } from "@/subtrees/schemas";
@@ -18,8 +22,20 @@ export async function createSubscriptionRoutes(app: Elysia) {
             trialDays,
             allowProration,
             promoCode,
+            delayFirstPayment, firstPaymentDate, prorateBeforeFirstPayment,
         } = body;
 
+        const enrollmentKey = delayFirstPayment && !body.previewOnly ? body.enrollmentAttemptId : undefined;
+        if (delayFirstPayment && !body.previewOnly && !enrollmentKey) return status(400, { error: "Enrollment attempt ID is required" });
+        const subscriptionId = enrollmentKey ? `sub_deferred_${enrollmentKey}` : undefined;
+        const requestKey = JSON.stringify([lid, memberId, pricingId, paymentType, startDate, endDate, firstPaymentDate, !!prorateBeforeFirstPayment, promoCode || ""]);
+        if (subscriptionId) {
+            const existing = await db.query.memberSubscriptions.findFirst({ where: (row, { eq }) => eq(row.id, subscriptionId) });
+            if (existing) {
+                if (existing.metadata.enrollmentRequestKey !== requestKey) return status(409, { error: "This enrollment attempt has different billing details" });
+                return status(200, { subscription: existing });
+            }
+        }
         const pricing = await db.query.memberPlanPricing.findFirst({
             where: (p, { eq }) => eq(p.id, pricingId),
             with: { plan: true },
@@ -60,7 +76,10 @@ export async function createSubscriptionRoutes(app: Elysia) {
             return status(404, { error: "Member not found in location" });
         }
 
-        const baseStartDate = startDate ? new Date(startDate) : new Date();
+        const baseStartDate = delayFirstPayment && startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)
+            ? fromZonedTime(`${startDate}T00:00:00`, memberLocation.location.timezone)
+            : startDate ? new Date(startDate) : new Date();
+        if (!Number.isFinite(baseStartDate.getTime())) return status(400, { error: "Invalid access start date" });
         const currentPeriodEnd = calculateThresholdDate({
             startDate: baseStartDate,
             threshold: pricing.intervalThreshold,
@@ -78,6 +97,15 @@ export async function createSubscriptionRoutes(app: Elysia) {
 
         const parsedTrialDays = typeof trialDays === "number" && trialDays > 0 ? trialDays : 0;
         const trialEnd = parsedTrialDays > 0 ? addDays(baseStartDate, parsedTrialDays) : null;
+
+        let deferredBilling;
+        try {
+            deferredBilling = createDeferredBilling({ delayFirstPayment, firstPaymentDate, prorateBeforeFirstPayment,
+                startDate: baseStartDate, cancelAt, timezone: memberLocation.location.timezone,
+                price: pricing.price, interval: pricing.interval, intervalThreshold: pricing.intervalThreshold, trialDays });
+        } catch (error) {
+            return status(400, { error: error instanceof Error ? error.message : "Invalid billing schedule" });
+        }
 
         let promoData:
             | {
@@ -131,24 +159,38 @@ export async function createSubscriptionRoutes(app: Elysia) {
             };
         }
 
+        if (body.previewOnly) {
+            if (!deferredBilling) return status(400, { error: "Choose a delayed first payment date to preview" });
+            const quote = quoteSubscriptionInvoice({ locationId: lid, subscriptionId: "preview", pricing,
+                subscriptionMetadata: { deferredBilling }, location: memberLocation.location,
+                billingPhase: "initial", periodStart: new Date(deferredBilling.firstPaymentAt),
+                discount: promoData ? { type: promoData.discount.type, value: promoData.discount.value } : undefined,
+                additionalFees: await getAdditionalFeesForCheckout(lid, "subscription", "initial") });
+            return status(200, { billingPreview: { dueToday: 0, firstPaymentAt: deferredBilling.firstPaymentAt,
+                timezone: deferredBilling.timezone, firstChargeTotal: quote.total, prorationAmount: deferredBilling.prorationAmount,
+                currency: quote.currency, recurringAmount: pricing.price, interval: pricing.interval, intervalThreshold: pricing.intervalThreshold } });
+        }
+
         const classCredits = pricing.plan.classLimitInterval === "term"
             ? (pricing.plan.totalClassLimit || 0)
             : 0;
 
-        const [subscription] = await db.insert(memberSubscriptions).values({
+        const [inserted] = await db.insert(memberSubscriptions).values({
+            ...(subscriptionId ? { id: subscriptionId } : {}),
             memberId,
             memberPlanPricingId: pricing.id,
             locationId: lid,
             startDate: baseStartDate,
             currentPeriodStart: baseStartDate,
-            currentPeriodEnd: currentPeriodEnd || baseStartDate,
+            currentPeriodEnd: deferredBilling ? new Date(deferredBilling.firstPaymentAt) : currentPeriodEnd || baseStartDate,
             cancelAt,
             trialEnd,
             status: parsedTrialDays > 0 ? "trialing" : "incomplete",
             paymentType,
             classCredits,
             metadata: {
-                allowProration: !!allowProration,
+                allowProration: deferredBilling ? false : !!allowProration,
+                ...(deferredBilling ? { deferredBilling, enrollmentRequestKey: requestKey } : {}),
                 ...(promoData && {
                     promo: {
                         id: promoData.promoId,
@@ -158,7 +200,9 @@ export async function createSubscriptionRoutes(app: Elysia) {
                     },
                 }),
             },
-        }).returning();
+        }).onConflictDoNothing().returning();
+        const subscription = inserted ?? (subscriptionId ? await db.query.memberSubscriptions.findFirst({ where: (row, { eq }) => eq(row.id, subscriptionId) }) : null);
+        if (!subscription || (subscriptionId && subscription.metadata.enrollmentRequestKey !== requestKey)) return status(409, { error: "Enrollment details changed. Refresh and try again." });
 
         return status(201, {
             subscription,
@@ -188,6 +232,11 @@ export async function createSubscriptionRoutes(app: Elysia) {
             trialDays: t.Optional(t.Number()),
             allowProration: t.Optional(t.Boolean()),
             promoCode: t.Optional(t.String()),
+            enrollmentAttemptId: t.Optional(t.String({ format: "uuid" })),
+            previewOnly: t.Optional(t.Boolean()),
+            delayFirstPayment: t.Optional(t.Boolean()),
+            firstPaymentDate: t.Optional(t.String()),
+            prorateBeforeFirstPayment: t.Optional(t.Boolean()),
         }),
     });
 }

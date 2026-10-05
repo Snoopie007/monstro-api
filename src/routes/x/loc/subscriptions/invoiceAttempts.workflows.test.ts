@@ -11,13 +11,14 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
     const db = drizzle(sql, { schema });
     const tables = ["member_invoices", "transactions", "members", "workflows", "workflow_triggers", "workflow_queues"];
     let save: typeof import("./invoiceAttempts").saveInvoiceAttemptResult;
+    let claim: typeof import("./invoiceAttempts").claimInvoiceAttempt;
     beforeAll(async () => {
         if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname)) throw new Error("Local Postgres required");
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         await sql`alter table member_invoices add column if not exists renewal_key text`;
         mock.module("@/db/db", () => ({ db }));
-        ({ saveInvoiceAttemptResult: save } = await import("./invoiceAttempts"));
+        ({ saveInvoiceAttemptResult: save, claimInvoiceAttempt: claim } = await import("./invoiceAttempts"));
     });
     afterAll(async () => {
         await sql.end();
@@ -34,6 +35,12 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         await db.insert(schema.workflowTriggers).values({ workflowId: "workflow", type: "payment::failed", data: { label: "Decline" } });
         await db.insert(schema.transactions).values({ id: "txn", memberId: "member", locationId: "location", type: "inbound", status: "failed", paymentType: "card" });
         await db.insert(schema.memberInvoices).values({ id: "invoice", memberId: "member", locationId: "location", transactionId: "txn", status: "unpaid", tax: 0, total: 100, subTotal: 100, metadata: { billingAttempt: { id: "attempt", status: "in_flight", paymentType: "card" } } });
+    });
+    test("held provider payments block another billing attempt", async () => {
+        await save({ invoiceId: "invoice", attemptId: "attempt", status: "processing", paymentIntentId: "held-id", retryable: false });
+        const result = await claim({ invoiceId: "invoice", gatewayIntegrationId: "gateway", gatewayCustomerId: "customer", paymentMethodId: "method", paymentType: "card" });
+        expect(result).toMatchObject({ ok: false, reason: "unknown" });
+        expect((await db.select().from(schema.memberInvoices))[0]?.metadata).toMatchObject({ billingAttempt: { id: "attempt", status: "processing", paymentIntentId: "held-id" } });
     });
     const decline = (workflowDecline: boolean, attemptId = "attempt") => save({ invoiceId: "invoice", attemptId, status: "failed", paymentIntentId: "pi_declined", workflowDecline });
     test("accepted provider decline creates the workflow with its durable attempt outcome", async () => {

@@ -1,3 +1,4 @@
+import { getDeferredBilling, isDeferredFirstPeriod } from "@/subtrees/utils/deferredBilling";
 import { getNextCashCycle } from "@/subtrees/utils/cashBilling";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
@@ -115,9 +116,9 @@ export async function createInvoiceRoutes(app: Elysia) {
                 if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return status(400, { error: "Invalid billing period" });
                 const quote = await buildSubscriptionInvoiceQuote({
                     locationId: lid, subscriptionId: sub.id, parentId: sub.parentId,
-                    subscriptionMetadata: sub.metadata, pricing: sub.pricing,
+                    subscriptionMetadata: sub.metadata, pricing: sub.pricing, periodStart: start,
                     memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId, location: sub.location,
-                    billingPhase: start.getTime() === sub.currentPeriodEnd.getTime() && sub.status !== "trialing" ? "renewal" : undefined,
+                    billingPhase: start.getTime() === sub.currentPeriodEnd.getTime() && sub.status !== "trialing" && !isDeferredFirstPeriod(getDeferredBilling(sub.metadata), start) ? "renewal" : undefined,
                 });
                 try {
                     const result = await db.transaction(tx => ensureCashInvoice(tx, {
@@ -129,6 +130,8 @@ export async function createInvoiceRoutes(app: Elysia) {
                     throw error;
                 }
             }
+
+            if (getDeferredBilling(sub.metadata)) return status(400, { error: "This subscription collects through its scheduled payment. Use Retry payment for an unpaid invoice." });
 
             const quote = await buildSubscriptionInvoiceQuote({
                 locationId: lid,
