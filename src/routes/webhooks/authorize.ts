@@ -538,8 +538,8 @@ export function authorizeWebhookRoutes(app: Elysia) {
 
             const paymentStatus = authorizePaymentState(details);
             if (!paymentStatus) throw new Error("Unknown Authorize.net transaction status");
-            // Serialize with manual retry claims. Invoice correlation alone cannot
-            // distinguish a delayed callback from an earlier payment attempt.
+            // Lock the invoice so a manual retry cannot change the payment attempt during this update.
+            // Then check the attempt: a delayed webhook may belong to an older payment.
             const [invoice] = await tx.select().from(memberInvoices)
                 .where(eq(memberInvoices.transactionId, current.id)).for("update");
             const attemptResult = prepareAuthorizeInvoiceAttempt(invoice, {

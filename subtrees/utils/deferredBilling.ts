@@ -12,7 +12,7 @@ export type DeferredBilling = {
   originalProrationAmount?: number;
 };
 
-/** Missing metadata means ordinary billing; malformed schedules must never fall back to charging normally. */
+/** Return null for ordinary billing. Reject invalid billing settings so we do not charge the wrong amount. */
 export function getDeferredBilling(metadata: Record<string, unknown> | null | undefined): DeferredBilling | null {
   const { deferredBilling: raw } = metadata ?? {};
   if (raw === undefined) return null;
@@ -22,7 +22,7 @@ export function getDeferredBilling(metadata: Record<string, unknown> | null | un
     version, firstPaymentAt, prorate, prorationAmount,
   } = raw as Record<string, unknown>;
 
-  // JSON metadata is untrusted. Check the required fields before using dates or amounts.
+  // Check stored field types before using the billing dates or amounts.
   if (version !== 1 || typeof firstPaymentAt !== "string"
     || typeof prorate !== "boolean" || typeof prorationAmount !== "number") {
     throw new Error("Invalid deferred billing schedule");
@@ -31,7 +31,7 @@ export function getDeferredBilling(metadata: Record<string, unknown> | null | un
     throw new Error("Invalid deferred billing schedule");
   }
 
-  // Money is stored in whole cents. Disabling proration must leave no extra charge.
+  // Amounts must be whole cents. When proration is off, the extra charge must be zero.
   if (!Number.isSafeInteger(prorationAmount) || prorationAmount < 0 || (!prorate && prorationAmount !== 0)) {
     throw new Error("Invalid deferred billing schedule");
   }
@@ -44,9 +44,9 @@ export function getDeferredBilling(metadata: Record<string, unknown> | null | un
   };
 }
 
-/** Read the optional state accumulated when an initial access period is paused. */
+/** Validate the saved pause dates, paused days, and original prorated amount. */
 function getPauseFields({ pausedAt, pausedDays, originalProrationAmount }: Record<string, unknown>) {
-  // Pause bookkeeping is optional until the first pause; null means no active pause.
+  // These fields are added after the first pause. A null pausedAt means the subscription is not paused.
   if (pausedAt != null) {
     if (typeof pausedAt !== "string" || !Number.isFinite(new Date(pausedAt).getTime())) {
       throw new Error("Invalid deferred billing schedule");
@@ -66,7 +66,7 @@ function getPauseFields({ pausedAt, pausedDays, originalProrationAmount }: Recor
   return { pausedAt, pausedDays, originalProrationAmount };
 }
 
-// Represent a calendar date at UTC midnight so day counts are unaffected by DST.
+// Use UTC midnight to count whole days, even when daylight saving time changes the day length.
 function calendarDate(value: string) {
   const date = new Date(`${value}T00:00:00.000Z`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
@@ -75,7 +75,7 @@ function calendarDate(value: string) {
   return date;
 }
 
-/** Calendar-day proration uses the full interval immediately preceding the anchor. */
+/** Validate the first payment date and calculate the extra charge for access before that date. */
 export function createDeferredBilling(input: {
   delayFirstPayment?: boolean; firstPaymentDate?: string; prorateBeforeFirstPayment?: boolean;
   startDate: Date; cancelAt?: Date | null; timezone: string; price: number;
@@ -102,8 +102,8 @@ export function createDeferredBilling(input: {
 }
 
 function calculateProrationAmount(price: number, access: Date, date: Date, interval: Interval, threshold: number) {
-  // Use the interval before the first bill as the proration denominator.
-  // Clamp month/year anchors to the last valid day, e.g. March 31 back to February 28.
+  // Calculate the length of one billing period ending on the first payment date.
+  // If the previous month has fewer days, use its last day. For example, March 31 goes back to February 28.
   const previous = new Date(date);
   if (interval === "month" || interval === "year") {
     const month = date.getUTCMonth() - threshold * (interval === "year" ? 12 : 1);
@@ -112,45 +112,45 @@ function calculateProrationAmount(price: number, access: Date, date: Date, inter
   } else {
     previous.setUTCDate(date.getUTCDate() - threshold * (interval === "week" ? 7 : 1));
   }
-  // Charge recurring price × initial access days / full interval days, rounded once to cents.
+  // Extra charge = regular price × early access days / days in a full billing period. Round once to cents.
   const prorationAmount = Math.round(price * (date.getTime() - access.getTime()) / (date.getTime() - previous.getTime()));
   if (!Number.isSafeInteger(prorationAmount) || prorationAmount < 0 || prorationAmount > 2_147_483_647) throw new Error("Prorated amount is out of range");
   return prorationAmount;
 }
 
-/** Advance in local wall-clock time so DST does not shift the collection hour. */
+/** Find the next billing date in the location timezone, keeping the same local time across daylight saving changes. */
 export function nextDeferredBillingBoundary(schedule: DeferredBilling, periodStart: Date, interval: Interval, threshold: number, timezone: string) {
-  // Temporarily encode local clock fields as UTC for the shared calendar arithmetic.
+  // Copy the local date and time into a temporary UTC date so the shared helper can do calendar calculations.
   const local = (date: Date) => new Date(`${formatInTimeZone(date, timezone, "yyyy-MM-dd'T'HH:mm:ss.SSS")}Z`);
   const next = nextBillingBoundary(local(new Date(schedule.firstPaymentAt)), local(periodStart), interval, threshold);
   return fromZonedTime(next.toISOString().slice(0, 23), timezone);
 }
 
-/** The first paid period starts at the chosen billing anchor, after the initial access period. */
+/** Check whether this invoice period starts on the chosen first payment date. */
 export function isDeferredFirstPeriod(schedule: DeferredBilling | null, periodStart: Date | string) {
   return !!schedule && new Date(periodStart).getTime() === new Date(schedule.firstPaymentAt).getTime();
 }
 
-/** Add initial-access proration only once; later periods always use the recurring price. */
+/** Add the early access charge to the first bill only. Later bills use the regular price. */
 export function deferredChargeAmount(schedule: DeferredBilling | null, periodStart: Date | string, price: number, downpayment?: number | null) {
-  // Preserve the existing convention that a zero downpayment falls back to the full price.
+  // As in existing billing, a zero downpayment means charge the full regular price.
   return schedule && isDeferredFirstPeriod(schedule, periodStart)
     ? (downpayment || price) + schedule.prorationAmount : price;
 }
 
-/** Exclude only paused calendar days that overlap access before the first bill. */
+/** Reduce the early access charge for paused days. Read the access date from the subscription start date. */
 export function resumeDeferredBilling(schedule: DeferredBilling, now: Date, timezone: string, startDate: Date): DeferredBilling {
   if (!schedule.pausedAt) return schedule;
   const day = (date: Date) => calendarDate(formatInTimeZone(date, timezone, "yyyy-MM-dd")).getTime();
   const accessStart = day(startDate);
   const firstPayment = day(new Date(schedule.firstPaymentAt));
-  // Clip the pause to [access start, first bill), excluding time before access begins.
+  // Count paused days only between the access start date and the first payment date. Exclude the payment date itself.
   const pausedStart = Math.max(accessStart, day(new Date(schedule.pausedAt)));
   const pausedEnd = Math.min(firstPayment, day(now));
   const daysInAccess = (firstPayment - accessStart) / 86_400_000;
   if (daysInAccess <= 0) throw new Error("First payment must be after access starts");
   const pausedDays = Math.min(daysInAccess, (schedule.pausedDays ?? 0) + Math.max(0, pausedEnd - pausedStart) / 86_400_000);
-  // Recalculate from the original amount so repeated pauses do not compound rounding.
+  // Always calculate from the original amount so repeated pauses do not add rounding errors.
   const originalProrationAmount = schedule.originalProrationAmount ?? schedule.prorationAmount;
   return {
     ...schedule,

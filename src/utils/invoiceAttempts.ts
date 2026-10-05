@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 type AttemptMetadata = Record<string, unknown>;
 type InvoiceMetadata = Record<string, unknown> | null | undefined;
 
-/** Build only the attempt-related update; callers retain their transaction and invoice locks. */
+/** Build the payment attempt update. The caller locks the invoice and saves the result. */
 function invoiceAttemptOutcome(
     metadata: InvoiceMetadata,
     attempt: AttemptMetadata | undefined,
@@ -14,7 +14,7 @@ function invoiceAttemptOutcome(
     return { metadata: { ...metadata, billingAttempt: { ...attempt, status, paymentIntentId } } };
 }
 
-/** A Square callback must match the locked invoice's current attempt before any writes. */
+/** Check the Square result against the current payment attempt. Return null for an old result or an already paid invoice. */
 export function prepareSquareInvoiceAttempt(
     invoice: { metadata: InvoiceMetadata; paid: boolean | null; total: number },
     amount: number,
@@ -35,7 +35,7 @@ export function prepareSquareInvoiceAttempt(
     };
 }
 
-/** Recover a response-lost Authorize charge only when its reference identifies this attempt. */
+/** If the original Authorize.net response was lost, use its invoice reference to identify the payment attempt. */
 function matchesAuthorizeInvoiceAttempt(
     invoice: { paid: boolean | null } | undefined,
     attempt: AttemptMetadata,
@@ -49,7 +49,7 @@ function matchesAuthorizeInvoiceAttempt(
     return invoiceNumber === reference;
 }
 
-/** Prepare the invoice outcome after locking, without performing or reordering any writes. */
+/** Build updates for the matching Authorize.net payment result. The caller must lock the invoice before calling and save the updates afterward. */
 export function prepareAuthorizeInvoiceAttempt(
     invoice: { metadata: InvoiceMetadata; paid: boolean | null; memberPlanId: string | null } | undefined,
     payment: { id: string; invoiceNumber?: string; status: "paid" | "failed" | "pending" },

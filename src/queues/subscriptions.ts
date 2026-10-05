@@ -43,7 +43,7 @@ type ScheduleRenewalProps = {
 
 
 
-/** Queue the next cash invoice at its exact due time. Used by activation and resume. */
+/** Schedule the next cash invoice for its due date and time. Called when activating or resuming a subscription. */
 export async function scheduleCashRenewal(dueAt: Date, data: CashSubscriptionJobData) {
     return subQueue.add("renewal:cash:recursive", { ...data, recurrenceCount: 1 }, {
         jobId: `cashInvoiceDue_${data.sid}_${dueAt.getTime()}`,

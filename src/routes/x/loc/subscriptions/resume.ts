@@ -187,7 +187,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
     });
 }
 
-/** A deferred schedule keeps its original anchor and cannot bill a missed paused period. */
+/** Reject resume if a billing date has passed or a date override would change the next billing date. */
 function getDeferredResumeError(schedule: DeferredBilling | null, dueAt: Date, resumeAt?: string) {
     if (!schedule) return null;
     if (dueAt <= new Date()) {

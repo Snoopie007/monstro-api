@@ -180,7 +180,7 @@ export async function resolveSubscriptionBillingContext(
 type AuthorizeGateway = Pick<typeof integrations.$inferSelect,
     "id" | "locationId" | "service" | "accessToken" | "accountId" | "metadata" | "apiKey" | "secretKey">;
 
-/** Authorize uses saved customer profiles rather than Stripe/Square access tokens. */
+/** Check that the selected Authorize.net payment profile belongs to this customer. */
 async function resolveAuthorizePaymentMethod(
     gateway: AuthorizeGateway,
     gatewayCustomerId: string,

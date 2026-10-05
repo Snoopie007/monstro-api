@@ -223,7 +223,7 @@ export async function createSubscriptionRoutes(app: Elysia) {
     });
 }
 
-/** Resolve retry identity before enrollment reads or writes, including completed draft retries. */
+/** Reuse an existing enrollment when the same request is retried. Reject retries with different billing details. */
 async function prepareEnrollmentAttempt(lid: string, body: EnrollmentBody) {
     const { delayFirstPayment, memberId, pricingId, paymentType, startDate, endDate,
         firstPaymentDate, prorateBeforeFirstPayment, promoCode } = body;
@@ -241,7 +241,7 @@ async function prepareEnrollmentAttempt(lid: string, body: EnrollmentBody) {
     return { subscriptionId, requestKey };
 }
 
-/** Date-only deferred access starts at local midnight; ordinary enrollment retains its timestamp. */
+/** For a delayed first payment, a date without a time means midnight in the location timezone. */
 function parseAccessStartDate(startDate: string | undefined, deferred: boolean | undefined, timezone: string) {
     if (deferred && startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
         return fromZonedTime(`${startDate}T00:00:00`, timezone);
@@ -251,6 +251,7 @@ function parseAccessStartDate(startDate: string | undefined, deferred: boolean |
 
 type InvoiceQuoteInput = Parameters<typeof quoteSubscriptionInvoice>[0];
 
+/** Calculate the first bill for the preview without creating a subscription, invoice, or charge. */
 async function previewDeferredEnrollment({ locationId, pricing, location, deferredBilling, discount }: {
     locationId: string;
     pricing: InvoiceQuoteInput["pricing"];
@@ -273,7 +274,7 @@ async function previewDeferredEnrollment({ locationId, pricing, location, deferr
     } });
 }
 
-/** Concurrent retries reuse the same draft only when its original enrollment request matches. */
+/** If two requests create the same subscription, return the existing one only when their enrollment details match. */
 async function persistSubscription(values: typeof memberSubscriptions.$inferInsert, requestKey: string) {
     const subscriptionId = values.id;
     const [inserted] = await db.insert(memberSubscriptions).values(values).onConflictDoNothing().returning();
@@ -284,7 +285,7 @@ async function persistSubscription(values: typeof memberSubscriptions.$inferInse
     return subscription;
 }
 
-/** Adapt the selected policy to the stored period and metadata before any enrollment is written. */
+/** Set currentPeriodEnd to the chosen first payment date and prepare the billing settings to save. */
 function prepareEnrollmentBilling(
     input: Parameters<typeof createDeferredBilling>[0],
     ordinaryPeriodEnd: Date | null | undefined,

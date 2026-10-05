@@ -85,7 +85,7 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   return { invoice: { ...invoice, transactionId: transaction.id }, created: true };
 }
 
-/** Check deferred eligibility after the subscription lock, before reusing or writing invoices. */
+/** Block cash invoices before the first payment is due. Call this after locking the subscription row. */
 function assertCashCollectionStarted(metadata: Record<string, unknown> | null, periodStart: Date) {
   const deferred = getDeferredBilling(metadata);
   if (deferred && (periodStart < new Date(deferred.firstPaymentAt) || new Date() < new Date(deferred.firstPaymentAt))) {
