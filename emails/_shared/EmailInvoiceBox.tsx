@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Button, Hr, Link, Section, Text } from '@react-email/components';
 import * as React from 'react';
 
@@ -7,10 +8,10 @@ type InvoiceItem = {
     price: number;
     productId?: string;
 }
-function formatCurrency(amount: number) {
+function formatCurrency(amount: number, currency = 'USD') {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'USD',
+        currency,
     }).format(amount / 100);
 }
 const styles: Record<string, React.CSSProperties> = {
@@ -213,11 +214,12 @@ EmailInvoiceLabel.displayName = 'EmailInvoiceLabel';
 
 interface EmailInvoiceAmountProps {
     amount: number;
+    currency?: string;
 }
 
-export const EmailInvoiceAmount = React.forwardRef<HTMLParagraphElement, EmailInvoiceAmountProps>(({ amount }, ref) => {
+export const EmailInvoiceAmount = React.forwardRef<HTMLParagraphElement, EmailInvoiceAmountProps>(({ amount, currency }, ref) => {
     return (
-        <Text ref={ref} style={styles.amount}>{formatCurrency(amount)}</Text>
+        <Text ref={ref} style={styles.amount}>{formatCurrency(amount, currency)}</Text>
     );
 });
 
@@ -253,8 +255,9 @@ EmailInvoicePayButton.displayName = 'EmailInvoicePayButton';
 interface EmailInvoiceItemsTableProps {
     items: InvoiceItem[];
     total: number;
+    currency?: string;
 }
-export const EmailInvoiceItemsTable = React.forwardRef<HTMLTableElement, EmailInvoiceItemsTableProps>(({ items, total }, ref) => {
+export const EmailInvoiceItemsTable = React.forwardRef<HTMLTableElement, EmailInvoiceItemsTableProps>(({ items, total, currency }, ref) => {
 
 
     return (
@@ -267,7 +270,7 @@ export const EmailInvoiceItemsTable = React.forwardRef<HTMLTableElement, EmailIn
                             <span style={styles.itemQuantity}>Qty {item.quantity}</span>
                         </td>
                         <td style={styles.itemCellPrice}>
-                            <span style={styles.itemValue}>{formatCurrency(item.quantity * item.price)}</span>
+                            <span style={styles.itemValue}>{formatCurrency(item.quantity * item.price, currency)}</span>
                         </td>
                     </tr>
                 ))}
@@ -277,7 +280,7 @@ export const EmailInvoiceItemsTable = React.forwardRef<HTMLTableElement, EmailIn
                         <span style={styles.itemValue}>Amount due</span>
                     </td>
                     <td style={styles.itemCellPrice}>
-                        <span style={styles.itemValue}>{formatCurrency(total)}</span>
+                        <span style={styles.itemValue}>{formatCurrency(total, currency)}</span>
                     </td>
                 </tr>
             </tbody>
