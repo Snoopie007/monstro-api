@@ -66,6 +66,7 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   } else if (sub.currentPeriodStart.getTime() !== periodStart.getTime() || sub.currentPeriodEnd.getTime() !== periodEnd.getTime()) {
     throw new CashInvoiceError("The billing period changed. Refresh the subscription.", "BILLING_PERIOD_CHANGED");
   }
+  const commissionBilling = sub.metadata?.commissionBilling as Record<string, unknown> | undefined;
   const [invoice] = await tx.insert(memberInvoices).values({
     memberId, locationId, memberPlanId: subscriptionId, renewalKey,
     forPeriodStart: periodStart, forPeriodEnd: periodEnd, dueDate: periodStart,
@@ -74,10 +75,10 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
     status: "draft", paymentType: "cash", invoiceType: "recurring",
     metadata: {
       type: "from-subscription", subscriptionId, collectionMethod: "send_invoice", platformFeeAmount: quote.platformFeeAmount,
-      commissionAllowanceInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.allowanceInterval,
-      commissionBillingInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingInterval,
-      commissionBillingThreshold: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingThreshold,
-      commissionVisitAllowance: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.visitAllowance,
+      commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+      commissionBillingInterval: commissionBilling?.billingInterval,
+      commissionBillingThreshold: commissionBilling?.billingThreshold,
+      commissionVisitAllowance: commissionBilling?.visitAllowance,
     },
   }).returning();
   if (!invoice) throw new Error("Failed to create cash invoice");

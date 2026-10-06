@@ -374,10 +374,16 @@ async function fulfillPlanCheckout(
         memberPlanPricingId: pricing.id,
     }).returning();
     if (!subscription) throw new Error("Authorize.net subscription could not be finalized");
+    const commissionBilling = metadata.commissionBilling as Record<string, unknown> | undefined;
     await tx.insert(memberInvoices).values({
         ...invoiceBase,
         memberPlanId: subscription.id,
-        metadata: { commissionAllowanceInterval: (metadata.commissionBilling as Record<string, unknown> | undefined)?.allowanceInterval, commissionBillingInterval: (metadata.commissionBilling as Record<string, unknown> | undefined)?.billingInterval, commissionBillingThreshold: (metadata.commissionBilling as Record<string, unknown> | undefined)?.billingThreshold, commissionVisitAllowance: (metadata.commissionBilling as Record<string, unknown> | undefined)?.visitAllowance },
+        metadata: {
+            commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+            commissionBillingInterval: commissionBilling?.billingInterval,
+            commissionBillingThreshold: commissionBilling?.billingThreshold,
+            commissionVisitAllowance: commissionBilling?.visitAllowance,
+        },
         forPeriodStart: subscription.currentPeriodStart,
         forPeriodEnd: subscription.currentPeriodEnd,
     });

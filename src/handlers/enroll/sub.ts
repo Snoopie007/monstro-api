@@ -198,7 +198,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             authorizeCustomerProfileId: gatewayCustomerId,
         } : {}),
         checkoutKind: "subscription",
-        commissionBilling: { allowanceInterval: pricing.plan.classLimitInterval, billingInterval: pricing.interval, billingThreshold: pricing.intervalThreshold, visitAllowance: pricing.plan.totalClassLimit },
+        commissionBilling: {
+            allowanceInterval: pricing.plan.classLimitInterval,
+            billingInterval: pricing.interval,
+            billingThreshold: pricing.intervalThreshold,
+            visitAllowance: pricing.plan.totalClassLimit,
+        },
     };
     const transactionId = generateUUID('txn_');
     const items = [{
@@ -274,7 +279,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     paymentType,
                     gatewayPaymentId: paymentMethodId,
                     metadata: {
-                        commissionBilling: { allowanceInterval: pricing.plan.classLimitInterval, billingInterval: pricing.interval, billingThreshold: pricing.intervalThreshold, visitAllowance: pricing.plan.totalClassLimit },
+                        commissionBilling: {
+                            allowanceInterval: pricing.plan.classLimitInterval,
+                            billingInterval: pricing.interval,
+                            billingThreshold: pricing.intervalThreshold,
+                            visitAllowance: pricing.plan.totalClassLimit,
+                        },
                         gatewayIntegrationId: gateway.integrationId,
                         gatewayCustomerId,
                         allowProration: resolvedAllowProration,
@@ -293,7 +303,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     locationId: lid,
                     paymentType,
                     ...chargeDetails,
-                    metadata: { commissionAllowanceInterval: pricing.plan.classLimitInterval, commissionBillingInterval: pricing.interval, commissionBillingThreshold: pricing.intervalThreshold, commissionVisitAllowance: pricing.plan.totalClassLimit },
+                    metadata: {
+                        commissionAllowanceInterval: pricing.plan.classLimitInterval,
+                        commissionBillingInterval: pricing.interval,
+                        commissionBillingThreshold: pricing.intervalThreshold,
+                        commissionVisitAllowance: pricing.plan.totalClassLimit,
+                    },
                     forPeriodStart: result.currentPeriodStart,
                     forPeriodEnd: result.currentPeriodEnd,
                     currency,
