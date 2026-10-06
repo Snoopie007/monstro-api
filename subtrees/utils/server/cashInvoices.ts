@@ -44,6 +44,7 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   if (!["active", "past_due", "unpaid", "incomplete", "trialing"].includes(sub.status)) {
     throw new CashInvoiceError("This subscription is not collecting cash payments", "SUBSCRIPTION_NOT_COLLECTING");
   }
+  if (!sub.currentPeriodStart || !sub.currentPeriodEnd) throw new CashInvoiceError("Missing billing period", "BILLING_PERIOD_CHANGED");
   assertCashCollectionStarted(sub.metadata, periodStart);
   const renewing = sub.currentPeriodEnd.getTime() === periodStart.getTime();
   const renewalKey = `${subscriptionId}:${periodStart.toISOString()}`;
@@ -111,7 +112,7 @@ async function advanceCashPeriod(tx: CashInvoiceDatabase, sub: typeof memberSubs
   const stored = typeof sub.metadata.cashBillingAnchor === "string" ? new Date(sub.metadata.cashBillingAnchor) : start;
   const anchor = Number.isFinite(stored.getTime()) ? stored : start;
   const deferred = getDeferredBilling(sub.metadata);
-  const [location] = deferred ? await tx.select({ timezone: locations.timezone }).from(locations).where(eq(locations.id, sub.locationId)) : [];
+  const [location] = deferred ? await tx.select({ timezone: locations.timezone }).from(locations).where(eq(locations.id, sub.locationId!)) : [];
   if (deferred && !location) throw new CashInvoiceError("Billing location not found", "BILLING_PERIOD_CHANGED");
   const boundary = deferred ? nextDeferredBillingBoundary(deferred, start, pricing.interval, pricing.intervalThreshold, location!.timezone) : nextBillingBoundary(anchor, start, pricing.interval, pricing.intervalThreshold);
   if (boundary.getTime() !== end.getTime()) {
