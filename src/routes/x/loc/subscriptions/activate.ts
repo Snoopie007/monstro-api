@@ -287,6 +287,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             discount: chargeDetails.productDiscount,
         }, ...chargeDetails.additionalFeeLines];
 
+        const commissionBilling = sub.metadata?.commissionBilling as Record<string, unknown> | undefined;
         const [invoice] = await db.insert(memberInvoices).values({
             memberId: sub.memberId,
             locationId: lid,
@@ -307,6 +308,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             forPeriodEnd: new Date(sub.currentPeriodEnd),
             metadata: {
                 type: "from-subscription",
+                commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+                commissionBillingInterval: commissionBilling?.billingInterval,
+                commissionBillingThreshold: commissionBilling?.billingThreshold,
+                commissionVisitAllowance: commissionBilling?.visitAllowance,
                 subscriptionId: sub.id,
                 collectionMethod: "charge_automatically",
                 gatewayService,
@@ -414,6 +419,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     updated: new Date(),
                     metadata: {
                         type: "from-subscription",
+                        commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+                        commissionBillingInterval: commissionBilling?.billingInterval,
+                        commissionBillingThreshold: commissionBilling?.billingThreshold,
+                        commissionVisitAllowance: commissionBilling?.visitAllowance,
                         subscriptionId: sub.id,
                         collectionMethod: "charge_automatically",
                         paymentIntentId,

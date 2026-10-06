@@ -155,6 +155,10 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
             authorizeIntegrationId: gateway.integrationId,
         } : {}),
         checkoutKind: "package",
+        packageClassLimit: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
+        commissionPurchase: {
+            visitAllowance: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
+        },
     };
     const items = [{
         name: productName,
@@ -231,6 +235,11 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     locationId: lid,
                     memberId: mid,
                     totalClassLimit: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
+                    metadata: {
+                        commissionPurchase: {
+                            visitAllowance: totalClassLimit ?? pricing.plan.totalClassLimit ?? 0,
+                        },
+                    },
                     memberPlanPricingId: pricing.id,
                     promoId: promoId ?? null,
                     paymentType,

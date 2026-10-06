@@ -315,6 +315,7 @@ async function fulfillPlanCheckout(
         const [memberPackage] = await tx.insert(memberPackages).values({
             locationId: transaction.locationId,
             memberId: transaction.memberId,
+            metadata: { commissionPurchase: metadata.commissionPurchase },
             totalClassLimit: typeof metadata.packageClassLimit === "number"
                 ? metadata.packageClassLimit
                 : pricing.plan.totalClassLimit ?? 0,
@@ -365,6 +366,7 @@ async function fulfillPlanCheckout(
         paymentType: transaction.paymentType,
         gatewayPaymentId: transaction.paymentMethodId,
         metadata: {
+            commissionBilling: metadata.commissionBilling,
             gatewayIntegrationId: metadata.authorizeIntegrationId,
             gatewayCustomerId,
             allowProration,
@@ -372,9 +374,16 @@ async function fulfillPlanCheckout(
         memberPlanPricingId: pricing.id,
     }).returning();
     if (!subscription) throw new Error("Authorize.net subscription could not be finalized");
+    const commissionBilling = metadata.commissionBilling as Record<string, unknown> | undefined;
     await tx.insert(memberInvoices).values({
         ...invoiceBase,
         memberPlanId: subscription.id,
+        metadata: {
+            commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+            commissionBillingInterval: commissionBilling?.billingInterval,
+            commissionBillingThreshold: commissionBilling?.billingThreshold,
+            commissionVisitAllowance: commissionBilling?.visitAllowance,
+        },
         forPeriodStart: subscription.currentPeriodStart,
         forPeriodEnd: subscription.currentPeriodEnd,
     });

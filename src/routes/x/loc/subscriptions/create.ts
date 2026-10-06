@@ -193,6 +193,12 @@ export async function createSubscriptionRoutes(app: Elysia) {
             paymentType,
             classCredits,
             metadata: {
+                commissionBilling: {
+                    allowanceInterval: pricing.plan.classLimitInterval,
+                    billingInterval: pricing.interval,
+                    billingThreshold: pricing.intervalThreshold,
+                    visitAllowance: pricing.plan.totalClassLimit,
+                },
                 ...billing.metadata,
                 ...(promoData && {
                     promo: {
