@@ -169,3 +169,32 @@ test("surfaces a singleton follow-on provider error", async () => {
     expect(gateway.refundTransaction("provider-1", 100, "0015"))
         .rejects.toThrow("does not meet the criteria");
 });
+
+
+test.each([true, false])("held Authorize charges preserve legacy behavior unless deferred billing is enabled: %s", async deferredBilling => {
+    process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
+    let order: unknown;
+    globalThis.fetch = Object.assign(async (_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+        order = JSON.parse(String(init?.body)).createTransactionRequest.transactionRequest.order;
+        return new Response(JSON.stringify({
+            transactionResponse: { responseCode: "4", transId: "held-id" },
+            messages: { resultCode: "Ok" },
+        }));
+    }, { preconnect: originalFetch.preconnect });
+    const { chargeWithGateway } = await import("@/utils/checkoutUtil");
+    const { createHash } = await import("node:crypto");
+    const result = await chargeWithGateway({
+        gateway: { service: "authorize", integrationId: "gateway", apiKey: "login", secretKey: "key", accountId: "merchant", metadata: {} },
+        gatewayCustomerId: "customer", paymentMethodId: "method", transactionId: "txn",
+        total: 100, feesAmount: 0, currency: "USD", description: "Subscription", note: "",
+        metadata: { billingAttemptId: "attempt", invoiceId: "invoice" }, paymentType: "card", deferredBilling,
+    });
+    if (deferredBilling) {
+        expect(result).toMatchObject({ status: "uncertain", paymentIntentId: "held-id", paymentIntentStatus: "processing" });
+        expect(order).toEqual({ invoiceNumber: createHash("sha256").update("attempt").digest("hex").slice(0, 20), description: "monstro-invoice:invoice" });
+    } else {
+        expect(result).toMatchObject({ status: "failed", failureCode: "4" });
+        expect(result).not.toHaveProperty("paymentIntentId");
+        expect(order).toEqual({ invoiceNumber: "txn", description: "Subscription" });
+    }
+});

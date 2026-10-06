@@ -1,3 +1,4 @@
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { removeRenewalJobs } from "@/queues/subscriptions";
 import { memberSubscriptions } from "@/subtrees/schemas";
@@ -18,9 +19,16 @@ export async function pauseSubscriptionRoutes(app: Elysia) {
             return status(400, { error: "Pause the root subscription to pause participant access", code: "SUBSCRIPTION_CHILD" });
         }
 
+        if (sub.status === "paused") return status(200, { status: "paused", scheduler: { paused: true } });
+        const deferred = getDeferredBilling(sub.metadata);
+        const now = new Date();
         await db.transaction(async (tx) => {
             await tx.update(memberSubscriptions).set({
                 status: "paused",
+                ...(deferred ? { metadata: {
+                    ...sub.metadata,
+                    deferredBilling: { ...deferred, pausedAt: now.toISOString() },
+                } } : {}),
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sid));
             await tx.update(memberSubscriptions).set({

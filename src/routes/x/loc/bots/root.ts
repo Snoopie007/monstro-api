@@ -23,7 +23,7 @@ export const xBots = new Elysia({ prefix: "/bots" })
 			userId: userId ?? "",
 			role: userRole === "staff" ? "staff" : "vendor",
 			purpose: "member_ops",
-			name: "Chief Operations Officer",
+			name: "Frank",
 		}).returning();
 		return [newBot];
 	}, {

@@ -1,8 +1,9 @@
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 
 import { db } from "@/db/db";
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
-import type { RecursiveSubscriptionJobData, SubscriptionJobData } from "@/subtrees/bullmq/types";
+import type { CashSubscriptionJobData, RecursiveSubscriptionJobData, SubscriptionJobData } from "@/subtrees/bullmq/types";
 import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { sleep } from "bun";
 
@@ -41,6 +42,18 @@ type ScheduleRenewalProps = {
 }
 
 
+
+/** Schedule the next cash invoice for its due date and time. Called when activating or resuming a subscription. */
+export async function scheduleCashRenewal(dueAt: Date, data: CashSubscriptionJobData) {
+    return subQueue.add("renewal:cash:recursive", { ...data, recurrenceCount: 1 }, {
+        jobId: `cashInvoiceDue_${data.sid}_${dueAt.getTime()}`,
+        delay: Math.max(0, dueAt.getTime() - Date.now()),
+        attempts: 3,
+        backoff: { type: "exponential", delay: 5000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+    });
+}
 
 export async function scheduleCronBasedRenewal({
     startDate,
@@ -172,7 +185,13 @@ export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Dat
     if (!sub || sub.parentId || sub.paymentType === "cash" || !sub.pricing || !sub.member || !sub.location) return;
 
     const migration = getStripeMigration(sub.metadata);
-    if (!migration || !["armed", "first_payment_verified"].includes(migration.state)) return;
+    if (!getDeferredBilling(sub.metadata) && (!migration || !["armed", "first_payment_verified"].includes(migration.state))) return;
+
+    if (getDeferredBilling(sub.metadata) && (
+        !["active", "past_due"].includes(sub.status)
+        || sub.currentPeriodEnd.getTime() !== dueAtMs
+        || (sub.cancelAt && sub.cancelAt.getTime() <= Date.now())
+    )) return;
 
     const billingQuote = getSubscriptionBillingQuote(sub);
     const payload: SubscriptionJobData = {
@@ -233,6 +252,10 @@ export async function removeRenewalJobs(sid: string) {
     }
     const exactJobs = await subQueue.getJobs(["delayed", "waiting", "active"]);
     for (const job of exactJobs) {
-        if (job.id?.startsWith(`renewal-exact-${sid}-`)) await job.remove();
+        if (job.id?.startsWith(`cashInvoiceDue_${sid}_`)) {
+            if (await job.getState() !== "active") await job.remove();
+            continue;
+        }
+        if (job.id?.startsWith(`renewal-exact-${sid}-`) && await job.getState() !== "active") await job.remove();
     }
 }

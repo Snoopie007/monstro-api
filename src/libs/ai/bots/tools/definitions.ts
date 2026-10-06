@@ -73,8 +73,8 @@ export const TOOLS_DEFINITIONS = [
     {
         type: "function",
         function: {
-            name: "cancel_session",
-            description: "Start or continue cancelling one member session. Call this immediately when the user selects Cancel Session or asks to cancel a class. Pass name, memberId, program, time, reservationId, and refundClassCredit whenever they are known.",
+            name: "cancel_class",
+            description: "Start or continue cancelling one member class. Call this immediately when the user selects Cancel a Class or asks to cancel a class. Pass name, memberId, program, time, reservationId, and refundClassCredit whenever they are known.",
             parameters: {
                 type: "object",
                 additionalProperties: false,
@@ -92,8 +92,8 @@ export const TOOLS_DEFINITIONS = [
     {
         type: "function",
         function: {
-            name: "schedule_session",
-            description: "Start or continue scheduling a member into a class. Call this immediately when the user selects Schedule a Session or asks to book someone. Pass name, memberId, program, programId, memberPlanId, time, and date whenever they are known.",
+            name: "schedule_class",
+            description: "Start or continue booking a member into a class. Call this immediately when the user selects Schedule a Class or asks to book someone. Pass name, memberId, program, programId, memberPlanId, time, and date whenever they are known. Do not use this to list the classes a member already has.",
             parameters: {
                 type: "object",
                 additionalProperties: false,
@@ -137,21 +137,44 @@ export const TOOLS_DEFINITIONS = [
     {
         type: "function",
         function: {
-            name: "report",
-            description: "Get a report of the data for the location. Call this when the user asks for a report.",
+            name: "member_sessions",
+            description: "List the classes and session times a member can attend from their active subscription or package at this location. Call this when the user asks what classes, schedule, or sessions a member has. Do not use this to book a class.",
             parameters: {
                 type: "object",
+                additionalProperties: false,
+                properties: {
+                    name: {
+                        type: "string",
+                        description: "Member first and last name when the user typed a name",
+                    },
+                    memberId: {
+                        type: "string",
+                        description: "Member id from a clarify chip, e.g. mbr_...",
+                    },
+                },
             },
-            properties: {
-                metric: {
-                    type: "string",
-                    description: "Metric name such as attendance, revenue, active_members",
+        },
+    },
+    {
+        type: "function",
+        function: {
+            name: "report",
+            description: "Look up a location metric. Call this immediately for active members, revenue, average MRR, or top paying members. Do not clarify.",
+            parameters: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                    kind: {
+                        type: "string",
+                        enum: ["active_members", "monthly_revenue", "average_mrr", "top_payers"],
+                        description: "active_members for the current count, monthly_revenue for paid transaction totals, average_mrr for average monthly subscription revenue, top_payers for the five members who paid the most",
+                    },
+                    range: {
+                        type: "string",
+                        description: "Time phrase for monthly_revenue and top_payers, such as this month, last month, last 6 months, or this year. Omit for this month. Ignored for active_members and average_mrr.",
+                    },
                 },
-                range: {
-                    type: "string",
-                    description: "Time range for report retrieval, for example last 30 days",
-                },
-                required: ["metric", "range"],
+                required: ["kind"],
             },
         },
     },

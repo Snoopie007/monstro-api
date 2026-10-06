@@ -59,6 +59,7 @@ export async function overdueInvoiceRoutes(app: Elysia) {
 
             await invoiceQueue.add('overdue', {
                 invoiceId,
+                manual: true,
                 reminderCount: 0, // Start at 0
                 data: {
                     member: {

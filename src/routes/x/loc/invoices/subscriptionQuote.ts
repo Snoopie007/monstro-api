@@ -1,14 +1,18 @@
-import type { CheckoutDiscount } from "@/subtrees/types";
+import { getDeferredBilling, deferredChargeAmount } from "@/subtrees/utils/deferredBilling";
+import type { AdditionalFee, CheckoutDiscount } from "@/subtrees/types";
 import { getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { memberInvoices } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/db";
-import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
+import { calculateChargeDetails } from "@/utils/enrollUtils";
+import { getAdditionalFeesForCheckout } from "@/utils/additionalFees";
+import { getCurrency } from "@/utils/getCurrency";
 
 type SubscriptionPricing = {
     id: string;
     name: string;
     price: number;
+    downpayment?: number | null;
     interval: "day" | "week" | "month" | "year" | null;
     intervalThreshold: number | null;
     plan?: {
@@ -38,10 +42,11 @@ type BuildSubscriptionInvoiceQuoteProps = {
     promoId?: string | null;
     location: SubscriptionLocation;
     billingPhase?: "initial" | "renewal";
+    periodStart?: Date;
     discount?: CheckoutDiscount | number;
 };
 
-export async function buildSubscriptionInvoiceQuote({
+export function quoteSubscriptionInvoice({
     locationId,
     subscriptionId,
     parentId = null,
@@ -50,9 +55,14 @@ export async function buildSubscriptionInvoiceQuote({
     memberPlanPricingId,
     promoId,
     location,
-    billingPhase: requestedBillingPhase,
+    billingPhase,
     discount,
-}: BuildSubscriptionInvoiceQuoteProps) {
+    additionalFees,
+    periodStart,
+}: BuildSubscriptionInvoiceQuoteProps & {
+    billingPhase: "initial" | "renewal";
+    additionalFees: AdditionalFee[];
+}) {
     const billingQuote = getSubscriptionBillingQuote({
         id: subscriptionId,
         parentId,
@@ -69,28 +79,9 @@ export async function buildSubscriptionInvoiceQuote({
             plan: pricing.plan ? { locationId: pricing.plan.locationId } : null,
         },
     });
-    const startsAtRenewal = subscriptionMetadata?.additionalFeesStartAtRenewal === true;
-    const paidInvoice = requestedBillingPhase || startsAtRenewal
-        ? undefined
-        : await db.query.memberInvoices.findFirst({
-            where: and(
-                eq(memberInvoices.memberPlanId, subscriptionId),
-                eq(memberInvoices.paid, true),
-            ),
-            columns: { id: true },
-        });
-    const billingPhase = requestedBillingPhase
-        ?? (paidInvoice || startsAtRenewal
-            ? "renewal"
-            : "initial");
-    const additionalFees = await getAdditionalFeesForCheckout(
-        locationId,
-        "subscription",
-        billingPhase,
-    );
     const taxRate = location.taxRates.find((rate) => rate.isDefault);
     const chargeDetails = calculateChargeDetails({
-        amount: billingQuote.price,
+        amount: periodStart ? deferredChargeAmount(getDeferredBilling(subscriptionMetadata), periodStart, billingQuote.price, pricing.downpayment) : billingQuote.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
         planId: location.locationState?.planId ?? 0,
@@ -119,4 +110,25 @@ export async function buildSubscriptionInvoiceQuote({
         invoiceDescription: `${billingQuote.name} - Billing Period`,
         transactionDescription: `${billingQuote.name} - Recurring Payment`,
     };
+}
+
+export async function buildSubscriptionInvoiceQuote(props: BuildSubscriptionInvoiceQuoteProps) {
+    const startsAtRenewal = props.subscriptionMetadata?.additionalFeesStartAtRenewal === true;
+    const paidInvoices = await db.query.memberInvoices.findMany({
+            where: and(
+                eq(memberInvoices.memberPlanId, props.subscriptionId),
+                eq(memberInvoices.locationId, props.locationId),
+                eq(memberInvoices.paid, true),
+            ),
+            columns: { id: true },
+        });
+    const billingPhase = props.billingPhase ?? (paidInvoices.length || startsAtRenewal ? "renewal" : "initial");
+    const promo = props.subscriptionMetadata?.promo as {
+        discount?: { amount: number; duration?: number; type?: "fixed_amount" | "percentage"; value?: number };
+    } | undefined;
+    const discount = props.discount ?? (promo?.discount && paidInvoices.length < (promo.discount.duration ?? 1)
+        ? { type: promo.discount.type ?? "fixed_amount", value: promo.discount.value ?? promo.discount.amount }
+        : undefined);
+    const additionalFees = await getAdditionalFeesForCheckout(props.locationId, "subscription", billingPhase);
+    return quoteSubscriptionInvoice({ ...props, discount, billingPhase, additionalFees });
 }

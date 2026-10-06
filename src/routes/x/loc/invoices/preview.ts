@@ -1,8 +1,9 @@
+import { getDeferredBilling, isDeferredFirstPeriod } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { calcTotals } from "./shared";
-import { getCurrency } from "@/utils";
+import { getCurrency } from "@/utils/getCurrency";
 import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
 
 export async function previewInvoiceRoutes(app: Elysia) {
@@ -63,11 +64,13 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 subscriptionId: sub.id,
                 parentId: sub.parentId,
                 subscriptionMetadata: sub.metadata,
+                periodStart: sub.currentPeriodEnd <= new Date() ? sub.currentPeriodEnd : sub.currentPeriodStart,
                 pricing: sub.pricing,
                 memberPlanPricingId: sub.memberPlanPricingId,
                 promoId: sub.promoId,
                 location: sub.location,
-                discount,
+                discount: sub.paymentType === "cash" ? undefined : discount,
+                billingPhase: sub.paymentType === "cash" && sub.currentPeriodEnd <= new Date() && sub.status !== "trialing" && !isDeferredFirstPeriod(getDeferredBilling(sub.metadata), sub.currentPeriodEnd) ? "renewal" : undefined,
             });
             return status(200, {
                 preview: {

@@ -1,5 +1,7 @@
+import type { integrations } from "@/subtrees/schemas";
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
-import { StripePaymentGateway, SquarePaymentGateway } from "@/libs/PaymentGateway";
+import { StripePaymentGateway, SquarePaymentGateway, AuthorizePaymentGateway } from "@/libs/PaymentGateway";
 import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
 
 export type SupportedStripePaymentMethod = "card" | "us_bank_account" | "link" | "cashapp";
@@ -63,7 +65,7 @@ export async function resolveSubscriptionBillingContext(
                 id: true,
                 locationId: true,
                 service: true,
-                accessToken: true,
+                accessToken: true, apiKey: true, secretKey: true,
                 accountId: true,
                 metadata: true,
             },
@@ -79,7 +81,7 @@ export async function resolveSubscriptionBillingContext(
                 id: true,
                 locationId: true,
                 service: true,
-                accessToken: true,
+                accessToken: true, apiKey: true, secretKey: true,
                 accountId: true,
                 metadata: true,
             },
@@ -88,7 +90,7 @@ export async function resolveSubscriptionBillingContext(
     if (!gateway || gateway.locationId !== subscription.locationId) {
         throw new BillingContextError("Payment gateway integration not found", "GATEWAY_NOT_FOUND");
     }
-    if (!gateway.accessToken || !gateway.accountId) {
+    if (gateway.service !== "authorize" && (!gateway.accessToken || !gateway.accountId)) {
         throw new BillingContextError("Payment gateway integration is not configured", "GATEWAY_NOT_CONFIGURED");
     }
 
@@ -104,13 +106,17 @@ export async function resolveSubscriptionBillingContext(
         ?? (typeof metadata.paymentMethodId === "string" && metadata.paymentMethodId.length > 0
             ? metadata.paymentMethodId
             : null);
+    if (gateway.service === "authorize" && getDeferredBilling(subscription.metadata)) {
+        return resolveAuthorizePaymentMethod(gateway, gatewayCustomerId, selectedMethodId);
+    }
+
     if (gateway.service === "stripe") {
         if (!selectedMethodId && options.requirePaymentMethod !== false) {
             throw new BillingContextError("Subscription payment method is missing", "PAYMENT_METHOD_MISSING");
         }
         let paymentMethodId = selectedMethodId;
         let paymentMethodType: SupportedStripePaymentMethod | null = null;
-        const stripe = new StripePaymentGateway(gateway.accessToken);
+        const stripe = new StripePaymentGateway(gateway.accessToken!);
         if (!paymentMethodId) {
             const customer = await stripe.getCustomer(gatewayCustomerId);
             const defaultMethod = customer?.invoice_settings?.default_payment_method;
@@ -136,7 +142,7 @@ export async function resolveSubscriptionBillingContext(
             gateway: {
                 ...gateway,
                 integrationId: gateway.id,
-                accessToken: gateway.accessToken,
+                accessToken: gateway.accessToken!,
             },
             gatewayCustomerId,
             paymentMethodId,
@@ -152,7 +158,7 @@ export async function resolveSubscriptionBillingContext(
             throw new BillingContextError("Subscription does not have a Square customer ID", "CUSTOMER_GATEWAY_MISMATCH");
         }
         try {
-            await new SquarePaymentGateway(gateway.accessToken).retrieveCardForCustomer(gatewayCustomerId, selectedMethodId);
+            await new SquarePaymentGateway(gateway.accessToken!).retrieveCardForCustomer(gatewayCustomerId, selectedMethodId);
         } catch {
             throw new BillingContextError("Payment method does not belong to subscription customer", "PAYMENT_METHOD_OWNER_MISMATCH");
         }
@@ -160,7 +166,7 @@ export async function resolveSubscriptionBillingContext(
             gateway: {
                 ...gateway,
                 integrationId: gateway.id,
-                accessToken: gateway.accessToken,
+                accessToken: gateway.accessToken!,
             },
             gatewayCustomerId,
             paymentMethodId: selectedMethodId,
@@ -170,6 +176,28 @@ export async function resolveSubscriptionBillingContext(
 
     throw new BillingContextError("Unsupported payment gateway for subscriptions", "GATEWAY_UNSUPPORTED");
 }
+
+type AuthorizeGateway = Pick<typeof integrations.$inferSelect,
+    "id" | "locationId" | "service" | "accessToken" | "accountId" | "metadata" | "apiKey" | "secretKey">;
+
+/** Check that the selected Authorize.net payment profile belongs to this customer. */
+async function resolveAuthorizePaymentMethod(
+    gateway: AuthorizeGateway,
+    gatewayCustomerId: string,
+    selectedMethodId: string | null,
+): Promise<SubscriptionBillingContext> {
+    if (!gateway.apiKey || !gateway.secretKey || !selectedMethodId) {
+        throw new BillingContextError("Authorize.net payment setup is missing", "PAYMENT_METHOD_MISSING");
+    }
+    const profile = await new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey).getCustomerProfile(gatewayCustomerId);
+    const profiles = Array.isArray(profile.paymentProfiles) ? profile.paymentProfiles : profile.paymentProfiles ? [profile.paymentProfiles] : [];
+    if (!profiles.some(method => method.customerPaymentProfileId === selectedMethodId)) {
+        throw new BillingContextError("Payment method does not belong to subscription customer", "PAYMENT_METHOD_OWNER_MISMATCH");
+    }
+    return { gateway: { ...gateway, integrationId: gateway.id, accessToken: gateway.accessToken ?? "" },
+        gatewayCustomerId, paymentMethodId: selectedMethodId, paymentMethodType: "card" };
+}
+
 // The cutover script stops the old collector and checks invoice overlap before arming.
 // Runtime keeps only local readiness, account, and cutoff checks.
 export async function assertImportedSubscriptionRetrySafe(

@@ -10,6 +10,9 @@ import { eq } from "drizzle-orm";
 import { memberInvoices, transactions } from "@/subtrees/schemas";
 import { scheduleInvoiceReminderAndOverdue } from "./shared";
 import type { Currency } from "square";
+import { canEditLocationMember } from "@/utils/locationAccess";
+import { sendCashInvoice } from "./cashEmail";
+import { CashInvoiceError } from "@/subtrees/utils/server/cashInvoices";
 
 type InvoiceChargeMetadata = {
     collectionMethod?: "send_invoice" | "charge_automatically";
@@ -41,7 +44,8 @@ function squareChargeFailure(error: unknown) {
 }
 
 export async function sendInvoiceRoutes(app: Elysia) {
-    return app.post("/:iid/send", async ({ params, body, status }) => {
+    return app.post("/:iid/send", async ctx => {
+        const { params, body, status } = ctx;
         const { lid, iid } = params as { lid: string; iid: string };
         const { paymentMethodId } = body as { paymentMethodId?: string };
 
@@ -80,6 +84,19 @@ export async function sendInvoiceRoutes(app: Elysia) {
             return status(404, { error: "Invoice not found" });
         }
 
+        if (invoice.paymentType === "cash") {
+            const actor = ctx as typeof ctx & { vendorId?: string; staffId?: string; userId?: string };
+            if (!await canEditLocationMember(lid, actor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
+            try {
+                const sent = await sendCashInvoice(lid, iid);
+                return status(200, { success: true, message: sent.emailQueued ? "Invoice email queued" : "Invoice already issued", invoice: sent });
+            } catch (error) {
+                if (error instanceof CashInvoiceError) return status(error.code === "INVOICE_NOT_FOUND" ? 404 : 400, { error: error.message, code: error.code });
+                console.error("Failed to queue cash invoice email", error);
+                return status(503, { error: "Could not queue the invoice email. Please retry." });
+            }
+        }
+
         if (invoice.status !== "draft") {
             return status(400, { error: "Invoice must be draft to send" });
         }
@@ -92,7 +109,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
         });
         const invoiceMetadata = (invoice.metadata as InvoiceChargeMetadata | null) ?? null;
         const collectionMethod = invoiceMetadata?.collectionMethod || "send_invoice";
-        const shouldAutoCharge = collectionMethod === "charge_automatically" && invoice.paymentType !== "cash";
+        const shouldAutoCharge = collectionMethod === "charge_automatically";
         const linkedTransaction = invoice.transactionId
             ? await db.query.transactions.findFirst({
                 where: (transaction, { eq }) => eq(transaction.id, invoice.transactionId!),
@@ -420,7 +437,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
             updated: new Date(),
         }).where(eq(memberInvoices.id, iid));
 
-        if (invoice.paymentType !== "cash" && invoice.member && invoice.location) {
+        if (invoice.member && invoice.location) {
             await scheduleInvoiceReminderAndOverdue(iid, new Date(invoice.dueDate), {
                 member: {
                     firstName: invoice.member.firstName,

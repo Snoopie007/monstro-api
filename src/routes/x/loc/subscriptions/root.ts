@@ -8,8 +8,10 @@ import { pauseSubscriptionRoutes } from "./pause";
 import { resumeSubscriptionRoutes } from "./resume";
 import { retrySubscriptionPaymentRoutes } from "./retryPayment";
 import { updateSubscriptionRoutes } from "./update";
+import { upcomingRoutes } from "./upcoming";
 
 export const xSubscriptions = new Elysia({ prefix: "/subscriptions" })
+    .use(upcomingRoutes)
     .use(createSubscriptionRoutes)
     .use(activateSubscriptionRoutes)
     .use(activateCashSubscriptionRoutes)

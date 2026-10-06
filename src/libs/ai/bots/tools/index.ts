@@ -1,11 +1,12 @@
 import type { ToolArgs, ToolExecutorResult } from "../type";
 import { executeAsk } from "./ask";
-import { executeCancelSession } from "./cancelSession";
+import { executeCancelClass } from "./cancelClass";
 import { executeClarify } from "./clarify";
 import { executeReportTool } from "./reports";
 import { TOOLS_DEFINITIONS } from "./definitions";
 import { executeRetryFailed } from "./retryFailed";
-import { executeScheduleSession } from "./scheduleSession";
+import { executeMemberSessions } from "./memberSessions";
+import { executeScheduleClass } from "./scheduleClass";
 import { jsonResult, normalizeToolArgs } from "../utils";
 
 export { parseToolArgs, jsonResult, lastPausedTask, mergeResumeArgs, compactArgs, applyMentions } from "../utils";
@@ -33,11 +34,14 @@ export async function executeTool(name: string, args: ToolArgs, locationId: stri
     if (name === "retry_failed") {
         return attachPauseState(await executeRetryFailed(normalized, locationId), name, normalized);
     }
-    if (name === "cancel_session") {
-        return attachPauseState(await executeCancelSession(normalized, locationId), name, normalized);
+    if (name === "cancel_class") {
+        return attachPauseState(await executeCancelClass(normalized, locationId), name, normalized);
     }
-    if (name === "schedule_session") {
-        return attachPauseState(await executeScheduleSession(normalized, locationId), name, normalized);
+    if (name === "schedule_class") {
+        return attachPauseState(await executeScheduleClass(normalized, locationId), name, normalized);
+    }
+    if (name === "member_sessions") {
+        return attachPauseState(await executeMemberSessions(normalized, locationId), name, normalized);
     }
     if (name === "report") {
         return executeReportTool(normalized, locationId);

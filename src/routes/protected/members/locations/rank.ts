@@ -1,3 +1,5 @@
+import { asc } from "drizzle-orm";
+import { ranks } from "@/subtrees/schemas";
 import { db } from "@/db/db"
 import { Elysia, t } from "elysia"
 
@@ -23,6 +25,7 @@ export function mlRankRoutes(app: Elysia) {
                         process: {
                             with: {
                                 ranks: {
+                                    orderBy: [asc(ranks.sortOrder)],
                                     with: {
                                         requirements: true,
                                     },
@@ -45,7 +48,7 @@ export function mlRankRoutes(app: Elysia) {
 
             const { process, ...memberRank } = memberRanks;
 
-            return status(200, { process, memberRank, memberRankRequirements });
+            return status(200, { process: { ...process, ranks: process.ranks.filter(rank => !rank.archivedAt || rank.id === memberRank.rankId) }, memberRank, memberRankRequirements });
         } catch (error) {
             console.error(error);
             return status(500, { error: "Failed to fetch achievements" });

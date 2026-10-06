@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { streamBotAgent } from "./agent";
+import { streamBotAgent } from "./bot";
 
 const params = t.Object({
 	lid: t.String(),

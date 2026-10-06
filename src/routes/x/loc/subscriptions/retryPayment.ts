@@ -1,3 +1,4 @@
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
 import { scheduleRenewalRepair } from "@/queues/subscriptions";
@@ -78,13 +79,13 @@ export async function retrySubscriptionPaymentRoutes(app: Elysia) {
                 columns: { id: true, forPeriodEnd: true },
             });
             if (paidInvoice) {
-                const importedStripeRoot = Boolean(getStripeMigration(sub.metadata));
-                if (importedStripeRoot) await scheduleRenewalRepair(sid, lid, paidInvoice.forPeriodEnd);
+                const repairRenewal = Boolean(getStripeMigration(sub.metadata) || getDeferredBilling(sub.metadata));
+                if (repairRenewal) await scheduleRenewalRepair(sid, lid, paidInvoice.forPeriodEnd);
                 await db.update(memberSubscriptions).set({ status: "active", updated: new Date() }).where(and(
                     eq(memberSubscriptions.id, sid),
                     eq(memberSubscriptions.status, "past_due"),
                 ));
-                return status(200, { enqueued: importedStripeRoot, repairOnly: true, invoiceId: paidInvoice.id });
+                return status(200, { enqueued: repairRenewal, repairOnly: true, invoiceId: paidInvoice.id });
             }
             return status(400, {
                 error: "No failed transaction found for this subscription",

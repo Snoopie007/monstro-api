@@ -1,3 +1,4 @@
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { db } from "@/db/db";
@@ -129,7 +130,7 @@ export async function retrySubscriptionPayment(props: {
     const transaction = invoice.transaction;
     if (!transaction) return fail("TRANSACTION_NOT_FOUND", "Transaction not found");
     if (invoice.paid || invoice.status === "paid") {
-        if (importedStripeRoot) await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
+        if (importedStripeRoot || getDeferredBilling(sub.metadata)) await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
         return {
             ok: true,
             subscriptionId: sub.id,
@@ -217,7 +218,7 @@ export async function retrySubscriptionPayment(props: {
                     sql`coalesce(${memberSubscriptions.metadata}->'stripeMigration'->>'state', '') <> 'armed'`,
                 ));
             });
-            if (importedStripeRoot && billingContext.gateway.service === "stripe") {
+            if ((importedStripeRoot && billingContext.gateway.service === "stripe") || getDeferredBilling(sub.metadata)) {
                 await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
             }
             return {
@@ -278,6 +279,7 @@ export async function retrySubscriptionPayment(props: {
             gatewayCustomerId: billingContext.gatewayCustomerId,
             paymentMethodId,
             transactionId: attemptId,
+            deferredBilling: !!getDeferredBilling(sub.metadata),
             total: invoice.total,
             feesAmount: transaction.feeAmount,
             currency: transaction.currency,
@@ -379,7 +381,7 @@ export async function retrySubscriptionPayment(props: {
         }
     });
 
-    if (attemptStatus === "succeeded" && importedStripeRoot && billingContext.gateway.service === "stripe") {
+    if (attemptStatus === "succeeded" && ((importedStripeRoot && billingContext.gateway.service === "stripe") || getDeferredBilling(sub.metadata))) {
         await scheduleRenewalRepair(sub.id, lid, invoice.forPeriodEnd);
     }
     if (attemptStatus !== "succeeded") {
