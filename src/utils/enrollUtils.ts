@@ -2,98 +2,54 @@ import type { AdditionalFee, ChargeDetails, CheckoutDiscount, InvoiceItem } from
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
 import { db } from "@/db/db";
 import { memberContracts } from "@/subtrees/schemas";
+import { and, asc, eq } from "drizzle-orm";
+import { ensureCurrentLocationWaiver } from "./locationWaiver";
 import { getMonstroPlatformFeePercent } from "@/subtrees/utils";
 
 type EnrollTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-/** Creates plan contract and location waiver rows for an enrollment; returns IDs still needing a signature. */
+/** Resolves the current waiver before creating the enrollment's plan contract. */
 export async function createEnrollUnsignedDocs(
-	tx: EnrollTx,
-	input: {
-		mid: string;
-		lid: string;
-		memberPlanId: string;
-		contractId?: string | null;
-		waiverId?: string | null;
-		signedWaiverId?: string | null;
-	},
+    tx: EnrollTx,
+    input: { mid: string; lid: string; memberPlanId: string; contractId?: string | null },
 ): Promise<string[]> {
-	const { mid, lid, memberPlanId, contractId, waiverId, signedWaiverId } = input;
-	const unsignedDocs: string[] = [];
-
-	if (contractId) {
-		const [c] = await tx.insert(memberContracts).values({
-			memberId: mid,
-			templateId: contractId,
-			locationId: lid,
-			memberPlanId,
-		}).returning({
-			id: memberContracts.id,
-		});
-		if (c) {
-			unsignedDocs.push(c.id);
-		}
-	}
-
-	if (waiverId && !signedWaiverId) {
-		const [w] = await tx.insert(memberContracts).values({
-			memberId: mid,
-			templateId: waiverId,
-			locationId: lid,
-			memberPlanId,
-		}).returning({
-			id: memberContracts.id,
-		});
-		if (w) {
-			unsignedDocs.push(w.id);
-		}
-	}
-
-	return unsignedDocs;
+    const { mid, lid, memberPlanId, contractId } = input;
+    const waiver = await ensureCurrentLocationWaiver(tx, input);
+    const unsignedDocs: string[] = waiver.pendingDocId ? [waiver.pendingDocId] : [];
+    if (contractId && contractId !== waiver.waiverId) {
+        const documents = await tx.select().from(memberContracts).where(and(
+            eq(memberContracts.memberId, mid),
+            eq(memberContracts.locationId, lid),
+            eq(memberContracts.templateId, contractId),
+            eq(memberContracts.memberPlanId, memberPlanId),
+        )).orderBy(asc(memberContracts.created), asc(memberContracts.id)).for("update");
+        if (!documents.some((doc) => doc.signedOn)) {
+            const pending = documents.find((doc) => !doc.signedOn);
+            if (pending) {
+                unsignedDocs.push(pending.id);
+            } else {
+                const [created] = await tx.insert(memberContracts).values({
+                    memberId: mid,
+                    templateId: contractId,
+                    locationId: lid,
+                    memberPlanId,
+                }).returning({ id: memberContracts.id });
+                if (!created) throw new Error("Failed to create plan contract document");
+                unsignedDocs.push(created.id);
+            }
+        }
+    }
+    return [...new Set(unsignedDocs)];
 }
 
-/** Recovers pending enrollment documents after a paid transaction replay without duplicating existing rows. */
+/** Recovers the same documents under the enrollment resolver's locks. */
 export async function recoverEnrollUnsignedDocs(input: {
-	mid: string;
-	lid: string;
-	memberPlanId: string;
-	contractId?: string | null;
-	waiverId?: string | null;
+    mid: string;
+    lid: string;
+    memberPlanId: string;
+    contractId?: string | null;
 }): Promise<string[]> {
-	const templateIds = [input.contractId, input.waiverId]
-		.filter((id): id is string => Boolean(id));
-	if (templateIds.length === 0) return [];
-
-	const existing = await db.query.memberContracts.findMany({
-		where: (doc, { and, eq }) => and(
-			eq(doc.memberId, input.mid),
-			eq(doc.locationId, input.lid),
-			eq(doc.memberPlanId, input.memberPlanId),
-		),
-		columns: {
-			id: true,
-			templateId: true,
-			signedOn: true,
-		},
-	});
-	const unsignedDocs: string[] = [];
-	for (const templateId of templateIds) {
-		const docs = existing.filter((doc) => doc.templateId === templateId);
-		if (docs.some((doc) => doc.signedOn)) continue;
-		const pending = docs.filter((doc) => !doc.signedOn);
-		if (pending.length > 0) {
-			unsignedDocs.push(...pending.map((doc) => doc.id));
-			continue;
-		}
-		const [created] = await db.insert(memberContracts).values({
-			memberId: input.mid,
-			templateId,
-			locationId: input.lid,
-			memberPlanId: input.memberPlanId,
-		}).returning({ id: memberContracts.id });
-		if (created) unsignedDocs.push(created.id);
-	}
-	return unsignedDocs;
+    return db.transaction((tx) => createEnrollUnsignedDocs(tx, input));
 }
 
 export type CalculateChargeDetailsProps = {

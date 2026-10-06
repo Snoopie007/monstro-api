@@ -16,11 +16,9 @@ import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, scheduleRenewalRepa
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
     courseEnrollments,
-    contractTemplates,
     eventRegistrations,
     eventTickets,
     locationEvents,
-    memberContracts,
     memberInvoices,
     memberLocations,
     memberPackages,
@@ -249,31 +247,6 @@ async function fulfillPlanCheckout(
     if (metadata.checkoutKind !== "package" && metadata.checkoutKind !== "subscription") {
         throw new Error("Authorize.net plan checkout kind is invalid");
     }
-    const waiverId = memberLocation.location.locationState.waiverId;
-    if (memberLocation.signedWaiverId) {
-        if (!waiverId) {
-            throw new Error("Authorize.net signed waiver is not valid for this location");
-        }
-        const signedWaiver = await tx.query.memberContracts.findFirst({
-            where: (memberContract, { eq, and, isNotNull }) => and(
-                eq(memberContract.id, memberLocation.signedWaiverId!),
-                eq(memberContract.memberId, transaction.memberId!),
-                eq(memberContract.locationId, transaction.locationId),
-                eq(memberContract.templateId, waiverId),
-                isNotNull(memberContract.signedOn),
-            ),
-            with: {
-                contractTemplate: {
-                    columns: {
-                        locationId: true,
-                    },
-                },
-            },
-        });
-        if (!signedWaiver || signedWaiver.contractTemplate?.locationId !== transaction.locationId) {
-            throw new Error("Authorize.net signed waiver is not valid for this location");
-        }
-    }
     const contractId = pricing.plan.contractId;
     if (contractId) {
         const contractTemplate = await tx.query.contractTemplates.findFirst({
@@ -332,8 +305,6 @@ async function fulfillPlanCheckout(
             lid: transaction.locationId,
             memberPlanId: memberPackage.id,
             contractId,
-            waiverId,
-            signedWaiverId: memberLocation.signedWaiverId,
         });
         return undefined;
     }
@@ -392,8 +363,6 @@ async function fulfillPlanCheckout(
         lid: transaction.locationId,
         memberPlanId: subscription.id,
         contractId,
-        waiverId,
-        signedWaiverId: memberLocation.signedWaiverId,
     });
 
     if (!(["month", "year"] as string[]).includes(pricing.interval)) return undefined;
