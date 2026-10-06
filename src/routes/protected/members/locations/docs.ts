@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { Elysia, t } from "elysia"
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
-import { MemberDocumentError, signMemberDocument } from "@/utils/signMemberDocument";
+import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
 
 
 export function mlDocsRoutes(app: Elysia) {

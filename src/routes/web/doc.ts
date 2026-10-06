@@ -3,7 +3,7 @@ import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
-import { MemberDocumentError, signMemberDocument } from "@/utils/signMemberDocument";
+import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
 
 export const webDocRoutes = new Elysia({ prefix: "/docs" })
     .use(WebAuthMiddleware)
