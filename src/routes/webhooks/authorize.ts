@@ -1,3 +1,4 @@
+import { getDeferredInvoiceBilling, prepareAuthorizeInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
@@ -11,7 +12,7 @@ import { db } from "@/db/db";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
-import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
+import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, scheduleRenewalRepair } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
     courseEnrollments,
@@ -175,6 +176,16 @@ async function transactionForDetails(
         if (original) return original;
     }
     if (direct) return direct;
+
+    const invoiceMatch = typeof details.order?.description === "string"
+        ? /^monstro-invoice:([A-Za-z0-9_-]{1,128})$/.exec(details.order.description) : null;
+    if (invoiceMatch?.[1]) {
+        const invoice = await db.query.memberInvoices.findFirst({ where: and(
+            eq(memberInvoices.id, invoiceMatch[1]), eq(memberInvoices.locationId, integration.locationId)) });
+        if (invoice?.transactionId && metadataOf(invoice.metadata).gatewayService === "authorize") {
+            return db.query.transactions.findFirst({ where: and(eq(transactions.id, invoice.transactionId), eq(transactions.locationId, integration.locationId)) });
+        }
+    }
 
     const match = typeof details.order?.description === "string"
         ? /^monstro:([A-Za-z0-9_-]{1,128})$/.exec(details.order.description)
@@ -489,6 +500,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
         }
 
         let renewal: Renewal | undefined;
+        let repair: { sid: string; lid: string; dueAt: Date | null } | undefined;
         await db.transaction(async (tx) => {
             await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${transaction.id}))`);
             const current = await tx.query.transactions.findFirst({
@@ -527,6 +539,20 @@ export function authorizeWebhookRoutes(app: Elysia) {
 
             const paymentStatus = authorizePaymentState(details);
             if (!paymentStatus) throw new Error("Unknown Authorize.net transaction status");
+            // Lock the invoice so a manual retry cannot change the payment attempt during this update.
+            // Then check the attempt: a delayed webhook may belong to an older payment.
+            const [invoice] = await tx.select().from(memberInvoices)
+                .where(eq(memberInvoices.transactionId, current.id)).for("update");
+            const deferred = await getDeferredInvoiceBilling(tx, invoice?.memberPlanId);
+            // TODO(billing): review payment-attempt matching for ordinary payments in a separate PR.
+            // Keep their existing webhook behavior until that follow-up is implemented.
+            const attemptResult = prepareAuthorizeInvoiceAttempt(deferred ? invoice : undefined, {
+                id: providerTransactionId, invoiceNumber: details.order?.invoiceNumber, status: paymentStatus,
+            });
+            if (deferred && invoice?.memberPlanId && paymentStatus === "paid" && (attemptResult || invoice.paid)) {
+                repair = { sid: invoice.memberPlanId, lid: invoice.locationId, dueAt: invoice.forPeriodEnd };
+            }
+            if (!attemptResult) return;
             const metadata: Record<string, unknown> = {
                 ...currentMetadata,
                 authorizeTransactionId: providerTransactionId,
@@ -543,20 +569,18 @@ export function authorizeWebhookRoutes(app: Elysia) {
                 updated: new Date(),
             }).where(eq(transactions.id, current.id));
 
-            const invoice = await tx.query.memberInvoices.findFirst({
-                where: eq(memberInvoices.transactionId, current.id),
-            });
             if (invoice && terminalTransition) {
                 await tx.update(memberInvoices).set({
                     status: paymentStatus === "paid" ? "paid" : "unpaid",
                     paid: paymentStatus === "paid",
                     paymentType: "card",
+                    ...attemptResult.invoiceUpdate,
                     updated: new Date(),
                 }).where(eq(memberInvoices.id, invoice.id));
             }
             const subscriptionId = typeof metadata.memberSubscriptionId === "string"
                 ? metadata.memberSubscriptionId
-                : null;
+                : attemptResult.subscriptionId;
             if (subscriptionId && terminalTransition) {
                 const [updatedSubscription] = await tx.update(memberSubscriptions).set({
                     status: paymentStatus === "paid" ? "active" : "past_due",
@@ -651,6 +675,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
             }
         });
         if (renewal) await scheduleRenewal(renewal);
+        if (repair) await scheduleRenewalRepair(repair.sid, repair.lid, repair.dueAt);
 
         return status(200, { message: "Authorize.net event processed" });
     }, { parse: "none" });

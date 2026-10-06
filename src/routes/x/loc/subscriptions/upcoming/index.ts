@@ -185,7 +185,7 @@ export async function upcomingRoutes(app: Elysia) {
                 currency: getCurrency(location.country) as Currency,
                 now,
                 canMarkPaid,
-                quote: (sub, billingPhase, discount) => {
+                quote: (sub, billingPhase, discount, periodStart) => {
                     if (!sub.pricing)
                         throw new Error("Subscription price is missing");
                     return quoteSubscriptionInvoice({
@@ -198,6 +198,7 @@ export async function upcomingRoutes(app: Elysia) {
                         pricing: sub.pricing,
                         location,
                         billingPhase,
+                        periodStart,
                         discount,
                         additionalFees: fees.filter(
                             (fee) =>

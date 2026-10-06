@@ -1,4 +1,5 @@
 
+import { createHash } from "node:crypto";
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import type { CheckoutContext } from "./getCheckoutContext";
 import type { PaymentType } from "@/subtrees/types";
@@ -38,6 +39,7 @@ export type ChargeWithGatewayInput = {
 	note: string;
 	metadata: Record<string, string>;
 	paymentType: PaymentType;
+	deferredBilling?: boolean;
 };
 
 export type ChargeWithGatewayResult =
@@ -144,12 +146,13 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		}
 		const authorize = new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey);
 		try {
+			const billingAttemptId = input.deferredBilling ? metadata.billingAttemptId : undefined;
 			const charge = await authorize.createCharge(gatewayCustomerId, paymentMethodId, {
 				total,
 				currency,
 				idempotencyKey: transactionId,
-				referenceId: transactionId,
-				orderDescription: description,
+				referenceId: billingAttemptId ? createHash("sha256").update(billingAttemptId).digest("hex").slice(0, 20) : transactionId,
+				orderDescription: billingAttemptId && metadata.invoiceId ? `monstro-invoice:${metadata.invoiceId}` : description,
 			});
 			const gatewayMetadata = {
 				gatewayService: "authorize",
@@ -167,10 +170,18 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 						gatewayMetadata,
 					};
 				case "held":
-					return {
+					// TODO(billing): handle held payments as pending across ordinary checkout in a separate PR.
+					// Keep the existing failure result unless this is a deferred subscription payment.
+					if (!input.deferredBilling) return {
 						status: "failed",
 						failureReason: charge.responseMessage ?? "Authorize.net held the transaction for review",
-						failureCode: "4",
+						failureCode: "4", paymentType: "card", gatewayMetadata,
+					};
+					return {
+						status: "uncertain",
+						paymentIntentId: charge.transactionId,
+						paymentIntentStatus: "processing",
+						message: charge.responseMessage ?? "Authorize.net held the transaction for review",
 						paymentType: "card",
 						gatewayMetadata,
 					};

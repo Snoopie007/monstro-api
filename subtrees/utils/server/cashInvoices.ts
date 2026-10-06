@@ -1,3 +1,4 @@
+import { getDeferredBilling, nextDeferredBillingBoundary } from "../deferredBilling";
 import { and, eq, isNull, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { memberInvoices } from "../../schemas/invoice";
@@ -43,6 +44,7 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   if (!["active", "past_due", "unpaid", "incomplete", "trialing"].includes(sub.status)) {
     throw new CashInvoiceError("This subscription is not collecting cash payments", "SUBSCRIPTION_NOT_COLLECTING");
   }
+  assertCashCollectionStarted(sub.metadata, periodStart);
   const renewing = sub.currentPeriodEnd.getTime() === periodStart.getTime();
   const renewalKey = `${subscriptionId}:${periodStart.toISOString()}`;
   const existing = await tx.select().from(memberInvoices).where(and(
@@ -83,6 +85,14 @@ export async function ensureCashInvoice(tx: CashInvoiceDatabase, input: {
   return { invoice: { ...invoice, transactionId: transaction.id }, created: true };
 }
 
+/** Block cash invoices before the first payment is due. Call this after locking the subscription row. */
+function assertCashCollectionStarted(metadata: Record<string, unknown> | null, periodStart: Date) {
+  const deferred = getDeferredBilling(metadata);
+  if (deferred && (periodStart < new Date(deferred.firstPaymentAt) || new Date() < new Date(deferred.firstPaymentAt))) {
+    throw new CashInvoiceError("First payment is not due yet", "SUBSCRIPTION_NOT_COLLECTING");
+  }
+}
+
 /** Renew on the calendar boundary, even while a previous period is unpaid.
  * The caller inserts the new invoice in this same transaction. */
 async function advanceCashPeriod(tx: CashInvoiceDatabase, sub: typeof memberSubscriptions.$inferSelect, start: Date, end: Date, paid = false) {
@@ -94,7 +104,11 @@ async function advanceCashPeriod(tx: CashInvoiceDatabase, sub: typeof memberSubs
   if (!pricing?.interval || !pricing.intervalThreshold) throw new CashInvoiceError("Missing billing cadence", "BILLING_PERIOD_CHANGED");
   const stored = typeof sub.metadata.cashBillingAnchor === "string" ? new Date(sub.metadata.cashBillingAnchor) : start;
   const anchor = Number.isFinite(stored.getTime()) ? stored : start;
-  if (nextBillingBoundary(anchor, start, pricing.interval, pricing.intervalThreshold).getTime() !== end.getTime()) {
+  const deferred = getDeferredBilling(sub.metadata);
+  const [location] = deferred ? await tx.select({ timezone: locations.timezone }).from(locations).where(eq(locations.id, sub.locationId)) : [];
+  if (deferred && !location) throw new CashInvoiceError("Billing location not found", "BILLING_PERIOD_CHANGED");
+  const boundary = deferred ? nextDeferredBillingBoundary(deferred, start, pricing.interval, pricing.intervalThreshold, location!.timezone) : nextBillingBoundary(anchor, start, pricing.interval, pricing.intervalThreshold);
+  if (boundary.getTime() !== end.getTime()) {
     throw new CashInvoiceError("The billing period changed. Refresh the subscription.", "BILLING_PERIOD_CHANGED");
   }
   await tx.update(memberSubscriptions).set({

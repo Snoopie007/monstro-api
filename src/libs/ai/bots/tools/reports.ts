@@ -318,6 +318,7 @@ async function mrr(locationId: string): Promise<MRRReport> {
             eq(memberSubscriptions.locationId, locationId),
             eq(memberSubscriptions.status, "active"),
             isNull(memberSubscriptions.parentId),
+            sql`(${memberSubscriptions.metadata}->'deferredBilling' IS NULL OR ${memberSubscriptions.currentPeriodStart} >= (${memberSubscriptions.metadata}->'deferredBilling'->>'firstPaymentAt')::timestamptz)`,
         ));
 
     const totalMrrCents = rows.reduce(

@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 
@@ -23,7 +23,10 @@ const transaction = {
 let providerDetails: Record<string, unknown>;
 const updates: Array<Record<string, unknown>> = [];
 const inserts: Array<Record<string, unknown>> = [];
-let existingInvoice: { id: string } | undefined = { id: "invoice-1" };
+let existingInvoice: {
+    locationId?: string; forPeriodEnd?: Date; id: string; transactionId?: string; memberPlanId?: string; paid?: boolean;
+    metadata?: Record<string, unknown>;
+} | undefined = { id: "invoice-1" };
 let existingEventRegistration: { id: string; status: "pending" | "registered" } | undefined;
 const pricing = {
     id: "pricing-1",
@@ -55,9 +58,13 @@ const update = mock(() => ({
     }),
 }));
 const tx = {
+    select: () => ({ from: () => ({ where: () => ({ for: async () => existingInvoice ? [existingInvoice] : [] }) }) }),
     query: {
         transactions: { findFirst: mock(async () => transaction) },
         memberInvoices: { findFirst: mock(async () => existingInvoice) },
+        memberSubscriptions: { findFirst: mock(async (): Promise<{ metadata: Record<string, unknown> }> => ({ metadata: {
+            deferredBilling: { version: 1, firstPaymentAt: "2026-02-01T09:00:00Z", prorate: false, prorationAmount: 0 },
+        } })) },
         memberPlanPricing: { findFirst: mock(async () => pricing) },
         memberLocations: { findFirst: mock(async () => memberLocation) },
         eventRegistrations: { findFirst: mock(async () => existingEventRegistration) },
@@ -78,6 +85,7 @@ const tx = {
 const findTransaction = mock(async (): Promise<typeof transaction | undefined> => transaction);
 const db = {
     query: {
+        memberInvoices: { findFirst: async () => existingInvoice },
         transactions: { findFirst: findTransaction },
         integrations: {
             findFirst: mock(async () => ({
@@ -95,7 +103,9 @@ const db = {
 
 mock.module("@/db/db", () => ({ db }));
 mock.module("@/utils", () => ({ createEnrollUnsignedDocs: mock(async () => []) }));
+const repairRenewal = mock(async (..._args: unknown[]) => {});
 mock.module("@/queues/subscriptions", () => ({
+    scheduleRenewalRepair: repairRenewal,
     scheduleCronBasedRenewal: mock(async () => undefined),
     scheduleRecursiveRenewal: mock(async () => undefined),
 }));
@@ -126,6 +136,7 @@ function request(payload: unknown = event, validSignature = true) {
 
 describe("Authorize.net webhook", () => {
     beforeEach(() => {
+    repairRenewal.mockReset();
         mock.clearAllMocks();
         updates.length = 0;
         inserts.length = 0;
@@ -337,4 +348,53 @@ describe("Authorize.net webhook", () => {
         expect(response.status).toBe(200);
         expect(updates).toContainEqual(expect.objectContaining({ status: "cancelled" }));
     });
+    test.each(["paid", "processing", "in_flight"])("billing attempt ignores obsolete callback while current state is %s", async currentState => {
+        findTransaction.mockResolvedValueOnce(undefined);
+        transaction.status = currentState === "paid" ? "paid" : "pending";
+        existingInvoice = {
+            id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1", paid: currentState === "paid",
+            metadata: { gatewayService: "authorize", billingAttempt: {
+                id: "billing-invoice-1-2", status: currentState === "paid" ? "succeeded" : currentState,
+                ...(currentState === "processing" ? { paymentIntentId: "new-provider-id" } : {}),
+            } },
+        };
+        providerDetails = { ...providerDetails, responseCode: 2, transactionStatus: "declined",
+            order: { description: "monstro-invoice:invoice-1", invoiceNumber: createHash("sha256").update("billing-invoice-1-1").digest("hex").slice(0, 20) } };
+        const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
+        expect(response.status).toBe(200);
+        expect(updates).toHaveLength(0);
+    });
+    test("ordinary billing attempt retains previous Authorize callback behavior", async () => {
+        tx.query.memberSubscriptions.findFirst.mockResolvedValueOnce({ metadata: {} });
+        existingInvoice = { id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1",
+            metadata: { billingAttempt: { id: "old-attempt", status: "processing", paymentIntentId: "another-provider-id" } } };
+        const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
+        expect(response.status).toBe(200);
+        expect(updates).toContainEqual(expect.objectContaining({ paid: true }));
+        expect(updates.some(value => (value.metadata as Record<string, unknown> | undefined)?.billingAttempt)).toBe(false);
+    });
+    test("billing attempt recovers its current response-lost payment using the provider reference", async () => {
+        findTransaction.mockResolvedValueOnce(undefined);
+        existingInvoice = { id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1",
+            metadata: { gatewayService: "authorize", billingAttempt: { id: "billing-invoice-1-2", status: "unknown" } } };
+        providerDetails.order = { description: "monstro-invoice:invoice-1", invoiceNumber: createHash("sha256").update("billing-invoice-1-2").digest("hex").slice(0, 20) };
+        const response = await authorizeWebhookRoutes(new Elysia()).handle(request());
+        expect(response.status).toBe(200);
+        expect(updates).toContainEqual(expect.objectContaining({ paid: true, metadata: expect.objectContaining({ billingAttempt: expect.objectContaining({ status: "succeeded", paymentIntentId: "authorize-transaction-1" }) }) }));
+    });
+
+    test("paid deferred Authorize redelivery retries renewal scheduling", async () => {
+        transaction.status = "paid";
+        const dueAt = new Date("2026-02-01T00:00:00Z");
+        existingInvoice = { id: "invoice-1", transactionId: transaction.id, memberPlanId: "sub-1", paid: true,
+            locationId: "location-1", forPeriodEnd: dueAt,
+            metadata: { billingAttempt: { id: "attempt", status: "succeeded", paymentIntentId: "authorize-transaction-1" } } };
+        repairRenewal.mockRejectedValueOnce(new Error("Queue unavailable"));
+        expect((await authorizeWebhookRoutes(new Elysia()).handle(request())).status).toBe(500);
+        expect((await authorizeWebhookRoutes(new Elysia()).handle(request())).status).toBe(200);
+        expect(repairRenewal).toHaveBeenCalledTimes(2);
+        expect(repairRenewal).toHaveBeenLastCalledWith("sub-1", "location-1", dueAt);
+        expect(updates).toHaveLength(0);
+    });
+
 });

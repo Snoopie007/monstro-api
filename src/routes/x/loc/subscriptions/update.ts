@@ -1,3 +1,4 @@
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { memberSubscriptions } from "@/subtrees/schemas";
 import { BillingContextError, findInFlightSubscriptionAttempt, resolveSubscriptionBillingContext } from "./billingContext";
@@ -18,6 +19,11 @@ export async function updateSubscriptionRoutes(app: Elysia) {
         }
         if (sub.parentId) {
             return status(400, { error: "Only root subscriptions can be updated", code: "SUBSCRIPTION_CHILD" });
+        }
+        const deferred = getDeferredBilling(sub.metadata);
+        if (deferred && (trialDays || allowProration)) return status(400, { error: "Trial days and legacy proration cannot be added to delayed billing" });
+        if (deferred && cancelAt && new Date(cancelAt) <= new Date(deferred.firstPaymentAt)) {
+            return status(400, { error: "Use Cancel to end access before the first payment" });
         }
         const inFlight = await findInFlightSubscriptionAttempt(sub.id);
         if (inFlight) {
