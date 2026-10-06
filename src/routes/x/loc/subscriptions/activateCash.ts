@@ -99,6 +99,10 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     forPeriodEnd: new Date(sub.currentPeriodEnd),
                     metadata: {
                         type: "from-subscription",
+                        commissionAllowanceInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.allowanceInterval,
+                        commissionBillingInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingInterval,
+                        commissionBillingThreshold: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingThreshold,
+                        commissionVisitAllowance: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.visitAllowance,
                         subscriptionId: sid,
                         platformFeeAmount: quote.platformFeeAmount,
                     },

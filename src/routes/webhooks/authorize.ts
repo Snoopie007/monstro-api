@@ -304,6 +304,7 @@ async function fulfillPlanCheckout(
         const [memberPackage] = await tx.insert(memberPackages).values({
             locationId: transaction.locationId,
             memberId: transaction.memberId,
+            metadata: { commissionPurchase: metadata.commissionPurchase },
             totalClassLimit: typeof metadata.packageClassLimit === "number"
                 ? metadata.packageClassLimit
                 : pricing.plan.totalClassLimit ?? 0,
@@ -354,6 +355,7 @@ async function fulfillPlanCheckout(
         paymentType: transaction.paymentType,
         gatewayPaymentId: transaction.paymentMethodId,
         metadata: {
+            commissionBilling: metadata.commissionBilling,
             gatewayIntegrationId: metadata.authorizeIntegrationId,
             gatewayCustomerId,
             allowProration,
@@ -364,6 +366,7 @@ async function fulfillPlanCheckout(
     await tx.insert(memberInvoices).values({
         ...invoiceBase,
         memberPlanId: subscription.id,
+        metadata: { commissionAllowanceInterval: (metadata.commissionBilling as Record<string, unknown> | undefined)?.allowanceInterval, commissionBillingInterval: (metadata.commissionBilling as Record<string, unknown> | undefined)?.billingInterval, commissionBillingThreshold: (metadata.commissionBilling as Record<string, unknown> | undefined)?.billingThreshold, commissionVisitAllowance: (metadata.commissionBilling as Record<string, unknown> | undefined)?.visitAllowance },
         forPeriodStart: subscription.currentPeriodStart,
         forPeriodEnd: subscription.currentPeriodEnd,
     });

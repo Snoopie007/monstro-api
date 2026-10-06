@@ -221,6 +221,10 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                                 forPeriodEnd: nextEnd,
                                 metadata: {
                                     type: "from-subscription",
+                                    commissionAllowanceInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.allowanceInterval,
+                                    commissionBillingInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingInterval,
+                                    commissionBillingThreshold: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingThreshold,
+                                    commissionVisitAllowance: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.visitAllowance,
                                     subscriptionId: sub.id,
                                     platformFeeAmount: quote.platformFeeAmount,
                                 },

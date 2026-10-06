@@ -283,6 +283,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             forPeriodEnd: new Date(sub.currentPeriodEnd),
             metadata: {
                 type: "from-subscription",
+                commissionAllowanceInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.allowanceInterval,
+                commissionBillingInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingInterval,
+                commissionBillingThreshold: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingThreshold,
+                commissionVisitAllowance: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.visitAllowance,
                 subscriptionId: sub.id,
                 collectionMethod: "charge_automatically",
                 gatewayService,
@@ -390,6 +394,10 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     updated: new Date(),
                     metadata: {
                         type: "from-subscription",
+                        commissionAllowanceInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.allowanceInterval,
+                        commissionBillingInterval: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingInterval,
+                        commissionBillingThreshold: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.billingThreshold,
+                        commissionVisitAllowance: (sub.metadata?.commissionBilling as Record<string, unknown> | undefined)?.visitAllowance,
                         subscriptionId: sub.id,
                         collectionMethod: "charge_automatically",
                         paymentIntentId,
