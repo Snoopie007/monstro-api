@@ -1,12 +1,16 @@
-import { strict as assert } from "node:assert";
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
+import { scheduleCashRenewal } from "@/queues/subscriptions";
+import { getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
+import { memberLocations, memberSubscriptions, promos } from "@/subtrees/schemas";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
-import { getCurrency } from "@/utils";
-import { resolveInitialSubscriptionPricing } from "./effectivePricing";
+import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
+import { ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
@@ -22,10 +26,11 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                         email: true,
                     },
                 },
-                pricing: true,
+                pricing: { with: { plan: true } },
                 location: {
                     with: {
                         taxRates: true,
+                        locationState: true,
                     },
                     columns: {
                         country: true,
@@ -39,80 +44,79 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             },
         });
 
-        if (!sub || !sub.pricing || !sub.member || !sub.location) {
-            return status(404, { error: "Subscription not found" });
+        if (!sub || !sub.member || !sub.location || !sub.pricing) {
+            return status(404, { error: "Subscription billing definition not found" });
         }
-        const { pricing, basePricing, pricingSource } = await resolveInitialSubscriptionPricing(sub.id);
+        if (sub.parentId) {
+            return status(400, { error: "Only root subscriptions can be activated", code: "SUBSCRIPTION_CHILD" });
+        }
+
+        const deferred = getDeferredBilling(sub.metadata);
+        if (deferred) {
+            if (!["incomplete", "active"].includes(sub.status)) return status(409, { error: "This subscription cannot be activated" });
+            if (sub.status === "incomplete" && new Date(sub.currentPeriodEnd).getTime() <= Date.now()) return status(409, { error: "The first payment date has passed. Create a new enrollment.", code: "FIRST_PAYMENT_DATE_PASSED" });
+            const pricing = getSubscriptionBillingQuote(sub);
+            const due = new Date(sub.currentPeriodEnd);
+            await db.transaction(async tx => {
+                await tx.update(memberSubscriptions).set({ status: "active", updated: new Date() }).where(eq(memberSubscriptions.id, sid));
+                await tx.update(memberLocations).set({ status: "active", updated: new Date() }).where(and(
+                    eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
+                await scheduleCashRenewal(due, {
+                    sid, lid, pricing, vendorId: sub.location.vendorId,
+                    member: sub.member, location: sub.location,
+                    taxRate: sub.location.taxRates.find(rate => rate.isDefault)?.percentage ?? 0,
+                });
+            });
+            return status(200, { status: "active", nextBillingAt: due, scheduledJobKey: `cashInvoiceDue_${sid}_${due.getTime()}` });
+        }
 
         const isTrialing = !!(sub.trialEnd && isFuture(sub.trialEnd));
+        const promoMeta = sub.metadata?.promo as {
+            id?: string;
+            applied?: boolean;
+            discount?: { amount: number; type?: "fixed_amount" | "percentage"; value?: number };
+        } | undefined;
+        const discount = promoMeta?.discount
+            ? {
+                type: promoMeta.discount.type ?? "fixed_amount",
+                value: promoMeta.discount.value ?? promoMeta.discount.amount,
+            }
+            : undefined;
 
         if (!isTrialing) {
-            const existingDraft = await db.query.memberInvoices.findFirst({
-                where: (inv, { and, eq }) => and(
-                    eq(inv.memberPlanId, sid),
-                    eq(inv.status, "draft")
-                ),
+            const quote = await buildSubscriptionInvoiceQuote({
+                locationId: lid, subscriptionId: sid, parentId: sub.parentId,
+                subscriptionMetadata: sub.metadata, pricing: sub.pricing,
+                memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId,
+                location: sub.location, discount,
+                periodStart: new Date(sub.currentPeriodStart), periodEnd: new Date(sub.currentPeriodEnd),
             });
-
-            if (!existingDraft) {
-                const lineItems = [{
-                    name: pricing.name,
-                    description: "Subscription billing period",
-                    quantity: 1,
-                    price: pricing.price,
-                    billingSource: { type: "subscription" as const, memberSubscriptionId: sid },
-                    pricingSource,
-                    basePlanPricingId: basePricing.id,
-                    effectivePlanPricingId: pricing.id,
-                }];
-
-                const currency = getCurrency(sub.location.country);
-                const [invoice] = await db.insert(memberInvoices).values({
-                    memberId: sub.memberId,
-                    locationId: lid,
-                    memberPlanId: sid,
-                    description: `${pricing.name} - Billing Period`,
-                    items: lineItems,
-                    subTotal: pricing.price,
-                    total: pricing.price,
-                    tax: 0,
-                    currency: currency || "usd",
-                    status: "draft",
-                    dueDate: new Date(sub.currentPeriodEnd),
-                    paymentType: "cash",
-                    invoiceType: "recurring",
-                    forPeriodStart: new Date(sub.currentPeriodStart),
-                    forPeriodEnd: new Date(sub.currentPeriodEnd),
-                    metadata: {
-                        type: "from-subscription",
-                        subscriptionId: sid,
-                    },
-                }).returning();
-
-                if (invoice) {
-                    const [transaction] = await db.insert(transactions).values({
-                        memberId: sub.memberId,
-                        locationId: lid,
-                        description: `${pricing.name} - Recurring Payment`,
-                        type: "inbound",
-                        status: "failed",
-                        paymentType: "cash",
-                        total: pricing.price,
-                        subTotal: pricing.price,
-                        tax: 0,
-                        currency: currency || "usd",
-                    }).returning({ id: transactions.id });
-                    assert(transaction);
-                    await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
-                }
-            }
+            await db.transaction(tx => ensureCashInvoice(tx, {
+                subscriptionId: sid, locationId: lid, memberId: sub.memberId,
+                periodStart: new Date(sub.currentPeriodStart), periodEnd: new Date(sub.currentPeriodEnd), quote,
+            }));
         }
 
         await db.transaction(async (tx) => {
             await tx.update(memberSubscriptions).set({
                 status: isTrialing ? "trialing" : "active",
+                ...(!isTrialing && promoMeta ? {
+                    metadata: {
+                        ...(sub.metadata || {}),
+                        promo: { ...promoMeta, applied: true },
+                    },
+                } : {}),
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sid));
+
+            // A staff-assigned trial needs no charge, but its activation must commit.
+            if (isTrialing && !sub.parentId) {
+                await dispatchWorkflowTrigger(tx, {
+                    type: WorkflowEvents.trial.CHECKED_OUT,
+                    locationId: lid,
+                    memberId: sub.memberId,
+                });
+            }
 
             if (!isTrialing) {
                 await tx.update(memberLocations).set({
@@ -122,6 +126,13 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     eq(memberLocations.memberId, sub.memberId),
                     eq(memberLocations.locationId, lid),
                 ));
+
+                if (promoMeta?.id && !promoMeta.applied) {
+                    await tx.update(promos).set({
+                        redemptionCount: sql`${promos.redemptionCount} + 1`,
+                        updated: new Date(),
+                    }).where(eq(promos.id, promoMeta.id));
+                }
             }
         });
 

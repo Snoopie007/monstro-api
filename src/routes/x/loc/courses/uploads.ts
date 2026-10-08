@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import S3Bucket from "@/libs/s3";
-import { courseChapters, courseLessons, courses } from "@subtrees/schemas";
+import { courseChapters, courseLessons, courses } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import type { CourseAccessContext } from "./shared";

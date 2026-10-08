@@ -4,13 +4,13 @@ import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 
 export const webCouponRoutes = new Elysia({ prefix: "/coupon" })
     .use(WebAuthMiddleware)
-    .get('/:code', async ({ params, status, lid }) => {
+    .get('/:code', async ({ params, query, status, lid }) => {
         const { code } = params;
         if (!lid) {
             return status(401, { message: "No Location ID provided" });
         }
         try {
-            const promo = await handlePromo(lid, code);
+            const promo = await handlePromo(lid, code, query.priceId);
 
             if (!promo) {
                 return status(404, { code: 'PROMO_NOT_FOUND', message: 'Promotion code not found' });
@@ -24,5 +24,8 @@ export const webCouponRoutes = new Elysia({ prefix: "/coupon" })
     }, {
         params: t.Object({
             code: t.String(),
+        }),
+        query: t.Object({
+            priceId: t.Optional(t.String()),
         }),
     });

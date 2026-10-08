@@ -1,32 +1,33 @@
 import { Elysia } from 'elysia';
 import { AuthXMiddleware } from '@/middlewares';
-import { xSupport } from './loc/support/root';
 import { xInvoices } from './loc/invoices/root';
 import { xClass } from './loc/class/root';
 import { xEmail } from './loc/email/root';
-import { xChat } from './loc/chat/root';
+import { xChat } from './loc/chats/root';
+import { xBots } from './loc/bots/root';
 import { xGroups } from './loc/groups/root';
 import { locMembers } from './loc/locMembers';
 import { xSubscriptions } from './loc/subscriptions/root';
 import { xPromos } from './loc/promos/root';
 import { xTransactions } from './loc/transactions/root';
 import { xMigrations } from './loc/migrate/root';
-import { xAssistant } from './loc/assistant/root';
 import { xMerchandise } from './loc/merchandise/root';
 import { xPrograms } from './loc/programs/root';
 import { xEvents } from './loc/events/root';
 import { xCourses } from './loc/courses/root';
 import { xAddonsBundles } from './loc/addonsBundles/root';
 import { locationEnrollRoutes } from "../protected/locations/enroll";
+import { xAdditionalFees } from "./loc/additionalFees";
+import { xGoogleAds } from "./loc/ads/google/root";
 
 export const XRoutes = new Elysia()
     .use(AuthXMiddleware)
     .use(xEmail)
     .group('/loc/:lid', (app) => {
-        app.use(xSupport);
         app.use(xInvoices);
         app.use(xClass);
         app.use(xChat);
+        app.use(xBots);
         app.use(xGroups);
         app.use(xSubscriptions);
         app.use(xPromos);
@@ -38,7 +39,8 @@ export const XRoutes = new Elysia()
         app.use(xCourses);
         app.use(xAddonsBundles);
         app.use(locationEnrollRoutes);
-        app.use(xAssistant);
+        app.use(xAdditionalFees);
+        app.use(xGoogleAds);
         app.group('/members', (app) => app.use(locMembers));
         return app;
     })

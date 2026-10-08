@@ -9,19 +9,20 @@ import {
     userSupportRoutes,
     userNotificationRoutes,
     userOnlineStatusRoutes,
+    userGroupsRoutes,
 } from './users';
 import { friendsRoutes } from './friends';
 import { mediaRoutes } from './medias';
 import { stripeRoutes } from './stripe';
 import { groupRoutes } from './groups';
 import { locationsRoutes } from './locations';
+import { staffsRoutes } from './staffs/root';
 import { userAccountsRoutes } from './users/accounts';
 import { searchRoutes } from './search';
 import { familyRoutes } from './family';
 import {
     memberAvatar,
     memberFamilies,
-    memberGroups,
     memberPlans,
     memberProfile,
     membersLocations,
@@ -45,13 +46,13 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(userChatsRoutes);
         app.use(userNotificationRoutes);
         app.use(userOnlineStatusRoutes);
+        app.use(userGroupsRoutes);
         return app;
     })
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
         app.use(resetPassword);
         app.use(memberFamilies);
-        app.use(memberGroups);
         app.use(memberPlans);
         app.group('/profile', (app) => {
             app.use(memberProfile);
@@ -61,5 +62,6 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         return app;
     })
     .use(locationsRoutes)
+    .use(staffsRoutes)
     .use(commentRoutes)
     .use(familyRoutes)

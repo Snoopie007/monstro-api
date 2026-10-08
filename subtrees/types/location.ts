@@ -7,14 +7,21 @@ import type {
   Transaction,
   Wallet,
 } from ".";
+import { locationClosures } from "../schemas/closures";
 import { locations } from "../schemas/locations";
 import { locationState } from "../schemas/locationState";
+import type { AdditionalFee } from "./additionalFees";
 import type { MemberPlan } from "./member";
 import type { Vendor } from "./vendor";
+
+export type LocationClosure = typeof locationClosures.$inferSelect & {
+  location?: Location;
+};
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
   programs?: Program[];
+  additionalFees?: AdditionalFee[];
   memberInvoices?: MemberInvoice[];
   memberSubscriptions?: MemberSubscription[];
   transactions?: Transaction[];
@@ -22,6 +29,7 @@ export type Location = typeof locations.$inferSelect & {
   memberPlans?: MemberPlan[];
   taxRates?: TaxRate[];
   taxRate?: TaxRate;
+  locationClosures?: LocationClosure[];
   vendor?: Vendor;
 };
 
@@ -30,11 +38,9 @@ export type LocationState = typeof locationState.$inferSelect & {
   settings: LocationSettings;
 }
 
-
 export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
 
 export type HolidaySettings = {
-  blockedHolidays: number[];
   defaultBehavior: HolidayBehavior;
   advanceBlockDays: number;
   autoNotifyMembers: boolean;
@@ -111,7 +117,6 @@ export type LocationOnboardingSettings = {
 
 export type LocationSettings = {
   theme: 'default';
-  passOnFees: boolean;
   processingMethods: PaymentType[];
   holidays?: HolidaySettings;
   onboarding?: LocationOnboardingSettings;

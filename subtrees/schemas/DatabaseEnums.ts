@@ -1,5 +1,7 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
+export const WorkflowStatusEnum = pgEnum("workflow_status", ["draft", "active", "pause", "deleted"]);
+
 export const LocationStatusEnum = pgEnum("location_status", [
   "incomplete",
   "active",
@@ -15,7 +17,7 @@ export const PlanType = pgEnum("plan_type", ["recurring", "one-time", "pass"]);
 export const IntervalType = pgEnum("interval_type", ["day", "week", "month", "year"]);
 export const ClassLimitIntervalEnum = pgEnum("class_limit_interval", ["term", "week", "month", "day", "year"]);
 export const PackageStatusEnum = pgEnum("package_status", ["active", "incomplete", "expired", "completed"]);
-export const PaymentTypeEnum = pgEnum("payment_type", ["cash", "card", "us_bank_account", 'paypal', 'apple_pay', 'google_pay']);
+export const PaymentTypeEnum = pgEnum("payment_type", ["cash", "card", "us_bank_account", 'paypal', 'apple_pay', 'google_pay', 'link', 'cashapp']);
 export const InvoiceStatusEnum = pgEnum("invoice_status", ["draft", "paid", "unpaid", "uncollectible", "void", "sent"]);
 export const MemberRelationshipEnum = pgEnum("relationship", ["parent", "spouse", "child", "sibling", "extended"]);
 export const RoleColorEnum = pgEnum("role_color", ["red", "green", "blue", "pink", "cyan", "lime", "orange", "fuchsia", "sky", "lemon", "purple", "yellow"]);
@@ -24,24 +26,18 @@ export const TransactionTypeEnum = pgEnum("transaction_type", ["inbound", "outbo
 export const TransactionStatusEnum = pgEnum("transaction_status", ["pending", "paid", "failed", "disputed"]);
 export const StaffStatusEnum = pgEnum("staff_status", ["active", "inactive"]);
 export const ProgramStatusEnum = pgEnum("program_status", ["active", "inactive", "archived"]);
+export const ProgramSessionModeEnum = pgEnum("program_session_mode", ["group", "one_on_one"]);
 export const MigrateStatusEnum = pgEnum("migrate_status", ["pending", "completed"]);
 export const CustomFieldTypeEnum = pgEnum("custom_field_type", ["text", "number", "date", "boolean", "select", "multi-select"]);
 
-// Reservation and Exception Enums
 export const ReservationStatusEnum = pgEnum("reservation_status", [
+  "pending_payment",
   "confirmed",
   "cancelled_by_member",
   "cancelled_by_vendor",
   "cancelled_by_holiday",
   "completed",
   "no_show"
-]);
-
-export const ExceptionInitiatorEnum = pgEnum("exception_initiator", [
-  "member",
-  "vendor",
-  "holiday",
-  "maintenance"
 ]);
 
 export const PromoTypeEnum = pgEnum("promo_type", ["percentage", "fixed_amount"]);

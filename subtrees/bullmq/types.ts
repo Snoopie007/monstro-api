@@ -14,7 +14,7 @@ export const LocationSchema = z.object({
     address: z.string().nullable().optional(),
 });
 
-// chema is shared everywhere (for job payload)
+// Shared by every invoice job producer and worker.
 export const InvoiceJobSchema = z.object({
     member: MemberSchema,
     location: LocationSchema,
@@ -53,11 +53,14 @@ const PricingSchema = z.object({
 export const DiscountSchema = z.object({
     amount: z.coerce.number(),
     duration: z.coerce.number(),
+    type: z.enum(["fixed_amount", "percentage"]).optional(),
+    value: z.coerce.number().optional(),
 })
 
 export const SubscriptionJobSchema = z.object({
     sid: z.string(),
     lid: z.string(),
+    expectedDueAt: z.string().datetime().optional(),
     member: MemberSchema,
     location: LocationSchema,
     taxRate: z.coerce.number(),
@@ -115,6 +118,83 @@ export const CheckMissedClassSchema = z.object({
     class: ClassSchema,
 });
 
+export const SINGLE_NEXT_JOB = "single:next";
+export const CLASS_REMINDER_JOB = "reminder";
+export const MISSED_CLASS_JOB = "missed:check";
+export const RESERVATION_JOB_LEAD_MS = 2 * 86_400_000;
+export const MISSED_CLASS_GRACE_MS = 30 * 60_000;
+
+export const ReservationPlanTypeSchema = z.discriminatedUnion("type", [
+    z.object({ type: z.literal("package"), id: z.string().min(1) }),
+    z.object({ type: z.literal("subscription"), id: z.string().min(1) }),
+]);
+
+export const SingleNextJobSchema = z.object({
+    previousReservationId: z.string().min(1),
+    sessionId: z.string().min(1),
+    locationId: z.string().min(1),
+    memberId: z.string().min(1),
+    nextStartOn: z.string().datetime(),
+    planType: ReservationPlanTypeSchema,
+    snapshot: z.object({
+        programId: z.string().min(1),
+        programName: z.string().min(1),
+        staffId: z.string().min(1),
+        sessionDay: z.number().int().min(1).max(7),
+        sessionTime: z.string().min(1),
+        duration: z.number().int().positive(),
+        timezone: z.string().min(1),
+    }),
+});
+
+export type ClassReminderData = z.infer<typeof ClassReminderJobSchema>;
+export type CheckMissedClassData = z.infer<typeof CheckMissedClassSchema>;
+export type ReservationPlanType = z.infer<typeof ReservationPlanTypeSchema>;
+export type SingleNextJobData = z.infer<typeof SingleNextJobSchema>;
+
+function delayUntil(target: string | Date, offset: number, now: Date) {
+    return Math.max(new Date(target).getTime() - now.getTime() - offset, 0);
+}
+
+export function singleNextJobId(data: Pick<
+    SingleNextJobData,
+    "sessionId" | "memberId" | "planType" | "nextStartOn"
+>) {
+    const identity = `${data.sessionId}-${data.memberId}-${data.planType.id}`;
+    return `${SINGLE_NEXT_JOB}:${identity}-${Date.parse(data.nextStartOn)}`;
+}
+
+export function singleNextDelay(nextStartOn: string | Date, now = new Date()) {
+    return delayUntil(nextStartOn, RESERVATION_JOB_LEAD_MS, now);
+}
+
+export function buildClassReminderJob(data: ClassReminderData, now = new Date()) {
+    return {
+        name: CLASS_REMINDER_JOB,
+        data,
+        opts: {
+            jobId: `class:reminder:${data.rid}-${data.class.startTime.getTime()}`,
+            delay: delayUntil(data.class.startTime, RESERVATION_JOB_LEAD_MS, now),
+            attempts: 2,
+        },
+    };
+}
+
+export function buildMissedClassJob(data: CheckMissedClassData, now = new Date()) {
+    return {
+        name: MISSED_CLASS_JOB,
+        data,
+        opts: {
+            jobId: `class:missed:${data.rid}-${data.class.endTime.getTime()}`,
+            delay: Math.max(
+                data.class.endTime.getTime() - now.getTime() + MISSED_CLASS_GRACE_MS,
+                0,
+            ),
+            attempts: 2,
+        },
+    };
+}
+
 
 // retry payment jobs
 export const RetrySubPaymentSchema = z.object({
@@ -148,18 +228,17 @@ export type SubscriptionAddonJobData = z.infer<typeof SubscriptionAddonJobSchema
 
 export type RetrySubPaymentData = z.infer<typeof RetrySubPaymentSchema>;
 export type RetryWalletData = z.infer<typeof RetryWalletSchema>;
-export type CheckMissedClassData = z.infer<typeof CheckMissedClassSchema>;
-export type ClassReminderData = z.infer<typeof ClassReminderJobSchema>;
 export type RRClassData = z.infer<typeof RRClassSchema>;
 export type DiscountData = z.infer<typeof DiscountSchema>;
 export type SubscriptionJobData = z.infer<typeof SubscriptionJobSchema>;
 export type CashSubscriptionJobData = z.infer<typeof CashSubscriptionJobSchema>;
 export type RecursiveSubscriptionJobData = z.infer<typeof RecursiveSubscriptionJobSchema>;
 
+export const RANK_QUEUE = "ranks";
+
+// Read the member, location, and duration from the saved check-in, not a job snapshot.
 export const RankAttendanceTriggerSchema = z.object({
-    mid: z.string(),
-    lid: z.string(),
-    duration: z.coerce.number().optional(),
-});
+    attendanceId: z.string().trim().min(1),
+}).strict();
 
 export type RankAttendanceTriggerData = z.infer<typeof RankAttendanceTriggerSchema>;

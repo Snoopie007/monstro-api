@@ -3,10 +3,10 @@ import {
     memberAchievements,
     memberPointsHistory,
     memberLocations,
-} from '@subtrees/schemas'
-import type { Achievement, NewMemberPointsHistory } from '@subtrees/types'
+} from '@/subtrees/schemas'
+import type { Achievement, NewMemberPointsHistory } from '@/subtrees/types'
 import { and, eq, inArray, SQL, sql } from 'drizzle-orm'
-import { AchievementTriggers } from '@subtrees/constants/data'
+import { AchievementTriggers } from '@/subtrees/constants/data'
 
 
 type ProgressInput = {

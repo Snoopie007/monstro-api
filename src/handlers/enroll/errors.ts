@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { SquareError } from "square";
-import { CheckoutError, handleSquareError, handleStripeError } from "@/utils";
+import { CheckoutError, handleSquareError, handleStripeError, PromoValidationError } from "@/utils";
 
 type StatusFn = (code: number, body: { error: string }) => unknown;
 
@@ -8,6 +8,9 @@ export function mapEnrollSubError(status: StatusFn, error: unknown) {
     console.error(error);
     if (error instanceof CheckoutError) {
         return status(error.status, { error: error.message });
+    }
+    if (error instanceof PromoValidationError) {
+        return status(400, { error: error.message });
     }
     if (error instanceof Stripe.errors.StripeError) {
         switch (error.type) {
@@ -28,6 +31,9 @@ export function mapEnrollPkgError(status: StatusFn, error: unknown) {
     console.error(error);
     if (error instanceof CheckoutError) {
         return status(error.status, { error: error.message });
+    }
+    if (error instanceof PromoValidationError) {
+        return status(400, { error: error.message });
     }
     if (error instanceof SquareError) {
         const { message } = handleSquareError(error);

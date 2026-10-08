@@ -57,6 +57,5 @@ test("accepts the legacy mobile paid course enrollment body", async () => {
         paymentType: "card",
         courseTitle: "Course",
         coursePrice: 25,
-        attemptId: expect.any(String),
     });
 });

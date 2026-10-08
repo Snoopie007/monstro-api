@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { eq, sql, and } from "drizzle-orm";
-import { memberLocations, memberSubscriptions } from "@subtrees/schemas";
+import { memberLocations, memberSubscriptions } from "@/subtrees/schemas";
 
 import { Elysia, t } from "elysia";
 import { z } from "zod";
@@ -44,6 +44,9 @@ export function memberPlansSubRoutes(app: Elysia) {
                 return status(404, { error: "Plan not found" });
             }
 
+            if (!sub.pricing?.plan) {
+                return status(400, { error: "Family plan pricing unavailable" });
+            }
             const { plan } = sub.pricing;
             if (!plan.family) {
                 return status(400, { error: "This is not a family plan" });
@@ -169,6 +172,10 @@ export function memberPlansSubRoutes(app: Elysia) {
             if (!sub) {
                 return status(404, { error: "Subscription not found" });
             }
+            if (!sub.pricing?.plan) {
+                return status(400, { error: "Family plan pricing unavailable" });
+            }
+
 
             const { plan } = sub.pricing;
 

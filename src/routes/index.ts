@@ -3,3 +3,4 @@ export * from "./protected/root";
 export * from "./public/root";
 export * from "./x/root";
 export * from "./webhooks/root";
+export * from "./sharedSites";

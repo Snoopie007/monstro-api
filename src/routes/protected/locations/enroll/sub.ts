@@ -20,6 +20,8 @@ const EnrollSubProps = {
         paymentType: t.Union([
             t.Literal("card"),
             t.Literal("us_bank_account"),
+            t.Literal("link"),
+            t.Literal("cashapp"),
         ]),
     }),
 };
@@ -38,7 +40,6 @@ export function subEnrollRoutes(app: Elysia) {
                     paymentMethodId,
                     paymentType,
                     promoId,
-                    attemptId: body.attemptId ?? randomUUID(),
                     startDate: body.startDate,
                     endDate: body.endDate,
                     trialDays: body.trialDays,

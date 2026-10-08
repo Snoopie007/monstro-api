@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/db";
-import { promos } from "@subtrees/schemas";
+import { promos } from "@/subtrees/schemas";
 
 export const xPromos = new Elysia({ prefix: "/promos" })
     .get("/", async ({ params, status }) => {

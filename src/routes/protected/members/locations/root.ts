@@ -6,10 +6,9 @@ import { mlAchievementsRoutes } from './achievements';
 import { mlDocsRoutes } from './docs';
 import { mlReferralsRoutes } from './referrals';
 import { mlRewardsRoutes } from './rewards';
-import { mlSupportRoutes } from './support';
 import { mlPointsRoutes } from './points';
 import { mlRankRoutes } from './rank';
-import { memberLocations } from '@subtrees/schemas';
+import { memberLocations } from '@/subtrees/schemas';
 import { paymentMethodsRoutes } from './methods/root';
 import { createLocationChat } from '@/utils/chatsGroupsUtils';
 import { memberLocationPassesRoutes } from './passes';
@@ -34,31 +33,21 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                 with: {
                     location: {
                         with: {
-                            locationState: true,
+                            locationState: {
+                                columns: {
+                                    locationId: true,
+                                    paymentGatewayId: true,
+                                    waiverId: true,
+                                    currency: true,
+                                    allowAppCheckIns: true,
+                                    settings: true,
+                                    usagePercent: true,
+                                }
+                            },
                         },
                     },
                 },
             })
-
-
-            // const migrations = await db.query.migrateMembers.findMany({
-            //     where: (migrateMembers, { eq, and }) => and(
-            //         eq(migrateMembers.memberId, mid),
-            //         eq(migrateMembers.status, "pending"),
-            //     ),
-            //     with: {
-            //         pricing: {
-            //             with: {
-            //                 plan: true,
-            //             },
-            //         },
-            //         location: {
-            //             with: {
-            //                 locationState: true,
-            //             },
-            //         },
-            //     },
-            // });
 
 
             return status(200, mls);
@@ -137,7 +126,6 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         app.use(mlDocsRoutes)
         app.use(mlRewardsRoutes)
         app.use(mlReferralsRoutes)
-        app.use(mlSupportRoutes)
         app.use(mlPointsRoutes)
         app.use(paymentMethodsRoutes)
         app.use(mlRankRoutes)

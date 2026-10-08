@@ -4,7 +4,7 @@ import { serverConfig } from "./src/config";
 import { RateLimitMiddleware } from "./src/middlewares";
 import {
 	AuthRoutes, ProtectedRoutes, PublicRoutes,
-	XRoutes, webhooksRoutes
+	sharedSiteAdminRoutes, XRoutes, webhooksRoutes
 } from "./src/routes";
 import { supportRoutes } from "./src/routes/support";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
@@ -73,7 +73,7 @@ app.use(cors(CORS_CONFIG))
 		return "";
 	})
 
-	.group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes).use(supportRoutes))
+	.group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes).use(supportRoutes).use(sharedSiteAdminRoutes))
 	.group("/x", (app) => app.use(XRoutes))
 	.group("/api/realtime", (app) =>
 		app.use(realtimeRoutes).use(realtimeHealthRoutes)

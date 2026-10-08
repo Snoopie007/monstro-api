@@ -1,4 +1,4 @@
-import { canAccessLocation } from "@/utils/merchandise";
+import { canAccessLocation } from "@/utils/locationAccess";
 import { enqueueSubscriptionAddonJob } from "@/queues";
 import { Elysia, t, type Context } from "elysia";
 import {

@@ -1,5 +1,6 @@
+import { getDeferredInvoiceBilling, prepareAuthorizeInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { and, eq, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
 import { Elysia } from "elysia";
 
 import {
@@ -8,8 +9,10 @@ import {
     createEventRegistration,
 } from "@/handlers/event/shared";
 import { db } from "@/db/db";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
-import { scheduleCronBasedRenewal, scheduleRecursiveRenewal } from "@/queues/subscriptions";
+import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, scheduleRenewalRepair } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
     courseEnrollments,
@@ -22,8 +25,8 @@ import {
     memberSubscriptions,
     orders,
     transactions,
-} from "@subtrees/schemas";
-import type { SubscriptionJobData } from "@subtrees/bullmq";
+} from "@/subtrees/schemas";
+import type { SubscriptionJobData } from "@/subtrees/bullmq";
 
 const PAYMENT_EVENTS = new Set([
     "net.authorize.payment.authorization.created",
@@ -92,8 +95,8 @@ export function authorizePaymentState(details: AuthorizeTransactionDetails): "pa
     const responseCode = String(details.responseCode ?? "");
     return responseCode === "1" ? "paid"
         : responseCode === "4" ? "pending"
-        : responseCode === "2" || responseCode === "3" ? "failed"
-        : null;
+            : responseCode === "2" || responseCode === "3" ? "failed"
+                : null;
 }
 
 function cents(value: unknown) {
@@ -172,6 +175,16 @@ async function transactionForDetails(
     }
     if (direct) return direct;
 
+    const invoiceMatch = typeof details.order?.description === "string"
+        ? /^monstro-invoice:([A-Za-z0-9_-]{1,128})$/.exec(details.order.description) : null;
+    if (invoiceMatch?.[1]) {
+        const invoice = await db.query.memberInvoices.findFirst({ where: and(
+            eq(memberInvoices.id, invoiceMatch[1]), eq(memberInvoices.locationId, integration.locationId)) });
+        if (invoice?.transactionId && metadataOf(invoice.metadata).gatewayService === "authorize") {
+            return db.query.transactions.findFirst({ where: and(eq(transactions.id, invoice.transactionId), eq(transactions.locationId, integration.locationId)) });
+        }
+    }
+
     const match = typeof details.order?.description === "string"
         ? /^monstro:([A-Za-z0-9_-]{1,128})$/.exec(details.order.description)
         : null;
@@ -218,7 +231,35 @@ async function fulfillPlanCheckout(
             },
         }),
     ]);
-    if (!pricing?.plan || !memberLocation) throw new Error("Authorize.net plan checkout artifact is missing");
+    if (
+        !pricing?.plan ||
+        pricing.plan.locationId !== transaction.locationId ||
+        !memberLocation
+    ) {
+        throw new Error("Authorize.net plan checkout artifact is missing");
+    }
+    if (
+        (metadata.checkoutKind === "package" && pricing.plan.type !== "one-time") ||
+        (metadata.checkoutKind === "subscription" && pricing.plan.type !== "recurring")
+    ) {
+        throw new Error("Authorize.net plan checkout type does not match pricing plan");
+    }
+    if (metadata.checkoutKind !== "package" && metadata.checkoutKind !== "subscription") {
+        throw new Error("Authorize.net plan checkout kind is invalid");
+    }
+    const contractId = pricing.plan.contractId;
+    if (contractId) {
+        const contractTemplate = await tx.query.contractTemplates.findFirst({
+            where: (template, { eq, and }) => and(
+                eq(template.id, contractId),
+                eq(template.locationId, transaction.locationId),
+            ),
+            columns: { id: true },
+        });
+        if (!contractTemplate) {
+            throw new Error("Authorize.net plan contract is not valid for this location");
+        }
+    }
 
     const now = new Date();
     const discount = typeof metadata.discount === "number" ? metadata.discount : 0;
@@ -247,6 +288,7 @@ async function fulfillPlanCheckout(
         const [memberPackage] = await tx.insert(memberPackages).values({
             locationId: transaction.locationId,
             memberId: transaction.memberId,
+            metadata: { commissionPurchase: metadata.commissionPurchase },
             totalClassLimit: typeof metadata.packageClassLimit === "number"
                 ? metadata.packageClassLimit
                 : pricing.plan.totalClassLimit ?? 0,
@@ -262,9 +304,7 @@ async function fulfillPlanCheckout(
             mid: transaction.memberId,
             lid: transaction.locationId,
             memberPlanId: memberPackage.id,
-            contractId: pricing.plan.contractId,
-            waiverId: memberLocation.location.locationState.waiverId,
-            signedWaiverId: memberLocation.signedWaiverId,
+            contractId,
         });
         return undefined;
     }
@@ -297,6 +337,7 @@ async function fulfillPlanCheckout(
         paymentType: transaction.paymentType,
         gatewayPaymentId: transaction.paymentMethodId,
         metadata: {
+            commissionBilling: metadata.commissionBilling,
             gatewayIntegrationId: metadata.authorizeIntegrationId,
             gatewayCustomerId,
             allowProration,
@@ -304,9 +345,16 @@ async function fulfillPlanCheckout(
         memberPlanPricingId: pricing.id,
     }).returning();
     if (!subscription) throw new Error("Authorize.net subscription could not be finalized");
+    const commissionBilling = metadata.commissionBilling as Record<string, unknown> | undefined;
     await tx.insert(memberInvoices).values({
         ...invoiceBase,
         memberPlanId: subscription.id,
+        metadata: {
+            commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+            commissionBillingInterval: commissionBilling?.billingInterval,
+            commissionBillingThreshold: commissionBilling?.billingThreshold,
+            commissionVisitAllowance: commissionBilling?.visitAllowance,
+        },
         forPeriodStart: subscription.currentPeriodStart,
         forPeriodEnd: subscription.currentPeriodEnd,
     });
@@ -314,9 +362,7 @@ async function fulfillPlanCheckout(
         mid: transaction.memberId,
         lid: transaction.locationId,
         memberPlanId: subscription.id,
-        contractId: pricing.plan.contractId,
-        waiverId: memberLocation.location.locationState.waiverId,
-        signedWaiverId: memberLocation.signedWaiverId,
+        contractId,
     });
 
     if (!(["month", "year"] as string[]).includes(pricing.interval)) return undefined;
@@ -432,6 +478,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
         }
 
         let renewal: Renewal | undefined;
+        let repair: { sid: string; lid: string; dueAt: Date | null } | undefined;
         await db.transaction(async (tx) => {
             await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${transaction.id}))`);
             const current = await tx.query.transactions.findFirst({
@@ -470,6 +517,20 @@ export function authorizeWebhookRoutes(app: Elysia) {
 
             const paymentStatus = authorizePaymentState(details);
             if (!paymentStatus) throw new Error("Unknown Authorize.net transaction status");
+            // Lock the invoice so a manual retry cannot change the payment attempt during this update.
+            // Then check the attempt: a delayed webhook may belong to an older payment.
+            const [invoice] = await tx.select().from(memberInvoices)
+                .where(eq(memberInvoices.transactionId, current.id)).for("update");
+            const deferred = await getDeferredInvoiceBilling(tx, invoice?.memberPlanId);
+            // TODO(billing): review payment-attempt matching for ordinary payments in a separate PR.
+            // Keep their existing webhook behavior until that follow-up is implemented.
+            const attemptResult = prepareAuthorizeInvoiceAttempt(deferred ? invoice : undefined, {
+                id: providerTransactionId, invoiceNumber: details.order?.invoiceNumber, status: paymentStatus,
+            });
+            if (deferred && invoice?.memberPlanId && paymentStatus === "paid" && (attemptResult || invoice.paid)) {
+                repair = { sid: invoice.memberPlanId, lid: invoice.locationId, dueAt: invoice.forPeriodEnd };
+            }
+            if (!attemptResult) return;
             const metadata: Record<string, unknown> = {
                 ...currentMetadata,
                 authorizeTransactionId: providerTransactionId,
@@ -486,20 +547,18 @@ export function authorizeWebhookRoutes(app: Elysia) {
                 updated: new Date(),
             }).where(eq(transactions.id, current.id));
 
-            const invoice = await tx.query.memberInvoices.findFirst({
-                where: eq(memberInvoices.transactionId, current.id),
-            });
             if (invoice && terminalTransition) {
                 await tx.update(memberInvoices).set({
                     status: paymentStatus === "paid" ? "paid" : "unpaid",
                     paid: paymentStatus === "paid",
                     paymentType: "card",
+                    ...attemptResult.invoiceUpdate,
                     updated: new Date(),
                 }).where(eq(memberInvoices.id, invoice.id));
             }
             const subscriptionId = typeof metadata.memberSubscriptionId === "string"
                 ? metadata.memberSubscriptionId
-                : null;
+                : attemptResult.subscriptionId;
             if (subscriptionId && terminalTransition) {
                 const [updatedSubscription] = await tx.update(memberSubscriptions).set({
                     status: paymentStatus === "paid" ? "active" : "past_due",
@@ -522,6 +581,10 @@ export function authorizeWebhookRoutes(app: Elysia) {
             }
             if (terminalTransition && paymentStatus === "failed" && metadata.checkoutKind === "event") {
                 await cancelPendingEventRegistration(tx, current.id);
+            }
+            if (paymentStatus === "failed" && isPaymentDecline("authorize", undefined, details.transactionStatus, String(details.responseCode ?? ""))
+                && (current.status === "pending" || (current.status === "failed" && !current.failedCode && !current.failedReason))) {
+                await dispatchPaymentFailed(tx, current.id);
             }
             if (paymentStatus !== "paid" || !terminalTransition) return;
 
@@ -590,6 +653,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
             }
         });
         if (renewal) await scheduleRenewal(renewal);
+        if (repair) await scheduleRenewalRepair(repair.sid, repair.lid, repair.dueAt);
 
         return status(200, { message: "Authorize.net event processed" });
     }, { parse: "none" });

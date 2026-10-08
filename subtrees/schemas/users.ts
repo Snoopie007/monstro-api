@@ -28,6 +28,7 @@ export const userNotifications = pgTable("user_notifications", {
     nativeToken: text("native_token").notNull(),
     deviceId: text("device_id").notNull(),
     enabled: boolean("enabled").notNull().default(true),
+    isStaffApp: boolean("is_staff_app").notNull().default(false),
     lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),

@@ -1,7 +1,9 @@
-import { addDays } from "date-fns";
-import type { PaymentType } from "@subtrees/types";
+import { getLocationWaiverTemplate } from "@/utils/locationWaiver";
+import { dispatchPaymentFailed, dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
+import { addDays, isFuture } from "date-fns";
+import type { PaymentType } from "@/subtrees/types";
 import {
-    authorizeReferenceIdForTransaction,
     calculateThresholdDate,
     calculateChargeDetails,
     chargeWithGateway,
@@ -9,18 +11,22 @@ import {
     createEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
+    getAdditionalFeesForCheckout,
     getCheckoutContext,
-    stableCheckoutTransactionId,
     type ChargeWithGatewayResult,
 } from "@/utils";
 import {
     scheduleCronBasedRenewal,
     scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
-import type { SubscriptionJobData } from "@subtrees/bullmq";
+import type { SubscriptionJobData } from "@/subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/subtrees/schemas";
+import { and, eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { generateUUID } from "subtrees/utils";
 
 export type EnrollSubProps = {
     lid: string;
@@ -29,11 +35,12 @@ export type EnrollSubProps = {
     paymentMethodId: string;
     paymentType: PaymentType;
     promoId?: string | null;
-    attemptId: string;
+    attemptId?: string;
     startDate?: string;
     endDate?: string;
     trialDays?: number;
     allowProration?: boolean;
+    quoteOnly?: boolean;
 };
 
 export async function handleEnrollSubscription(props: EnrollSubProps) {
@@ -44,27 +51,15 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         paymentMethodId,
         paymentType,
         promoId,
-        attemptId,
         startDate,
         endDate,
         trialDays,
         allowProration,
+        quoteOnly = false,
     } = props;
-    const transactionId = stableCheckoutTransactionId("subscription", lid, mid, attemptId);
-    const authorizeReferenceId = authorizeReferenceIdForTransaction(transactionId);
-    const existing = await db.query.transactions.findFirst({
-        where: (row, { and, eq }) => and(eq(row.id, transactionId), eq(row.locationId, lid), eq(row.memberId, mid)),
-    });
-    if (existing) {
-        if (existing.status === "pending") throw new CheckoutError(202, "Payment is pending; do not retry");
-        if (existing.status === "failed") throw new CheckoutError(400, existing.failedReason || "Payment was declined");
-        if (existing.status !== "paid") throw new CheckoutError(500, "Unexpected transaction status");
-        const invoice = await db.query.memberInvoices.findFirst({
-            where: (row, { eq }) => eq(row.transactionId, transactionId),
-        });
-        if (!invoice) throw new CheckoutError(202, "Payment is paid and subscription is being finalized");
-        return { ok: true, unsignedDocs: [] as string[] };
-    }
+
+
+    const authorizeReferenceId = randomUUID();
 
     const [checkout, pricing] = await Promise.all([
         getCheckoutContext({ lid, mid }),
@@ -73,24 +68,49 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             with: { plan: true },
         }),
     ]);
-    if (!pricing?.plan) throw new CheckoutError(404, "Pricing not found");
+    if (!pricing?.plan) {
+        throw new CheckoutError(404, "Pricing not found")
+    }
+
     if (!pricing.interval || !pricing.intervalThreshold) {
         throw new CheckoutError(400, "Invalid pricing for subscription plan.");
     }
 
     const { ml, gateway, taxRates, gatewayCustomerId } = checkout;
     const locationState = ml.location.locationState;
-    const { usagePercent, settings, currency } = locationState;
-    const today = new Date();
-    const subscriptionStart = startDate ? new Date(startDate) : today;
-    if (Number.isNaN(subscriptionStart.getTime())) {
-        throw new CheckoutError(400, "Invalid subscription start date");
+    const contractId = pricing.plan.contractId;
+    await getLocationWaiverTemplate(db, lid, locationState.waiverId);
+    const templateIds = [contractId].filter((id): id is string => Boolean(id));
+    if (templateIds.length > 0) {
+        const templates = await Promise.all(templateIds.map((templateId) =>
+            db.query.contractTemplates.findFirst({
+                where: (template, { eq, and }) => and(
+                    eq(template.id, templateId),
+                    eq(template.locationId, lid),
+                ),
+                columns: { id: true },
+            }),
+        ));
+        if (templates.some((template) => !template)) {
+            throw new CheckoutError(404, "Contract not found");
+        }
     }
+
+    const { planId, currency } = locationState;
+    const today = new Date();
+
+    const subscriptionStart = startDate ? new Date(startDate) : today;
+
+    if (Number.isNaN(subscriptionStart.getTime())) {
+        throw new CheckoutError(400, "Invalid subscription start date")
+    }
+
     const currentPeriodEnd = calculateThresholdDate({
         startDate: subscriptionStart,
         threshold: pricing.intervalThreshold,
         interval: pricing.interval,
     });
+
     const cancelAt = endDate
         ? new Date(endDate)
         : pricing.expireThreshold && pricing.expireInterval
@@ -100,63 +120,90 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                 interval: pricing.expireInterval,
             })
             : undefined;
+
     if (cancelAt && (Number.isNaN(cancelAt.getTime()) || cancelAt <= subscriptionStart)) {
         throw new CheckoutError(400, "Invalid subscription end date");
     }
     const parsedTrialDays = typeof trialDays === "number" && trialDays > 0 ? trialDays : 0;
     const trialEnd = parsedTrialDays > 0 ? addDays(subscriptionStart, parsedTrialDays) : undefined;
     const resolvedAllowProration = allowProration ?? pricing.plan.allowProration ?? false;
+
     const classCredits = pricing.plan.classLimitInterval === "term"
         ? pricing.plan.totalClassLimit || 0
         : 0;
+
+
     const taxRate = taxRates.find((rate) => rate.isDefault) || taxRates[0];
-    const discount = await fetchPromoDiscount(promoId ?? undefined, pricing);
-    const noGrowthPlan = [1, 2].includes(locationState.planId);
+    const discount = await fetchPromoDiscount(promoId ?? undefined, pricing, lid);
+    const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
     const chargeDetails = calculateChargeDetails({
         amount: pricing.downpayment || pricing.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
-        usagePercent: usagePercent || 0,
-        paymentType,
-        isRecurring: noGrowthPlan,
-        passOnFees: settings?.passOnFees || false,
+        planId,
+        additionalFees,
     });
+    // TODO: Reconcile quoteOnly with the Sites GET /api/enroll proxy before changing this early return.
+    if (quoteOnly) {
+        const baseAmount = pricing.downpayment || pricing.price;
+        return {
+            baseAmount,
+            discount: chargeDetails.discount,
+            tax: chargeDetails.tax,
+            fees: chargeDetails.additionalFeeTotal,
+            additionalFees: chargeDetails.additionalFeeLines.map((fee) => {
+                const description = additionalFees.find((configuredFee) => configuredFee.id === fee.feeId)?.description?.trim();
+                return {
+                    label: fee.name,
+                    amount: fee.price - (fee.discount ?? 0),
+                    ...(description ? { description } : {}),
+                };
+            }),
+            total: chargeDetails.total,
+            currency,
+        };
+    }
     const productName = pricing.name;
     const description = `${pricing.downpayment ? "Downpayment" : "Payment"} for ${pricing.name}`;
+
+
     const metadata: Record<string, unknown> = {
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
             authorizeCustomerProfileId: gatewayCustomerId,
-            authorizeReferenceId,
         } : {}),
-        gatewayService: gateway.service,
         checkoutKind: "subscription",
-        checkoutAttemptId: attemptId,
-        memberPlanPricingId: pricing.id,
-        productName,
-        discount,
-        subscriptionStartAt: subscriptionStart.toISOString(),
-        subscriptionCurrentPeriodEnd: currentPeriodEnd.toISOString(),
-        ...(cancelAt ? { subscriptionCancelAt: cancelAt.toISOString() } : {}),
-        ...(trialEnd ? { subscriptionTrialEnd: trialEnd.toISOString() } : {}),
-        subscriptionAllowProration: resolvedAllowProration,
-        classCredits,
+        commissionBilling: {
+            allowanceInterval: pricing.plan.classLimitInterval,
+            billingInterval: pricing.interval,
+            billingThreshold: pricing.intervalThreshold,
+            visitAllowance: pricing.plan.totalClassLimit,
+        },
     };
-
+    const transactionId = generateUUID('txn_');
+    const items = [{
+        name: productName,
+        quantity: 1,
+        price: chargeDetails.unitCost,
+        discount: chargeDetails.productDiscount,
+    }, ...chargeDetails.additionalFeeLines];
     const charge: ChargeWithGatewayResult = await chargeWithGateway({
         gateway,
         gatewayCustomerId,
         paymentMethodId,
         transactionId,
-        authorizeReferenceId,
         paymentType,
         total: chargeDetails.total,
         feesAmount: chargeDetails.feesAmount,
         currency,
         description,
-        referenceId: transactionId,
-        note: `transactionId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
+        note: `transId:${transactionId}|mid:${mid}|lid:${lid}|priceId:${pricing.id}`,
         metadata: { locationId: lid, memberId: mid, transactionId },
+    }).catch((error) => {
+        // Only explicit declines enter the existing failure branch. Other errors keep their behavior.
+        const failure = paymentFailureFromError(error);
+        if (!failure) throw error;
+        return failure;
     });
 
     switch (charge.status) {
@@ -164,12 +211,13 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             const now = new Date();
             let unsignedDocs: string[] = [];
             const subscription = await db.transaction(async (tx) => {
-                const [created] = await tx.insert(transactions).values({
+                const [transaction] = await tx.insert(transactions).values({
                     id: transactionId,
                     total: chargeDetails.total,
                     subTotal: chargeDetails.subTotal,
                     tax: chargeDetails.tax,
                     feeAmount: chargeDetails.feesAmount,
+                    items,
                     description,
                     currency,
                     locationId: lid,
@@ -189,7 +237,9 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         last4: charge.last4,
                     }],
                 }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
-                if (!created) throw new CheckoutError(202, "Payment is being finalized; do not retry");
+                if (!transaction) {
+                    throw new CheckoutError(202, "Payment is being finalized; do not retry")
+                }
 
                 const [result] = await tx.insert(memberSubscriptions).values({
                     startDate: subscriptionStart,
@@ -204,6 +254,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     paymentType,
                     gatewayPaymentId: paymentMethodId,
                     metadata: {
+                        commissionBilling: {
+                            allowanceInterval: pricing.plan.classLimitInterval,
+                            billingInterval: pricing.interval,
+                            billingThreshold: pricing.intervalThreshold,
+                            visitAllowance: pricing.plan.totalClassLimit,
+                        },
                         gatewayIntegrationId: gateway.integrationId,
                         gatewayCustomerId,
                         allowProration: resolvedAllowProration,
@@ -214,12 +270,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
 
                 const [invoice] = await tx.insert(memberInvoices).values({
                     description,
-                    items: [{
-                        name: productName,
-                        quantity: 1,
-                        price: chargeDetails.unitCost,
-                        discount,
-                    }],
+                    items,
                     status: "paid",
                     paid: true,
                     memberPlanId: result.id,
@@ -227,6 +278,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     locationId: lid,
                     paymentType,
                     ...chargeDetails,
+                    metadata: {
+                        commissionAllowanceInterval: pricing.plan.classLimitInterval,
+                        commissionBillingInterval: pricing.interval,
+                        commissionBillingThreshold: pricing.intervalThreshold,
+                        commissionVisitAllowance: pricing.plan.totalClassLimit,
+                    },
                     forPeriodStart: result.currentPeriodStart,
                     forPeriodEnd: result.currentPeriodEnd,
                     currency,
@@ -239,16 +296,29 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     mid,
                     lid,
                     memberPlanId: result.id,
-                    contractId: pricing.plan.contractId,
-                    waiverId: locationState.waiverId,
-                    signedWaiverId: ml.signedWaiverId,
+                    contractId,
                 });
+                await tx.update(memberLocations).set({
+                    status: "active",
+                    updated: now,
+                }).where(and(
+                    eq(memberLocations.memberId, mid),
+                    eq(memberLocations.locationId, lid),
+                ));
                 return result;
             });
 
             const member = ml.member;
+            const isTrialCheckout = !!(subscription.trialEnd && isFuture(subscription.trialEnd) && subscription.trialEnd > subscription.startDate);
             const nextBillingDate = new Date(subscription.currentPeriodEnd);
+            let renewal: Promise<unknown> | undefined;
             if (["month", "year"].includes(pricing.interval)) {
+                const promoDuration = discount?.duration === "once"
+                    ? 1
+                    : discount?.duration === "repeating"
+                        ? discount.durationInMonths ?? 1
+                        : Number.MAX_SAFE_INTEGER;
+                const remainingPromoPayments = Math.max(0, promoDuration - 1);
                 const payload: SubscriptionJobData = {
                     sid: subscription.id,
                     lid,
@@ -269,12 +339,14 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         interval: pricing.interval,
                         intervalThreshold: pricing.intervalThreshold,
                     },
-                    discount: discount > 0 ? {
-                        amount: discount,
-                        duration: pricing.intervalThreshold,
+                    discount: discount && remainingPromoPayments > 0 ? {
+                        amount: chargeDetails.discount,
+                        type: discount.type,
+                        value: discount.value,
+                        duration: remainingPromoPayments,
                     } : undefined,
                 };
-                const renewal = pricing.intervalThreshold === 1
+                renewal = pricing.intervalThreshold === 1
                     ? scheduleCronBasedRenewal({
                         startDate: nextBillingDate,
                         interval: pricing.interval,
@@ -284,7 +356,23 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                         startDate: nextBillingDate,
                         data: { ...payload, recurrenceCount: 1 },
                     });
-                renewal.catch((error) => console.error("Error scheduling renewal:", error));
+                // Ordinary enrollment keeps its existing background scheduling.
+                if (!isTrialCheckout) renewal.catch((error) => console.error("Error scheduling renewal:", error));
+            }
+            if (isTrialCheckout) {
+                try {
+                    // No workflow until required renewal setup has finished.
+                    await renewal;
+                    await db.transaction(tx => dispatchWorkflowTrigger(tx, {
+                        type: WorkflowEvents.trial.CHECKED_OUT,
+                        locationId: lid,
+                        memberId: mid,
+                    }));
+                } catch (error) {
+                    console.error("Trial payment saved but setup incomplete:", subscription.id, error);
+                    // Payment already succeeded. A normal retry could charge again.
+                    throw new CheckoutError(202, `Trial setup is incomplete for ${subscription.id}. Payment was saved; do not repeat checkout.`);
+                }
             }
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(member.userId, achievement);
@@ -293,33 +381,40 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         }
         case "failed": {
             const now = new Date();
-            await db.insert(transactions).values({
-                id: transactionId,
-                total: chargeDetails.total,
-                subTotal: chargeDetails.subTotal,
-                tax: chargeDetails.tax,
-                feeAmount: chargeDetails.feesAmount,
-                description,
-                currency,
-                locationId: lid,
-                memberId: mid,
-                type: "inbound",
-                status: "failed",
-                paymentMethodId,
-                paymentType,
-                chargeDate: now,
-                paymentIntentId: charge.paymentIntentId,
-                failedReason: charge.failureReason,
-                failedCode: charge.failureCode,
-                metadata: { ...metadata, ...charge.gatewayMetadata },
-                activities: [{
-                    at: now.toISOString(),
-                    reason: `Payment failed: ${charge.failureReason}`,
-                    paymentType: charge.paymentType ?? paymentType,
-                    brand: charge.brand,
-                    last4: charge.last4,
-                }],
-            }).onConflictDoNothing({ target: transactions.id });
+            await db.transaction(async (tx) => {
+                const [created] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    total: chargeDetails.total,
+                    subTotal: chargeDetails.subTotal,
+                    tax: chargeDetails.tax,
+                    feeAmount: chargeDetails.feesAmount,
+                    items,
+                    description,
+                    currency,
+                    locationId: lid,
+                    memberId: mid,
+                    type: "inbound",
+                    status: "failed",
+                    paymentMethodId,
+                    paymentType,
+                    chargeDate: now,
+                    paymentIntentId: charge.paymentIntentId,
+                    failedReason: charge.failureReason,
+                    failedCode: charge.failureCode,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: `Payment failed: ${charge.failureReason}`,
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                // Held/configuration failures keep their billing status, but do not start workflows.
+                if (created && isPaymentDecline(charge.gatewayMetadata.gatewayService, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode)) {
+                    await dispatchPaymentFailed(tx, created.id);
+                }
+            });
             throw new CheckoutError(400, charge.failureReason);
         }
         case "uncertain":

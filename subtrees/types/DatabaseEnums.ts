@@ -21,7 +21,7 @@ export enum PackageStatus {
 
 export type PlanType = 'recurring' | 'one-time';
 export type Interval = 'day' | 'week' | 'month' | 'year';
-export type PaymentType = 'card' | 'cash' | 'us_bank_account' | 'paypal' | 'apple_pay' | 'google_pay';
+export type PaymentType = 'card' | 'cash' | 'us_bank_account' | 'paypal' | 'apple_pay' | 'google_pay' | 'link' | 'cashapp';
 export type InvoiceStatus = 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'void';
 export type MemberRelationship = 'parent' | 'spouse' | 'child' | 'sibling' | 'extended';
 export type ContractType = 'contract' | 'waiver';
@@ -29,6 +29,7 @@ export type RoleColor = "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "o
 export type TransactionStatus = 'pending' | 'paid' | 'failed' | 'disputed';
 export type StaffStatus = 'active' | 'inactive';
 export type ProgramStatus = 'active' | 'inactive' | 'archived';
+export type ProgramSessionMode = 'group' | 'one_on_one';
 export type MigrateStatus = 'pending' | 'completed';
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'archived';
 export type EventType = 'in_person' | 'online';
@@ -51,3 +52,4 @@ export enum PromoType {
     FreeTrial = "free_trial"
 }
 export type PromoDuration = "once" | "repeating" | "forever";
+export type WorkflowStatus = "draft" | "active" | "pause" | "deleted";

@@ -5,7 +5,6 @@ import { locationNotifications } from "./notifications";
 import { locationReservations } from "./reservations";
 import { locationRewards } from "./rewards";
 import { locationSessions } from "./sessions";
-import { locationSupport } from "./support";
 import { locationEnrollRoutes } from "./enroll";
 import { locationLeaderboard } from "./leaderboard";
 import { onboardingRoutes } from "./onboarding";
@@ -15,11 +14,11 @@ import { locationPass } from "./pass";
 import { locationPlans } from "./plans";
 import { Elysia, t } from "elysia";
 import { locationEmail } from "./email";
-import { db } from "@/db/db";
 import { locationMercs } from "./mercs";
 import { locationCourses } from "./courses";
 import { locationEventRoutes } from "./events";
-
+import { getLocationById } from "@/handlers/location";
+import { db } from "@/db/db";
 
 const LocationGetProps = {
     params: t.Object({
@@ -34,32 +33,43 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.get('/', async ({ params, status }) => {
             const { lid } = params;
             try {
-                const location = await db.query.locations.findFirst({
-                    where: (l, { eq }) => eq(l.id, lid),
-                    with: {
-                        taxRates: true,
-                        locationState: true,
-                    },
-                });
-
+                const location = await getLocationById(lid);
                 if (!location) {
                     return status(404, { error: 'Location not found' });
                 }
 
+                // Fetch staff to inject into programs and sessions
+                // const staff = await db.query.staffsLocations.findMany({
+                //     where: (staffLocations, { eq }) => eq(staffLocations.locationId, location.id),
+                //     with: {
+                //         staff: {
+                //             user: {
+                //                 columns: {
+                //                     id: true,
+                //                     name: true,
+                //                     email: true,
+                //                     phone: true,
+                //                 },
+                //             },
+                //         },
+                //     },
+                // });
 
-                let defaultTaxRate = location.taxRates.find((taxRate) => taxRate.isDefault);
-                if (!defaultTaxRate) {
-                    defaultTaxRate = location.taxRates[0] || undefined;
-                }
+                const programs = await db.query.programs.findMany({
+                    where: (programs, { eq }) => eq(programs.locationId, location.id),
+                    with: {
+                        sessions: true,
+                    },
+                });
+
 
                 return status(200, {
                     ...location,
-                    taxRate: defaultTaxRate,
+                    programs,
                 });
             } catch (error) {
                 console.error(error);
-                status(500, { error: 'Internal server error' });
-                return { error: 'Internal server error' }
+                return status(500, { error: 'Internal server error' });
             }
         }, LocationGetProps);
         app.use(locationAchievements);
@@ -71,7 +81,6 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationSessions);
         app.use(locationPass);
         app.use(locationPromos);
-        app.use(locationSupport);
         app.use(locationMercs);
         app.use(locationLeaderboard);
         app.use(locationPlans);

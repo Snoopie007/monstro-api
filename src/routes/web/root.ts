@@ -11,6 +11,7 @@ import { webContentRoutes } from "./content";
 import { webGHLRoutes } from "./ghl";
 import { webEnrollRoutes } from "./enroll";
 import { webCouponRoutes } from "./coupon";
+import { webSiteRoutes } from "./sites";
 const ACCEPTED_METHODS = ["GET", "POST", "PATCH"];
 
 export const WebRoutes = new Elysia()
@@ -31,6 +32,7 @@ export const WebRoutes = new Elysia()
     .use(webContentRoutes)
     .use(webGHLRoutes)
     .use(webEnrollRoutes)
+    .use(webSiteRoutes)
     .group('/gateway', (app) => {
         app.use(webGatewaysRoutes)
         app.use(webStripeGateway)

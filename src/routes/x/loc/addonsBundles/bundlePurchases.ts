@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { calculateThresholdDate } from "@/utils";
+import { calculateThresholdDate } from "@/utils/enrollUtils";
 import {
   addons,
   bundleComponents,
@@ -11,12 +11,12 @@ import {
   memberPlans,
   memberSubscriptionAddons,
   memberSubscriptions,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import type {
   BundlePurchaseResponse,
   PurchaseBundleInput,
   SubscriptionBundleSummary,
-} from "@subtrees/types";
+} from "@/subtrees/types";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
   hasConflictingAddonPriceOverrides,
@@ -298,7 +298,7 @@ export async function activateBundlePurchase(locationId: string, bundlePurchaseI
           columns: { locationId: true },
           with: { components: { columns: { id: true, addonId: true, required: true } } },
         },
-        subscriptions: { columns: { id: true, memberPlanPricingId: true, status: true } },
+        subscriptions: { columns: { id: true, memberPlanPricingId: true, status: true, paymentType: true, gatewayPaymentId: true } },
         addonPurchases: { columns: { id: true, status: true, bundleComponentId: true } },
       },
     });
@@ -306,7 +306,8 @@ export async function activateBundlePurchase(locationId: string, bundlePurchaseI
     if (purchase.status === "canceled" || purchase.status === "expired") {
       return { status: "inactive" as const };
     }
-    if (purchase.subscriptions.some((subscription) => !["active", "trialing"].includes(subscription.status))) {
+    if (purchase.subscriptions.some((subscription) => !["active", "trialing"].includes(subscription.status)
+      || (subscription.paymentType !== "cash" && !subscription.gatewayPaymentId))) {
       return { status: "subscriptions-not-ready" as const };
     }
     const subscriptionIds = purchase.subscriptions.map((subscription) => subscription.id);
@@ -317,9 +318,12 @@ export async function activateBundlePurchase(locationId: string, bundlePurchaseI
       inArray(memberSubscriptionAddons.memberSubscriptionId, subscriptionIds),
       inArray(memberSubscriptionAddons.status, [...OPEN_ADDON_PURCHASE_STATUSES]),
     ));
+    if (purchase.subscriptions.some(subscription => !subscription.memberPlanPricingId)) {
+      return { status: "subscriptions-not-ready" as const };
+    }
     const pricingConflicts = await Promise.all(purchase.subscriptions.map((subscription) =>
       hasConflictingAddonPriceOverrides(
-        subscription.memberPlanPricingId,
+        subscription.memberPlanPricingId!,
         openAddonPurchases
           .filter((addon) => addon.memberSubscriptionId === subscription.id)
           .map((addon) => addon.addonId),

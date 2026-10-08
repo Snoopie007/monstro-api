@@ -14,6 +14,7 @@ import type { Contract, MemberContract } from './contract'
 import type { PaymentType } from './DatabaseEnums'
 import type { FamilyMember } from './FamilyMember'
 import type { MemberInvoice } from './invoices'
+import type { CashBilling } from './subscriptionBilling'
 import type { Location } from './location'
 import type { MigrateMember } from './MigrateMember'
 import type { PlanProgram, Program } from './program'
@@ -38,10 +39,11 @@ export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
 }
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
+	cashBilling?: CashBilling | null
 	child?: MemberSubscription
 	invoices?: MemberInvoice[]
 	plan?: MemberPlan
-	pricing?: MemberPlanPricing
+	pricing?: MemberPlanPricing | null
 	contract?: MemberContract
 	member?: Member
 	paymentType: PaymentType

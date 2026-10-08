@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway } from "@/libs/PaymentGateway/SquarePayment";
-import { integrations, memberLocations } from "@subtrees/schemas";
-import type { PaymentMethod } from "@subtrees/types";
+import { integrations, memberLocations } from "@/subtrees/schemas";
+import type { PaymentMethod } from "@/subtrees/types";
 import { eq } from "drizzle-orm";
 
 interface SquareCardPaymentMethod {

@@ -48,12 +48,17 @@ export const webGatewaysRoutes = new Elysia()
                 throw new Error("Payment gateway not found");
             }
 
-            let data = {
+            const data = {
                 key: gateway.apiKey,
                 service: gateway.service,
                 accountId: gateway.accountId,
                 squareLocationId: gateway.metadata?.squareLocationId,
-            }
+                ...(gateway.service === "authorize" ? {
+                    apiLoginId: gateway.apiKey,
+                    publicClientKey: gateway.metadata?.publicClientKey,
+                    scriptUrl: process.env.AUTHORIZE_SCRIPT_URL,
+                } : {}),
+            };
 
             return status(200, data);
         } catch (error) {

@@ -2,8 +2,8 @@ import { db } from "@/db/db";
 import {
     memberPackages, memberSubscriptions,
     migrateMembers, memberLocations, memberCustomFields,
-} from "@subtrees/schemas";
-import type { PaymentType } from "@subtrees/types";
+} from "@/subtrees/schemas";
+import type { PaymentType } from "@/subtrees/types";
 import { Elysia, t } from "elysia";
 import { eq, sql } from "drizzle-orm";
 import { calculateThresholdDate } from "@/utils";

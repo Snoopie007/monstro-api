@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import S3Bucket from "@/libs/s3";
-import { ALLOWED_IMAGE_TYPES } from "@subtrees/constants/data";
-import { productImages, products } from "@subtrees/schemas";
+import { ALLOWED_IMAGE_TYPES } from "@/subtrees/constants/data";
+import { productImages, products } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import type Elysia from "elysia";
 import { t } from "elysia";

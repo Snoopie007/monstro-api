@@ -1,0 +1,672 @@
+import { beforeEach, expect, mock, test } from "bun:test";
+import { Elysia } from "elysia";
+import { normalizeLocationSlug } from "@/subtrees/schemas";
+import {
+  createSitePreset,
+  storedSiteConfigFromStored,
+} from "@/subtrees/site-config.js";
+
+let siteLocationRows: Array<{
+  siteId: string;
+  locationId: string;
+  publishedRevisionId?: string | null;
+  paused?: boolean;
+}> = [];
+let selectedRows: unknown[][] = [];
+const planRows: unknown[] = [];
+const scheduleRows: unknown[] = [];
+const postRows: unknown[] = [];
+const productRows: unknown[] = [];
+const submitGhlFormContact = mock(async () => undefined);
+
+function routingConfig(connections: Array<{
+  locationId: string;
+  isPrimary: boolean;
+  ghlLocationId: string;
+  privateIntegrationToken: string;
+}>) {
+  const config = storedSiteConfigFromStored(
+    createSitePreset({
+      preset: "scale",
+      businessName: "Academy",
+      tagline: "Train well",
+    }),
+    "scale",
+    connections.map((connection, displayOrder) => ({
+      locationId: connection.locationId,
+      isPrimary: connection.isPrimary,
+      displayOrder,
+    })),
+  );
+  return {
+    ...config,
+    locationConnections: config.locationConnections.map((connection) => {
+      const routing = connections.find((candidate) => candidate.locationId === connection.locationId)!;
+      return {
+        ...connection,
+        leadRouting: {
+          ghlLocationId: routing.ghlLocationId,
+          privateIntegrationToken: routing.privateIntegrationToken,
+        },
+      };
+    }),
+  };
+}
+
+const selectBuilder = {
+  from() {
+    return this;
+  },
+  innerJoin() {
+    return this;
+  },
+  leftJoin() {
+    return this;
+  },
+  where() {
+    return this;
+  },
+  orderBy() {
+    return this;
+  },
+  then(resolve: (value: Array<{ total: number }>) => void) {
+    resolve((selectedRows.shift() as Array<{ total: number }> | undefined)
+      ?? [{ total: postRows.length }]);
+  },
+  limit: mock(async () => selectedRows.shift() ?? siteLocationRows),
+};
+
+const db = {
+  select: mock(() => selectBuilder),
+  query: {
+    memberPlans: {
+      findMany: mock(async () => planRows),
+      findFirst: mock(async () => null),
+    },
+    memberContracts: {
+      findFirst: mock(async () => null),
+      findMany: mock(async () => []),
+    },
+    members: {
+      findFirst: mock(async () => null),
+    },
+    locations: {
+      findFirst: mock(async () => ({
+        timezone: "UTC",
+        locationState: {
+          status: "active",
+          settings: { holidays: {} },
+        },
+      })),
+    },
+    programs: {
+      findMany: mock(async (_options?: unknown) => scheduleRows),
+    },
+    websiteContents: {
+      findMany: mock(async () => postRows),
+      findFirst: mock(async () => postRows[0] ?? null),
+    },
+    products: {
+      findMany: mock(async () => productRows),
+      findFirst: mock(async () => productRows[0] ?? null),
+    },
+  },
+};
+
+mock.module("@/db/db", () => ({ db }));
+mock.module("@/middlewares/WebAuthMW", () => ({
+  WebAuthMiddleware: (app: Elysia) => app.resolve(() => ({
+    lid: "location-1",
+    session: { user: { memberId: "member-1" } },
+  })),
+}));
+mock.module("@/utils/generatePDF", () => ({
+  generatePDF: mock(async () => undefined),
+}));
+mock.module("@/utils/contractUtils", () => ({
+  renderContractContent: mock(() => ""),
+}));
+mock.module("@/handlers/formSubmissions", () => ({ submitGhlFormContact }));
+
+const { webSiteRoutes } = await import("./sites");
+const { webPlansRoutes } = await import("./plans");
+const { webDocRoutes } = await import("./doc");
+const app = new Elysia().use(webSiteRoutes);
+const plansApp = new Elysia().use(webPlansRoutes);
+const docsApp = new Elysia().use(webDocRoutes);
+
+beforeEach(() => {
+  siteLocationRows = [];
+  selectedRows = [];
+  db.select.mockClear();
+  db.query.memberPlans.findMany.mockClear();
+  db.query.locations.findFirst.mockClear();
+  db.query.programs.findMany.mockClear();
+  postRows.length = 0;
+  productRows.length = 0;
+  db.query.websiteContents.findMany.mockClear();
+  db.query.products.findMany.mockClear();
+  submitGhlFormContact.mockClear();
+  Bun.env.MONSTRO_SITES_SERVICE_TOKEN = "sites-service-secret";
+});
+test("normalizes legacy location slugs for public site context", () => {
+  expect(normalizeLocationSlug("gracie-humaita west craig"))
+    .toBe("gracie-humaita-west-craig");
+  expect(normalizeLocationSlug("odyssey-health-spa---fitness--inc-"))
+    .toBe("odyssey-health-spa-fitness-inc");
+});
+
+test("returns a temporary unavailable response for a paused site", async () => {
+  selectedRows = [[{
+    siteId: "site-1",
+    vendorId: "vendor-1",
+    paused: true,
+    publishedRevisionId: "revision-1",
+    domain: "academy.monstro.site",
+    verificationData: { source: "wildcard" },
+    isCanonical: true,
+  }]];
+
+  const response = await app.handle(new Request(
+    "http://localhost/sites/resolve?hostname=academy.monstro.site",
+  ));
+
+  expect(response.status).toBe(503);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(await response.json()).toEqual({
+    code: "SITE_PAUSED",
+    message: "This site is unavailable at this time. Please contact Monstro Support.",
+  });
+});
+
+test("projects map identity and structured address through the public resolve response", async () => {
+  const publishedConfig = routingConfig([{
+    locationId: "location-1",
+    isPrimary: true,
+    ghlLocationId: "ghl-location-1",
+    privateIntegrationToken: "pit-location-1",
+  }, {
+    locationId: "location-2",
+    isPrimary: false,
+    ghlLocationId: "ghl-location-2",
+    privateIntegrationToken: "pit-location-2",
+  }]);
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      vendorId: "vendor-1",
+      publishedRevisionId: "revision-1",
+      domain: "hannmima.monstro.site",
+      verificationData: { source: "wildcard" },
+      isCanonical: false,
+    }],
+    [{
+      id: "revision-1",
+      schemaVersion: publishedConfig.schemaVersion,
+      config: publishedConfig,
+      publishedAt: new Date("2026-08-19T12:00:00.000Z"),
+    }],
+    [{ hostname: "hannmima.com" }],
+    [{
+      id: "location-1",
+      slug: "hann-mima",
+      name: "Hann Mima",
+      address: "123 Meridian Ave",
+      timezone: "America/Los_Angeles",
+      phone: "408-555-0100",
+      email: "hello@hannmima.com",
+      city: "San Jose",
+      state: "CA",
+      postalCode: "95126",
+      country: "US",
+      metadata: {
+        placeId: "places-id",
+        lat: 37.3318,
+        lng: -121.891,
+      },
+      selectedGmb: {
+        metadata: {
+          placeId: "gmb-id",
+          mapsUri: "https://maps.google.com/example",
+        },
+      },
+      currency: "USD",
+      gatewayService: null,
+      vendorId: "vendor-1",
+      isPrimary: true,
+    }, {
+      id: "location-2",
+      slug: "places-only",
+      name: "Places Only Academy",
+      address: "456 Market St",
+      timezone: "America/Los_Angeles",
+      phone: null,
+      email: null,
+      city: "San Francisco",
+      state: "CA",
+      postalCode: "94105",
+      country: "US",
+      metadata: { placeId: "places-only-id" },
+      selectedGmb: { metadata: { placeId: " " } },
+      currency: "USD",
+      gatewayService: null,
+      vendorId: "vendor-1",
+      isPrimary: false,
+    }],
+  ];
+
+  const response = await app.handle(new Request(
+    "http://localhost/sites/resolve?hostname=hannmima.monstro.site",
+  ));
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    context: {
+      primaryLocationId: "location-1",
+      locations: [{
+        id: "location-1",
+        googlePlaceId: "gmb-id",
+        address: "123 Meridian Ave",
+        postalAddress: {
+          streetAddress: "123 Meridian Ave",
+          addressLocality: "San Jose",
+          addressRegion: "CA",
+          postalCode: "95126",
+          addressCountry: "US",
+        },
+        coordinates: {
+          latitude: 37.3318,
+          longitude: -121.891,
+        },
+      }, {
+        id: "location-2",
+        googlePlaceId: "places-only-id",
+        postalAddress: {
+          streetAddress: "456 Market St",
+          addressLocality: "San Francisco",
+          addressRegion: "CA",
+          postalCode: "94105",
+          addressCountry: "US",
+        },
+      }],
+    },
+  });
+});
+
+
+test("rejects a location that is not attached to the requested site", async () => {
+  const response = await app.handle(
+    new Request("http://localhost/sites/site-1/locations/location-2/plans"),
+  );
+
+  expect(response.status).toBe(404);
+  expect(db.query.memberPlans.findMany).not.toHaveBeenCalled();
+});
+
+test("requires service authorization for native form submissions", async () => {
+  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-1/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(401);
+  expect(submitGhlFormContact).not.toHaveBeenCalled();
+});
+
+test("blocks authorized form submissions for a paused site", async () => {
+  selectedRows = [[{
+    siteId: "site-1",
+    locationId: "location-1",
+    publishedRevisionId: "revision-1",
+    paused: true,
+  }]];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-1/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(503);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(submitGhlFormContact).not.toHaveBeenCalled();
+});
+
+test("submits an authorized form only for an active attached location", async () => {
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      locationId: "location-1",
+      isPrimary: true,
+      publishedRevisionId: "revision-1",
+    }],
+    [{
+      config: routingConfig([{
+        locationId: "location-1",
+        isPrimary: true,
+        privateIntegrationToken: "private-token",
+        ghlLocationId: "ghl-location",
+      }]),
+    }],
+  ];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-1/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(200);
+  expect(submitGhlFormContact).toHaveBeenCalledWith({
+    privateIntegrationToken: "private-token",
+    locationId: "ghl-location",
+  }, validFormContact);
+});
+
+test("routes a secondary location form to its keyed GHL destination", async () => {
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      locationId: "location-2",
+      isPrimary: false,
+      publishedRevisionId: "revision-1",
+    }],
+    [{
+      config: routingConfig([
+        {
+          locationId: "location-1",
+          isPrimary: true,
+          ghlLocationId: "ghl-primary",
+          privateIntegrationToken: "pit-primary",
+        },
+        {
+          locationId: "location-2",
+          isPrimary: false,
+          ghlLocationId: "ghl-secondary",
+          privateIntegrationToken: "pit-secondary",
+        },
+      ]),
+    }],
+  ];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-2/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(200);
+  expect(submitGhlFormContact).toHaveBeenCalledWith({
+    privateIntegrationToken: "pit-secondary",
+    locationId: "ghl-secondary",
+  }, validFormContact);
+});
+
+test.each([
+  { locationId: "location-1", isPrimary: true, secondaryToken: "pit-shared", expectedToken: "pit-shared" },
+  { locationId: "location-2", isPrimary: false, secondaryToken: "pit-shared", expectedToken: "pit-shared" },
+  { locationId: "location-2", isPrimary: false, secondaryToken: "pit-secondary", expectedToken: "pit-secondary" },
+])("routes shared GHL destinations using the selected connection: %j", async ({
+  locationId, isPrimary, secondaryToken, expectedToken,
+}) => {
+  selectedRows = [
+    [{ siteId: "site-1", locationId, isPrimary, publishedRevisionId: "revision-1" }],
+    [{
+      config: routingConfig([
+        { locationId: "location-1", isPrimary: true, ghlLocationId: "ghl-shared", privateIntegrationToken: "pit-shared" },
+        { locationId: "location-2", isPrimary: false, ghlLocationId: "ghl-shared", privateIntegrationToken: secondaryToken },
+      ])
+    }],
+  ];
+  const response = await app.handle(new Request(
+    `http://localhost/sites/site-1/locations/${locationId}/forms/contact-form/submissions`,
+    {
+      method: "POST",
+      headers: { Authorization: "Bearer sites-service-secret", "Content-Type": "application/json" },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(200);
+  expect(submitGhlFormContact).toHaveBeenCalledTimes(1);
+  expect(submitGhlFormContact).toHaveBeenCalledWith({
+    privateIntegrationToken: expectedToken,
+    locationId: "ghl-shared",
+  }, validFormContact);
+});
+
+test("does not route a secondary location through legacy primary-only credentials", async () => {
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      locationId: "location-2",
+      isPrimary: false,
+      publishedRevisionId: "revision-1",
+    }],
+    [{
+      config: {
+        integrations: {
+          ghl: {
+            privateIntegrationToken: "legacy-primary-pit",
+            locationId: "legacy-primary-ghl",
+          },
+        },
+      },
+    }],
+  ];
+  const response = await app.handle(new Request(
+    "http://localhost/sites/site-1/locations/location-2/forms/contact-form/submissions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer sites-service-secret",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ contact: validFormContact }),
+    },
+  ));
+
+  expect(response.status).toBe(503);
+  expect(submitGhlFormContact).not.toHaveBeenCalled();
+});
+
+const validFormContact = {
+  firstName: "Jane",
+  lastName: "Smith",
+  name: "Jane Smith",
+  email: "jane@example.com",
+  phone: "5555555555",
+  source: "Generated website form",
+  tags: ["new lead", "web contact form"],
+  customFields: [{ key: "program", field_value: "kids" }],
+};
+
+test("returns only the selected site's location plans", async () => {
+  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+
+  const response = await app.handle(
+    new Request("http://localhost/sites/site-1/locations/location-1/plans"),
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual([]);
+  expect(db.query.memberPlans.findMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: expect.any(Function),
+    }),
+  );
+});
+
+test("returns selected-location schedules and rejects invalid dates", async () => {
+  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+
+  const response = await app.handle(
+    new Request(
+      "http://localhost/sites/site-1/locations/location-1/schedules?date=2024-02-30",
+    ),
+  );
+
+  expect(response.status).toBe(400);
+  expect(db.query.locations.findFirst).not.toHaveBeenCalled();
+
+  const validResponse = await app.handle(
+    new Request(
+      "http://localhost/sites/site-1/locations/location-1/schedules?date=2024-02-29",
+    ),
+  );
+
+  expect(validResponse.status).toBe(200);
+  expect(await validResponse.json()).toEqual({ sessions: [] });
+  expect(db.query.locations.findFirst).toHaveBeenCalledTimes(1);
+
+  const [query] = db.query.programs.findMany.mock.calls[0] as [{
+    where: (
+      columns: { locationId: string; sessionMode: string },
+      operators: {
+        and: (...conditions: string[]) => string;
+        eq: (column: string, value: string) => string;
+      },
+    ) => string;
+  }];
+  const comparisons: Array<[string, string]> = [];
+  query.where(
+    { locationId: "locationId", sessionMode: "sessionMode" },
+    {
+      and: (...conditions) => conditions.join(" AND "),
+      eq: (column, value) => {
+        comparisons.push([column, value]);
+        return `${column} = ${value}`;
+      },
+    },
+  );
+  expect(comparisons).toContainEqual(["sessionMode", "group"]);
+});
+
+test("returns only published posts for the selected site location", async () => {
+  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+  postRows.push({
+    id: "post-1",
+    title: "Training Tips",
+    slug: "training-tips",
+    featuredImageUrl: null,
+    publishedAt: new Date("2026-08-01T12:00:00.000Z"),
+    updated: null,
+  });
+
+  const response = await app.handle(
+    new Request("http://localhost/sites/site-1/locations/location-1/posts?page=1&limit=10"),
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    total: 1,
+    posts: [{
+      id: "post-1",
+      title: "Training Tips",
+      slug: "training-tips",
+      featuredImageUrl: null,
+      publishedAt: "2026-08-01T12:00:00.000Z",
+      updatedAt: null,
+    }],
+  });
+  expect(db.query.websiteContents.findMany).toHaveBeenCalled();
+});
+
+test("returns active products for the selected site location", async () => {
+  siteLocationRows = [{ siteId: "site-1", locationId: "location-1" }];
+  productRows.push({
+    id: "product-1",
+    slug: "academy-shirt",
+    name: "Academy Shirt",
+    category: "Apparel",
+    subCategory: null,
+    description: "Cotton shirt",
+    brand: null,
+    active: true,
+    created: new Date("2026-08-01T12:00:00.000Z"),
+    updated: null,
+    variants: [{
+      id: "variant-1",
+      productId: "product-1",
+      name: "Medium",
+      sku: "shirt-m",
+      color: null,
+      size: "M",
+      price: 2000,
+      salePrice: null,
+      stock: 5,
+      active: true,
+    }],
+    images: [],
+  });
+
+  const response = await app.handle(
+    new Request("http://localhost/sites/site-1/locations/location-1/products"),
+  );
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual([{
+    id: "product-1",
+    slug: "academy-shirt",
+    name: "Academy Shirt",
+    category: "Apparel",
+    subCategory: null,
+    description: "Cotton shirt",
+    brand: null,
+    active: true,
+    createdAt: "2026-08-01T12:00:00.000Z",
+    updatedAt: null,
+    variants: [{
+      id: "variant-1",
+      productId: "product-1",
+      name: "Medium",
+      sku: "shirt-m",
+      color: null,
+      size: "M",
+      price: 2000,
+      salePrice: null,
+      stock: 5,
+      active: true,
+    }],
+    images: [],
+  }]);
+  expect(db.query.products.findMany).toHaveBeenCalled();
+});
+
+test("rejects plan docs from a different selected location", async () => {
+  const response = await plansApp.handle(
+    new Request("http://localhost/plans/plan-foreign/docs"),
+  );
+
+  expect(response.status).toBe(404);
+  expect(db.query.memberPlans.findFirst).toHaveBeenCalled();
+});
+
+test("does not render a contract from another member or location", async () => {
+  const response = await docsApp.handle(
+    new Request("http://localhost/docs/doc-foreign/content"),
+  );
+
+  expect(response.status).toBe(404);
+  expect(db.query.memberContracts.findFirst).toHaveBeenCalled();
+});

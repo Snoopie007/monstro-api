@@ -1,4 +1,4 @@
-import type { AddonBundleCatalogOptions, AddonEditorInput, BundleEditorInput } from "@subtrees/types";
+import type { AddonBundleCatalogOptions, AddonEditorInput, BundleEditorInput } from "@/subtrees/types";
 import { describe, expect, test } from "bun:test";
 import { validateAddonEditorInput, validateBundleEditorInput } from "./input";
 

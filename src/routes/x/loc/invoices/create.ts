@@ -1,19 +1,24 @@
+import { getDeferredBilling, isDeferredFirstPeriod } from "@/subtrees/utils/deferredBilling";
+import { getNextCashCycle } from "@/subtrees/utils/cashBilling";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, eq } from "drizzle-orm";
-import { memberInvoices, memberSubscriptions, transactions } from "@subtrees/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import {
     calcTotals,
     createInvoiceBody,
     PENDING_TRANSACTION_PAYMENT_TYPE,
     PENDING_TRANSACTION_STATUS,
 } from "./shared";
-import { getCurrency } from "@/utils";
+import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
+import { CashInvoiceError, ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
+import { canEditLocationMember } from "@/utils/locationAccess";
 
 export async function createInvoiceRoutes(app: Elysia) {
-    return app.post("/", async ({ body, params, status }) => {
+    return app.post("/", async ctx => {
+        const { body, params, status } = ctx;
         const { lid } = params as { lid: string };
         const payload = Array.isArray(body) ? body[0] : body;
         if (!payload) {
@@ -28,6 +33,8 @@ export async function createInvoiceRoutes(app: Elysia) {
             paymentMethodId,
             subscriptionId,
             selectedSubscriptionId,
+            periodStart,
+            periodEnd,
             items,
             dueDate,
             description,
@@ -48,6 +55,12 @@ export async function createInvoiceRoutes(app: Elysia) {
             });
             return status(404, { error: "Member not found" });
         }
+        if (type === "one-off" && subscriptionId && collectionMethod === "charge_automatically") {
+            return status(400, {
+                error: "Subscription-linked automatic invoices must use the subscription payment retry flow",
+                code: "SUBSCRIPTION_RETRY_REQUIRED",
+            });
+        }
 
         if (type === "from-subscription") {
             // Subscription-generated invoices should use the subscription's own billing state.
@@ -60,8 +73,9 @@ export async function createInvoiceRoutes(app: Elysia) {
                 where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid), eq(s.memberId, memberId)),
                 with: {
                     location: {
-                        columns: {
-                            country: true,
+                        with: {
+                            locationState: true,
+                            taxRates: true,
                         },
                     },
                     pricing: {
@@ -72,30 +86,77 @@ export async function createInvoiceRoutes(app: Elysia) {
                 },
             });
 
-            if (!sub || !sub.pricing) {
-                return status(404, { error: "Subscription not found" });
+            if (!sub) {
+                return status(404, { error: "Subscription billing definition not found" });
+            }
+            if (sub.parentId) {
+                return status(400, { error: "Only root subscriptions can generate recurring invoices", code: "SUBSCRIPTION_CHILD" });
+            }
+            if (!sub.pricing) {
+                return status(404, { error: "Subscription billing definition not found" });
+            }
+            if (collectionMethod === "charge_automatically") {
+                return status(400, {
+                    error: "Subscription-linked automatic invoices must use the subscription payment retry flow",
+                    code: "SUBSCRIPTION_RETRY_REQUIRED",
+                });
             }
 
-            const lineItems = [{
-                name: `${sub.pricing.plan?.name || "Plan"}${sub.pricing.name ? ` - ${sub.pricing.name}` : ""}`,
-                description: sub.pricing.plan?.description || "",
-                quantity: 1,
-                price: sub.pricing.price,
-                discount,
-            }];
+            if (sub.paymentType === "cash") {
+                const actor = ctx as typeof ctx & { vendorId?: string; staffId?: string; userId?: string };
+                if (!await canEditLocationMember(lid, actor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
+                const now = new Date();
+                if (!["active", "past_due", "unpaid", "trialing"].includes(sub.status) || sub.startDate > now
+                    || (sub.trialEnd && sub.trialEnd > now) || (sub.cancelAt && sub.cancelAt <= now)) {
+                    return status(400, { error: "This subscription is not available for cash collection", code: "SUBSCRIPTION_NOT_COLLECTING" });
+                }
+                const renewal = sub.currentPeriodEnd <= now ? getNextCashCycle(sub, sub.location!.timezone) : null;
+                const start = new Date(periodStart ?? renewal?.periodStart ?? sub.currentPeriodStart);
+                const end = new Date(periodEnd ?? renewal?.periodEnd ?? sub.currentPeriodEnd);
+                if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return status(400, { error: "Invalid billing period" });
+                const quote = await buildSubscriptionInvoiceQuote({
+                    locationId: lid, subscriptionId: sub.id, parentId: sub.parentId,
+                    subscriptionMetadata: sub.metadata, pricing: sub.pricing, periodStart: start, periodEnd: end,
+                    memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId, location: sub.location,
+                    billingPhase: start.getTime() === sub.currentPeriodEnd.getTime() && sub.status !== "trialing" && !isDeferredFirstPeriod(getDeferredBilling(sub.metadata), start) ? "renewal" : undefined,
+                });
+                try {
+                    const result = await db.transaction(tx => ensureCashInvoice(tx, {
+                        subscriptionId: sub.id, memberId, locationId: lid, periodStart: start, periodEnd: end, quote,
+                    }));
+                    return status(result.created ? 201 : 200, result);
+                } catch (error) {
+                    if (error instanceof CashInvoiceError) return status(409, { error: error.message, code: error.code });
+                    throw error;
+                }
+            }
 
-            const { subtotal, total } = calcTotals(lineItems, tax, discount);
-            const currency = getCurrency(sub.location.country);
+            if (getDeferredBilling(sub.metadata)) return status(400, { error: "This subscription collects through its scheduled payment. Use Retry payment for an unpaid invoice." });
+
+            const quote = await buildSubscriptionInvoiceQuote({
+                locationId: lid,
+                subscriptionId: sub.id,
+                parentId: sub.parentId,
+                subscriptionMetadata: sub.metadata,
+                periodStart: new Date(periodStart ?? sub.currentPeriodStart),
+                periodEnd: new Date(periodEnd ?? sub.currentPeriodEnd),
+                pricing: sub.pricing,
+                memberPlanPricingId: sub.memberPlanPricingId,
+                promoId: sub.promoId,
+                location: sub.location,
+                discount,
+            });
+            const commissionBilling = sub.metadata?.commissionBilling as Record<string, unknown> | undefined;
             const [invoice] = await db.insert(memberInvoices).values({
                 memberId,
                 locationId: lid,
                 memberPlanId: sub.id,
-                description: description || `${sub.pricing.plan?.name || "Subscription"} billing period`,
-                items: lineItems,
-                subTotal: subtotal,
-                total,
-                tax,
-                currency: currency || "usd",
+                description: description || quote.invoiceDescription,
+                items: quote.items,
+                subTotal: quote.subTotal,
+                total: quote.total,
+                tax: quote.tax,
+                currency: quote.currency,
                 status: "draft",
                 dueDate: dueDate ? new Date(dueDate) : new Date(sub.currentPeriodEnd),
                 paymentType: sub.paymentType,
@@ -104,8 +165,13 @@ export async function createInvoiceRoutes(app: Elysia) {
                 forPeriodEnd: new Date(sub.currentPeriodEnd),
                 metadata: {
                     type: "from-subscription",
+                    commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+                    commissionBillingInterval: commissionBilling?.billingInterval,
+                    commissionBillingThreshold: commissionBilling?.billingThreshold,
+                    commissionVisitAllowance: commissionBilling?.visitAllowance,
                     subscriptionId: sub.id,
                     collectionMethod,
+                    platformFeeAmount: quote.platformFeeAmount,
                 },
             }).returning();
 
@@ -118,29 +184,33 @@ export async function createInvoiceRoutes(app: Elysia) {
                 return status(500, { error: "Failed to create invoice" });
             }
 
-            if (sub.paymentType === "cash") {
-                const [transaction] = await db.insert(transactions).values({
-                    memberId,
-                    locationId: lid,
-                    description: description || `${sub.pricing.plan?.name || "Subscription"} payment`,
-                    type: "inbound",
-                    status: PENDING_TRANSACTION_STATUS,
-                    paymentType: PENDING_TRANSACTION_PAYMENT_TYPE,
-                    total,
-                    subTotal: subtotal,
-                    tax,
-                    currency: currency || "usd",
-                    metadata: {
-                        intendedPaymentType: sub.paymentType,
-                        collectionMethod,
-                    },
-                }).returning({ id: transactions.id });
-                assert(transaction);
-                await db.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
-                invoice.transactionId = transaction.id;
-            }
-
             return status(201, { invoice });
+        }
+
+        if (type === "recurring" && subscriptionId) {
+            const recurringSubscription = await db.query.memberSubscriptions.findFirst({
+                where: (subscription, { and, eq }) => and(
+                    eq(subscription.id, subscriptionId),
+                    eq(subscription.locationId, lid),
+                    eq(subscription.memberId, memberId),
+                ),
+                columns: { parentId: true },
+            });
+            if (!recurringSubscription) {
+                return status(404, { error: "Subscription not found" });
+            }
+            if (recurringSubscription.parentId) {
+                return status(400, {
+                    error: "Only root subscriptions can generate recurring invoices",
+                    code: "SUBSCRIPTION_CHILD",
+                });
+            }
+            if (collectionMethod === "charge_automatically") {
+                return status(400, {
+                    error: "Subscription-linked automatic invoices must use the subscription payment retry flow",
+                    code: "SUBSCRIPTION_RETRY_REQUIRED",
+                });
+            }
         }
 
         if (!items || items.length === 0) {

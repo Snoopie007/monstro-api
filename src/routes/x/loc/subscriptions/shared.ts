@@ -4,6 +4,8 @@ export type PromoDiscount = {
     amount: number;
     duration: number;
     durationInMonths: number;
+    type: "fixed_amount" | "percentage";
+    value: number;
 };
 
 export async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {

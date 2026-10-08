@@ -1,7 +1,11 @@
+import { resolveInitialSubscriptionPricing } from "./effectivePricing";
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { calculateChargeDetails, getCurrency } from "@/utils";
+import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
 import {
     removeRenewalJobs,
     scheduleCronBasedRenewal,
@@ -13,17 +17,18 @@ import {
     memberSubscriptions,
     promos,
     transactions,
-} from "@subtrees/schemas";
-import type { SubscriptionJobData } from "@subtrees/bullmq/types";
+} from "@/subtrees/schemas";
+import type { SubscriptionJobData } from "@/subtrees/bullmq/types";
 import { and, eq, sql } from "drizzle-orm";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
+import Stripe from "stripe";
+import { BillingContextError, resolveSubscriptionBillingContext } from "./billingContext";
+import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
-import { resolveInitialSubscriptionPricing } from "./effectivePricing";
-
+import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 type GatewayService = "stripe" | "square";
-type SubscriptionPaymentMethod = { id: string; type: "card" | "us_bank_account" };
 type SquarePaymentResult = { id?: string; status?: string; receiptUrl?: string };
 
 function squareLocationIdFromMetadata(metadata: unknown) {
@@ -72,67 +77,47 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             },
         });
 
-        if (!sub || !sub.pricing || !sub.member || !sub.location) {
-            return status(404, { error: "Subscription not found" });
+        if (!sub || !sub.member || !sub.location || !sub.pricing) {
+            return status(404, { error: "Subscription billing definition not found" });
         }
-
-        const memberLocation = await db.query.memberLocations.findFirst({
-            where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
-            columns: {
-                gatewayCustomerId: true,
-            },
-        });
-
-        if (!memberLocation) {
-            return status(404, { error: "Member location not found" });
+        if (sub.parentId) {
+            return status(400, { error: "Only root subscriptions can be activated", code: "SUBSCRIPTION_CHILD" });
         }
-
-        if (sub.paymentType !== "cash" && !memberLocation.gatewayCustomerId) {
-            return status(400, { error: "Member location is missing gateway customer" });
-        }
-
         if (sub.paymentType === "cash") {
             return status(400, { error: "Use activate-cash for cash subscriptions" });
         }
-
-        const integration = sub.location.integrations?.find((candidate) => {
-            return candidate.id === sub.location?.locationState?.paymentGatewayId;
-        }) ?? sub.location.integrations?.[0];
-
-        if (!integration || !integration.accessToken) {
-            return status(404, { error: "Payment gateway integration not found" });
-        }
-
-        if (integration.service !== "stripe" && integration.service !== "square") {
-            return status(400, { error: "Unsupported payment gateway for subscriptions" });
-        }
-
-        if (integration.service === "stripe" && !integration.accountId) {
-            return status(404, { error: "Stripe integration not found" });
-        }
-
         if (!paymentMethodId) {
             return status(400, { error: "paymentMethodId is required" });
         }
 
+        let billingContext: SubscriptionBillingContext;
+        try {
+            billingContext = await resolveSubscriptionBillingContext(sub, {
+                paymentMethodId,
+                requirePaymentMethod: true,
+            });
+        } catch (error) {
+            if (error instanceof BillingContextError) {
+                const statusCode = error.code === "GATEWAY_NOT_FOUND" || error.code === "GATEWAY_NOT_CONFIGURED" ? 404 : 400;
+                return status(statusCode, { error: error.message, code: error.code });
+            }
+            throw error;
+        }
+        const integration = billingContext.gateway;
         const gatewayService = integration.service as GatewayService;
         const squareLocationId = gatewayService === "square"
             ? squareLocationIdFromMetadata(integration.metadata)
             : "";
-
         if (gatewayService === "square" && !squareLocationId) {
             return status(400, { error: "Square location ID not found" });
         }
-
-        const paymentMethod = await resolvePaymentMethod({
-            gatewayService,
-            accessToken: integration.accessToken,
-            gatewayCustomerId: memberLocation.gatewayCustomerId!,
-            paymentMethodId,
-            paymentType,
-        });
-
-        if (!paymentMethod.ok) return status(paymentMethod.statusCode, { error: paymentMethod.error });
+        const paymentMethod = {
+            ok: true as const,
+            value: {
+                id: billingContext.paymentMethodId!,
+                type: billingContext.paymentMethodType!,
+            },
+        };
 
         const nextBillingAt = getNextBillingDate(sub);
         const promoMeta = (sub.metadata?.promo as {
@@ -140,19 +125,50 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             discount?: PromoDiscount;
             applied?: boolean;
         } | undefined);
-        const discountAmount = promoMeta?.discount?.amount || 0;
+        const discount = promoMeta?.discount
+            ? {
+                type: promoMeta.discount.type ?? "fixed_amount",
+                value: promoMeta.discount.value ?? promoMeta.discount.amount,
+            }
+            : undefined;
         const location = sub.location;
         const currency = getCurrency(location.country);
+        const billingQuote = getSubscriptionBillingQuote(sub);
+
+        if (getDeferredBilling(sub.metadata)) {
+            if (sub.status === "active" && sub.gatewayPaymentId !== paymentMethod.value.id) return status(409, { error: "Use the subscription payment method editor to change its payment method" });
+            if (!["incomplete", "active"].includes(sub.status)) return status(409, { error: "This subscription cannot be activated" });
+            if (sub.status === "incomplete" && new Date(sub.currentPeriodEnd).getTime() <= Date.now()) return status(409, { error: "The first payment date has passed. Create a new enrollment.", code: "FIRST_PAYMENT_DATE_PASSED" });
+            const payload = buildRenewalPayload({ sub, lid, location,
+                memberLocationGatewayCustomerId: billingContext.gatewayCustomerId, currency,
+                taxRate: location.taxRates?.find(t => t.isDefault)?.percentage || 0,
+                promoMeta, billingQuote, expectedDueAt: nextBillingAt });
+            await db.transaction(async tx => {
+                await tx.update(memberSubscriptions).set({
+                    gatewayPaymentId: paymentMethod.value.id,
+                    metadata: { ...sub.metadata, paymentMethodId: paymentMethod.value.id, gatewayService,
+                        gatewayIntegrationId: integration.id, gatewayCustomerId: billingContext.gatewayCustomerId },
+                    status: "active", updated: new Date(),
+                }).where(eq(memberSubscriptions.id, sid));
+
+                await tx.update(memberLocations).set({ status: "active", updated: new Date() }).where(and(
+                    eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
+                await scheduleRecursiveRenewal({ startDate: nextBillingAt, data: { ...payload, recurrenceCount: 1 } });
+            });
+            return status(200, { status: "active", nextBillingAt, scheduledJobKey: `renewal:${sid}` });
+        }
 
         if (sub.status === "trialing" && sub.trialEnd && isFuture(sub.trialEnd)) {
             const payload = buildRenewalPayload({
                 sub,
                 lid,
                 location,
-                memberLocationGatewayCustomerId: memberLocation.gatewayCustomerId || null,
+                memberLocationGatewayCustomerId: billingContext.gatewayCustomerId,
                 currency,
                 taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
                 promoMeta,
+                billingQuote,
+                expectedDueAt: gatewayService === "stripe" && getStripeMigration(sub.metadata) ? nextBillingAt : undefined,
             });
 
             await db.update(memberSubscriptions).set({
@@ -161,15 +177,16 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     ...(sub.metadata || {}),
                     paymentMethodId: paymentMethod.value.id,
                     gatewayService,
+                    gatewayIntegrationId: integration.id,
+                    gatewayCustomerId: billingContext.gatewayCustomerId,
                 },
-                updated: new Date(),
             }).where(eq(memberSubscriptions.id, sub.id));
 
             await removeRenewalJobs(sub.id);
-            if (["month", "year"].includes(sub.pricing.interval || "") && sub.pricing.intervalThreshold === 1) {
+            if (["month", "year"].includes(billingQuote.interval) && billingQuote.intervalThreshold === 1) {
                 await scheduleCronBasedRenewal({
                     startDate: nextBillingAt,
-                    interval: sub.pricing.interval as "month" | "year",
+                    interval: billingQuote.interval as "month" | "year",
                     data: payload,
                 });
             } else {
@@ -182,6 +199,15 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 });
             }
 
+            // Payment setup and renewal scheduling succeeded. Saving the draft alone does not count.
+            if (!sub.parentId) {
+                await db.transaction(tx => dispatchWorkflowTrigger(tx, {
+                    type: WorkflowEvents.trial.CHECKED_OUT,
+                    locationId: lid,
+                    memberId: sub.memberId,
+                }));
+            }
+
             return status(200, {
                 status: "trialing",
                 nextBillingAt,
@@ -190,14 +216,17 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         }
         // Defer first charge to future startDate
         if (isFuture(sub.startDate)) {
+            const firstBillingAt = new Date(sub.startDate);
             const payload = buildRenewalPayload({
                 sub,
                 lid,
                 location,
-                memberLocationGatewayCustomerId: memberLocation.gatewayCustomerId || null,
+                memberLocationGatewayCustomerId: billingContext.gatewayCustomerId,
                 currency,
                 taxRate: sub.location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
                 promoMeta,
+                billingQuote,
+                expectedDueAt: gatewayService === "stripe" && getStripeMigration(sub.metadata) ? firstBillingAt : undefined,
             });
 
             await db.update(memberSubscriptions).set({
@@ -206,17 +235,17 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     ...(sub.metadata || {}),
                     paymentMethodId: paymentMethod.value.id,
                     gatewayService,
+                    gatewayIntegrationId: integration.id,
+                    gatewayCustomerId: billingContext.gatewayCustomerId,
                 },
-                updated: new Date(),
             }).where(eq(memberSubscriptions.id, sub.id));
 
             await removeRenewalJobs(sub.id);
 
-            const firstBillingAt = new Date(sub.startDate);
-            if (["month", "year"].includes(sub.pricing.interval || "") && sub.pricing.intervalThreshold === 1) {
+            if (["month", "year"].includes(billingQuote.interval) && billingQuote.intervalThreshold === 1) {
                 await scheduleCronBasedRenewal({
                     startDate: firstBillingAt,
-                    interval: sub.pricing.interval as "month" | "year",
+                    interval: billingQuote.interval as "month" | "year",
                     data: payload,
                 });
             } else {
@@ -238,41 +267,38 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         }
 
         const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
-        const pricingResolution = await resolveInitialSubscriptionPricing(sub.id);
-        const { pricing, basePricing, pricingSource } = pricingResolution;
-        const planName = `${sub.pricing.plan?.name || "Plan"}/${pricing.name}`;
-        const billedAmount = pricingSource.type === "bundle"
-            ? pricing.price
-            : sub.pricing.downpayment || pricing.price;
-        const locationState = sub.location?.locationState;
-        const isGrowthPlan = locationState?.planId === 3;
+        const { pricing, basePricing, pricingSource } = await resolveInitialSubscriptionPricing(sub.id);
+        const planName = sub.pricing?.plan?.name
+            ? `${sub.pricing.plan.name}/${pricing.name}`
+            : pricing.name;
+        const isDownpayment = pricingSource.type !== "bundle" && !!sub.pricing.downpayment;
+        const billedAmount = isDownpayment ? sub.pricing.downpayment! : pricing.price;
+        const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
         const chargeDetails = calculateChargeDetails({
             amount: billedAmount,
-            discount: discountAmount,
+            discount,
             taxRate: taxRate?.percentage ?? 0,
-            usagePercent: sub.location.locationState?.usagePercent ?? 0,
-            paymentType: paymentMethod.value.type,
-            isRecurring: isGrowthPlan ? false : !sub.pricing.downpayment,
-            passOnFees: sub.location.locationState?.settings?.passOnFees ?? false,
+            planId: sub.location.locationState?.planId ?? 0,
+            additionalFees,
         });
-
         const lineItems = [{
             name: planName,
-            description: sub.pricing.downpayment ? "Subscription downpayment" : "Subscription billing period",
+            description: isDownpayment ? "Subscription downpayment" : "Subscription billing period",
             quantity: 1,
-            price: billedAmount,
-            discount: discountAmount,
+            price: chargeDetails.unitCost,
+            discount: chargeDetails.productDiscount,
             billingSource: { type: "subscription" as const, memberSubscriptionId: sub.id },
             pricingSource,
             basePlanPricingId: basePricing.id,
             effectivePlanPricingId: pricing.id,
-        }];
+        }, ...chargeDetails.additionalFeeLines];
 
+        const commissionBilling = sub.metadata?.commissionBilling as Record<string, unknown> | undefined;
         const [invoice] = await db.insert(memberInvoices).values({
             memberId: sub.memberId,
             locationId: lid,
             memberPlanId: sub.id,
-            description: sub.pricing.downpayment
+            description: isDownpayment
                 ? `Downpayment for ${planName}`
                 : `${pricing.name} - Billing Period`,
             items: lineItems,
@@ -288,9 +314,16 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             forPeriodEnd: new Date(sub.currentPeriodEnd),
             metadata: {
                 type: "from-subscription",
+                commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+                commissionBillingInterval: commissionBilling?.billingInterval,
+                commissionBillingThreshold: commissionBilling?.billingThreshold,
+                commissionVisitAllowance: commissionBilling?.visitAllowance,
                 subscriptionId: sub.id,
                 collectionMethod: "charge_automatically",
                 gatewayService,
+                gatewayIntegrationId: integration.id,
+                gatewayCustomerId: billingContext.gatewayCustomerId,
+                platformFeeAmount: chargeDetails.feesAmount,
             },
         }).returning({
             id: memberInvoices.id,
@@ -300,18 +333,21 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             return status(500, { error: "Failed to create invoice for activation" });
         }
 
-        const chargeDescription = sub.pricing.downpayment
+        const chargeDescription = isDownpayment
             ? `Downpayment for ${planName}`
             : `Payment for ${planName}`;
         let paymentIntentId: string;
         let squarePayment: SquarePaymentResult | undefined;
 
         try {
-            if (gatewayService === "stripe") {
-                const stripe = new StripePaymentGateway(integration.accessToken);
+            if (chargeDetails.total === 0) {
+                paymentIntentId = `free_${invoice.id}`;
+            } else if (gatewayService === "stripe") {
+                const stripe = new StripePaymentGateway(integration.accessToken!);
                 const paymentResult = await withTimeout(
-                    stripe.createCharge(memberLocation.gatewayCustomerId!, paymentMethod.value.id, {
-                        ...chargeDetails,
+                    stripe.createChargeWithoutLineItems(billingContext.gatewayCustomerId, paymentMethod.value.id, {
+                        total: chargeDetails.total,
+                        feesAmount: chargeDetails.feesAmount,
                         description: chargeDescription,
                         metadata: {
                             lid,
@@ -322,7 +358,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                             memberSubscriptionId: sub.id,
                             gatewayService,
                         },
-                        productName: planName,
                         currency: currency || "usd",
                     }),
                     30000,
@@ -330,9 +365,9 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 );
                 paymentIntentId = paymentResult.id;
             } else {
-                const square = new SquarePaymentGateway(integration.accessToken);
+                const square = new SquarePaymentGateway(integration.accessToken!);
                 squarePayment = await withTimeout(
-                    square.createCharge(memberLocation.gatewayCustomerId!, paymentMethod.value.id, {
+                    square.createCharge(billingContext.gatewayCustomerId, paymentMethod.value.id, {
                         ...chargeDetails,
                         currency: currency || "USD",
                         referenceId: invoice.id,
@@ -351,6 +386,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : "Failed to process payment";
+            const stripeError = error instanceof Stripe.errors.StripeError ? error : null;
             console.error("[x/subscriptions/activate] process payment failed", {
                 lid,
                 sid,
@@ -358,23 +394,47 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 paymentMethodId,
                 gatewayService,
                 message,
+                stripeType: stripeError?.type,
+                stripeCode: stripeError?.code,
+                stripeDeclineCode: stripeError?.decline_code,
+                stripeParam: stripeError?.param,
+                stripeRequestId: stripeError?.requestId,
+                stripeStatusCode: stripeError?.statusCode,
             });
-            return status(502, { error: message });
+            if (!stripeError) return status(502, { error: message });
+            return status(502, {
+                error: message,
+                code: stripeError.code || "STRIPE_ERROR",
+                details: {
+                    type: stripeError.type,
+                    declineCode: stripeError.decline_code,
+                    param: stripeError.param,
+                    requestId: stripeError.requestId,
+                    statusCode: stripeError.statusCode,
+                },
+            });
         }
 
+        const finalizedImmediately = gatewayService === "square" || chargeDetails.total === 0;
         try {
             await db.transaction(async (tx) => {
                 await tx.update(memberInvoices).set({
-                    status: gatewayService === "square" ? "paid" : "sent",
-                    ...(gatewayService === "square" ? { paid: true, receiptUrl: squarePayment?.receiptUrl ?? null } : {}),
+                    status: finalizedImmediately ? "paid" : "sent",
+                    ...(finalizedImmediately ? { paid: true, receiptUrl: squarePayment?.receiptUrl ?? null } : {}),
                     sentAt: new Date(),
                     updated: new Date(),
                     metadata: {
                         type: "from-subscription",
+                        commissionAllowanceInterval: commissionBilling?.allowanceInterval,
+                        commissionBillingInterval: commissionBilling?.billingInterval,
+                        commissionBillingThreshold: commissionBilling?.billingThreshold,
+                        commissionVisitAllowance: commissionBilling?.visitAllowance,
                         subscriptionId: sub.id,
                         collectionMethod: "charge_automatically",
                         paymentIntentId,
                         gatewayService,
+                        platformFeeAmount: chargeDetails.feesAmount,
+                        ...(chargeDetails.total === 0 ? { noCharge: true } : {}),
                         ...(gatewayService === "square" ? {
                             paymentMethodId: paymentMethod.value.id,
                             squarePaymentId: squarePayment?.id,
@@ -386,12 +446,14 @@ export async function activateSubscriptionRoutes(app: Elysia) {
 
                 await tx.update(memberSubscriptions).set({
                     gatewayPaymentId: paymentMethod.value.id,
-                    ...(gatewayService === "square" ? { status: "active" } : {}),
+                    ...(finalizedImmediately ? { status: "active" } : {}),
                     metadata: {
                         ...(sub.metadata || {}),
-                        hasPaidDownpayment: !!sub.pricing.downpayment,
+                        hasPaidDownpayment: isDownpayment,
                         paymentMethodId: paymentMethod.value.id,
                         gatewayService,
+                        gatewayIntegrationId: integration.id,
+                        gatewayCustomerId: billingContext.gatewayCustomerId,
                         ...(promoMeta && {
                             promo: {
                                 ...promoMeta,
@@ -401,7 +463,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     },
                 }).where(eq(memberSubscriptions.id, sub.id));
 
-                if (gatewayService === "square") {
+                if (finalizedImmediately) {
                     const txValues = {
                         memberId: sub.memberId,
                         locationId: lid,
@@ -420,6 +482,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                             memberPlanId: sub.id,
                             memberSubscriptionId: sub.id,
                             gatewayService,
+                            ...(chargeDetails.total === 0 ? { noCharge: true } : {}),
                             squarePaymentId: squarePayment?.id,
                             chargeId: squarePayment?.id,
                             squarePaymentStatus: squarePayment?.status,
@@ -473,19 +536,22 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             sub,
             lid,
             location: sub.location,
-            memberLocationGatewayCustomerId: memberLocation.gatewayCustomerId || null,
+            memberLocationGatewayCustomerId: billingContext.gatewayCustomerId,
             currency,
             taxRate: taxRate?.percentage || 0,
             promoMeta,
+            billingQuote,
+            expectedDueAt: gatewayService === "stripe" && getStripeMigration(sub.metadata) ? nextBillingAt : undefined,
+            discountAlreadyApplied: true,
         });
 
         try {
             await withTimeout(removeRenewalJobs(sub.id), 15000, "Redis timeout removing old renewal jobs");
-            if (["month", "year"].includes(sub.pricing.interval || "") && sub.pricing.intervalThreshold === 1) {
+            if (["month", "year"].includes(billingQuote.interval) && billingQuote.intervalThreshold === 1) {
                 await withTimeout(
                     scheduleCronBasedRenewal({
                         startDate: nextBillingAt,
-                        interval: sub.pricing.interval as "month" | "year",
+                        interval: billingQuote.interval as "month" | "year",
                         data: payload,
                     }),
                     15000,
@@ -530,52 +596,14 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             paymentType: t.Optional(t.Union([
                 t.Literal("card"),
                 t.Literal("us_bank_account"),
+                t.Literal("link"),
+                t.Literal("cashapp"),
             ])),
             confirmNow: t.Optional(t.Boolean()),
         }),
     });
 }
 
-async function resolvePaymentMethod({
-    gatewayService,
-    accessToken,
-    gatewayCustomerId,
-    paymentMethodId,
-    paymentType,
-}: {
-    gatewayService: GatewayService;
-    accessToken: string;
-    gatewayCustomerId: string;
-    paymentMethodId: string;
-    paymentType?: "card" | "us_bank_account";
-}): Promise<
-    | { ok: true; value: SubscriptionPaymentMethod }
-    | { ok: false; statusCode: number; error: string }
-> {
-    if (gatewayService === "stripe") {
-        if (!paymentType) {
-            return { ok: false, statusCode: 400, error: "paymentType is required for Stripe subscription activation" };
-        }
-        return { ok: true, value: { id: paymentMethodId, type: paymentType } };
-    }
-
-    if (paymentMethodId.startsWith("cnon:")) {
-        return { ok: false, statusCode: 400, error: "Saved Square card is required for subscription activation" };
-    }
-
-    if (gatewayCustomerId.startsWith("cus_")) {
-        return { ok: false, statusCode: 400, error: "Member location does not have a Square customer ID" };
-    }
-
-    const square = new SquarePaymentGateway(accessToken);
-    try {
-        await square.retrieveCardForCustomer(gatewayCustomerId, paymentMethodId);
-    } catch {
-        return { ok: false, statusCode: 400, error: "Selected Square card is not available for this member" };
-    }
-
-    return { ok: true, value: { id: paymentMethodId, type: "card" } };
-}
 
 function buildRenewalPayload({
     sub,
@@ -585,10 +613,13 @@ function buildRenewalPayload({
     currency,
     taxRate,
     promoMeta,
+    billingQuote,
+    expectedDueAt,
+    discountAlreadyApplied = false,
 }: {
     sub: NonNullable<Awaited<ReturnType<typeof db.query.memberSubscriptions.findFirst>>> & {
         member: { firstName: string; lastName: string | null; email: string };
-        pricing: { name: string; price: number; interval: string | null; intervalThreshold: number | null };
+        pricing?: { name: string; price: number; interval: string | null; intervalThreshold: number | null } | null;
     };
     lid: string;
     location: {
@@ -601,7 +632,14 @@ function buildRenewalPayload({
     currency: string;
     taxRate: number;
     promoMeta: { discount?: PromoDiscount } | undefined;
+    billingQuote: { name: string; price: number; interval: "day" | "week" | "month" | "year"; intervalThreshold: number };
+    expectedDueAt?: Date;
+    discountAlreadyApplied?: boolean;
 }): SubscriptionJobData {
+    const remainingDiscountPayments = promoMeta?.discount
+        ? Math.max(0, promoMeta.discount.duration - (discountAlreadyApplied ? 1 : 0))
+        : 0;
+    const renewalPricing = billingQuote;
     return {
         sid: sub.id,
         lid,
@@ -618,11 +656,19 @@ function buildRenewalPayload({
         },
         taxRate,
         pricing: {
-            name: sub.pricing.name,
-            price: sub.pricing.price,
-            interval: sub.pricing.interval as "day" | "week" | "month" | "year",
-            intervalThreshold: sub.pricing.intervalThreshold!,
+            name: renewalPricing.name,
+            price: renewalPricing.price,
+            interval: renewalPricing.interval as "day" | "week" | "month" | "year",
+            intervalThreshold: renewalPricing.intervalThreshold!,
         },
-        ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
+        ...((expectedDueAt && (getStripeMigration(sub.metadata) || getDeferredBilling(sub.metadata))) ? { expectedDueAt: expectedDueAt.toISOString() } : {}),
+        ...(promoMeta?.discount && remainingDiscountPayments > 0
+            ? {
+                discount: {
+                    ...promoMeta.discount,
+                    duration: remainingDiscountPayments,
+                },
+            }
+            : {}),
     };
 }

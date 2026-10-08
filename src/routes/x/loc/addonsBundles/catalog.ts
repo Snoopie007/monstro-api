@@ -8,7 +8,7 @@ import {
   memberPlanPricing,
   memberPlans,
   memberSubscriptionAddons,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import type {
   Addon,
   AddonBundleCatalogOptions,
@@ -19,7 +19,7 @@ import type {
   BundleCatalogItem,
   BundleComponent,
   BundleEditorInput,
-} from "@subtrees/types";
+} from "@/subtrees/types";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 type CatalogReader = Pick<typeof db, "query" | "select">;

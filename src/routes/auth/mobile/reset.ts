@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { EmailSender } from "@/libs/email";
 import { getRedisClient } from "@/libs/redis";
 import { generateOtp } from "@/utils/userUtils";
-import { accounts } from "@subtrees/schemas";
+import { accounts } from "@/subtrees/schemas";
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
@@ -105,7 +105,7 @@ export async function mobileResetPassword(app: Elysia) {
                 await redis.set(redisKey, `${code}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt });
                 await sendResetEmail({
                     name: user.name,
-                    email: 'steve00006@gmail.com',
+                    email: user.email,
                     code,
                 });
             }

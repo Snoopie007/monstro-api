@@ -1,8 +1,6 @@
 import { Elysia, t } from "elysia";
 import { publicLocationPaymentGateway } from "./PaymentGateway";
-import { db } from "@/db/db";
-
-
+import { getLocationById } from "@/handlers/location";
 
 export const publicLocationRoutes = new Elysia({ prefix: "/loc" })
     .group('/:lid', (app) => {
@@ -10,28 +8,11 @@ export const publicLocationRoutes = new Elysia({ prefix: "/loc" })
         app.get('/', async ({ params, status }) => {
             const { lid } = params;
             try {
-                const location = await db.query.locations.findFirst({
-                    where: (l, { eq }) => eq(l.id, lid),
-                    with: {
-                        taxRates: true,
-                        locationState: true,
-                    },
-                });
-
+                const location = await getLocationById(lid);
                 if (!location) {
-                    return status(404, { error: 'Location not found' });
+                    return status(404, { error: "Location not found" });
                 }
-
-
-                let defaultTaxRate = location.taxRates.find((taxRate) => taxRate.isDefault);
-                if (!defaultTaxRate) {
-                    defaultTaxRate = location.taxRates[0] || undefined;
-                }
-
-                return status(200, {
-                    ...location,
-                    taxRate: defaultTaxRate,
-                });
+                return status(200, location);
             } catch (error) {
                 console.error("Failed to get location", error);
                 return status(500, { error: "Failed to get location" });

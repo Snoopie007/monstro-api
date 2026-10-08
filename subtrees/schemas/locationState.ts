@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { GMBLocation, LocationSettings } from "../types";
 import type { Currency } from "../types/currency";
-import { LocationStatusEnum } from "./DatabaseEnums";
+import { LocationStatusEnum, ProgramSessionModeEnum } from "./DatabaseEnums";
 import { integrations } from "./integrations";
 import { locations } from "./locations";
 
@@ -21,6 +21,7 @@ export const locationState = pgTable("location_state", {
 	currency: text("currency").$type<Currency>().notNull().default("UNKNOWN_CURRENCY"),
 	agreeToTerms: boolean("agree_to_terms").notNull().default(false),
 	allowAppCheckIns: boolean("allow_app_check_ins").notNull().default(true),
+	defaultProgramMode: ProgramSessionModeEnum("default_program_mode").notNull().default("group"),
 	lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true, }).defaultNow(),
 	startDate: timestamp("start_date", { withTimezone: true }),
 	settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),

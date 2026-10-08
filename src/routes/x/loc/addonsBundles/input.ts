@@ -3,7 +3,7 @@ import type {
   AddonBundlePlanPricingOption,
   AddonEditorInput,
   BundleEditorInput,
-} from "@subtrees/types";
+} from "@/subtrees/types";
 import { t } from "elysia";
 
 const addonBodyFields = {

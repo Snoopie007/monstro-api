@@ -1,6 +1,13 @@
-import type { ExtendedVendorUser } from '@subtrees/types/auth';
+import type { ExtendedVendorUser } from '@/subtrees/types/auth';
 import { Elysia } from 'elysia';
 import { errors, jwtVerify } from 'jose';
+
+/** Identity supplied by AuthMiddleware after verifying the mobile/service token. */
+export type AuthContext = {
+    memberId: string | null;
+    userId: string | null;
+    isServiceRole: boolean;
+};
 
 type MobileTokenReturnType = {
     ok: boolean;
@@ -52,9 +59,14 @@ type VendorTokenReturnType = {
         staffId?: string;
         userRole?: string;
         userId: string;
+        isServiceRole: boolean;
     } | null;
     code: string;
 }
+
+export type AuthXContext = {
+    isServiceRole: boolean;
+};
 
 
 async function verifyTokenX(token: string): Promise<VendorTokenReturnType> {
@@ -72,7 +84,7 @@ async function verifyTokenX(token: string): Promise<VendorTokenReturnType> {
 
         const { payload } = await jwtVerify(token, secret, { clockTolerance: '999y' });
         const user = payload as ExtendedVendorUser;
-        const userId = payload.sub as string; // Extract userId from sub field
+        const userId = typeof payload.sub === "string" ? payload.sub : "service_role";
 
         return {
             ok: true,
@@ -81,6 +93,7 @@ async function verifyTokenX(token: string): Promise<VendorTokenReturnType> {
                 staffId: user.staffId || user.user_metadata?.staffId,
                 userRole: user.userRole || user.user_metadata?.role,
                 userId,
+                isServiceRole: payload.role === "service_role",
             },
             code: "SUCCESS",
         };
@@ -182,9 +195,9 @@ export async function AuthXMiddleware(app: Elysia) {
             });
         };
 
-        const { vendorId, staffId, userId, userRole } = res.data;
+        const { vendorId, staffId, userId, userRole, isServiceRole } = res.data;
 
-        return { vendorId, staffId, userId, userRole };
+        return { vendorId, staffId, userId, userRole, isServiceRole };
 
     })
 }

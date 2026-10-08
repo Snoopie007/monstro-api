@@ -1,8 +1,11 @@
+import { getNextCashCycle } from "@/subtrees/utils/cashBilling";
+import { getDeferredBilling, isDeferredFirstPeriod } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { calcTotals } from "./shared";
-import { getCurrency } from "@/utils";
+import { getCurrency } from "@/utils/getCurrency";
+import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
 
 export async function previewInvoiceRoutes(app: Elysia) {
     return app.post("/preview", async ({ body, params, status }) => {
@@ -43,30 +46,46 @@ export async function previewInvoiceRoutes(app: Elysia) {
             }
             const sub = await db.query.memberSubscriptions.findFirst({
                 where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid), eq(s.memberId, memberId)),
-                with: { pricing: { with: { plan: true } } },
+                with: {
+                    pricing: { with: { plan: true } },
+                    location: {
+                        with: {
+                            locationState: true,
+                            taxRates: true,
+                        },
+                    },
+                },
             });
             if (!sub || !sub.pricing) {
-                return status(404, { error: "Subscription not found" });
+                return status(404, { error: "Subscription billing definition not found" });
             }
 
-            const previewItems = [{
-                name: `${sub.pricing.plan?.name || "Plan"} - ${sub.pricing.name}`,
-                quantity: 1,
-                price: sub.pricing.price,
-                description: sub.pricing.plan?.description || "",
-            }];
-            const totals = calcTotals(previewItems, tax, discount);
+            const cycle = sub.currentPeriodEnd <= new Date() ? getNextCashCycle(sub, sub.location.timezone) : null;
+            const quote = await buildSubscriptionInvoiceQuote({
+                locationId: lid,
+                subscriptionId: sub.id,
+                parentId: sub.parentId,
+                subscriptionMetadata: sub.metadata,
+                periodStart: new Date(cycle?.periodStart ?? sub.currentPeriodStart),
+                periodEnd: new Date(cycle?.periodEnd ?? sub.currentPeriodEnd),
+                pricing: sub.pricing,
+                memberPlanPricingId: sub.memberPlanPricingId,
+                promoId: sub.promoId,
+                location: sub.location,
+                discount: sub.paymentType === "cash" ? undefined : discount,
+                billingPhase: sub.paymentType === "cash" && sub.currentPeriodEnd <= new Date() && sub.status !== "trialing" && !isDeferredFirstPeriod(getDeferredBilling(sub.metadata), sub.currentPeriodEnd) ? "renewal" : undefined,
+            });
             return status(200, {
                 preview: {
-                    subtotal: totals.subtotal,
-                    tax_total: tax,
-                    amount_due: totals.total,
-                    currency: currency || "usd",
-                    formatted_lines: previewItems.map((item) => ({
-                        description: `${item.name}${item.description ? ` - ${item.description}` : ""}`,
-                        amount: item.price * item.quantity,
+                    subtotal: quote.subTotal,
+                    tax_total: quote.tax,
+                    amount_due: quote.total,
+                    currency: quote.currency,
+                    formatted_lines: quote.items.map((item) => ({
+                        description: item.name,
+                        amount: item.price * item.quantity - ("discount" in item ? (item.discount ?? 0) : 0),
                         quantity: item.quantity,
-                        currency: currency || "usd",
+                        currency: quote.currency,
                     })),
                     customer_info: {
                         name: `${member.firstName} ${member.lastName}`,
@@ -74,12 +93,13 @@ export async function previewInvoiceRoutes(app: Elysia) {
                     },
                 },
                 summary: {
-                    total_items: previewItems.length,
-                    subtotal_cents: totals.subtotal,
-                    tax_cents: tax,
-                    discount_cents: discount,
-                    total_cents: totals.total,
-                    currency: currency || "usd",
+                    total_items: quote.items.length,
+                    subtotal_cents: quote.subTotal,
+                    additional_fee_cents: quote.additionalFeeTotal,
+                    tax_cents: quote.tax,
+                    discount_cents: quote.discount,
+                    total_cents: quote.total,
+                    currency: quote.currency,
                 },
             });
         }

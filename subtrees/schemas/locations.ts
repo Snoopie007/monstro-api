@@ -9,6 +9,16 @@ import {
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { vendors } from "./vendors";
 
+export function normalizeLocationSlug(value: string): string {
+	return value
+		.normalize("NFKD")
+		.replace(/\p{M}/gu, "")
+		.toLowerCase()
+		.replace(/[’']/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+}
+
 export const locations = pgTable("locations", {
 	id: uuid("id")
 		.primaryKey()

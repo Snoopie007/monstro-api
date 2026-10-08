@@ -2,10 +2,11 @@ import { db } from "@/db/db";
 import {
     handleFreeEventRegistration,
     handlePaidEventRegistration,
-    mapEventRegistrationError,
+    mapEventRegistrationError
 } from "@/handlers/event";
 import { Elysia, t } from "elysia";
 import { randomUUID } from "node:crypto";
+import type { AuthContext } from "@/middlewares/AuthMW";
 
 const EventRegisterParams = t.Object({
     lid: t.String(),
@@ -24,10 +25,8 @@ const EventRegisterBody = t.Object({
 
 export async function locationEventRoutes(app: Elysia) {
     app.get("/events", async ({ params, status }) => {
-
         const today = new Date();
         const { lid } = params;
-
         try {
             const events = await db.query.locationEvents.findMany({
                 where: (locationEvents, { eq, and, gte }) => and(
@@ -46,12 +45,12 @@ export async function locationEventRoutes(app: Elysia) {
     }, {
         params: t.Object({
             lid: t.String(),
-        }),
+
+        })
     })
 
     app.get('/events/upcoming', async ({ params, status }) => {
         const { lid } = params;
-        const today = new Date();
         try {
             const event = await db.query.locationEvents.findFirst({
                 where: (locationEvents, { eq }) => eq(locationEvents.locationId, lid),
@@ -89,10 +88,16 @@ export async function locationEventRoutes(app: Elysia) {
                 eventId: t.String(),
             }),
         });
-        app.post('/register/free', async ({ params, body, status }) => {
+        app.post('/register/free', async (context) => {
+            const { params, body, status } = context;
+            const actor = context as typeof context & AuthContext;
             const { eventId, lid } = params;
             const { mid, ticketId } = body;
 
+            // This is the member route. Staff use their separate registration route.
+            if (actor.isServiceRole !== true && actor.memberId !== mid) {
+                return status(403, { error: "Cannot register another member" });
+            }
             try {
                 const registration = await handleFreeEventRegistration({
                     lid,
@@ -108,10 +113,16 @@ export async function locationEventRoutes(app: Elysia) {
             params: EventRegisterParams,
             body: EventRegisterBody,
         });
-        app.post('/register', async ({ params, body, status }) => {
+        app.post('/register', async (context) => {
+            const { params, body, status } = context;
+            const actor = context as typeof context & AuthContext;
             const { eventId, lid } = params;
             const { mid, ticketId, paymentMethodId, paymentType, attemptId } = body;
 
+            // Check identity before attempting a charge or creating a registration.
+            if (actor.isServiceRole !== true && actor.memberId !== mid) {
+                return status(403, { error: "Cannot register another member" });
+            }
             try {
                 const registration = await handlePaidEventRegistration({
                     lid,

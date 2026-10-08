@@ -1,9 +1,11 @@
-import type { AddonEditorInput, BundleEditorInput } from "@subtrees/types";
-import { expect, test } from "bun:test";
+import type { AddonEditorInput, BundleEditorInput } from "@/subtrees/types";
+import { expect, mock, test } from "bun:test";
 import { eq, inArray } from "drizzle-orm";
 import { Elysia } from "elysia";
 
 test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and versions purchased definitions", async () => {
+	if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(Bun.env.DATABASE_URL!).hostname)) throw new Error("Local Postgres required");
+	mock.module("@/queues", () => ({ enqueueSubscriptionAddonJob: async () => ({ id: "catalog-test" }) }));
 	const { db } = await import("@/db/db");
 	const {
 		addonPlanPriceOverrides,
@@ -20,7 +22,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		members,
 		users,
 		vendors,
-	} = await import("@subtrees/schemas");
+	} = await import("@/subtrees/schemas");
 	const {
 		archiveAddon,
 		archiveBundle,

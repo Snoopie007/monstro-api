@@ -3,7 +3,7 @@ import {
   addonPlanPriceOverrides,
   memberSubscriptionAddons,
   memberSubscriptions,
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import { hasConflictingReplacementPricing } from "./subscriptionAddonPricingRules";
 

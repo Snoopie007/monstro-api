@@ -1,8 +1,10 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { memberLocations, memberPackages, memberPasses } from "@subtrees/schemas";
+import { WorkflowEvents } from "@/subtrees/constants/workflow";
+import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
+import { memberLocations, memberPackages, memberPasses } from "@/subtrees/schemas";
 import { calculateThresholdDate } from "@/utils";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 const LocationPassProps = {
     params: t.Object({
@@ -23,7 +25,10 @@ export function locationPass(app: Elysia) {
 
             try {
                 const pass = await db.query.memberPasses.findFirst({
-                    where: (memberPasses, { eq }) => eq(memberPasses.id, passId),
+                    where: (memberPasses, { eq, and }) => and(
+                        eq(memberPasses.id, passId),
+                        eq(memberPasses.locationId, lid),
+                    ),
                 });
                 if (!pass) {
                     return status(404, {
@@ -43,7 +48,11 @@ export function locationPass(app: Elysia) {
                 }
                 // Typo fix: reference to memberPlans in query - import if necessary
                 const plan = await db.query.memberPlans.findFirst({
-                    where: (memberPlans, { eq }) => eq(memberPlans.id, pass.planId),
+                    where: (memberPlans, { eq, and }) => and(
+                        eq(memberPlans.id, pass.planId),
+                        eq(memberPlans.locationId, lid),
+                        eq(memberPlans.archived, false),
+                    ),
                     columns: {
                         id: true,
                         totalClassLimit: true,
@@ -71,6 +80,7 @@ export function locationPass(app: Elysia) {
                 const existingPass = await db.query.memberPackages.findFirst({
                     where: (memberPackages, { eq, and }) => and(
                         eq(memberPackages.memberId, memberId),
+                        eq(memberPackages.locationId, lid),
                         eq(memberPackages.memberPlanPricingId, pricing.id),
                     ),
                 });
@@ -81,6 +91,17 @@ export function locationPass(app: Elysia) {
 
                 // Wrap transaction correctly and use the passed-in connection
                 const pkg = await db.transaction(async (tx) => {
+
+                    // Only one claimant can win, even when requests arrive together.
+                    const [claimed] = await tx.update(memberPasses).set({
+                        claimedBy: memberId,
+                        claimedOn: new Date(),
+                    }).where(and(
+                        eq(memberPasses.id, passId),
+                        eq(memberPasses.locationId, lid),
+                        isNull(memberPasses.claimedBy),
+                    )).returning({ id: memberPasses.id });
+                    if (!claimed) return null;
 
                     await tx.insert(memberLocations).values({
                         memberId,
@@ -111,15 +132,18 @@ export function locationPass(app: Elysia) {
                         expireDate,
                     }).returning();
 
-                    await tx.update(memberPasses).set({
-                        claimedBy: memberId,
-                        claimedOn: new Date(),
-                    }).where(eq(memberPasses.id, passId));
+                    if (!insertedPackages[0]) throw new Error("Pass package was not created");
+                    // A claimed pass already provides an active trial package. No separate activation follows.
+                    await dispatchWorkflowTrigger(tx, {
+                        type: WorkflowEvents.trial.CHECKED_OUT,
+                        locationId: lid,
+                        memberId,
+                    });
                     return insertedPackages;
                 });
 
                 if (!pkg) {
-                    return status(500, { error: 'Failed to create package' });
+                    return status(400, { error: 'This pass has already been claimed.' });
                 }
 
                 return status(200, pkg);

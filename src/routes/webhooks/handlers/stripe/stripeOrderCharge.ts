@@ -1,7 +1,9 @@
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
-import type { PaymentType } from "@subtrees/types";
-import { orders, transactions } from "@subtrees/schemas";
+import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
+import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
+import type { PaymentType } from "@/subtrees/types";
+import { orders, transactions } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { queueOrderPaidNotifications } from "@/utils/orderEmailNotifications";
 
@@ -33,6 +35,14 @@ export async function handleStripeOrderCharge({
     feeAmount,
     stripeChargeId,
 }: HandleStripeOrderChargeProps) {
+    if (paymentIntentId) {
+        const existingTransaction = await db.query.transactions.findFirst({
+            where: eq(transactions.paymentIntentId, paymentIntentId),
+            columns: { id: true },
+        });
+        if (existingTransaction) return;
+    }
+
     const previousOrder = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
         with: {
@@ -76,6 +86,9 @@ export async function handleStripeOrderCharge({
             updated: new Date(),
         }).where(eq(orders.id, orderId)).returning();
         assert(updatedOrder);
+        if (!success && isPaymentDecline("stripe", failedCode)) {
+            await dispatchPaymentFailed(tx, transaction.id);
+        }
         return updatedOrder;
     });
 

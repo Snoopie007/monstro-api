@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions } from "@subtrees/schemas";
+import { memberSubscriptions } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 export async function resolveInitialSubscriptionPricing(memberSubscriptionId: string) {

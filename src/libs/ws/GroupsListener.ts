@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import {
 	groupMembers, chatMembers, users, groupPosts,
 	groups, staffsLocations
-} from "@subtrees/schemas";
+} from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 import {
 	notifyUsersNewGroupPost,

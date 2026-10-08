@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
-import { handleEnrollSubscription, mapEnrollSubError } from "@/handlers/enroll";
+import { handleEnrollPackage, handleEnrollSubscription, mapEnrollSubError } from "@/handlers/enroll";
 
 const EnrollSubBody = t.Object({
     paymentMethodId: t.String(),
@@ -10,11 +11,61 @@ const EnrollSubBody = t.Object({
     paymentType: t.Union([
         t.Literal("card"),
         t.Literal("us_bank_account"),
+        t.Literal("link"),
+        t.Literal("cashapp"),
     ]),
 });
 
+const EnrollQuoteBody = t.Union([
+    t.Object({
+        priceId: t.String(),
+        promoId: t.Optional(t.Nullable(t.String())),
+        paymentType: t.Union([
+            t.Literal("card"),
+            t.Literal("us_bank_account"),
+            t.Literal("link"),
+            t.Literal("cashapp"),
+        ]),
+        planType: t.Literal("recurring"),
+    }),
+    t.Object({
+        priceId: t.String(),
+        promoId: t.Optional(t.Nullable(t.String())),
+        paymentType: t.Union([
+            t.Literal("card"),
+            t.Literal("us_bank_account"),
+        ]),
+        planType: t.Literal("one-time"),
+    }),
+]);
+
 export const webEnrollSubRoutes = new Elysia({ prefix: "/enroll" })
     .use(WebAuthMiddleware)
+    .post("/quote", async ({ status, lid, session, body }) => {
+        if (!lid) {
+            return status(401, { message: "No Location ID provided" });
+        }
+        if (!session) {
+            return status(401, { message: "Unauthorized" });
+        }
+
+        try {
+            const handler = body.planType === "recurring" ? handleEnrollSubscription : handleEnrollPackage;
+            const result = await handler({
+                lid,
+                mid: session.user.memberId,
+                priceId: body.priceId,
+                paymentMethodId: "quote",
+                paymentType: body.paymentType,
+                promoId: body.promoId,
+                attemptId: randomUUID(),
+                quoteOnly: true,
+            });
+            return status(200, result);
+        } catch (error) {
+            return mapEnrollSubError(status, error);
+        }
+    }, { body: EnrollQuoteBody })
     .post("/sub", async ({ status, lid, session, body }) => {
         if (!lid) {
             return status(401, { message: "No Location ID provided" });

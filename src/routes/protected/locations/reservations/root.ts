@@ -1,18 +1,17 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, type Context } from "elysia";
 import { db } from "@/db/db";
 import type {
-    Reservation
+    Reservation,
+    SessionException
 } from "subtrees/types";
 import {
-    memberPackages, memberSubscriptions,
+    attendances, memberPackages, memberSubscriptions,
     reservations
 } from "subtrees/schemas";
-import { eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 
-import { differenceInMilliseconds } from "date-fns";
-import { toZonedTime } from 'date-fns-tz';
-import { checkSubClassCredits, getSessionState, hasUnlimitedSubscriptionAddon, scheduleClassReminderJobs } from "./utils";
-import { chargeWallet } from "@/libs/wallet";
+import { differenceInMilliseconds, differenceInMinutes } from "date-fns";
+import { checkSubClassCredits, getSessionState, hasUnlimitedSubscriptionAddon } from "./utils";
 import { triggerFirstBooking } from "@/utils/triggers";
 import { broadcastAchievement } from "@/libs/broadcast";
 
@@ -34,24 +33,79 @@ const ReservationsProps = {
             utcStartTime: t.Date(),
             utcEndTime: t.Date(),
             staffId: t.Optional(t.Union([t.String(), t.Null()])),
+            exceptionId: t.Optional(t.Union([t.String(), t.Null()])),
         }),
         memberPlanId: t.String(),
         autoReschedule: t.Optional(t.Boolean()),
     }),
 };
+
+class SessionModeChangedError extends Error {}
+
+// This endpoint uses group capacity/package rules. Allowing 1-on-1 here would
+// bypass weekly-slot ownership and the dedicated booking/payment flow.
+async function rejectOneOnOneBooking(context: Context) {
+    const { session } = context.body as { session: { id: string } };
+    const { lid } = context.params as { lid: string };
+    const requestedSession = await db.query.programSessions.findFirst({
+        where: (row, { eq }) => eq(row.id, session.id),
+        columns: { id: true },
+        with: {
+            program: { columns: { locationId: true, sessionMode: true } },
+        },
+    });
+    if (!requestedSession || requestedSession.program.locationId !== lid) {
+        return context.status(404, { success: false, message: "Session not found." });
+    }
+    if (requestedSession.program.sessionMode === "one_on_one") {
+        return context.status(400, {
+            success: false,
+            message: "Book 1-on-1 reservations from the vendor calendar.",
+        });
+    }
+}
+
 export async function locationReservations(app: Elysia) {
     app.group('/reservations', (app) => {
+
+        app.get('/', async ({ params, query, status }) => {
+            const { lid } = params;
+            const { date } = query;
+            const startDate = date ? new Date(date) : new Date();
+            try {
+                const reservations = await db.query.reservations.findMany({
+                    where: (reservations, { eq, gte, and }) => and(
+                        eq(reservations.locationId, lid),
+                        gte(reservations.startOn, startDate),
+                    ),
+                    with: {
+                        attendance: true,
+                    }
+                });
+                return status(200, reservations);
+            } catch (err) {
+                console.error(err);
+                return status(500, { error: err });
+            }
+        }, {
+            params: t.Object({
+                lid: t.String(),
+            }),
+            query: t.Object({
+                date: t.Optional(t.Date()),
+            }),
+        })
         app.post('/', async ({ body, params, status }) => {
             const { lid } = params;
-            const { memberPlanId, session, autoReschedule, plan } = body;
+            const { memberPlanId, session, plan } = body;
             const isPackage = memberPlanId.startsWith("pkg_");
 
             try {
                 let pkg = undefined;
                 let sub = undefined;
                 let classLimitReached = false;
-                let memberId = undefined;
                 let hasUnlimitedAccess = false;
+                let memberId = undefined;
                 if (isPackage) {
                     pkg = await db.query.memberPackages.findFirst({
                         where: (mp, { eq, and }) => and(
@@ -68,9 +122,10 @@ export async function locationReservations(app: Elysia) {
                     classLimitReached = pkg ? pkg.totalClassAttended >= pkg.totalClassLimit : false;
                 } else {
                     sub = await db.query.memberSubscriptions.findFirst({
-                        where: (ms, { eq, and }) => and(
+                        where: (ms, { eq, and, lte }) => and(
                             eq(ms.id, memberPlanId),
-                            eq(ms.status, "active")
+                            eq(ms.status, "active"),
+                            lte(ms.startDate, new Date(session.utcStartTime))
                         ),
                         with: {
                             member: {
@@ -131,13 +186,6 @@ export async function locationReservations(app: Elysia) {
                                 phone: true,
                                 timezone: true,
                             },
-                            with: {
-                                locationState: {
-                                    columns: {
-                                        planId: true,
-                                    }
-                                }
-                            }
                         }
                     },
                     columns: {
@@ -149,7 +197,7 @@ export async function locationReservations(app: Elysia) {
                 if (!ml) {
                     throw new Error("Member  not found");
                 }
-                const { member, location } = ml;
+                const { member } = ml;
                 if (!member) {
                     throw new Error("Member not found");
                 }
@@ -158,18 +206,27 @@ export async function locationReservations(app: Elysia) {
                     return status(200, { success: false, message: "Class limit reached for your plan." });
                 }
 
-                // location time
-                const now = toZonedTime(new Date(), location.timezone);
-                const { utcStartTime, utcEndTime, programId } = session;
-
-                // Check if session is in the past
+                // Check if session is in an exception
+                let exception: Pick<SessionException, "startsAt" | "endsAt"> | undefined = undefined;
+                const exceptionId = session.exceptionId;
+                if (exceptionId) {
+                    exception = await db.query.sessionExceptions.findFirst({
+                        where: (se, { eq: eqSe }) => eqSe(se.id, exceptionId),
+                        columns: {
+                            startsAt: true,
+                            endsAt: true,
+                        },
+                    });
+                }
+                const now = new Date();
+                const utcStartTime = exception?.startsAt ?? session.utcStartTime;
+                const utcEndTime = exception?.endsAt ?? session.utcEndTime;
                 const diff = differenceInMilliseconds(utcStartTime, now);
 
                 if (diff <= 15) {
                     return status(200, { success: false, message: "This session is in the future." });
                 }
 
-                // Check session state
                 const { isFull, isReserved } = await getSessionState({
                     startTime: utcStartTime,
                     sessionId: session.id,
@@ -183,19 +240,30 @@ export async function locationReservations(app: Elysia) {
                     return status(200, { success: false, message: error });
                 }
 
-                const subscriptionCreditConsumed = Boolean(
-                    sub && !hasUnlimitedAccess && plan.classLimitInterval === 'term'
-                );
+                const sessionDuration = differenceInMinutes(utcEndTime, utcStartTime);
+
+
+                const subscriptionCreditConsumed = Boolean(sub && !hasUnlimitedAccess && plan.classLimitInterval === "term");
                 const reservation = await db.transaction(async (tx) => {
-                    // Explicitly cast to Reservation[] (or whatever Drizzle returns)
+                    // The earlier check gives fast feedback; this locked reread closes
+                    // the race with a vendor changing program mode during plan validation.
+                    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lid}, 0))`);
+                    const current = await tx.query.programSessions.findFirst({
+                        where: (row, { eq }) => eq(row.id, session.id), columns: { id: true },
+                        with: { program: { columns: { sessionMode: true, locationId: true } } },
+                    });
+                    if (!current || current.program.locationId !== lid || current.program.sessionMode !== "group") {
+                        throw new SessionModeChangedError("The session mode changed. Reload the calendar before booking.");
+                    }
                     const inserted = await tx.insert(reservations).values({
                         memberId,
                         locationId: lid,
                         programName: session.programName,
                         sessionId: session.id,
+                        sessionDuration: sessionDuration,
                         startOn: utcStartTime,
                         endOn: utcEndTime,
-                        programId: programId,
+                        programId: session.programId,
                         subscriptionCreditConsumed: isPackage ? null : subscriptionCreditConsumed,
                         ...(isPackage ? {
                             memberPackageId: memberPlanId,
@@ -212,6 +280,8 @@ export async function locationReservations(app: Elysia) {
                     }
                     if (pkg) {
 
+                        // Legacy group accounting consumes usage at booking.
+                        // The 1-on-1 path counts it when Present attendance is recorded.
                         await tx.update(memberPackages).set({
                             totalClassAttended: Math.max((pkg?.totalClassAttended || 0) + 1, 0)
                         }).where(eq(memberPackages.id, memberPlanId));
@@ -228,144 +298,239 @@ export async function locationReservations(app: Elysia) {
                 });
 
 
-                // No growth charge 10 cents per reservation
-                const noGrowthPlan = [1, 2].includes(location.locationState?.planId);
-                if (noGrowthPlan) {
-                    chargeWallet({
-                        lid,
-                        vendorId: location.vendorId,
-                        amount: 1000,
-                        description: `Reservation fee for ${session.programName}`,
-                    }).then((charged) => {
-                        if (charged) {
-                            scheduleClassReminderJobs({
-                                lid,
-                                reservationId: reservation.id,
-                                memberPlanId,
-                                member,
-                                location,
-                                session,
-                                plan,
-                                autoReschedule: autoReschedule ?? false,
-                            }).catch((error) => {
-                                console.error("Error scheduling class reminder jobs:", error);
-                            });
-                        }
-                    }).catch((error) => {
-                        console.error("Error charging wallet:", error);
-                        return false;
-                    });
-                }
-
                 if (!ml.onboarded) {
                     triggerFirstBooking({ mid: memberId, lid }).then((achievement) => {
                         if (achievement) {
                             broadcastAchievement(member.userId, achievement)
                         }
-                    }).catch((error) => {
-                    });
+                    })
                 }
                 return status(200, { success: true, data: reservation });
             } catch (err) {
+                if (err instanceof SessionModeChangedError) return status(409, { success: false, message: err.message });
                 console.error(err);
                 return status(500, { error: err });
             }
-        }, ReservationsProps)
-        app.delete('/:rid', async ({ params, status }) => {
-            const { rid } = params;
-            try {
-                const reservation = await db.query.reservations.findFirst({
-                    where: (reservations, { eq }) => eq(reservations.id, rid),
+        }, { ...ReservationsProps, beforeHandle: rejectOneOnOneBooking })
 
-                })
+        app.group('/:rid', (app) => {
+            app.get('/', async ({ params, status }) => {
+                const { rid } = params;
+                try {
+                    const reservation = await db.query.reservations.findFirst({
+                        where: (reservations, { eq }) => eq(reservations.id, rid),
+                        with: {
+                            attendance: true,
+                        }
+                    })
 
-                if (!reservation) {
-                    return status(404, { error: "Reservation not found" })
+                    if (!reservation) {
+                        return status(404, { error: "Reservation not found" })
+                    }
+                    return status(200, { success: true, data: reservation });
+                } catch (err) {
+                    console.error(err);
+                    return status(500, { error: err });
                 }
+            }, {
+                params: t.Object({
+                    lid: t.String(),
+                    rid: t.String(),
+                })
+            })
+            app.patch('/resume', async ({ params, status }) => {
+                const { rid } = params;
+                try {
+                    const reservation = await db.query.reservations.findFirst({
+                        where: (reservations, { eq, and, or }) => and(
+                            eq(reservations.id, rid),
+                            or(
+                                eq(reservations.status, "cancelled_by_member"),
+                                eq(reservations.status, "cancelled_by_vendor"),
+                                eq(reservations.status, "cancelled_by_holiday"),
+                            )
+                        ),
+                        with: {
+                            attendance: {
+                                columns: {
+                                    id: true,
+                                },
+                            },
+                            program: {
+                                columns: {
+                                    capacity: true,
+                                },
+                            },
+                        }
+
+                    })
+                    if (!reservation) {
+                        return status(404, { error: "Reservation not found" })
+                    }
+                    if (reservation.attendance) {
+                        return status(200, { success: false, message: "Reservation is already attended" })
+                    }
+
+                    const hasPassed = differenceInMilliseconds(reservation.startOn, new Date()) <= 0;
+                    if (hasPassed) {
+                        return status(200, { success: false, message: "Reservation has already passed" })
+                    }
+
+                    if (reservation.sessionId) {
+                        const [occupancy] = await db
+                            .select({ reservedCount: count() })
+                            .from(reservations)
+                            .where(and(
+                                eq(reservations.sessionId, reservation.sessionId),
+                                eq(reservations.startOn, reservation.startOn),
+                                eq(reservations.status, "confirmed"),
+                            ));
+
+                        const reservedCount = Number(occupancy?.reservedCount ?? 0);
+                        const capacity = reservation.program?.capacity ?? 0;
+                        if (capacity > 0 && reservedCount >= capacity) {
+                            return status(200, { success: false, message: "Session is full" });
+                        }
+                    }
+
+                    await db.update(reservations).set({
+                        status: "confirmed",
+                        updated: new Date(),
+                    }).where(eq(reservations.id, reservation.id));
+                    return status(200, { success: true })
+                } catch (err) {
+                    console.error(err);
+                    return status(500, { error: err });
+                }
+            }, {
+                params: t.Object({
+                    lid: t.String(),
+                    rid: t.String(),
+                })
+            })
+            app.delete('/', async ({ body, params, status }) => {
+                const { rid } = params;
+                const refundCredit = body?.refundCredit;
+                const byStaff = body?.byStaff;
+                try {
+                    const reservation = await db.query.reservations.findFirst({
+                        where: (reservations, { eq }) => eq(reservations.id, rid),
+                        with: {
+                            attendance: {
+                                columns: {
+                                    id: true,
+                                },
+                            },
+                        }
+
+                    })
+
+                    if (!reservation) {
+                        return status(404, { error: "Reservation not found" })
+                    }
+
+                    if (reservation.attendance) {
+                        return status(200, { success: false, message: "Reservation is already attended" })
+                    }
+
+                    const now = new Date();
+                    await db.transaction(async (tx) => {
+
+                        await tx.update(reservations).set({
+                            status: byStaff ? "cancelled_by_vendor" : "cancelled_by_member",
+                            cancelledAt: now,
+                            cancelledReason: byStaff ? "Cancelled by staff" : "Cancelled by member",
+                            updated: now,
+                        }).where(eq(reservations.id, reservation.id));
 
 
-                await db.transaction(async (tx) => {
-                    await tx.delete(reservations).where(eq(reservations.id, reservation.id))
-                    if (reservation.memberPackageId) {
-                        // Prevent decrementing below 0
-                        await tx.execute(sql`
-                            UPDATE ${memberPackages}
-                            SET total_class_attended = CASE 
-                                WHEN total_class_attended > 0 THEN total_class_attended - 1
-                                ELSE 0
-                            END
-                            WHERE id = ${reservation.memberPackageId!}
-                        `);
-                    } else {
-                        const sub = await tx.query.memberSubscriptions.findFirst({
+                        if (refundCredit) {
+                            if (reservation.memberPackageId) {
+                                // Prevent decrementing below 0
+                                await tx.execute(sql`
+                                    UPDATE ${memberPackages}
+                                    SET total_class_attended = CASE
+                                        WHEN total_class_attended > 0 THEN total_class_attended - 1
+                                        ELSE 0
+                                    END
+                                    WHERE id = ${reservation.memberPackageId!}
+                                `);
+                            } else {
+                                /*
+                                  Handle refunding class credits for term-based subscriptions:
+                                  For example, if a user subscribes for a total number of classes over a term (e.g., 100 classes paid monthly),
+                                  and cancels after attending some classes (e.g., attended 50 and cancels), refund any unused class credits.
+                                */
 
-                            where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, reservation.memberSubscriptionId!),
-                            with: {
-                                pricing: {
-                                    columns: {
-                                        id: true,
-                                    },
+                                const sub = await tx.query.memberSubscriptions.findFirst({
+
+                                    where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, reservation.memberSubscriptionId!),
                                     with: {
-                                        plan: {
+                                        pricing: {
                                             columns: {
                                                 id: true,
-                                                classLimitInterval: true,
-                                                totalClassLimit: true,
+                                            },
+                                            with: {
+                                                plan: {
+                                                    columns: {
+                                                        id: true,
+                                                        classLimitInterval: true,
+                                                        totalClassLimit: true,
+                                                    },
+                                                },
                                             },
                                         },
                                     },
-                                },
-                            },
-                        })
-                        if (!sub) {
-                            throw new Error("Member subscription not found");
-                        }
-                        const { pricing } = sub;
+                                })
+                                if (!sub) {
+                                    throw new Error("Member subscription not found");
+                                }
+                                const { pricing } = sub;
 
-                        if (pricing.plan && pricing.plan.classLimitInterval) {
-                            const limit = pricing.plan.totalClassLimit;
+                                if (pricing?.plan && pricing.plan.classLimitInterval) {
+                                    const limit = pricing.plan.totalClassLimit;
 
-                            if (
-                                pricing.plan.classLimitInterval === 'term'
-                                && limit
-                                && limit > 0
-                                && (reservation.subscriptionCreditConsumed ?? true)
-                            ) {
-                                // Make sure not to exceed the original classCredits limit
-                                await tx.execute(sql` UPDATE ${memberSubscriptions}
-                                    SET class_credits = 
-                                        CASE 
-                                            WHEN class_credits < ${limit} THEN class_credits + 1
-                                            ELSE class_credits
-                                        END
-                                    WHERE id = ${reservation.memberSubscriptionId!}
-                                `);
+                                    if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0 && (reservation.subscriptionCreditConsumed ?? true)) {
+                                        // Make sure not to exceed the original classCredits limit
+                                        await tx.execute(sql` UPDATE ${memberSubscriptions}
+                                            SET class_credits =
+                                                CASE
+                                                    WHEN class_credits < ${limit} THEN class_credits + 1
+                                                    ELSE class_credits
+                                                END
+                                            WHERE id = ${reservation.memberSubscriptionId!}
+                                        `);
+                                    }
+                                }
+
                             }
                         }
-
-                    }
-                });
+                    });
 
 
 
-                return status(200, { success: true })
-            } catch (error) {
-                console.error(error)
-                return status(500, { error: "Internal server error" })
-            }
-        }, {
-            params: t.Object({
-                lid: t.String(),
-                rid: t.String(),
+                    return status(200, { success: true })
+                } catch (error) {
+                    console.error(error)
+                    return status(500, { error: "Internal server error" })
+                }
+            }, {
+                params: t.Object({
+                    lid: t.String(),
+                    rid: t.String(),
+                }),
+                body: t.Optional(t.Object({
+                    byStaff: t.Optional(t.Boolean()),
+                    refundCredit: t.Optional(t.Boolean()),
+                })),
             })
+
+            return app;
         })
+
+
 
         return app;
     })
     return app;
 }
-
-
-
-
-

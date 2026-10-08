@@ -11,6 +11,9 @@ export const ranks = pgTable("ranks", {
 	description: text("description").notNull(),
 	badge: text("badge").notNull(),
 	sortOrder: integer("sort_order").notNull(),
+	archivedAt: timestamp("archived_at", { withTimezone: true }),
+	// A restore starts counting future attendance; delayed jobs from the pause earn no credit.
+	progressResumedAt: timestamp("progress_resumed_at", { withTimezone: true }),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

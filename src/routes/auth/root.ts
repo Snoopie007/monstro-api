@@ -5,9 +5,15 @@ import {
     verifySession, mobileRegister,
     mobileResetPassword,
 } from "./mobile";
-
+import { staffLogin } from "./staff/login";
+import { staffRefreshToken } from "./staff/refresh";
 
 export const AuthRoutes = new Elysia({ prefix: '/auth' })
+    .group('/staff', (app) => {
+        app.use(staffLogin)
+        app.use(staffRefreshToken)
+        return app
+    })
     .group('/mobile', (app) => {
         app.use(mobileLogin)
         app.use(mobileGoogleLogin)

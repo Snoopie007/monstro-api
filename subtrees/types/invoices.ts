@@ -16,6 +16,8 @@ type InvoiceItemBase = {
     productId?: string;
     discount?: number;
     tax?: number;
+    feeId?: string;
+    refundable?: boolean;
 }
 
 type SubscriptionPricingSource =

@@ -1,5 +1,5 @@
 import { redisConfig } from "@/config";
-import type { SubscriptionAddonJobData } from "@subtrees/bullmq";
+import type { SubscriptionAddonJobData } from "@/subtrees/bullmq";
 import { Queue } from "bullmq";
 
 export const subscriptionAddonQueue = new Queue<SubscriptionAddonJobData>("subscription-addons", {

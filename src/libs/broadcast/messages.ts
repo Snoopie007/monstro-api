@@ -1,6 +1,6 @@
-import type { Message } from '@subtrees/types';
+import type { Message } from '@/subtrees/types';
 import supabase from './SupabaseService';
-import { RealTimeEvents } from '@subtrees/constants/data';
+import { RealTimeEvents } from '@/subtrees/constants/data';
 
 /**
  * Broadcasts an enriched message to a Supabase Realtime channel

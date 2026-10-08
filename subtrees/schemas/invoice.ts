@@ -16,6 +16,7 @@ export const memberInvoices = pgTable('member_invoices', {
     locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
     memberPlanId: text('member_plan_id'),
     memberSubscriptionAddonId: text('member_subscription_addon_id').references(() => memberSubscriptionAddons.id, { onDelete: 'set null' }),
+    renewalKey: text('renewal_key'),
     description: text('description'),
     items: jsonb('items').array().$type<InvoiceItem[]>().default(sql`'{}'::jsonb[]`),
     paid: boolean('paid').notNull().default(false),
@@ -36,6 +37,9 @@ export const memberInvoices = pgTable('member_invoices', {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [
+    uniqueIndex('member_invoices_renewal_key_uq')
+        .on(t.renewalKey)
+        .where(sql`${t.renewalKey} is not null`),
     uniqueIndex('member_invoices_transaction_id_uq')
         .on(t.transactionId)
         .where(sql`${t.transactionId} is not null`),

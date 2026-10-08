@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { notifyVendorUsersNewEcommerceOrder } from "@/libs/novu";
 import { emailQueue } from "@/queues";
-import { staffsLocations } from "@subtrees/schemas";
-import type { OrderLineItem } from "@subtrees/types";
+import { staffsLocations } from "@/subtrees/schemas";
+import type { OrderLineItem } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
 
 const CUSTOMER_VISIBLE_ORDER_STATUSES: Record<string, true> = {

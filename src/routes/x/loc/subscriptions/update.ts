@@ -1,6 +1,7 @@
+import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
-import { SquarePaymentGateway } from "@/libs/PaymentGateway";
-import { memberSubscriptions } from "@subtrees/schemas";
+import { memberSubscriptions } from "@/subtrees/schemas";
+import { BillingContextError, findInFlightSubscriptionAttempt, resolveSubscriptionBillingContext } from "./billingContext";
 import { addDays } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
@@ -16,74 +17,44 @@ export async function updateSubscriptionRoutes(app: Elysia) {
         if (!sub) {
             return status(404, { error: "Subscription not found" });
         }
+        if (sub.parentId) {
+            return status(400, { error: "Only root subscriptions can be updated", code: "SUBSCRIPTION_CHILD" });
+        }
+        const deferred = getDeferredBilling(sub.metadata);
+        if (deferred && (trialDays || allowProration)) return status(400, { error: "Trial days and legacy proration cannot be added to delayed billing" });
+        if (deferred && cancelAt && new Date(cancelAt) <= new Date(deferred.firstPaymentAt)) {
+            return status(400, { error: "Use Cancel to end access before the first payment" });
+        }
+        const inFlight = await findInFlightSubscriptionAttempt(sub.id);
+        if (inFlight) {
+            return status(409, {
+                error: "A payment attempt is still in flight; resolve it before changing billing",
+                code: "PAYMENT_ATTEMPT_IN_FLIGHT",
+                invoiceId: inFlight.invoice?.id,
+                attemptStatus: inFlight.status,
+            });
+        }
 
         let nextGatewayPaymentId: string | undefined;
+        let nextPaymentType: typeof sub.paymentType | undefined;
+        let gatewayIntegrationId: string | undefined;
+        let gatewayCustomerId: string | undefined;
         if (paymentMethodId) {
-            const memberLocation = await db.query.memberLocations.findFirst({
-                where: (ml, { and, eq }) => and(eq(ml.locationId, lid), eq(ml.memberId, sub.memberId)),
-                columns: {
-                    gatewayCustomerId: true,
-                },
-            });
-
-            if (!memberLocation?.gatewayCustomerId) {
-                return status(400, { error: "Member location is missing gateway customer" });
-            }
-
-            const locationState = await db.query.locationState.findFirst({
-                where: (state, { eq }) => eq(state.locationId, lid),
-                columns: {
-                    paymentGatewayId: true,
-                },
-            });
-
-            const integration = locationState?.paymentGatewayId
-                ? await db.query.integrations.findFirst({
-                    where: (integration, { eq }) => eq(integration.id, locationState.paymentGatewayId!),
-                    columns: {
-                        accountId: true,
-                        accessToken: true,
-                        service: true,
-                    },
-                })
-                : await db.query.integrations.findFirst({
-                    where: (integration, { eq }) => eq(integration.locationId, lid),
-                    columns: {
-                        accountId: true,
-                        accessToken: true,
-                        service: true,
-                    },
+            try {
+                const billingContext = await resolveSubscriptionBillingContext(sub, {
+                    paymentMethodId,
+                    requirePaymentMethod: true,
                 });
-
-            if (!integration?.accessToken) {
-                return status(404, { error: "Payment gateway integration not found" });
-            }
-
-            if (integration.service === "stripe") {
-                if (!integration.accountId) {
-                    return status(404, { error: "Stripe integration not found" });
+                nextGatewayPaymentId = billingContext.paymentMethodId ?? undefined;
+                nextPaymentType = billingContext.paymentMethodType ?? undefined;
+                gatewayIntegrationId = billingContext.gateway.id;
+                gatewayCustomerId = billingContext.gatewayCustomerId;
+            } catch (error) {
+                if (error instanceof BillingContextError) {
+                    const statusCode = error.code === "GATEWAY_NOT_FOUND" || error.code === "GATEWAY_NOT_CONFIGURED" ? 404 : 400;
+                    return status(statusCode, { error: error.message, code: error.code });
                 }
-
-                nextGatewayPaymentId = paymentMethodId;
-            } else if (integration.service === "square") {
-                if (paymentMethodId.startsWith("cnon:")) {
-                    return status(400, { error: "Saved Square card is required for subscription payment method updates" });
-                }
-
-                if (memberLocation.gatewayCustomerId.startsWith("cus_")) {
-                    return status(400, { error: "Member location does not have a Square customer ID" });
-                }
-
-                const square = new SquarePaymentGateway(integration.accessToken);
-                try {
-                    await square.retrieveCardForCustomer(memberLocation.gatewayCustomerId, paymentMethodId);
-                } catch {
-                    return status(400, { error: "Selected Square card is not available for this member" });
-                }
-
-                nextGatewayPaymentId = paymentMethodId;
-            } else {
-                return status(400, { error: "Unsupported payment gateway for subscriptions" });
+                throw error;
             }
         }
 
@@ -94,18 +65,19 @@ export async function updateSubscriptionRoutes(app: Elysia) {
         const [updated] = await db.update(memberSubscriptions).set({
             ...(cancelAt !== undefined ? { cancelAt: cancelAt ? new Date(cancelAt) : null } : {}),
             ...(nextGatewayPaymentId ? { gatewayPaymentId: nextGatewayPaymentId } : {}),
-            ...(trialEnd ? { trialEnd } : {}),
+            ...(nextPaymentType ? { paymentType: nextPaymentType } : {}),
             metadata: {
                 ...(sub.metadata || {}),
                 ...(allowProration !== undefined ? { allowProration } : {}),
                 ...(nextGatewayPaymentId ? { paymentMethodId: nextGatewayPaymentId } : {}),
+                ...(gatewayIntegrationId ? { gatewayIntegrationId } : {}),
+                ...(gatewayCustomerId ? { gatewayCustomerId } : {}),
             },
             updated: new Date(),
         }).where(eq(memberSubscriptions.id, sid)).returning();
 
         return status(200, {
             subscription: updated,
-            schedulerUpdated: false,
         });
     }, {
         body: t.Object({

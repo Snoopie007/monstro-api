@@ -1,7 +1,7 @@
 import { transactions } from "../schemas";
 import type { PaymentType, TransactionStatus, TransactionType } from "./DatabaseEnums";
 import type { Member } from "./member";
-import type { MemberInvoice } from "./invoices";
+import type { InvoiceItem, MemberInvoice } from "./invoices";
 
 export type TransactionMetadata = {
   card?: {
@@ -59,5 +59,10 @@ export type ChargeDetails = {
   subTotal: number;
   unitCost: number;
   tax: number;
+  discount: number;
+  productDiscount: number;
+  /** Monstro's vendor-side platform fee; never part of the member-facing total. */
   feesAmount: number;
+  additionalFeeTotal: number;
+  additionalFeeLines: InvoiceItem[];
 }

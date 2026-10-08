@@ -7,11 +7,14 @@ import { db } from "src/db/db";
 export function locationCoursesEnroll(app: Elysia) {
     return app.post("/courses/enroll", async ({ params, status, body }) => {
         const { lid } = params;
-        const { paymentMethodId, courseId, mid, paymentType, attemptId } = body;
+        const { paymentMethodId, courseId, mid, paymentType } = body;
 
         try {
             const course = await db.query.courses.findFirst({
-                where: (c, { eq }) => eq(c.id, courseId),
+                where: (c, { eq, and }) => and(
+                    eq(c.id, courseId),
+                    eq(c.locationId, lid),
+                ),
                 columns: {
                     title: true,
                     price: true,
@@ -40,7 +43,6 @@ export function locationCoursesEnroll(app: Elysia) {
                     paymentType,
                     courseTitle: course.title,
                     coursePrice: course.price,
-                    attemptId: attemptId ?? randomUUID(),
                 });
                 return status(200, enrollment);
             }
@@ -66,7 +68,6 @@ export function locationCoursesEnroll(app: Elysia) {
                 t.Literal("card"),
                 t.Literal("us_bank_account"),
             ])),
-            attemptId: t.Optional(t.String()),
         }),
     });
 }

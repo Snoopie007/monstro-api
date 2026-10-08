@@ -10,6 +10,7 @@ export async function detailInvoiceRoutes(app: Elysia) {
             const invoice = await db.query.memberInvoices.findFirst({
                 where: (inv, { and, eq }) => and(eq(inv.id, iid), eq(inv.locationId, lid)),
                 with: {
+                    location: { columns: { timezone: true } },
                     member: {
                         columns: {
                             id: true,

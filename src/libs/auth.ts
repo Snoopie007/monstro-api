@@ -7,7 +7,8 @@ type MobileToken = {
 }
 
 type TokenPayload = {
-    memberId: string;
+    memberId?: string;
+    staffId?: string;
     userId: string;
     email: string;
 }
@@ -35,13 +36,15 @@ export async function generateMobileToken(m: TokenPayload): Promise<MobileToken>
         role: "authenticated", // Required: Supabase role
         email: m.email || "",
         user_metadata: {
-            member_id: m.memberId,
+            ...(m.memberId && { member_id: m.memberId }),
+            ...(m.staffId && { staff_id: m.staffId }),
             role: "member"
         },
     };
 
     const refreshToken = await new SignJWT({
-        memberId: m.memberId,
+        ...(m.memberId && { memberId: m.memberId }),
+        ...(m.staffId && { staffId: m.staffId }),
         userId: m.userId,
         email: m.email,
         expires: refreshTokenExpires,

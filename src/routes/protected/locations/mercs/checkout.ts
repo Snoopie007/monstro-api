@@ -1,12 +1,13 @@
 import type { Elysia } from "elysia";
 import { t } from "elysia";
-import { randomUUID } from "node:crypto";
 import { handleMercCheckout, mapMercCheckoutError } from "@/handlers/merc";
+import { randomUUID } from "node:crypto";
+
 
 export function locationMercsCheckout(app: Elysia) {
     return app.post("/mercs/checkout", async ({ params, status, body }) => {
         const { lid } = params;
-        const { items, promoId, paymentMethodId, mid, attemptId } = body;
+        const { items, promoId, paymentMethodId, mid } = body;
 
         try {
             const order = await handleMercCheckout({
@@ -15,7 +16,7 @@ export function locationMercsCheckout(app: Elysia) {
                 items,
                 paymentMethodId,
                 promoId,
-                attemptId: attemptId ?? randomUUID(),
+                attemptId: randomUUID(),
             });
             return status(200, order);
         } catch (error) {
@@ -32,7 +33,6 @@ export function locationMercsCheckout(app: Elysia) {
                 quantity: t.Number(),
             })),
             promoId: t.Optional(t.Nullable(t.String())),
-            attemptId: t.Optional(t.String()),
             paymentMethodId: t.String(),
         }),
     });

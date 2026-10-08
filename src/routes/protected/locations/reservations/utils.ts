@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { addons, memberSubscriptionAddons, reservations } from "@subtrees/schemas";
+import { addons, memberSubscriptionAddons, reservations } from "@/subtrees/schemas";
 import { and, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { startOfWeek, endOfWeek, subDays, addMinutes, differenceInMilliseconds, addWeeks } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
