@@ -1,6 +1,6 @@
 // @bun
 // src/config.ts
-import { z as z36 } from "zod";
+import { z as z37 } from "zod";
 
 // src/collections.ts
 import { z as z31 } from "zod";
@@ -456,27 +456,28 @@ function validateFormValues(form, input, locationId) {
     values[field] = parsed.data[field] === true;
   return values;
 }
-function resolveFormRedirect(form, values, pages, locationId) {
+function resolveFormRedirect(form, values, pages, locationId, locationName) {
+  const redirectValues = locationName === undefined ? values : { ...values, locations: locationName };
   for (const field of form.fields) {
     if (!isFormFieldVisible(field, values, locationId) || field.type !== "select")
       continue;
     const selected = field.options?.find((option) => option.value === String(values[field.name] ?? ""));
-    const redirect = resolveRedirectTarget(selected?.redirectTo, undefined, values, pages);
+    const redirect = resolveRedirectTarget(selected?.redirectTo, undefined, redirectValues, pages);
     if (redirect)
       return redirect;
   }
   if (Array.isArray(form.redirectRules)) {
     for (const rule of form.redirectRules) {
       if (matchesFormCondition(rule.when, values, locationId)) {
-        return resolveRedirectTarget(rule.redirectTo, rule.redirectToType, values, pages) ?? "/";
+        return resolveRedirectTarget(rule.redirectTo, rule.redirectToType, redirectValues, pages) ?? "/";
       }
     }
     return "/";
   }
   if (typeof form.redirectRules === "string") {
-    return resolveRedirectTarget(form.redirectTo || form.redirectRules, form.redirectToType, values, pages) ?? "/";
+    return resolveRedirectTarget(form.redirectTo || form.redirectRules, form.redirectToType, redirectValues, pages) ?? "/";
   }
-  return resolveRedirectTarget(form.redirectTo, form.redirectToType, values, pages) ?? "/";
+  return resolveRedirectTarget(form.redirectTo, form.redirectToType, redirectValues, pages) ?? "/";
 }
 function resolveRedirectTarget(target, type, values, pages) {
   const value = target?.trim();
@@ -1441,14 +1442,114 @@ var SiteScriptsAndEmbedsSchema = z34.object({
   }
 });
 
-// src/blog-embed.ts
+// src/page-paths.ts
 import { z as z35 } from "zod";
-var BlogIframeSchema = z35.object({
+var PagePathSchema = z35.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
+var RUNTIME_OWNED_PATH_SEGMENTS = new Set([
+  "api",
+  "auth",
+  "blog",
+  "docs",
+  "download",
+  "legal",
+  "member",
+  "opengraph-image",
+  "preview-draft",
+  "schedules",
+  "shop",
+  "success"
+]);
+function isRuntimeOwnedPath(path) {
+  const [first = ""] = path.split("/").filter(Boolean);
+  return RUNTIME_OWNED_PATH_SEGMENTS.has(first);
+}
+function normalizeEditablePagePath(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed)
+    return { ok: false, message: "Enter a page URL, such as /hammocks/kids-classes." };
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith("//")) {
+    return { ok: false, message: "Enter only the path after the domain, such as /hammocks/kids-classes." };
+  }
+  if (/[?#]/.test(trimmed)) {
+    return { ok: false, message: "Remove the ? or # part. A page URL is only its path." };
+  }
+  const leading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const path = leading.length > 1 && leading.endsWith("/") ? leading.slice(0, -1) : leading;
+  if (/[A-Z]/.test(path))
+    return { ok: false, message: "Use lowercase letters in the URL." };
+  if (path.includes("//"))
+    return { ok: false, message: "Separate folders with a single slash." };
+  if (path.split("/").some((segment) => segment === "." || segment === "..")) {
+    return { ok: false, message: "Remove . and .. folders from the URL." };
+  }
+  if (!PagePathSchema.safeParse(path).success) {
+    return { ok: false, message: "Use lowercase letters, numbers, and single hyphens in each folder." };
+  }
+  if (isRuntimeOwnedPath(path)) {
+    return { ok: false, message: "This URL belongs to a built-in site feature. Choose another path." };
+  }
+  return { ok: true, path };
+}
+function normalizeProgramPagePath(raw) {
+  const result = normalizeEditablePagePath(raw);
+  if (result.ok && result.path === "/") {
+    return { ok: false, message: "A program page needs its own URL." };
+  }
+  return result;
+}
+function validateChangedEditablePagePaths(previousPages, nextPages) {
+  const before = new Map(previousPages.map((page) => [page.id, page.path]));
+  const issues = [];
+  for (const page of nextPages) {
+    if (page.kind === "builtin" || before.get(page.id) === page.path)
+      continue;
+    const result = normalizeEditablePagePath(page.path);
+    if (!result.ok) {
+      issues.push({ pageId: page.id, path: page.path, message: result.message });
+    } else if (result.path !== page.path) {
+      issues.push({ pageId: page.id, path: page.path, message: "Page URL is not normalized." });
+    }
+  }
+  return issues;
+}
+
+// src/program-pages.ts
+function legacyProgramPagePath(slug) {
+  return `/programs/${slug}`;
+}
+function programDetailPages(pages, programId) {
+  return pages.filter((page) => page.kind === "sections" && page.sections.some((section) => section.type === "program_detail" && section.props.programId === programId));
+}
+function resolveProgramPage(pages, program) {
+  const legacyPath = legacyProgramPagePath(program.slug);
+  const legacy = pages.find((page) => page.visible && page.path === legacyPath);
+  if (legacy)
+    return { status: "resolved", page: legacy, source: "legacy-path" };
+  const candidates = programDetailPages(pages, program.id).filter((page) => page.visible);
+  if (candidates.length === 1) {
+    return { status: "resolved", page: candidates[0], source: "detail-reference" };
+  }
+  if (candidates.length > 1) {
+    return { status: "ambiguous", pageIds: candidates.map((page) => page.id) };
+  }
+  return { status: "missing" };
+}
+function requireProgramPagePath(pages, program) {
+  const resolution = resolveProgramPage(pages, program);
+  if (resolution.status !== "resolved") {
+    throw new Error(`Program ${program.id} has no unique visible detail page`);
+  }
+  return resolution.page.path;
+}
+
+// src/blog-embed.ts
+import { z as z36 } from "zod";
+var BlogIframeSchema = z36.object({
   src: HttpsUrlSchema,
-  title: z35.string().trim().min(1).max(200),
-  sizing: z35.enum(["fixed", "ratio"]),
-  height: z35.number().int().min(100).max(3000),
-  aspectRatio: z35.number().min(0.1).max(10)
+  title: z36.string().trim().min(1).max(200),
+  sizing: z36.enum(["fixed", "ratio"]),
+  height: z36.number().int().min(100).max(3000),
+  aspectRatio: z36.number().min(0.1).max(10)
 }).strict();
 function encodeBlogIframe(input) {
   return encodeURIComponent(JSON.stringify(BlogIframeSchema.parse(input)));
@@ -1462,12 +1563,12 @@ function decodeBlogIframe(value) {
   }
 }
 var MAX_BLOG_HTML_EMBED_BYTES = 75000;
-var BlogHtmlEmbedSchema = z35.object({
-  version: z35.literal(1),
-  title: z35.string().trim().min(1).max(200),
-  source: z35.string().refine((source) => source.trim().length > 0, "Embed source is required").refine((source) => new TextEncoder().encode(source).byteLength <= MAX_BLOG_HTML_EMBED_BYTES, `Embed source cannot exceed ${MAX_BLOG_HTML_EMBED_BYTES} bytes`),
-  sizing: z35.enum(["auto", "fixed"]),
-  height: z35.number().int().min(100).max(3000)
+var BlogHtmlEmbedSchema = z36.object({
+  version: z36.literal(1),
+  title: z36.string().trim().min(1).max(200),
+  source: z36.string().refine((source) => source.trim().length > 0, "Embed source is required").refine((source) => new TextEncoder().encode(source).byteLength <= MAX_BLOG_HTML_EMBED_BYTES, `Embed source cannot exceed ${MAX_BLOG_HTML_EMBED_BYTES} bytes`),
+  sizing: z36.enum(["auto", "fixed"]),
+  height: z36.number().int().min(100).max(3000)
 }).strict();
 function encodeBlogHtmlEmbed(input) {
   return encodeURIComponent(JSON.stringify(BlogHtmlEmbedSchema.parse(input)));
@@ -1545,38 +1646,38 @@ function normalizeSiteConfigV2(input) {
     pages
   };
 }
-var NavigationItemSchema = z36.lazy(() => z36.discriminatedUnion("type", [
-  z36.object({
-    type: z36.literal("link"),
-    id: z36.string().min(1),
-    label: z36.string().min(1),
+var NavigationItemSchema = z37.lazy(() => z37.discriminatedUnion("type", [
+  z37.object({
+    type: z37.literal("link"),
+    id: z37.string().min(1),
+    label: z37.string().min(1),
     href: SiteHrefSchema,
-    external: z36.boolean(),
-    visible: z36.boolean()
+    external: z37.boolean(),
+    visible: z37.boolean()
   }).strict(),
-  z36.object({
-    type: z36.literal("group"),
-    id: z36.string().min(1),
-    label: z36.string().min(1),
-    visible: z36.boolean(),
-    items: z36.array(NavigationItemSchema).min(1)
+  z37.object({
+    type: z37.literal("group"),
+    id: z37.string().min(1),
+    label: z37.string().min(1),
+    visible: z37.boolean(),
+    items: z37.array(NavigationItemSchema).min(1)
   }).strict()
 ]));
-var SiteHeaderActionSchema = z36.discriminatedUnion("kind", [
-  z36.object({
-    kind: z36.literal("link"),
-    label: z36.string().min(1).max(100),
+var SiteHeaderActionSchema = z37.discriminatedUnion("kind", [
+  z37.object({
+    kind: z37.literal("link"),
+    label: z37.string().min(1).max(100),
     href: SiteHrefSchema,
-    external: z36.boolean()
+    external: z37.boolean()
   }).strict(),
-  z36.object({ kind: z36.literal("hidden") }).strict()
+  z37.object({ kind: z37.literal("hidden") }).strict()
 ]);
-var BlogListingEmbedSchema = z36.discriminatedUnion("kind", [
-  BlogIframeSchema.extend({ kind: z36.literal("iframe") }),
-  BlogHtmlEmbedSchema.extend({ kind: z36.literal("html") })
+var BlogListingEmbedSchema = z37.discriminatedUnion("kind", [
+  BlogIframeSchema.extend({ kind: z37.literal("iframe") }),
+  BlogHtmlEmbedSchema.extend({ kind: z37.literal("html") })
 ]);
-var BlogListingSchema = z36.object({
-  source: z36.enum(["native", "external"]),
+var BlogListingSchema = z37.object({
+  source: z37.enum(["native", "external"]),
   embed: BlogListingEmbedSchema.optional()
 }).strict().superRefine((listing, issue) => {
   if (listing.source === "external" && !listing.embed) {
@@ -1587,56 +1688,56 @@ var BlogListingSchema = z36.object({
     });
   }
 });
-var PagePathSchema = z36.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
-var SiteThemeSchema = z36.object({
-  colors: z36.object({
+var SiteThemeSchema = z37.object({
+  colors: z37.object({
     primary: SiteColorSchema,
     background: SiteColorSchema,
     foreground: SiteColorSchema,
     muted: SiteColorSchema,
     accent: SiteColorSchema
   }).strict(),
-  typography: z36.object({
-    heading: z36.enum(["sans", "serif"]),
-    body: z36.enum(["sans", "serif"])
+  typography: z37.object({
+    heading: z37.enum(["sans", "serif"]),
+    body: z37.enum(["sans", "serif"])
   }).strict(),
-  radius: z36.enum(["none", "small", "medium", "large"]),
-  button: z36.object({
+  radius: z37.enum(["none", "small", "medium", "large"]),
+  button: z37.object({
     borderColor: SiteColorSchema.nullable().optional(),
     backgroundColor: SiteColorSchema.nullable().optional(),
     textColor: SiteColorSchema.nullable().optional()
   }).strict().optional()
 }).strict();
-var SitePageHeaderSchema = z36.object({
-  mode: z36.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
-  contrast: z36.enum(["auto", "light", "dark"]).default("auto")
+var SitePageHeaderSchema = z37.object({
+  mode: z37.enum(["auto", "overlay", "stacked", "sticky"]).default("auto"),
+  contrast: z37.enum(["auto", "light", "dark"]).default("auto")
 }).strict();
-var SitePageBaseSchema = z36.object({
-  id: z36.string().min(1),
+var SitePageBaseSchema = z37.object({
+  id: z37.string().min(1),
   path: PagePathSchema,
-  visible: z36.boolean(),
-  metadata: z36.object({
-    title: z36.string().min(1),
-    description: z36.string().optional(),
+  visible: z37.boolean(),
+  metadata: z37.object({
+    title: z37.string().min(1),
+    description: z37.string().optional(),
     openGraphImage: SiteImageSchema.optional(),
-    indexable: z36.boolean().optional()
+    indexable: z37.boolean().optional()
   }).strict(),
   header: SitePageHeaderSchema.optional()
 });
 var SiteSectionsPageSchema = SitePageBaseSchema.extend({
-  kind: z36.literal("sections").default("sections"),
-  displayLocationId: z36.string().min(1).max(128).optional(),
-  sections: z36.array(SiteSectionSchema).min(1)
+  kind: z37.literal("sections").default("sections"),
+  displayLocationId: z37.string().min(1).max(128).optional(),
+  serviceLocationId: z37.string().min(1).max(128).optional(),
+  sections: z37.array(SiteSectionSchema).min(1)
 }).strict();
-var SitePageTemplateSchema = z36.object({
-  schemaVersion: z36.literal(2),
-  page: z36.object({
-    metadata: z36.object({
-      description: z36.string().optional(),
+var SitePageTemplateSchema = z37.object({
+  schemaVersion: z37.literal(2),
+  page: z37.object({
+    metadata: z37.object({
+      description: z37.string().optional(),
       openGraphImage: SiteImageSchema.optional(),
-      indexable: z36.boolean().optional()
+      indexable: z37.boolean().optional()
     }).strict(),
-    sections: z36.array(SiteSectionSchema).min(1)
+    sections: z37.array(SiteSectionSchema).min(1)
   }).strict()
 }).strict();
 function replacePageTemplateTokens(value, businessName) {
@@ -1655,7 +1756,7 @@ function replacePageTemplateTokens(value, businessName) {
 function materializeSitePageTemplate(input, businessName) {
   return SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(replacePageTemplateTokens(input, businessName)));
 }
-var BuiltinPageIdSchema = z36.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
+var BuiltinPageIdSchema = z37.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
 var BUILTIN_PAGE_PATHS = {
   "/schedules": "schedules",
   "/blog": "blog",
@@ -1664,11 +1765,11 @@ var BUILTIN_PAGE_PATHS = {
   "/shop/plans": "shop-plans"
 };
 var SiteBuiltinPageSchema = SitePageBaseSchema.extend({
-  kind: z36.literal("builtin"),
+  kind: z37.literal("builtin"),
   id: BuiltinPageIdSchema,
-  path: z36.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
+  path: z37.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
 }).strict().refine((page) => BUILTIN_PAGE_PATHS[page.path] === page.id, "Builtin page ID and path must match");
-var SitePageSchema = z36.union([
+var SitePageSchema = z37.union([
   SiteSectionsPageSchema,
   SiteBuiltinPageSchema
 ]);
@@ -1687,38 +1788,38 @@ function getNativeFormPlacement(section) {
   const placement = getFormPlacement(section);
   return placement?.kind === "native" ? placement : null;
 }
-var PublicSiteConfigObjectSchema = z36.object({
-  schemaVersion: z36.union([z36.literal(2), z36.literal(3)]),
-  locale: z36.string().min(2),
-  business: z36.object({
-    name: z36.string().min(1),
-    tagline: z36.string().min(1),
+var PublicSiteConfigObjectSchema = z37.object({
+  schemaVersion: z37.union([z37.literal(2), z37.literal(3)]),
+  locale: z37.string().min(2),
+  business: z37.object({
+    name: z37.string().min(1),
+    tagline: z37.string().min(1),
     logo: SiteImageSchema.optional(),
-    structuredDataType: z36.enum([
+    structuredDataType: z37.enum([
       "LocalBusiness",
       "SportsActivityLocation",
       "EducationalOrganization",
       "Organization"
     ])
   }).strict(),
-  metadata: z36.object({
-    defaultTitle: z36.string().min(1),
-    titleTemplate: z36.string().min(1),
-    defaultDescription: z36.string().min(1),
+  metadata: z37.object({
+    defaultTitle: z37.string().min(1),
+    titleTemplate: z37.string().min(1),
+    defaultDescription: z37.string().min(1),
     openGraphImage: SiteImageSchema.optional(),
-    googleSiteVerification: z36.string().min(1).optional()
+    googleSiteVerification: z37.string().min(1).optional()
   }).strict(),
   theme: SiteThemeSchema,
   headerAction: SiteHeaderActionSchema.optional(),
-  navigation: z36.array(NavigationItemSchema),
-  footer: z36.object({
-    credit: z36.string(),
-    links: z36.array(NavigationItemSchema),
-    locationsTitle: z36.string().min(1).default("Our Locations"),
-    hiddenLocationIds: z36.array(z36.string().min(1).max(128)).default([])
+  navigation: z37.array(NavigationItemSchema),
+  footer: z37.object({
+    credit: z37.string(),
+    links: z37.array(NavigationItemSchema),
+    locationsTitle: z37.string().min(1).default("Our Locations"),
+    hiddenLocationIds: z37.array(z37.string().min(1).max(128)).default([])
   }).strict(),
-  locationConnections: z36.array(SiteLocationConnectionSchema).min(1).optional(),
-  manualLocations: z36.array(SiteManualLocationSchema).default([]),
+  locationConnections: z37.array(SiteLocationConnectionSchema).min(1).optional(),
+  manualLocations: z37.array(SiteManualLocationSchema).default([]),
   locationOverride: SiteLocationOverrideSchema.optional(),
   content: SiteContentSchema.default({
     programs: [],
@@ -1726,8 +1827,8 @@ var PublicSiteConfigObjectSchema = z36.object({
     testimonials: [],
     faqs: []
   }),
-  pages: z36.array(SitePageSchema).min(1),
-  forms: z36.array(SiteFormSchema),
+  pages: z37.array(SitePageSchema).min(1),
+  forms: z37.array(SiteFormSchema),
   capabilities: SiteCapabilitiesSchema,
   scriptsAndEmbeds: SiteScriptsAndEmbedsSchema.default({
     enabled: true,
@@ -1891,7 +1992,7 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
       }
     }
   }
-  for (const page of config.pages) {
+  for (const [pageIndex, page] of config.pages.entries()) {
     if (pageIds.has(page.id)) {
       issue.addIssue({
         code: "custom",
@@ -1922,6 +2023,13 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
         code: "custom",
         message: `Page references an unknown display location: ${page.displayLocationId}`,
         path: ["pages"]
+      });
+    }
+    if (page.serviceLocationId !== undefined && !connectedLocationIds.has(page.serviceLocationId)) {
+      issue.addIssue({
+        code: "custom",
+        message: `Page references an unconnected service location: ${page.serviceLocationId}`,
+        path: ["pages", pageIndex, "serviceLocationId"]
       });
     }
     const sectionIds = new Set;
@@ -2027,11 +2135,19 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
     }
   }
   for (const [index, program] of config.content.programs.entries()) {
-    const programPath = `/programs/${program.slug}`;
-    if (program.visible && program.showLearnMore && !config.pages.some((page) => page.visible && page.path === programPath)) {
+    if (!program.visible || !program.showLearnMore)
+      continue;
+    const resolution = resolveProgramPage(config.pages, program);
+    if (resolution.status === "missing") {
       issue.addIssue({
         code: "custom",
-        message: `Visible program requires page: ${programPath}`,
+        message: `Visible program requires page: /programs/${program.slug} or one visible page with its program detail (${program.name})`,
+        path: ["content", "programs", index, "slug"]
+      });
+    } else if (resolution.status === "ambiguous") {
+      issue.addIssue({
+        code: "custom",
+        message: `Visible program has multiple detail pages: ${program.name} (${resolution.pageIds.join(", ")})`,
         path: ["content", "programs", index, "slug"]
       });
     }
@@ -2049,8 +2165,8 @@ function publicConfigInput(config) {
   };
 }
 var StoredSiteConfigObjectSchema = PublicSiteConfigObjectSchema.omit({ schemaVersion: true, locationConnections: true, locationOverride: true }).extend({
-  schemaVersion: z36.literal(3),
-  locationConnections: z36.array(StoredSiteLocationConnectionSchema).min(1)
+  schemaVersion: z37.literal(3),
+  locationConnections: z37.array(StoredSiteLocationConnectionSchema).min(1)
 }).strict();
 var StoredSiteConfigSchema = StoredSiteConfigObjectSchema.superRefine((config, issue) => {
   const parsedPublic = PublicSiteConfigSchema.safeParse(publicConfigInput(config));
@@ -2270,8 +2386,10 @@ function siteLocationReferences(config, locationId) {
     if (page.kind === "builtin")
       return [];
     const pageReference = page.displayLocationId === locationId ? [`${page.path} \xB7 location page`] : [];
+    const serviceReference = page.serviceLocationId === locationId ? [`${page.path} \xB7 page location`] : [];
     return [
       ...pageReference,
+      ...serviceReference,
       ...page.sections.flatMap((section) => {
         const formPlacement = getNativeFormPlacement(section);
         const liveLocationIds = section.type === "schedules" || section.type === "plans" ? section.props.locationIds : [];
@@ -3419,248 +3537,256 @@ function sharedConfig(source) {
   const parsed = PublicSiteConfigSchema.safeParse(candidate);
   return parsed.success ? parsed.data : null;
 }
+function hasPageServiceBinding(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    return false;
+  const pages = input.pages;
+  return Array.isArray(pages) && pages.some((page) => Boolean(page) && typeof page === "object" && !Array.isArray(page) && ("serviceLocationId" in page));
+}
 function publicSiteConfigFromStored(input, preset, options = {}) {
   const normalized = normalizeSiteConfigV2(migrateDownloadPage(input));
   const parsed = PublicSiteConfigSchema.safeParse(normalized);
   if (parsed.success)
     return parsed.data;
+  if (hasPageServiceBinding(normalized))
+    throw parsed.error;
   const shared = normalized && typeof normalized === "object" && !Array.isArray(normalized) ? sharedConfig(normalized) : null;
   return shared ?? legacyDraftToPublicSiteConfig(normalized, preset, options);
 }
 // src/live-data.ts
-import { z as z37 } from "zod";
-var JsonValueSchema = z37.lazy(() => z37.union([
-  z37.string(),
-  z37.number(),
-  z37.boolean(),
-  z37.null(),
-  z37.array(JsonValueSchema),
-  z37.record(z37.string(), JsonValueSchema)
+import { z as z38 } from "zod";
+var JsonValueSchema = z38.lazy(() => z38.union([
+  z38.string(),
+  z38.number(),
+  z38.boolean(),
+  z38.null(),
+  z38.array(JsonValueSchema),
+  z38.record(z38.string(), JsonValueSchema)
 ]));
-var SiteDateSchema = z37.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD").refine((value) => {
+var SiteDateSchema = z38.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD").refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }, "Date must be a valid calendar date");
-var LocationListSchema = z37.string().min(1).transform((value) => value.split(",").map((item) => item.trim())).pipe(z37.array(SiteLocationSlugSchema).min(1));
-var ScheduleQuerySchema = z37.object({
+var LocationListSchema = z38.string().min(1).transform((value) => value.split(",").map((item) => item.trim())).pipe(z38.array(SiteLocationSlugSchema).min(1));
+var ScheduleQuerySchema = z38.object({
   date: SiteDateSchema,
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var PlansQuerySchema = z37.object({
+var PlansQuerySchema = z38.object({
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var DocumentSignatureRequestSchema = z37.object({ signature: z37.string().min(1) }).strict();
-var EnrollRequestSchema = z37.object({
-  locationId: z37.string().min(1).optional(),
-  attemptId: z37.string().min(1),
-  priceId: z37.string().min(1),
-  planType: z37.enum(["recurring", "one-time"]).optional(),
-  paymentType: z37.string().min(1),
-  paymentMethodId: z37.string().min(1),
-  promoId: z37.string().min(1).nullable().optional()
+var DocumentSignatureRequestSchema = z38.object({ signature: z38.string().min(1) }).strict();
+var EnrollRequestSchema = z38.object({
+  locationId: z38.string().min(1).optional(),
+  attemptId: z38.string().min(1),
+  priceId: z38.string().min(1),
+  planType: z38.enum(["recurring", "one-time"]).optional(),
+  paymentType: z38.string().min(1),
+  paymentMethodId: z38.string().min(1),
+  promoId: z38.string().min(1).nullable().optional()
 }).strict();
-var EnrollQuoteRequestSchema = z37.object({
-  priceId: z37.string().min(1),
-  planType: z37.enum(["recurring", "one-time"]),
-  paymentType: z37.enum(["card", "us_bank_account"]),
-  promoId: z37.string().min(1).nullable().optional()
+var EnrollQuoteRequestSchema = z38.object({
+  priceId: z38.string().min(1),
+  planType: z38.enum(["recurring", "one-time"]),
+  paymentType: z38.enum(["card", "us_bank_account"]),
+  promoId: z38.string().min(1).nullable().optional()
 }).strict();
-var PaymentAddressSchema = z37.object({
-  line1: z37.string(),
-  line2: z37.string().optional(),
-  city: z37.string(),
-  state: z37.string(),
-  postalCode: z37.string(),
-  country: z37.string()
+var PaymentAddressSchema = z38.object({
+  line1: z38.string(),
+  line2: z38.string().optional(),
+  city: z38.string(),
+  state: z38.string(),
+  postalCode: z38.string(),
+  country: z38.string()
 }).strict();
-var EnrollResponseSchema = z37.object({
-  ok: z37.literal(true),
-  unsignedDocs: z37.array(z37.string().min(1))
+var EnrollResponseSchema = z38.object({
+  ok: z38.literal(true),
+  unsignedDocs: z38.array(z38.string().min(1))
 }).strict();
-var CheckoutAdditionalFeeSchema = z37.object({
-  label: z37.string().min(1),
-  amount: z37.number().int().nonnegative(),
-  description: z37.string().min(1).optional()
+var CheckoutAdditionalFeeSchema = z38.object({
+  label: z38.string().min(1),
+  amount: z38.number().int().nonnegative(),
+  description: z38.string().min(1).optional()
 }).strict();
-var EnrollQuoteSchema = z37.object({
-  baseAmount: z37.number().int().nonnegative(),
-  discount: z37.number().int().nonnegative(),
-  tax: z37.number().int().nonnegative(),
-  fees: z37.number().int().nonnegative(),
-  additionalFees: z37.array(CheckoutAdditionalFeeSchema).default([]),
-  total: z37.number().int().nonnegative(),
-  currency: z37.string().min(1)
+var EnrollQuoteSchema = z38.object({
+  baseAmount: z38.number().int().nonnegative(),
+  discount: z38.number().int().nonnegative(),
+  tax: z38.number().int().nonnegative(),
+  fees: z38.number().int().nonnegative(),
+  additionalFees: z38.array(CheckoutAdditionalFeeSchema).default([]),
+  total: z38.number().int().nonnegative(),
+  currency: z38.string().min(1)
 }).strict();
-var ShopCheckoutQuoteSchema = z37.object({
-  subtotal: z37.number().int().nonnegative(),
-  discount: z37.number().int().nonnegative(),
-  tax: z37.number().int().nonnegative(),
-  feesAmount: z37.number().int().nonnegative(),
-  processingFee: z37.number().int().nonnegative(),
-  additionalFees: z37.array(CheckoutAdditionalFeeSchema).default([]),
-  total: z37.number().int().nonnegative()
+var ShopCheckoutQuoteSchema = z38.object({
+  subtotal: z38.number().int().nonnegative(),
+  discount: z38.number().int().nonnegative(),
+  tax: z38.number().int().nonnegative(),
+  feesAmount: z38.number().int().nonnegative(),
+  processingFee: z38.number().int().nonnegative(),
+  additionalFees: z38.array(CheckoutAdditionalFeeSchema).default([]),
+  total: z38.number().int().nonnegative()
 }).strict();
-var PaymentMethodSchema = z37.discriminatedUnion("type", [
-  z37.object({
-    id: z37.string().min(1),
-    source: z37.enum(["stripe", "square", "authorize"]),
-    type: z37.literal("card"),
-    isDefault: z37.boolean(),
+var PaymentMethodSchema = z38.discriminatedUnion("type", [
+  z38.object({
+    id: z38.string().min(1),
+    source: z38.enum(["stripe", "square", "authorize"]),
+    type: z38.literal("card"),
+    isDefault: z38.boolean(),
     address: PaymentAddressSchema.optional(),
-    card: z37.object({
-      brand: z37.string().min(1),
-      last4: z37.string().nullable().optional(),
-      expMonth: z37.number().nullable(),
-      expYear: z37.number().nullable()
+    card: z38.object({
+      brand: z38.string().min(1),
+      last4: z38.string().nullable().optional(),
+      expMonth: z38.number().nullable(),
+      expYear: z38.number().nullable()
     }).strict()
   }).strict(),
-  z37.object({
-    id: z37.string().min(1),
-    source: z37.enum(["stripe", "square", "authorize"]),
-    type: z37.literal("us_bank_account"),
-    isDefault: z37.boolean(),
-    usBankAccount: z37.object({
-      bankName: z37.string().nullable(),
-      last4: z37.string().nullable(),
-      accountType: z37.string().nullable()
+  z38.object({
+    id: z38.string().min(1),
+    source: z38.enum(["stripe", "square", "authorize"]),
+    type: z38.literal("us_bank_account"),
+    isDefault: z38.boolean(),
+    usBankAccount: z38.object({
+      bankName: z38.string().nullable(),
+      last4: z38.string().nullable(),
+      accountType: z38.string().nullable()
     }).strict()
   }).strict()
 ]);
-var PaymentMethodsApiResponseSchema = z37.array(PaymentMethodSchema);
-var ScheduleSessionSchema = z37.object({
-  id: z37.string().min(1),
-  name: z37.string(),
-  minAge: z37.number(),
-  maxAge: z37.number(),
-  utcStartTime: z37.string().datetime(),
-  utcEndTime: z37.string().datetime(),
-  day: z37.string().datetime(),
-  isHoliday: z37.boolean(),
-  isBlocked: z37.boolean(),
-  holidayName: z37.string().optional(),
-  description: z37.string()
+var PaymentMethodsApiResponseSchema = z38.array(PaymentMethodSchema);
+var ScheduleSessionSchema = z38.object({
+  id: z38.string().min(1),
+  name: z38.string(),
+  minAge: z38.number(),
+  maxAge: z38.number(),
+  utcStartTime: z38.string().datetime(),
+  utcEndTime: z38.string().datetime(),
+  day: z38.string().datetime(),
+  isHoliday: z38.boolean(),
+  isBlocked: z38.boolean(),
+  holidayName: z38.string().optional(),
+  description: z38.string()
 }).strict();
-var ScheduleApiResponseSchema = z37.object({ sessions: z37.array(ScheduleSessionSchema) }).strict();
-var PlanProgramSchema = z37.object({
-  id: z37.string().min(1),
-  name: z37.string(),
-  minAge: z37.number(),
-  maxAge: z37.number(),
-  icon: z37.string().nullable().optional(),
-  description: z37.string().nullable()
+var ScheduleApiResponseSchema = z38.object({ sessions: z38.array(ScheduleSessionSchema) }).strict();
+var PlanProgramSchema = z38.object({
+  id: z38.string().min(1),
+  name: z38.string(),
+  minAge: z38.number(),
+  maxAge: z38.number(),
+  icon: z38.string().nullable().optional(),
+  description: z38.string().nullable()
 }).strict();
-var PlanPricingSchema = z37.object({
-  id: z37.string().min(1),
-  memberPlanId: z37.string().min(1),
-  name: z37.string(),
-  price: z37.number(),
-  interval: z37.string().nullable().optional(),
-  intervalThreshold: z37.number().nullable().optional(),
-  expireInterval: z37.string().nullable().optional(),
-  expireThreshold: z37.number().nullable().optional(),
-  downpayment: z37.number().nullable().optional(),
-  created: z37.string().datetime().optional(),
-  updated: z37.string().datetime().nullable().optional()
+var PlanPricingSchema = z38.object({
+  id: z38.string().min(1),
+  memberPlanId: z38.string().min(1),
+  name: z38.string(),
+  price: z38.number(),
+  interval: z38.string().nullable().optional(),
+  intervalThreshold: z38.number().nullable().optional(),
+  expireInterval: z38.string().nullable().optional(),
+  expireThreshold: z38.number().nullable().optional(),
+  downpayment: z38.number().nullable().optional(),
+  created: z38.string().datetime().optional(),
+  updated: z38.string().datetime().nullable().optional()
 }).strict();
-var SitePlanSchema = z37.object({
-  id: z37.string().min(1),
-  name: z37.string(),
-  description: z37.string().nullable(),
-  family: z37.boolean(),
-  familyMemberLimit: z37.number(),
-  editable: z37.boolean(),
-  archived: z37.boolean(),
-  contractId: z37.string().nullable(),
+var SitePlanSchema = z38.object({
+  id: z38.string().min(1),
+  name: z38.string(),
+  description: z38.string().nullable(),
+  family: z38.boolean(),
+  familyMemberLimit: z38.number(),
+  editable: z38.boolean(),
+  archived: z38.boolean(),
+  contractId: z38.string().nullable(),
   billingAnchorConfig: JsonValueSchema,
   marketingDetails: JsonValueSchema,
-  type: z37.enum(["one-time", "recurring"]),
-  totalClassLimit: z37.number().nullable(),
-  classLimitInterval: z37.string().nullable(),
-  allowProration: z37.boolean(),
-  classLimitThreshold: z37.number().nullable(),
-  makeUpCredits: z37.number(),
-  groupId: z37.string().nullable(),
-  locationId: z37.string(),
-  created: z37.string().datetime(),
-  updated: z37.string().datetime().nullable(),
-  programs: z37.array(PlanProgramSchema),
-  startingPrice: z37.number(),
-  pricings: z37.array(PlanPricingSchema),
-  ageRange: z37.object({ min: z37.number(), max: z37.number() }).strict()
+  type: z38.enum(["one-time", "recurring"]),
+  totalClassLimit: z38.number().nullable(),
+  classLimitInterval: z38.string().nullable(),
+  allowProration: z38.boolean(),
+  classLimitThreshold: z38.number().nullable(),
+  makeUpCredits: z38.number(),
+  groupId: z38.string().nullable(),
+  locationId: z38.string(),
+  created: z38.string().datetime(),
+  updated: z38.string().datetime().nullable(),
+  programs: z38.array(PlanProgramSchema),
+  startingPrice: z38.number(),
+  pricings: z38.array(PlanPricingSchema),
+  ageRange: z38.object({ min: z38.number(), max: z38.number() }).strict()
 }).strict();
-var PlanContractSchema = z37.object({
-  id: z37.string().min(1),
-  title: z37.string(),
-  requireSignature: z37.boolean()
+var PlanContractSchema = z38.object({
+  id: z38.string().min(1),
+  title: z38.string(),
+  requireSignature: z38.boolean()
 }).strict();
 var ApiPlanProgramSchema = PlanProgramSchema.extend({
-  capacity: z37.number()
+  capacity: z38.number()
 }).strict();
 var ApiSitePlanSchema = SitePlanSchema.extend({
   contract: PlanContractSchema.nullable(),
-  programs: z37.array(ApiPlanProgramSchema)
+  programs: z38.array(ApiPlanProgramSchema)
 }).strict().transform(({ contract: _contract, programs: programs3, ...plan }) => ({
   ...plan,
   programs: programs3.map(({ capacity: _capacity, ...program }) => program)
 }));
-var PlansApiResponseSchema = z37.array(ApiSitePlanSchema);
-var BlogPostSummarySchema = z37.object({
-  id: z37.string().min(1),
-  title: z37.string().min(1),
-  slug: z37.string().min(1),
-  featuredImageUrl: z37.string().nullable(),
-  publishedAt: z37.string().datetime().nullable(),
-  updatedAt: z37.string().datetime().nullable()
+var PlansApiResponseSchema = z38.array(ApiSitePlanSchema);
+var BlogPostSummarySchema = z38.object({
+  id: z38.string().min(1),
+  title: z38.string().min(1),
+  slug: z38.string().min(1),
+  featuredImageUrl: z38.string().nullable(),
+  publishedAt: z38.string().datetime().nullable(),
+  updatedAt: z38.string().datetime().nullable()
 }).strict();
 var BlogPostSchema = BlogPostSummarySchema.extend({
-  mdx: z37.string(),
-  metaTitle: z37.string().nullable(),
-  metaDescription: z37.string().nullable(),
-  authorName: z37.string().min(1).nullable()
+  mdx: z38.string(),
+  metaTitle: z38.string().nullable(),
+  metaDescription: z38.string().nullable(),
+  authorName: z38.string().min(1).nullable()
 }).strict();
-var BlogPostsApiResponseSchema = z37.object({
-  posts: z37.array(BlogPostSummarySchema),
-  total: z37.number().int().nonnegative()
+var BlogPostsApiResponseSchema = z38.object({
+  posts: z38.array(BlogPostSummarySchema),
+  total: z38.number().int().nonnegative()
 }).strict();
-var ProductVariantSchema = z37.object({
-  id: z37.string().min(1),
-  productId: z37.string().min(1),
-  name: z37.string().min(1),
-  sku: z37.string().min(1),
-  color: z37.string().nullable(),
-  size: z37.string().nullable(),
-  price: z37.number().int().nonnegative(),
-  salePrice: z37.number().int().nonnegative().nullable(),
-  stock: z37.number().int(),
-  active: z37.boolean()
+var ProductVariantSchema = z38.object({
+  id: z38.string().min(1),
+  productId: z38.string().min(1),
+  name: z38.string().min(1),
+  sku: z38.string().min(1),
+  color: z38.string().nullable(),
+  size: z38.string().nullable(),
+  price: z38.number().int().nonnegative(),
+  salePrice: z38.number().int().nonnegative().nullable(),
+  stock: z38.number().int(),
+  active: z38.boolean()
 }).strict();
-var ProductImageSchema = z37.object({
-  id: z37.string().min(1),
-  productId: z37.string().min(1),
-  imageUrl: z37.string().min(1),
-  sortOrder: z37.number().int()
+var ProductImageSchema = z38.object({
+  id: z38.string().min(1),
+  productId: z38.string().min(1),
+  imageUrl: z38.string().min(1),
+  sortOrder: z38.number().int()
 }).strict();
-var SiteProductSchema = z37.object({
-  id: z37.string().min(1),
-  slug: z37.string().min(1),
-  name: z37.string().min(1),
-  category: z37.string().nullable(),
-  subCategory: z37.string().nullable(),
-  description: z37.string().nullable(),
-  brand: z37.string().nullable(),
-  active: z37.boolean(),
-  currency: z37.string().length(3).nullable(),
-  createdAt: z37.string().datetime(),
-  updatedAt: z37.string().datetime().nullable(),
-  variants: z37.array(ProductVariantSchema),
-  images: z37.array(ProductImageSchema)
+var SiteProductSchema = z38.object({
+  id: z38.string().min(1),
+  slug: z38.string().min(1),
+  name: z38.string().min(1),
+  category: z38.string().nullable(),
+  subCategory: z38.string().nullable(),
+  description: z38.string().nullable(),
+  brand: z38.string().nullable(),
+  active: z38.boolean(),
+  currency: z38.string().length(3).nullable(),
+  createdAt: z38.string().datetime(),
+  updatedAt: z38.string().datetime().nullable(),
+  variants: z38.array(ProductVariantSchema),
+  images: z38.array(ProductImageSchema)
 }).strict();
-var ProductsApiResponseSchema = z37.array(SiteProductSchema);
-var LocationFailureSchema = z37.object({
+var ProductsApiResponseSchema = z38.array(SiteProductSchema);
+var LocationFailureSchema = z38.object({
   location: SiteLocationSchema,
-  message: z37.string().min(1)
+  message: z38.string().min(1)
 }).strict();
 function scheduleQueryKey(siteId, date, locationIds) {
   return ["schedules", siteId, date, ...locationIds];
@@ -3711,14 +3837,14 @@ function getSiteSectionTemplate(key) {
   return SITE_SECTION_TEMPLATES.find((template) => template.key === key);
 }
 // src/runtime.ts
-import { z as z38 } from "zod";
-var RuntimeSitePayloadSchema = z38.object({
+import { z as z39 } from "zod";
+var RuntimeSitePayloadSchema = z39.object({
   context: TenantContextSchema,
-  revision: z38.object({
-    id: z38.string().min(1).max(128),
-    schemaVersion: z38.number().int().positive(),
-    config: z38.unknown(),
-    publishedAt: z38.string().datetime().nullable()
+  revision: z39.object({
+    id: z39.string().min(1).max(128),
+    schemaVersion: z39.number().int().positive(),
+    config: z39.unknown(),
+    publishedAt: z39.string().datetime().nullable()
   }).strict()
 }).strict();
 function parseRuntimeSite(input) {
@@ -3738,6 +3864,9 @@ function parseRuntimeSite(input) {
   for (const page of config.pages) {
     if (page.kind === "builtin")
       continue;
+    if (page.serviceLocationId && !allowedLocationIds.has(page.serviceLocationId)) {
+      throw new Error("Published page references a disallowed service location");
+    }
     for (const section of page.sections) {
       if ((section.type === "schedules" || section.type === "plans") && section.props.locationIds.some((id2) => !allowedLocationIds.has(id2))) {
         throw new Error("Published live section references a disallowed location");
@@ -3762,10 +3891,10 @@ function parseRuntimeSite(input) {
     }
   };
 }
-var SiteCacheInvalidationSchema = z38.object({
-  siteId: z38.string().min(1).max(128),
-  revisionId: z38.string().min(1).max(128),
-  domains: z38.array(z38.string().min(1).max(253)).min(1).max(100)
+var SiteCacheInvalidationSchema = z39.object({
+  siteId: z39.string().min(1).max(128),
+  revisionId: z39.string().min(1).max(128),
+  domains: z39.array(z39.string().min(1).max(253)).min(1).max(100)
 }).strict();
 // src/stored-config.ts
 function record(value) {
@@ -3812,6 +3941,7 @@ export {
   withManualLocations,
   withLocationSlug,
   validateFormValues,
+  validateChangedEditablePagePaths,
   toVideoEmbedUrl,
   toPublicSiteConfig,
   toGhlFormContact,
@@ -3825,8 +3955,11 @@ export {
   resolveSitePageHeader,
   resolveSelectedLocation,
   resolveRenderedTenantContext,
+  resolveProgramPage,
   resolveFormRedirect,
+  requireProgramPagePath,
   publicSiteConfigFromStored,
+  programDetailPages,
   plansQueryKey,
   parseStoredSiteConfig,
   parseRuntimeSite,
@@ -3836,13 +3969,18 @@ export {
   normalizeStoredLocationConnections,
   normalizeSitePageTemplateV2,
   normalizeSiteConfigV2,
+  normalizeProgramPagePath,
+  normalizeEditablePagePath,
   materializeSitePageTemplate,
   manualLocationForDisplay,
   locationBySlug,
   locationById,
+  legacyProgramPagePath,
   legacyDraftToPublicSiteConfig,
+  isRuntimeOwnedPath,
   isIframeUrlAllowed,
   isFormFieldVisible,
+  hasPageServiceBinding,
   getSiteSectionTemplate,
   getNativeFormPlacement,
   getFormValidationErrors,
@@ -3930,6 +4068,7 @@ export {
   RenderedTenantContextSchema,
   RenderedSiteLocationSchema,
   RedirectRuleSchema,
+  RUNTIME_OWNED_PATH_SEGMENTS,
   PublishableStoredSiteConfigSchema,
   PublicSiteConfigSchema,
   ProgramsSectionSchema,
@@ -3946,6 +4085,7 @@ export {
   PlanPricingSchema,
   PaymentMethodsApiResponseSchema,
   PaymentMethodSchema,
+  PagePathSchema,
   OrderedIdsSchema,
   NotSureSectionSchema,
   NavigationItemSchema,
