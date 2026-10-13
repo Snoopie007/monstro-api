@@ -533,6 +533,7 @@ test("saves page and block rows as a new relational draft version", async () => 
   rows = [
     [site],
     [{ version: 1, isDirty: true }],
+    [{ id: "home", path: "/" }],
     [{ id: "location-1", vendorId: "vendor-1" }],
     [site],
     [{
@@ -572,6 +573,121 @@ test("saves page and block rows as a new relational draft version", async () => 
     },
   });
   expect(updates).toContainEqual(expect.objectContaining({ version: 2, isDirty: true }));
+});
+
+function programConfig(path: string, serviceLocationId?: string) {
+  return publishableConfig({
+    ...structuredClone(templateConfig),
+    business: { ...templateConfig.business, name: "Academy" },
+    locationConnections: [{ locationId: "location-1", isPrimary: true, displayOrder: 0 }],
+    content: {
+      ...templateConfig.content,
+      programs: [{
+        id: "dragon",
+        slug: "little-dragon",
+        name: "Little Dragon",
+        description: "Kids classes",
+        visible: true,
+        showLearnMore: false,
+      }],
+    },
+    pages: [...templateConfig.pages, {
+      id: "program-little-dragon",
+      path,
+      kind: "sections",
+      visible: true,
+      metadata: { title: "Little Dragon" },
+      ...(serviceLocationId ? { serviceLocationId } : {}),
+      sections: [{
+        id: "program-little-dragon-detail",
+        type: "program_detail",
+        visible: true,
+        props: { programId: "dragon" },
+      }],
+    }],
+  });
+}
+
+async function saveDraftRequest(config: unknown) {
+  return request("/shared-sites/site-1/draft", {
+    method: "PUT",
+    body: JSON.stringify({ expectedRevisionId: "draft:site-1:1", schemaVersion: 3, config }),
+  });
+}
+
+test("rejects a new or changed page URL owned by a built-in route", async () => {
+  rows = [
+    [site],
+    [{ version: 1, isDirty: true }],
+    [{ id: "home", path: "/" }, { id: "program-little-dragon", path: "/programs/little-dragon" }],
+  ];
+  const response = await saveDraftRequest(programConfig("/shop/little-dragon"));
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ code: "SITE_PAGE_PATH_INVALID" });
+  expect(inserts).toHaveLength(0);
+});
+
+test("checks paths only after the locked revision check", async () => {
+  rows = [[site], [{ version: 2, isDirty: true }]];
+  const response = await saveDraftRequest(programConfig("/shop/little-dragon"));
+  expect(response.status).toBe(409);
+});
+
+test("keeps an unchanged historical path and persists a custom path's service location", async () => {
+  const config = programConfig("/legal", "location-1");
+  const { pages: _pages, schemaVersion, ...storedSettings } = config;
+  rows = [
+    [site],
+    [{ version: 1, isDirty: true }],
+    [{ id: "home", path: "/" }, { id: "program-little-dragon", path: "/legal" }],
+    [{ id: "location-1", vendorId: "vendor-1" }],
+    [site],
+    [{
+      schemaVersion,
+      settings: storedSettings,
+      version: 2,
+      isDirty: true,
+      updatedAt: new Date("2026-08-08T12:00:00.000Z"),
+    }],
+    [storedPage, {
+      ...storedPage,
+      id: "page-program",
+      pageKey: "program-little-dragon",
+      path: "/legal",
+      position: 1,
+      settings: { serviceLocationId: "location-1" },
+    }],
+    [storedBlock, {
+      pageId: "page-program",
+      blockKey: "program-little-dragon-detail",
+      type: "program_detail",
+      position: 0,
+      visible: true,
+      props: { programId: "dragon" },
+    }],
+    [{ locationId: "location-1", isPrimary: true, displayOrder: 0 }],
+    [{ id: "location-1", vendorId: "vendor-1", name: "Academy HQ", timezone: "America/Chicago" }],
+    [],
+  ];
+  returningRows = [[
+    { id: "page-home", pageKey: "home" },
+    { id: "page-program", pageKey: "program-little-dragon" },
+  ]];
+
+  const response = await saveDraftRequest(config);
+
+  expect(response.status).toBe(200);
+  expect(inserts).toContainEqual(expect.arrayContaining([
+    expect.objectContaining({
+      pageKey: "program-little-dragon",
+      path: "/legal",
+      settings: { serviceLocationId: "location-1" },
+    }),
+  ]));
+  const payload = await response.json() as { config: { pages: Array<Record<string, unknown>> } };
+  expect(payload.config.pages.find((page) => page.id === "program-little-dragon"))
+    .toMatchObject({ path: "/legal", serviceLocationId: "location-1" });
 });
 
 test("publishes only the expected relational draft", async () => {

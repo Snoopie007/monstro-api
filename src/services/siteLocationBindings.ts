@@ -5,6 +5,7 @@ import {
 } from "@/subtrees/site-config.js";
 import {
   locations,
+  normalizeLocationSlug,
   websiteSiteLocations,
 } from "@/subtrees/schemas";
 import { db } from "@/db/db";
@@ -97,6 +98,7 @@ async function loadSiteLocations(
       id: locations.id,
       vendorId: locations.vendorId,
       name: locations.name,
+      slug: locations.slug,
       address: locations.address,
       city: locations.city,
       state: locations.state,
@@ -121,7 +123,13 @@ async function loadSiteLocations(
   }
   return connections.map(({ locationId, isPrimary, displayOrder }) => {
     const location = byId.get(locationId)!;
-    const { vendorId: _vendorId, ...publicLocation } = location;
-    return { ...publicLocation, isPrimary, displayOrder };
+    const { vendorId: _vendorId, slug, ...publicLocation } = location;
+    // Same public slug the runtime context derives for ?location= links.
+    return {
+      ...publicLocation,
+      slug: normalizeLocationSlug(slug ?? "") || normalizeLocationSlug(location.name ?? "") || null,
+      isPrimary,
+      displayOrder,
+    };
   });
 }

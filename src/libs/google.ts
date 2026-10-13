@@ -163,7 +163,8 @@ export class AdsSetupError extends Error {
 
 export type AdsSitelinkProgram = {
     name: string;
-    slug: string;
+    /** Resolved path of the program's published detail page. */
+    path: string;
 };
 
 export type AdsLocationAssets = {
@@ -171,7 +172,7 @@ export type AdsLocationAssets = {
     phone?: string;
     country?: string;
     pages?: Array<{ pageKey: string; path: string }>;
-    /** Visible site programs with a /programs/{slug} page (showLearnMore). */
+    /** Visible Learn More programs with their resolved published page paths. */
     programs?: AdsSitelinkProgram[];
 };
 
@@ -239,14 +240,14 @@ export function mxSitelinkSpecs(
         { linkText: "Pricing", url: joinUrl(origin, pricing) },
     ];
 
-    // One sitelink per program that has a public /programs/{slug} page.
+    // One sitelink per program at its actual published page path.
     for (const program of programs) {
-        const slug = program.slug?.trim();
+        const path = program.path?.trim();
         const name = clip(program.name, 25);
-        if (!slug || !name) continue;
+        if (!path || !name) continue;
         links.push({
             linkText: name,
-            url: joinUrl(origin, `/programs/${slug}`),
+            url: joinUrl(origin, path),
         });
     }
 

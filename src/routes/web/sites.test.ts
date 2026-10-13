@@ -294,6 +294,89 @@ test("projects map identity and structured address through the public resolve re
 });
 
 
+test("publishes a program page's custom path and service location without lead credentials", async () => {
+  const base = routingConfig([{
+    locationId: "location-1",
+    isPrimary: true,
+    ghlLocationId: "ghl-location-1",
+    privateIntegrationToken: "pit-location-1",
+  }, {
+    locationId: "location-2",
+    isPrimary: false,
+    ghlLocationId: "ghl-location-2",
+    privateIntegrationToken: "pit-location-2",
+  }]);
+  const publishedConfig = {
+    ...base,
+    pages: [...base.pages, {
+      id: "program-dragon",
+      kind: "sections" as const,
+      path: "/west/little-dragon-classes",
+      visible: true,
+      serviceLocationId: "location-2",
+      metadata: { title: "Little Dragon" },
+      sections: [{
+        id: "program-dragon-copy",
+        type: "rich_text" as const,
+        visible: true,
+        props: { title: "Little Dragon", body: ["Classes"] },
+      }],
+    }],
+  };
+  selectedRows = [
+    [{
+      siteId: "site-1",
+      vendorId: "vendor-1",
+      publishedRevisionId: "revision-1",
+      domain: "aka.monstro.site",
+      verificationData: { source: "wildcard" },
+      isCanonical: true,
+    }],
+    [{
+      id: "revision-1",
+      schemaVersion: publishedConfig.schemaVersion,
+      config: publishedConfig,
+      publishedAt: new Date("2026-08-19T12:00:00.000Z"),
+    }],
+    [],
+    [{
+      id: "location-1",
+      slug: "hammocks",
+      name: "Hammocks",
+      timezone: "America/New_York",
+      metadata: {},
+      selectedGmb: null,
+      currency: "USD",
+      gatewayService: null,
+      vendorId: "vendor-1",
+      isPrimary: true,
+    }, {
+      id: "location-2",
+      slug: "west-kendall",
+      name: "West Kendall",
+      timezone: "America/New_York",
+      metadata: {},
+      selectedGmb: null,
+      currency: "USD",
+      gatewayService: null,
+      vendorId: "vendor-1",
+      isPrimary: false,
+    }],
+  ];
+
+  const response = await app.handle(new Request(
+    "http://localhost/sites/resolve?hostname=aka.monstro.site",
+  ));
+
+  expect(response.status).toBe(200);
+  const payload = await response.json() as {
+    revision: { config: { pages: Array<Record<string, unknown>> } };
+  };
+  expect(payload.revision.config.pages.find((page) => page.id === "program-dragon"))
+    .toMatchObject({ path: "/west/little-dragon-classes", serviceLocationId: "location-2" });
+  expect(JSON.stringify(payload)).not.toContain("pit-location");
+});
+
 test("rejects a location that is not attached to the requested site", async () => {
   const response = await app.handle(
     new Request("http://localhost/sites/site-1/locations/location-2/plans"),
