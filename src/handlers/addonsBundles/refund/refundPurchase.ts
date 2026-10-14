@@ -1,7 +1,7 @@
 import type { BundleRefundResponse } from "@/subtrees/types";
 import { listBundleRefundCharges } from "./charges";
 import { refundOneBundleCharge } from "./chargeRefund";
-import { cancelBundleForRefund, removeCanceledBundleJobs, type BundleRefundInput } from "../cancellation";
+import { cancelBundleForRefund, finishBundleCancellation, type BundleRefundInput } from "../cancellation";
 import { getBundlePurchaseSummary } from "../bundleSummary";
 
 export type RefundBundlePurchaseResult = { status: "not-found" } | { status: "ok"; value: BundleRefundResponse };
@@ -13,7 +13,7 @@ export async function refundBundlePurchase(input: BundleRefundInput): Promise<Re
 
   if (!bundle) return { status: "not-found" };
 
-  const cancellationWarnings = await removeCanceledBundleJobs(bundle);
+  const cancellationWarnings = await finishBundleCancellation(bundle);
   const charges = await listBundleRefundCharges(input.locationId, bundle);
   const results = await Promise.all(charges.map(refundOneBundleCharge));
 

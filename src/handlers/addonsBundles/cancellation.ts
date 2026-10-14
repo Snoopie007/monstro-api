@@ -202,9 +202,10 @@ async function voidUnpaidBundleInvoices(bundle: CanceledBundle) {
   ));
 }
 
-/** Job removal is retried with the refund request. Failed cleanup cannot stop
- * the independent refunds after cancellation has already committed. */
-export async function removeCanceledBundleJobs(bundle: CanceledBundle) {
+/** Voids the canceled bundle's unpaid invoices and removes its scheduled jobs.
+ * Both are retried with the refund request. Failed cleanup cannot stop the
+ * independent refunds after cancellation has already committed. */
+export async function finishBundleCancellation(bundle: CanceledBundle) {
   const cleanup = await Promise.allSettled([
     voidUnpaidBundleInvoices(bundle),
     ...bundle.subscriptionIds.map((id) => removeRenewalJobs(id)),
@@ -212,5 +213,5 @@ export async function removeCanceledBundleJobs(bundle: CanceledBundle) {
   ]);
   const failed = cleanup.some((result) => result.status === "rejected");
 
-  return failed ? ["Some scheduled payments could not be removed. Try again to finish cancellation."] : [];
+  return failed ? ["Some unpaid invoices could not be voided or scheduled payments removed. Try again to finish cancellation."] : [];
 }
