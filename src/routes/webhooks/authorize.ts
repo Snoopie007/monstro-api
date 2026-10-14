@@ -30,7 +30,6 @@ import {
     transactions,
 } from "@/subtrees/schemas";
 import type { SubscriptionJobData } from "@/subtrees/bullmq";
-import { activateBundleComponents, scheduleBundleJobs, type BundleJobs } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 import { isBundleRefundPaymentReplay, preserveBundleRefundProgress, recordBundleAuthorizeRefund } from "@/routes/x/loc/addonsBundles/bundleRefundState";
 
 const PAYMENT_EVENTS = new Set([
@@ -502,7 +501,6 @@ export function authorizeWebhookRoutes(app: Elysia) {
 
         let renewal: Renewal | undefined;
         let repair: { sid: string; lid: string; dueAt: Date | null } | undefined;
-        let bundleJobs: BundleJobs | undefined;
         await db.transaction(async (tx) => {
             await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${transaction.id}))`);
             const current = await tx.query.transactions.findFirst({
@@ -558,10 +556,9 @@ export function authorizeWebhookRoutes(app: Elysia) {
             const [invoice] = await tx.select().from(memberInvoices)
                 .where(eq(memberInvoices.transactionId, current.id)).for("update");
             const deferred = await getDeferredInvoiceBilling(tx, invoice?.memberPlanId);
-            const bundleOwned = currentMetadata.checkoutKind === "bundle";
             // TODO(billing): review payment-attempt matching for ordinary payments in a separate PR.
             // Keep their existing webhook behavior until that follow-up is implemented.
-            const attemptResult = prepareAuthorizeInvoiceAttempt(deferred || bundleOwned ? invoice : undefined, {
+            const attemptResult = prepareAuthorizeInvoiceAttempt(deferred ? invoice : undefined, {
                 id: providerTransactionId, invoiceNumber: details.order?.invoiceNumber, status: paymentStatus,
             });
             if (deferred && invoice?.memberPlanId && paymentStatus === "paid" && (attemptResult || invoice.paid)) {
@@ -683,10 +680,6 @@ export function authorizeWebhookRoutes(app: Elysia) {
                 case "subscription":
                     renewal = await fulfillPlanCheckout(tx, current, metadata);
                     return;
-                case "bundle":
-                    if (!invoice) throw new Error("Authorize.net bundle invoice is missing");
-                    bundleJobs = await activateBundleComponents(tx, invoice);
-                    return;
                 case undefined:
                     return;
                 default:
@@ -695,7 +688,6 @@ export function authorizeWebhookRoutes(app: Elysia) {
         });
         if (renewal) await scheduleRenewal(renewal);
         if (repair) await scheduleRenewalRepair(repair.sid, repair.lid, repair.dueAt);
-        if (bundleJobs) await scheduleBundleJobs(bundleJobs);
 
         return status(200, { message: "Authorize.net event processed" });
     }, { parse: "none" });

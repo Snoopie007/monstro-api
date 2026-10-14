@@ -70,7 +70,7 @@ export function bundlePaymentState(invoice: Pick<Invoice, "paid" | "metadata">):
   }
 }
 
-export type BundleJobs = {
+type BundleJobs = {
   locationId: string;
   subscriptions: Array<{ id: string; dueAt: Date }>;
   addonRenewals: Array<{ addonPurchaseId: string; runAt: Date }>;
@@ -78,7 +78,7 @@ export type BundleJobs = {
 
 /** Activates everything a paid bundle invoice bought. Runs in the transaction
  * that marked the invoice paid; returns the jobs to schedule after it commits. */
-export async function activateBundleComponents(
+async function activateBundleComponents(
   tx: Transaction,
   invoice: Pick<Invoice, "id" | "locationId" | "items" | "metadata">,
 ): Promise<BundleJobs> {
@@ -165,7 +165,7 @@ export async function activateBundleComponents(
   };
 }
 
-export async function scheduleBundleJobs(jobs: BundleJobs) {
+async function scheduleBundleJobs(jobs: BundleJobs) {
   for (const subscription of jobs.subscriptions) {
     await scheduleBundledRenewal(subscription.id, jobs.locationId, subscription.dueAt);
   }
