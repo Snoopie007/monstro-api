@@ -126,7 +126,7 @@ type GatewayAnswer =
     | { charge: ChargeWithGatewayResult; error?: never }
     | { charge?: never; error: unknown };
 
-export type InvoiceAttemptCharge = GatewayAnswer & (
+type InvoiceAttemptCharge = GatewayAnswer & (
     | { status: "succeeded"; paymentIntentId: string }
     | { status: "failed"; paymentIntentId?: string; failure: { reason: string; code: string } }
     | { status: UnsettledStatus; paymentIntentId?: string }

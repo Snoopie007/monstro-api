@@ -30,7 +30,7 @@ export function promoCheckoutDiscount(promo: StoredPromo | undefined): CheckoutD
 }
 
 /** A bundle price replaces the plan price, downpayment included. */
-export function initialDownpayment(
+function initialDownpayment(
     pricingSource: { type: string },
     pricing: { downpayment: number | null },
 ): number | null {

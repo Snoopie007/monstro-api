@@ -4,7 +4,7 @@ import { refundOneBundleCharge } from "./chargeRefund";
 import { cancelBundleForRefund, finishBundleCancellation, type BundleRefundInput } from "../cancellation";
 import { getBundlePurchaseSummary } from "../bundleSummary";
 
-export type RefundBundlePurchaseResult = { status: "not-found" } | { status: "ok"; value: BundleRefundResponse };
+type RefundBundlePurchaseResult = { status: "not-found" } | { status: "ok"; value: BundleRefundResponse };
 
 /** Full refund-and-cancel only. Each retry discovers charges afresh, including
  * payments that completed after an earlier cancellation/refund request. */

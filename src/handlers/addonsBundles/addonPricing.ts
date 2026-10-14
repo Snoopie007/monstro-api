@@ -7,7 +7,7 @@ import {
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 
 
-export type ActiveAddonPriceOverride = {
+type ActiveAddonPriceOverride = {
   addonId: string;
   replacementPlanPricingId: string;
 };

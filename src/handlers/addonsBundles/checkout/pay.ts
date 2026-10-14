@@ -30,7 +30,7 @@ type PaymentUnavailable = { status: "payment-unavailable"; error: string };
 
 type CollectedPayment = { status: "ok"; payment: BundlePaymentState } | PaymentUnavailable | { status: "inactive" };
 
-export type PayBundlePurchaseResult =
+type PayBundlePurchaseResult =
   | { status: "not-found" | "inactive" }
   | PaymentUnavailable
   | { status: "ok"; value: BundlePaymentResponse };

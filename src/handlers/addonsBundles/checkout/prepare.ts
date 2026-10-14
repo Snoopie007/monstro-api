@@ -27,7 +27,7 @@ import { getBundlePurchaseSummary } from "../bundleSummary";
 import { hasConflictingAddonPriceOverrides } from "../addonPricing";
 
 
-export type PrepareBundlePurchaseInput = PurchaseBundleInput & {
+type PrepareBundlePurchaseInput = PurchaseBundleInput & {
   locationId: string;
   memberId: string;
 };
