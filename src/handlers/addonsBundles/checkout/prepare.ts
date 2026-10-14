@@ -33,6 +33,8 @@ export type PrepareBundlePurchaseInput = PurchaseBundleInput & {
   memberId: string;
 };
 
+type BundlePurchaseDraft = PrepareBundlePurchaseInput & { purchaseId: string };
+
 type BundlePurchaseError = {
   status: "member-not-found" | "bundle-not-found" | "invalid-components" | "pricing-conflict" | "payment-unavailable" | "intent-conflict";
   error: string;
@@ -226,7 +228,7 @@ function subscriptionCancelAt(pricing: BundlePricing, startsAt: Date) {
   return calculateThresholdDate({ startDate: startsAt, threshold: pricing.expireThreshold, interval: pricing.expireInterval });
 }
 
-async function createPendingBundleRecords(tx: Transaction, input: PrepareBundlePurchaseInput, selection: BundleSelection) {
+async function createPendingBundleRecords(tx: Transaction, input: BundlePurchaseDraft, selection: BundleSelection) {
   const { locationId, memberId, paymentType } = input;
   const { startsAt } = selection;
   const [purchase] = await tx.insert(bundlePurchases).values({
@@ -287,9 +289,9 @@ async function createPendingBundleRecords(tx: Transaction, input: PrepareBundleP
   return { purchaseId: purchase.id, subscriptionIds, addonPurchaseIds };
 }
 
-async function readPreparedPurchase(database: Pick<typeof db, "query">, input: PrepareBundlePurchaseInput) {
+async function readPreparedPurchase(database: Pick<typeof db, "query">, input: BundlePurchaseDraft) {
   const purchase = await database.query.bundlePurchases.findFirst({
-    where: eq(bundlePurchases.id, input.purchaseId!),
+    where: eq(bundlePurchases.id, input.purchaseId),
     with: {
       bundle: { columns: { locationId: true }, with: { components: { columns: { id: true, required: true } } } },
       subscriptions: { columns: { id: true, bundleComponentId: true, paymentType: true, metadata: true } },
@@ -316,28 +318,41 @@ async function readPreparedPurchase(database: Pick<typeof db, "query">, input: P
 /** Create or resume the caller's durable draft before reading mutable catalog
  * or gateway settings. The purchase primary key serializes concurrent prepare. */
 export async function prepareBundlePurchase(input: PrepareBundlePurchaseInput): Promise<BundlePurchaseResult> {
-  input = { ...input, purchaseId: input.purchaseId ?? generateUUID("bpur_") };
-  let result: Awaited<ReturnType<typeof readPreparedPurchase>> | BundlePurchaseError = await readPreparedPurchase(db, input);
+  const draft: BundlePurchaseDraft = { ...input, purchaseId: input.purchaseId ?? generateUUID("bpur_") };
+  let result: Awaited<ReturnType<typeof readPreparedPurchase>> | BundlePurchaseError = await readPreparedPurchase(db, draft);
+
   if (!result) {
-    const payment = await resolveCardPayment(input);
+    const payment = await resolveCardPayment(draft);
+
     if (payment.status !== "ready") return { ...payment, checkoutCreated: false };
+
     result = await db.transaction(async (tx) => {
       // There may be no purchase row yet; this lock covers its primary key.
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${input.purchaseId!}))`);
-      const existing = await readPreparedPurchase(tx, input);
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${draft.purchaseId}))`);
+      const existing = await readPreparedPurchase(tx, draft);
+
       if (existing) return existing;
-      const selection = await validateBundleSelection(tx, input);
+
+      const selection = await validateBundleSelection(tx, draft);
+
       if (selection.status !== "valid") return { ...selection, checkoutCreated: false as const };
-      const records = await createPendingBundleRecords(tx, input, selection);
+
+      const records = await createPendingBundleRecords(tx, draft, selection);
+
       if (payment.card) await createBundleInvoice(tx, {
-        locationId: input.locationId, memberId: input.memberId, purchaseId: records.purchaseId,
+        locationId: draft.locationId, memberId: draft.memberId, purchaseId: records.purchaseId,
         description: selection.bundleName, payment: payment.card,
       });
+
       return { status: "created" as const, ...records };
     });
   }
+
   if (result.status !== "created") return result;
-  const purchase = await getBundlePurchaseSummary(input.locationId, result.purchaseId);
+
+  const purchase = await getBundlePurchaseSummary(draft.locationId, result.purchaseId);
+
   if (!purchase) throw new Error("Bundle purchase was not found after preparation");
+
   return { status: "created", value: { purchase, subscriptionIds: result.subscriptionIds, addonPurchaseIds: result.addonPurchaseIds } };
 }
