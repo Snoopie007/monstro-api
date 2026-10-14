@@ -2,21 +2,18 @@ import { db } from "@/db/db";
 import { AuthorizeApiError, AuthorizePaymentGateway, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { integrations, memberSubscriptions } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
-import { Currency, SquareError, type PaymentRefund } from "square";
+import { SquareError } from "square";
 import Stripe from "stripe";
 import { z } from "zod";
 import type { BundleRefundCharge } from "./bundleChargeOwnership";
 import {
   bundleRefundAmounts,
-  bundleRefundKey,
   readBundleRefundAttempt,
   saveBundleRefundOutcome,
   type BundleRefundAttempt,
   type BundleRefundBinding,
   type BundleRefundOutcome,
 } from "./bundleRefundState";
-
-const squareCurrency = z.enum(Currency);
 
 const paymentBindingSchema = z.object({
   gatewayService: z.enum(["stripe", "square", "authorize"]).optional(),
@@ -124,14 +121,14 @@ export function bundleRefundFailure(cause: unknown) {
   return { message: cause instanceof Error ? cause.message : "The gateway could not confirm this refund.", definite: false };
 }
 
-function refundableRemainder(charge: BundleRefundCharge, paid: number, completed: number, pending: number) {
+export function refundableRemainder(charge: BundleRefundCharge, paid: number, completed: number, pending: number) {
   const amounts = bundleRefundAmounts(charge);
   const returned = Math.max(amounts.refundedAmount, completed);
 
   return Math.max(0, Math.min(amounts.refundableAmount - returned - pending, paid - completed - pending));
 }
 
-function noRemainingRefund(completed: number, pending: number): BundleRefundOutcome {
+export function noRemainingRefund(completed: number, pending: number): BundleRefundOutcome {
   return {
     status: pending > 0 ? "failed" : "completed",
     amount: 0,
@@ -141,153 +138,22 @@ function noRemainingRefund(completed: number, pending: number): BundleRefundOutc
   };
 }
 
-function stripeRefundOutcome(refund: Stripe.Refund, completed: number): BundleRefundOutcome {
-  const status = refund.status === "succeeded" ? "completed"
-    : refund.status === "failed" || refund.status === "canceled" ? "failed" : "pending";
-
-  return {
-    status,
-    amount: refund.amount,
-    id: refund.id,
-    operation: "refund",
-    refundedAmount: completed,
-    error: status === "failed" ? `Stripe could not return this charge: ${refund.failure_reason ?? refund.status}.`
-      : status === "pending" ? "Stripe is still processing this refund. Check again later." : undefined,
-  };
-}
-
-const stripePaymentReferenceSchema = z.union([
-  z.string(),
-  z.object({ id: z.string() }).transform((payment) => payment.id),
-]).nullable();
-
-export async function refundBundleStripeCharge(
-  gateway: Extract<BundleRefundGateway, { service: "stripe" }>,
+/** Saves the pending refund before the provider call, so an interrupted
+ * request is reconciled instead of submitted again. Only a conclusive
+ * provider rejection fails; any other error leaves the refund unknown. */
+export async function submitRefund(
   charge: BundleRefundCharge,
   attempt: BundleRefundAttempt,
-  reconcile: boolean,
+  plan: Pick<BundleRefundOutcome, "amount" | "operation">,
+  send: () => Promise<BundleRefundOutcome>,
 ): Promise<BundleRefundOutcome> {
-  const { payment, refunds } = await gateway.client.inspectPaymentRefunds(attempt.paymentId);
-  const completed = refunds.reduce((sum, refund) => sum + (refund.status === "succeeded" ? refund.amount : 0), 0);
-  const pending = refunds.reduce((sum, refund) => sum + (refund.status !== "succeeded" && refund.status !== "failed" && refund.status !== "canceled" ? refund.amount : 0), 0);
-
-  if (payment.currency.toUpperCase() !== charge.transaction.currency.toUpperCase()) throw new Error("Stripe's charge currency does not match the saved payment.");
-
-  if (reconcile) {
-    const refund = attempt.id
-      ? await gateway.client.retrieveRefund(attempt.id)
-      : refunds.find((candidate) => candidate.metadata?.monstroBundleRefundKey === bundleRefundKey(charge.transaction.id, attempt));
-
-    if (!refund) {
-      return { status: "unknown", amount: attempt.amount, operation: "refund", error: "Stripe has not confirmed this refund. Staff must check it before another refund is submitted." };
-    }
-
-    const paymentId = stripePaymentReferenceSchema.parse(refund.payment_intent);
-
-    if (paymentId !== attempt.paymentId || refund.amount !== attempt.amount) throw new Error("Stripe's refund does not match this charge and amount.");
-
-    const returned = completed + (refund.status === "succeeded" && !refunds.some((candidate) => candidate.id === refund.id) ? refund.amount : 0);
-
-    return stripeRefundOutcome(refund, returned);
-  }
-
-  if (payment.status !== "succeeded") throw new Error("Stripe has not finished collecting this charge. Try again after the payment settles.");
-
-  const amount = Math.min(attempt.amount, refundableRemainder(charge, payment.amount_received, completed, pending));
-
-  if (amount === 0) return noRemainingRefund(completed, pending);
-
-  await saveBundleRefundOutcome(charge, attempt, { status: "pending", amount, operation: "refund" });
+  await saveBundleRefundOutcome(charge, attempt, { status: "pending", amount: plan.amount, operation: plan.operation });
 
   try {
-    const refund = await gateway.client.createRefund(attempt.paymentId, amount, charge.transaction.currency, bundleRefundKey(charge.transaction.id, attempt));
-
-    return stripeRefundOutcome(refund, completed + (refund.status === "succeeded" ? refund.amount : 0));
+    return await send();
   } catch (cause) {
     const failure = bundleRefundFailure(cause);
 
-    return { status: failure.definite ? "failed" : "unknown", amount, operation: "refund", error: failure.message };
-  }
-}
-
-function squareMoney(amount: bigint | null | undefined) {
-  const value = Number(amount ?? 0n);
-
-  if (!Number.isSafeInteger(value) || value < 0) throw new Error("Square returned an invalid refund amount.");
-
-  return value;
-}
-
-function squareRefundOutcome(refund: PaymentRefund, completed: number): BundleRefundOutcome {
-  const status = refund.status === "COMPLETED" ? "completed"
-    : refund.status === "FAILED" || refund.status === "REJECTED" ? "failed" : "pending";
-
-  return {
-    status,
-    amount: squareMoney(refund.amountMoney.amount),
-    id: refund.id,
-    operation: "refund",
-    refundedAmount: completed,
-    error: status === "failed" ? `Square ${refund.status === "REJECTED" ? "rejected" : "could not complete"} this refund.`
-      : status === "pending" ? "Square is still processing this refund. Check again later." : undefined,
-  };
-}
-
-export async function refundBundleSquareCharge(
-  gateway: Extract<BundleRefundGateway, { service: "square" }>,
-  charge: BundleRefundCharge,
-  attempt: BundleRefundAttempt,
-  reconcile: boolean,
-): Promise<BundleRefundOutcome> {
-  const { payment, refunds } = await gateway.client.inspectPaymentRefunds(attempt.paymentId);
-  const completed = refunds.reduce((sum, refund) => sum + (refund.status === "COMPLETED" ? squareMoney(refund.amountMoney.amount) : 0), 0);
-  const pending = Math.max(
-    refunds.reduce((sum, refund) => sum + (refund.status === "PENDING" ? squareMoney(refund.amountMoney.amount) : 0), 0),
-    squareMoney(payment.refundedMoney?.amount) - completed,
-  );
-  const currency = payment.totalMoney?.currency ?? payment.amountMoney?.currency;
-
-  if (currency !== charge.transaction.currency.toUpperCase()) throw new Error("Square's charge currency does not match the saved payment.");
-
-  const reason = `Bundle refund ${bundleRefundKey(charge.transaction.id, attempt)}`;
-
-  if (reconcile) {
-    const refund = attempt.id
-      ? await gateway.client.retrieveRefund(attempt.id)
-      : await gateway.client.findRefundByReason(attempt.paymentId, reason, new Date(Date.parse(attempt.requestedAt) - 300_000).toISOString());
-
-    if (!refund) {
-      return { status: "unknown", amount: attempt.amount, operation: "refund", error: "Square has not confirmed this refund. Staff must check it before another refund is submitted." };
-    }
-
-    if (refund.paymentId !== attempt.paymentId || squareMoney(refund.amountMoney.amount) !== attempt.amount) throw new Error("Square's refund does not match this charge and amount.");
-
-    const returned = completed + (refund.status === "COMPLETED" && !refunds.some((candidate) => candidate.id === refund.id) ? squareMoney(refund.amountMoney.amount) : 0);
-
-    return squareRefundOutcome(refund, returned);
-  }
-
-  if (payment.status !== "COMPLETED") throw new Error("Square has not finished collecting this charge. Try again after the payment settles.");
-
-  const amount = Math.min(attempt.amount, refundableRemainder(charge, squareMoney(payment.totalMoney?.amount ?? payment.amountMoney?.amount), completed, pending));
-
-  if (amount === 0) return noRemainingRefund(completed, pending);
-
-  await saveBundleRefundOutcome(charge, attempt, { status: "pending", amount, operation: "refund" });
-
-  try {
-    const refund = await gateway.client.refundPayment(
-      attempt.paymentId,
-      amount,
-      reason,
-      bundleRefundKey(charge.transaction.id, attempt),
-      squareCurrency.parse(charge.transaction.currency.toUpperCase()),
-    );
-
-    return squareRefundOutcome(refund, completed + (refund.status === "COMPLETED" ? squareMoney(refund.amountMoney.amount) : 0));
-  } catch (cause) {
-    const failure = bundleRefundFailure(cause);
-
-    return { status: failure.definite ? "failed" : "unknown", amount, operation: "refund", error: failure.message };
+    return { status: failure.definite ? "failed" : "unknown", amount: plan.amount, operation: plan.operation, error: failure.message };
   }
 }

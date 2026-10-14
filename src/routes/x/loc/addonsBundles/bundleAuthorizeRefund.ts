@@ -1,8 +1,8 @@
 import type { AuthorizeTransactionDetails } from "@/libs/PaymentGateway/AuthorizePayment";
 import { z } from "zod";
 import type { BundleRefundCharge } from "./bundleChargeOwnership";
-import { bundleRefundFailure, type BundleRefundGateway } from "./bundleRefundGateways";
-import { bundleRefundAmounts, saveBundleRefundOutcome, type BundleRefundAttempt, type BundleRefundOutcome } from "./bundleRefundState";
+import { submitRefund, type BundleRefundGateway } from "./bundleRefundGateways";
+import { bundleRefundAmounts, type BundleRefundAttempt, type BundleRefundOutcome } from "./bundleRefundState";
 
 function authorizeAmount(details: AuthorizeTransactionDetails) {
   const settled = details.transactionStatus === "settledSuccessfully" || details.transactionStatus === "refundSettledSuccessfully";
@@ -121,9 +121,7 @@ export async function refundBundleAuthorizeCharge(
     throw new Error("Authorize.net card details are unavailable. Staff must handle this refund through the gateway.");
   }
 
-  await saveBundleRefundOutcome(charge, attempt, { status: "pending", amount, operation });
-
-  try {
+  return submitRefund(charge, attempt, { amount, operation }, async () => {
     let refund: AuthorizeTransactionDetails;
 
     if (operation === "void") {
@@ -144,9 +142,5 @@ export async function refundBundleAuthorizeCharge(
       refundedAmount: operation === "void" ? paid : undefined,
       error: operation === "void" ? undefined : "Authorize.net is still processing this refund. Check again later.",
     };
-  } catch (cause) {
-    const failure = bundleRefundFailure(cause);
-
-    return { status: failure.definite ? "failed" : "unknown", amount, operation, error: failure.message };
-  }
+  });
 }

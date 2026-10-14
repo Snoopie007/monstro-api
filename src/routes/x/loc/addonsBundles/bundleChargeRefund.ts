@@ -2,13 +2,7 @@ import type { BundleRefundChargeResult } from "@/subtrees/types";
 import { z } from "zod";
 import { refundBundleAuthorizeCharge } from "./bundleAuthorizeRefund";
 import type { BundleRefundCharge } from "./bundleChargeOwnership";
-import {
-  bundleRefundFailure,
-  loadBundleRefundGateway,
-  refundBundleSquareCharge,
-  refundBundleStripeCharge,
-  type BundleRefundGateway,
-} from "./bundleRefundGateways";
+import { bundleRefundFailure, loadBundleRefundGateway, type BundleRefundGateway } from "./bundleRefundGateways";
 import {
   bundleRefundAmounts,
   claimBundleRefund,
@@ -19,6 +13,8 @@ import {
   type BundleRefundAttempt,
   type BundleRefundOutcome,
 } from "./bundleRefundState";
+import { refundBundleSquareCharge } from "./bundleSquareRefund";
+import { refundBundleStripeCharge } from "./bundleStripeRefund";
 
 function chargeResult(
   charge: BundleRefundCharge,
