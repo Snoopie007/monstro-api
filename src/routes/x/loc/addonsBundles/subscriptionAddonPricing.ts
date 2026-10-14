@@ -5,13 +5,21 @@ import {
   memberSubscriptions,
 } from "@/subtrees/schemas";
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
-import { hasConflictingReplacementPricing } from "./subscriptionAddonPricingRules";
-
-export { hasConflictingReplacementPricing } from "./subscriptionAddonPricingRules";
 
 type PricingReader = Pick<typeof db, "select" | "query">;
 
+export type ActiveAddonPriceOverride = {
+  addonId: string;
+  replacementPlanPricingId: string;
+};
+
 export const OPEN_ADDON_PURCHASE_STATUSES = ["pending", "active", "past_due"] as const;
+
+export function hasConflictingReplacementPricing(
+  mappings: Iterable<ActiveAddonPriceOverride>,
+) {
+  return new Set(Array.from(mappings, (mapping) => mapping.replacementPlanPricingId)).size > 1;
+}
 
 export async function loadActiveAddonPriceOverrides(
   database: PricingReader,
