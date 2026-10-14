@@ -408,6 +408,37 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         expect(current).toEqual(before);
     });
 
+    test("a cancellation that commits while pay waits to claim reports an inactive purchase", async () => {
+        const prepared = await prepare();
+        const { charge, calls } = approve();
+        let paying: ReturnType<typeof app.payBundlePurchase> | undefined;
+
+        // Pay reads the purchase as pending, then waits on this row lock to claim the attempt.
+        await admin.begin(async (tx) => {
+            await tx`update ${tx(namespace)}.bundle_purchases
+                set status = 'canceled', ended_at = greatest(now(), starts_at), updated_at = now()
+                where id = ${prepared.purchase.id}`;
+            paying = app.payBundlePurchase({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge);
+
+            for (let tries = 0; ; tries++) {
+                const waiting = await tx`select 1 from pg_locks where not granted`;
+
+                if (waiting.length > 0) return;
+
+                if (tries === 200) throw new Error("Pay never waited for the purchase lock");
+
+                await Bun.sleep(10);
+            }
+        });
+
+        expect(await paying).toEqual({ status: "inactive" });
+        expect(calls).toHaveLength(0);
+
+        const current = await state();
+        expect(current.purchases[0]?.status).toBe("canceled");
+        expect(current.invoices[0]?.metadata).not.toHaveProperty("billingAttempt");
+    });
+
     test("prepare rejects components v1 cannot charge in one payment", async () => {
         const { sql } = app;
         const future = new Date(Date.now() + 86_400_000).toISOString();

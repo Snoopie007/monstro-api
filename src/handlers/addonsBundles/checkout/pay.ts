@@ -106,7 +106,7 @@ async function collectBundleInvoice(
 
   if (unavailable) return { status: "payment-unavailable", error: unavailable };
 
-  await collectBundlePayment({
+  const collection = await collectBundlePayment({
     invoiceId: invoice.id,
     gateway: {
       service: gateway.service,
@@ -117,6 +117,10 @@ async function collectBundleInvoice(
     retry: true,
     method,
   }, request => chargeBundleInvoice(request, gateway, charge));
+
+  // Cancellation can commit between pay's first read and the claim.
+  if (collection === "inactive") return { status: "inactive" };
+
   const current = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoice.id), columns: { paid: true, metadata: true } });
   if (!current) throw new Error(`Bundle invoice ${invoice.id} disappeared during payment`);
   return { status: "ok", payment: bundlePaymentState(current) };
