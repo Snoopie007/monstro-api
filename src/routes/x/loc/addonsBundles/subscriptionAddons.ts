@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
 import {
   addons,
-  bundlePurchases,
   memberInvoices,
   memberPlanPricing,
   memberPlans,
@@ -17,6 +16,7 @@ import type {
 } from "@/subtrees/types";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getSubscriptionBundleSummary } from "@/handlers/addonsBundles/bundleSummary";
+import { lockBundleComponents } from "@/handlers/addonsBundles/bundleLocks";
 import {
   hasConflictingAddonPriceOverrides,
   loadActiveAddonPriceOverrides,
@@ -304,16 +304,8 @@ export async function cancelSubscriptionAddon(locationId: string, purchaseId: st
     const owner = await tx.query.memberSubscriptionAddons.findFirst({
       where: eq(memberSubscriptionAddons.id, purchaseId), columns: { bundlePurchaseId: true },
     });
-    if (owner?.bundlePurchaseId) {
-      await tx.select({ id: bundlePurchases.id }).from(bundlePurchases)
-        .where(eq(bundlePurchases.id, owner.bundlePurchaseId)).for("update");
-      await tx.select({ id: memberSubscriptions.id }).from(memberSubscriptions)
-        .where(eq(memberSubscriptions.bundlePurchaseId, owner.bundlePurchaseId))
-        .orderBy(asc(memberSubscriptions.id)).for("update");
-      await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons)
-        .where(eq(memberSubscriptionAddons.bundlePurchaseId, owner.bundlePurchaseId))
-        .orderBy(asc(memberSubscriptionAddons.id)).for("update");
-    }
+    if (owner?.bundlePurchaseId) await lockBundleComponents(tx, owner.bundlePurchaseId);
+
     await tx.execute(sql`
       select ${memberSubscriptionAddons.id}
       from ${memberSubscriptionAddons}

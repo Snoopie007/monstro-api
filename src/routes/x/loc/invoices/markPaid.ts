@@ -2,13 +2,14 @@ import { settleSubscriptionAddonInvoice } from "@/subtrees/utils/server/subscrip
 import { addInterval } from "./shared";
 import { enqueueSubscriptionAddonJob } from "@/queues";
 import { hasConflictingSubscriptionAddonPricing } from "@/handlers/addonsBundles/addonPricing";
+import { lockBundleComponents } from "@/handlers/addonsBundles/bundleLocks";
 import { reconcileBundlePurchase } from "@/handlers/addonsBundles/checkout/settlement";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { Wallet } from "@/libs/wallet";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { and, asc, eq, inArray, lte } from "drizzle-orm";
+import { and, eq, inArray, lte } from "drizzle-orm";
 import { bundlePurchases, memberInvoices, memberSubscriptionAddons, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import type { Currency } from "@/subtrees/types/currency";
 import { canEditLocationMember } from "@/utils/locationAccess";
@@ -40,9 +41,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         }
 
         if (invoice.memberSubscriptionAddonId) {
-            const purchase = await db.query.memberSubscriptionAddons.findFirst({
-                where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId),
-            });
+            const purchase = discoveredAddon;
             if (!purchase || ["canceled", "expired"].includes(purchase.status)) {
                 return status(409, { error: "Canceled or expired add-on invoices cannot be marked paid" });
             }
@@ -139,9 +138,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
             // them outside this transaction so the two-connection pool cannot
             // deadlock while another confirmation waits for the invoice lock.
             if (discoveredAddon?.bundlePurchaseId) {
-                await tx.select({ id: bundlePurchases.id }).from(bundlePurchases).where(eq(bundlePurchases.id, discoveredAddon.bundlePurchaseId)).for("update");
-                await tx.select({ id: memberSubscriptions.id }).from(memberSubscriptions).where(eq(memberSubscriptions.bundlePurchaseId, discoveredAddon.bundlePurchaseId)).orderBy(asc(memberSubscriptions.id)).for("update");
-                await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons).where(eq(memberSubscriptionAddons.bundlePurchaseId, discoveredAddon.bundlePurchaseId)).orderBy(asc(memberSubscriptionAddons.id)).for("update");
+                await lockBundleComponents(tx, discoveredAddon.bundlePurchaseId);
                 const owner = await tx.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, discoveredAddon.bundlePurchaseId), columns: { status: true } });
                 if (!owner || ["canceled", "expired"].includes(owner.status)) return "addon-ended";
             }
