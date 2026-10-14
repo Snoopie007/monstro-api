@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { bundlePurchases, memberInvoices, memberSubscriptions } from "@/subtrees/schemas";
-import type { BundlePaymentResponse, BundlePaymentState } from "@/subtrees/types";
+import type { BundlePaymentResponse, BundlePaymentState, PaymentType } from "@/subtrees/types";
 import { chargeWithGateway } from "@/utils/checkoutUtil";
 import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
 import { and, asc, eq } from "drizzle-orm";
@@ -55,6 +55,20 @@ async function findPayableBundle(input: PayBundlePurchaseInput): Promise<Payable
   return { status: "payable", memberId: purchase.memberId, invoiceId: purchase.invoiceId };
 }
 
+/** Why the location's gateway cannot charge this saved payment, if it cannot.
+ * Checked before the attempt is claimed, so the charge only fails on provider I/O. */
+function gatewayChargeUnavailable(gateway: CheckoutContext["gateway"], paymentType: PaymentType, total: number): string | null {
+  if (gateway.service === "stripe") return null;
+
+  if (paymentType !== "card") return "This location's payment gateway only accepts saved cards";
+
+  if (gateway.service === "square" && total > 0 && !gateway.metadata.squareLocationId) {
+    return "This location's Square gateway has no Square location configured";
+  }
+
+  return null;
+}
+
 async function collectBundleInvoice(
   input: { locationId: string; memberId: string; invoiceId: string; paymentMethodId?: string; paymentType?: "card" | "us_bank_account" },
   charge: typeof chargeWithGateway | undefined,
@@ -83,11 +97,12 @@ async function collectBundleInvoice(
   }
 
   const { gateway, gatewayCustomerId } = context;
-  const paymentType = input.paymentType ?? invoice.transaction.paymentType;
+  const method = input.paymentMethodId
+    ? { paymentMethodId: input.paymentMethodId, paymentType: input.paymentType ?? invoice.transaction.paymentType }
+    : undefined;
+  const unavailable = gatewayChargeUnavailable(gateway, method?.paymentType ?? invoice.transaction.paymentType, invoice.total);
 
-  if (input.paymentMethodId && gateway.service !== "stripe" && paymentType !== "card") {
-    return { status: "payment-unavailable", error: "This location's payment gateway only accepts saved cards" };
-  }
+  if (unavailable) return { status: "payment-unavailable", error: unavailable };
 
   await collectBundlePayment({
     invoiceId: invoice.id,
@@ -98,7 +113,7 @@ async function collectBundleInvoice(
       stripeAccountId: gateway.service === "stripe" ? gateway.accountId : undefined,
     },
     retry: true,
-    method: input.paymentMethodId ? { paymentMethodId: input.paymentMethodId, paymentType } : undefined,
+    method,
   }, request => chargeBundleInvoice(request, gateway, charge));
   const current = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoice.id), columns: { paid: true, metadata: true } });
   if (!current) throw new Error(`Bundle invoice ${invoice.id} disappeared during payment`);

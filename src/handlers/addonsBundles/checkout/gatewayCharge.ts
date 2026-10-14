@@ -12,7 +12,8 @@ export async function chargeBundleInvoice(
   charge?: typeof chargeWithGateway,
 ): Promise<InvoicePaymentOutcome> {
   try {
-    if (!charge && gateway.service === "square" && request.total > 0) return await chargeSquareBundle(request, gateway);
+    // SAFETY: pay rejects a Square charge over $0 without a location before claiming the attempt.
+    if (!charge && gateway.service === "square" && request.total > 0) return await chargeSquareBundle(request, gateway, gateway.metadata.squareLocationId!);
     const result = await (charge ?? chargeWithGateway)({
       ...request, gateway, gatewayCustomerId: request.gateway.customerId,
       transactionId: request.attemptId, attempt: { id: request.attemptId, invoiceId: request.invoiceId },
@@ -51,9 +52,11 @@ export async function chargeBundleInvoice(
   }
 }
 
-async function chargeSquareBundle(request: InvoicePaymentRequest, gateway: Extract<CheckoutContext["gateway"], { service: "square" }>): Promise<InvoicePaymentOutcome> {
-  const squareLocationId = gateway.metadata.squareLocationId;
-  if (!squareLocationId || request.paymentType !== "card") throw new Error("Square saved-card binding is missing");
+async function chargeSquareBundle(
+  request: InvoicePaymentRequest,
+  gateway: Extract<CheckoutContext["gateway"], { service: "square" }>,
+  squareLocationId: string,
+): Promise<InvoicePaymentOutcome> {
   const payment = await new SquarePaymentGateway(gateway.accessToken).createCharge(request.gateway.customerId, request.paymentMethodId, {
     total: request.total, feesAmount: request.feesAmount, currency: z.enum(Currency).parse(request.currency),
     referenceId: request.referenceId, note: request.note, idempotencyKey: request.attemptId, squareLocationId,

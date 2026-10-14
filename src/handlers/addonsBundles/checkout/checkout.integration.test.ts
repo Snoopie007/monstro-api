@@ -391,6 +391,23 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         expect(await state()).toEqual(before);
     });
 
+    test("square: pay reports a missing Square location before claiming an attempt", async () => {
+        await seed("square");
+        const prepared = await prepare();
+        await app.sql`update integrations set metadata = '{}'::jsonb`;
+        const before = await state();
+        const { charge, calls } = approve();
+
+        expect(await app.payBundlePurchase({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge))
+            .toEqual({ status: "payment-unavailable", error: "This location's Square gateway has no Square location configured" });
+        expect(calls).toHaveLength(0);
+
+        const current = await state();
+        expect(current.invoices).toHaveLength(1);
+        expect(current.invoices[0]?.metadata).not.toHaveProperty("billingAttempt");
+        expect(current).toEqual(before);
+    });
+
     test("prepare rejects components v1 cannot charge in one payment", async () => {
         const { sql } = app;
         const future = new Date(Date.now() + 86_400_000).toISOString();
