@@ -28,6 +28,8 @@ type PayableBundle = { status: "payable"; memberId: string; invoiceId: string | 
 
 type PaymentUnavailable = { status: "payment-unavailable"; error: string };
 
+type CollectedPayment = { status: "ok"; payment: BundlePaymentState } | PaymentUnavailable | { status: "inactive" };
+
 export type PayBundlePurchaseResult =
   | { status: "not-found" | "inactive" }
   | PaymentUnavailable
@@ -72,7 +74,7 @@ function gatewayChargeUnavailable(gateway: CheckoutContext["gateway"], paymentTy
 async function collectBundleInvoice(
   input: { locationId: string; memberId: string; invoiceId: string; paymentMethodId?: string; paymentType?: "card" | "us_bank_account" },
   charge: typeof chargeWithGateway | undefined,
-): Promise<BundlePaymentState | PaymentUnavailable> {
+): Promise<CollectedPayment> {
   const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, input.invoiceId), with: { transaction: true } });
   if (!invoice?.transaction) throw new Error(`Bundle invoice ${input.invoiceId} has no pending charge`);
   const binding = readBundleInvoice(invoice.metadata);
@@ -84,7 +86,7 @@ async function collectBundleInvoice(
       amount: invoice.total, currency: invoice.currency,
       gateway: { service: binding.gatewayService, stripeAccountId: binding.gatewayService === "stripe" ? binding.billingAttempt.stripeAccountId ?? null : undefined },
     });
-    return "active";
+    return { status: "ok", payment: "active" };
   }
   let context: CheckoutContext;
 
@@ -117,14 +119,14 @@ async function collectBundleInvoice(
   }, request => chargeBundleInvoice(request, gateway, charge));
   const current = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoice.id), columns: { paid: true, metadata: true } });
   if (!current) throw new Error(`Bundle invoice ${invoice.id} disappeared during payment`);
-  return bundlePaymentState(current);
+  return { status: "ok", payment: bundlePaymentState(current) };
 }
 
 /** Today's cash activation for every bundled subscription, in one transaction:
  * each gets its own cash invoice to collect. Add-ons then bill through their
  * worker and the bundle activates once its required add-ons are paid, as before
  * server checkout. */
-async function activateCashBundle(locationId: string, purchaseId: string): Promise<BundlePaymentState | "inactive"> {
+async function activateCashBundle(locationId: string, purchaseId: string): Promise<CollectedPayment> {
   const subscriptions = await findCashSubscriptions(db, eq(memberSubscriptions.bundlePurchaseId, purchaseId));
   const activations: Array<{ subscription: BillableCashSubscription; activation: CashActivation }> = [];
 
@@ -162,11 +164,11 @@ async function activateCashBundle(locationId: string, purchaseId: string): Promi
     }
     return true;
   });
-  if (!collecting) return "inactive";
+  if (!collecting) return { status: "inactive" };
 
   await reconcileBundlePurchase(locationId, purchaseId);
 
-  return "active";
+  return { status: "ok", payment: "active" };
 }
 
 async function requireBundlePurchaseSummary(locationId: string, purchaseId: string) {
@@ -187,16 +189,14 @@ export async function payBundlePurchase(
 
   if (bundle.status !== "payable") return bundle;
 
-  const payment = bundle.invoiceId
+  const collected = bundle.invoiceId
     ? await collectBundleInvoice({ locationId: input.locationId, memberId: bundle.memberId, invoiceId: bundle.invoiceId, paymentMethodId: input.paymentMethodId, paymentType: input.paymentType }, charge)
     : await activateCashBundle(input.locationId, input.purchaseId);
 
-  if (payment === "inactive") return { status: "inactive" };
-
-  if (typeof payment === "object") return payment;
+  if (collected.status !== "ok") return collected;
 
   return {
     status: "ok",
-    value: { purchase: await requireBundlePurchaseSummary(input.locationId, input.purchaseId), payment },
+    value: { purchase: await requireBundlePurchaseSummary(input.locationId, input.purchaseId), payment: collected.payment },
   };
 }
