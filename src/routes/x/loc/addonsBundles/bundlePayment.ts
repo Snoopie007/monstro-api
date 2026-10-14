@@ -13,7 +13,6 @@ import {
   type CashActivation,
 } from "../subscriptions/cashActivation";
 import { chargeBundleInvoice } from "./bundleCharge";
-import { getBundlePurchaseSummary } from "./bundlePurchases";
 import {
   bundlePaymentState,
   collectBundlePayment,
@@ -21,6 +20,7 @@ import {
   reconcileBundlePurchase,
   recordBundlePayment,
 } from "./bundleSettlement";
+import { getBundlePurchaseSummary } from "./bundleSummary";
 
 type PayBundlePurchaseInput = { locationId: string; bundleId: string; purchaseId: string; paymentMethodId?: string; paymentType?: "card" | "us_bank_account" };
 

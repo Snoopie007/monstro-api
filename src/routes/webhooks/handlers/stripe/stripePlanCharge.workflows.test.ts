@@ -19,7 +19,13 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Stripe invoice decline
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         await sql`alter table member_invoices add column if not exists renewal_key text`;
         mock.module("@/db/db", () => ({ db }));
-        mock.module("@/queues", () => ({ enqueueSubscriptionAddonJob: async () => {}, enqueueSubscriptionAddonPaymentRetry: async () => {}, scheduleBundledRenewal: async () => {} }));
+        mock.module("@/queues", () => ({
+            enqueueSubscriptionAddonJob: async () => {},
+            enqueueSubscriptionAddonPaymentRetry: async () => {},
+            scheduleBundledRenewal: async () => {},
+            removeRenewalJobs: async () => {},
+            removeSubscriptionAddonJobs: async () => {},
+        }));
         ({ handleStripePlanCharge: handle } = await import("./stripePlanCharge"));
     });
     afterAll(async () => {

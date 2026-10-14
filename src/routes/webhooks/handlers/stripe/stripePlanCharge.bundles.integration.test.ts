@@ -18,7 +18,13 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         mock.module("@/db/db", () => ({ db }));
-        mock.module("@/queues", () => ({ enqueueSubscriptionAddonJob: enqueue, enqueueSubscriptionAddonPaymentRetry: async () => {}, scheduleBundledRenewal: async () => {} }));
+        mock.module("@/queues", () => ({
+            enqueueSubscriptionAddonJob: enqueue,
+            enqueueSubscriptionAddonPaymentRetry: async () => {},
+            scheduleBundledRenewal: async () => {},
+            removeRenewalJobs: async () => {},
+            removeSubscriptionAddonJobs: async () => {},
+        }));
         ({ handleStripePlanCharge: handle } = await import("./stripePlanCharge"));
         ({ reconcileBundlePurchase: reconcile } = await import("@/routes/x/loc/addonsBundles/bundleSettlement"));
     });

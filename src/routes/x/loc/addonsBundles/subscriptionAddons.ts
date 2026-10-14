@@ -16,7 +16,7 @@ import type {
   SubscriptionAddonPurchaseItem,
 } from "@/subtrees/types";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { getSubscriptionBundleSummary } from "./bundlePurchases";
+import { getSubscriptionBundleSummary } from "./bundleSummary";
 import {
   hasConflictingAddonPriceOverrides,
   loadActiveAddonPriceOverrides,

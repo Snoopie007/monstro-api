@@ -1,6 +1,5 @@
 import { db } from "@/db/db";
-import { removeSubscriptionAddonJobs } from "@/queues/subscriptionAddons";
-import { removeRenewalJobs } from "@/queues/subscriptions";
+import { removeRenewalJobs, removeSubscriptionAddonJobs } from "@/queues";
 import {
   bundlePurchases,
   bundles,
@@ -10,7 +9,7 @@ import {
   memberSubscriptionAddons,
   memberSubscriptions,
 } from "@/subtrees/schemas";
-import { and, asc, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -52,6 +51,59 @@ async function cancelMemberWithoutAccess(tx: Transaction, locationId: string, me
 
   await tx.update(memberLocations).set({ status: "canceled", updated: now })
     .where(and(eq(memberLocations.locationId, locationId), eq(memberLocations.memberId, memberId)));
+}
+
+/** Ends a bundle without refunding it. Its subscriptions keep running; its
+ * add-ons stop and their unpaid invoices are voided. */
+export async function cancelBundlePurchase(locationId: string, bundlePurchaseId: string, reason?: string, expectedBundleId?: string) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`
+      select ${bundlePurchases.id}
+      from ${bundlePurchases}
+      inner join ${bundles} on ${bundles.id} = ${bundlePurchases.bundleId}
+      where ${bundlePurchases.id} = ${bundlePurchaseId}
+        and ${bundles.locationId} = ${locationId}
+      for update
+    `);
+    const purchase = await tx.query.bundlePurchases.findFirst({
+      where: eq(bundlePurchases.id, bundlePurchaseId),
+      with: { bundle: { columns: { locationId: true } } },
+    });
+    if (!purchase || purchase.bundle?.locationId !== locationId || (expectedBundleId && purchase.bundleId !== expectedBundleId)) return { status: "not-found" as const };
+    if (purchase.status === "canceled" || purchase.status === "expired") {
+      return { status: "unchanged" as const, addonPurchaseIds: [] };
+    }
+
+    const now = new Date();
+    const addonRows = await tx.select({ id: memberSubscriptionAddons.id })
+      .from(memberSubscriptionAddons)
+      .where(eq(memberSubscriptionAddons.bundlePurchaseId, bundlePurchaseId));
+    const addonPurchaseIds = addonRows.map((addon) => addon.id);
+    await tx.update(bundlePurchases).set({
+      status: "canceled",
+      endedAt: now,
+      cancelReason: reason?.trim() || null,
+      updated: now,
+    }).where(eq(bundlePurchases.id, bundlePurchaseId));
+    if (addonPurchaseIds.length > 0) {
+      await tx.update(memberSubscriptionAddons).set({
+        status: "canceled",
+        cancelAt: now,
+        canceledAt: now,
+        endedAt: now,
+        nextBillAt: null,
+        updated: now,
+      }).where(and(
+        inArray(memberSubscriptionAddons.id, addonPurchaseIds),
+        inArray(memberSubscriptionAddons.status, ["pending", "active", "past_due"]),
+      ));
+      await tx.update(memberInvoices).set({ status: "void", updated: now }).where(and(
+        inArray(memberInvoices.memberSubscriptionAddonId, addonPurchaseIds),
+        inArray(memberInvoices.status, ["draft", "sent", "unpaid"]),
+      ));
+    }
+    return { status: "canceled" as const, addonPurchaseIds };
+  });
 }
 
 /** Cancellation commits before refunds. Replays still cancel any component
@@ -130,7 +182,8 @@ export async function cancelBundleForRefund(input: BundleRefundInput): Promise<C
 }
 
 /** Invoice writes happen after the access transaction releases its locks.
- * Checkout and renewal callbacks lock invoices before access records. */
+ * Ordinary renewal callbacks lock an invoice before its access records; the
+ * bundle collector locks access records first, as cancellation does. */
 async function voidUnpaidBundleInvoices(bundle: CanceledBundle) {
   const invoiceOwners = [];
 
