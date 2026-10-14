@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { bundlePurchases, memberInvoices, memberSubscriptions } from "@/subtrees/schemas";
 import type { BundlePaymentResponse, BundlePaymentState } from "@/subtrees/types";
 import { chargeWithGateway } from "@/utils/checkoutUtil";
-import { getCheckoutContext } from "@/utils/getCheckoutContext";
+import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
 import { and, asc, eq } from "drizzle-orm";
 import {
   activateCashSubscription,
@@ -26,8 +26,11 @@ type PayBundlePurchaseInput = { locationId: string; bundleId: string; purchaseId
 
 type PayableBundle = { status: "payable"; memberId: string; invoiceId: string | null };
 
+type PaymentUnavailable = { status: "payment-unavailable"; error: string };
+
 export type PayBundlePurchaseResult =
   | { status: "not-found" | "inactive" }
+  | PaymentUnavailable
   | { status: "ok"; value: BundlePaymentResponse };
 
 async function findPayableBundle(input: PayBundlePurchaseInput): Promise<PayableBundle | { status: "not-found" | "inactive" }> {
@@ -55,7 +58,7 @@ async function findPayableBundle(input: PayBundlePurchaseInput): Promise<Payable
 async function collectBundleInvoice(
   input: { locationId: string; memberId: string; invoiceId: string; paymentMethodId?: string; paymentType?: "card" | "us_bank_account" },
   charge: typeof chargeWithGateway | undefined,
-): Promise<BundlePaymentState> {
+): Promise<BundlePaymentState | PaymentUnavailable> {
   const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, input.invoiceId), with: { transaction: true } });
   if (!invoice?.transaction) throw new Error(`Bundle invoice ${input.invoiceId} has no pending charge`);
   const binding = readBundleInvoice(invoice.metadata);
@@ -69,8 +72,23 @@ async function collectBundleInvoice(
     });
     return "active";
   }
-  const { gateway, gatewayCustomerId } = await getCheckoutContext({ lid: input.locationId, mid: input.memberId });
-  if (input.paymentMethodId && gateway.service !== "stripe" && input.paymentType !== "card") throw new Error("This gateway only accepts saved cards");
+  let context: CheckoutContext;
+
+  try {
+    context = await getCheckoutContext({ lid: input.locationId, mid: input.memberId });
+  } catch (error) {
+    if (error instanceof CheckoutError) return { status: "payment-unavailable", error: error.message };
+
+    throw error;
+  }
+
+  const { gateway, gatewayCustomerId } = context;
+  const paymentType = input.paymentType ?? invoice.transaction.paymentType;
+
+  if (input.paymentMethodId && gateway.service !== "stripe" && paymentType !== "card") {
+    return { status: "payment-unavailable", error: "This location's payment gateway only accepts saved cards" };
+  }
+
   await collectBundlePayment({
     invoiceId: invoice.id,
     gateway: {
@@ -80,10 +98,7 @@ async function collectBundleInvoice(
       stripeAccountId: gateway.service === "stripe" ? gateway.accountId : undefined,
     },
     retry: true,
-    method: input.paymentMethodId ? {
-      paymentMethodId: input.paymentMethodId,
-      paymentType: input.paymentType ?? invoice.transaction.paymentType,
-    } : undefined,
+    method: input.paymentMethodId ? { paymentMethodId: input.paymentMethodId, paymentType } : undefined,
   }, request => chargeBundleInvoice(request, gateway, charge));
   const current = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoice.id), columns: { paid: true, metadata: true } });
   if (!current) throw new Error(`Bundle invoice ${invoice.id} disappeared during payment`);
@@ -162,6 +177,8 @@ export async function payBundlePurchase(
     : await activateCashBundle(input.locationId, input.purchaseId);
 
   if (payment === "inactive") return { status: "inactive" };
+
+  if (typeof payment === "object") return payment;
 
   return {
     status: "ok",

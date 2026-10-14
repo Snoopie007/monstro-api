@@ -99,6 +99,8 @@ export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 				return status(404, { error: "Bundle purchase not found" });
 			case "inactive":
 				return status(409, { error: "Bundle purchase can no longer be paid" });
+			case "payment-unavailable":
+				return status(400, { error: result.error });
 			case "ok":
 				return status(200, result.value);
 		}
