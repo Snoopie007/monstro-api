@@ -1,4 +1,4 @@
-import type { db } from "@/db/db";
+import type { DbReader, DbTransaction } from "@/db/db";
 import { WorkflowEvents } from "@/subtrees/constants/workflow";
 import { memberLocations, memberSubscriptions, promos } from "@/subtrees/schemas";
 import { ensureCashInvoice, type CashInvoiceQuote } from "@/subtrees/utils/server/cashInvoices";
@@ -8,10 +8,8 @@ import { and, eq, sql, type SQL } from "drizzle-orm";
 import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
 import { promoCheckoutDiscount, readPromo } from "./activation";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type Reader = Pick<typeof db, "query">;
 
-export function findCashSubscriptions(database: Reader, where: SQL | undefined) {
+export function findCashSubscriptions(database: DbReader, where: SQL | undefined) {
     return database.query.memberSubscriptions.findMany({
         where,
         with: {
@@ -78,7 +76,7 @@ export async function planCashActivation(sub: BillableCashSubscription, location
 /** Today's cash activation: the first invoice is sent for collection and the
  * subscription starts immediately. */
 export async function activateCashSubscription(
-    tx: Transaction,
+    tx: DbTransaction,
     sub: BillableCashSubscription,
     locationId: string,
     activation: CashActivation,

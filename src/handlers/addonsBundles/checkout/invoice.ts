@@ -1,5 +1,5 @@
 import { bundlePreparationSchema } from "./preparationFacts";
-import type { db } from "@/db/db";
+import type { DbTransaction } from "@/db/db";
 import {
   bundlePurchases,
   locations,
@@ -24,7 +24,6 @@ import { getCurrency } from "@/utils/getCurrency";
 import { eq, sql } from "drizzle-orm";
 import { quoteInitialSubscriptionCharge } from "@/routes/x/loc/subscriptions/activation";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type BundleCardPayment = {
   gateway: CheckoutContext["gateway"];
@@ -61,7 +60,7 @@ function commissionBasisOf(
 }
 
 // The API's copy of the pricing schema predates this column, so it is read by name.
-async function sessionCommissionValue(tx: Transaction, pricingId: string) {
+async function sessionCommissionValue(tx: DbTransaction, pricingId: string) {
   const [row] = await tx.select({
     value: sql<number | null>`${memberPlanPricing}.session_commission_value_minor`,
   }).from(memberPlanPricing).where(eq(memberPlanPricing.id, pricingId));
@@ -70,7 +69,7 @@ async function sessionCommissionValue(tx: Transaction, pricingId: string) {
 }
 
 async function quoteBundledSubscription(
-  tx: Transaction,
+  tx: DbTransaction,
   location: BundleLocation,
   subscription: Awaited<ReturnType<typeof loadBundledSubscriptions>>[number],
 ) {
@@ -165,7 +164,7 @@ function quoteBundledAddon(
   return { item, platformFee: chargeDetails.feesAmount };
 }
 
-function loadBundledSubscriptions(tx: Transaction, purchaseId: string) {
+function loadBundledSubscriptions(tx: DbTransaction, purchaseId: string) {
   return tx.query.memberSubscriptions.findMany({
     where: eq(memberSubscriptions.bundlePurchaseId, purchaseId),
     columns: { id: true, currentPeriodStart: true, currentPeriodEnd: true, metadata: true },
@@ -173,7 +172,7 @@ function loadBundledSubscriptions(tx: Transaction, purchaseId: string) {
   });
 }
 
-function loadBundledAddons(tx: Transaction, purchaseId: string) {
+function loadBundledAddons(tx: DbTransaction, purchaseId: string) {
   return tx.query.memberSubscriptionAddons.findMany({
     where: eq(memberSubscriptionAddons.bundlePurchaseId, purchaseId),
     columns: { id: true, startsAt: true },
@@ -202,7 +201,7 @@ function invoiceAmounts(items: Array<{ feeId?: string; billing: ItemBilling }>) 
 
 /** Writes a card purchase's one draft invoice and its pending transaction. Runs
  * inside prepare's transaction so the quotes see the components it inserted. */
-export async function createBundleInvoice(tx: Transaction, input: {
+export async function createBundleInvoice(tx: DbTransaction, input: {
   locationId: string;
   memberId: string;
   purchaseId: string;

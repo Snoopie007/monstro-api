@@ -1,5 +1,5 @@
 import { getCurrency } from "@/utils/getCurrency";
-import { db } from "@/db/db";
+import { db, type DbReader, type DbTransaction } from "@/db/db";
 import {
   addonPlanPriceOverrides,
   addons,
@@ -24,7 +24,6 @@ import type {
 } from "@/subtrees/types";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
-type CatalogReader = Pick<typeof db, "query" | "select">;
 type AddonRow = Addon & { planPriceOverrides: AddonPlanPriceOverride[] };
 type BundleRow = Bundle & { components: BundleComponent[] };
 
@@ -43,7 +42,7 @@ function serializeAddon(addon: AddonRow): AddonCatalogItem {
   };
 }
 
-async function serializeBundles(reader: CatalogReader, bundleRows: BundleRow[]): Promise<BundleCatalogItem[]> {
+async function serializeBundles(reader: DbReader, bundleRows: BundleRow[]): Promise<BundleCatalogItem[]> {
   if (bundleRows.length === 0) return [];
 
   const planPricingIds = Array.from(new Set(bundleRows.flatMap((bundle) =>
@@ -86,7 +85,7 @@ async function serializeBundles(reader: CatalogReader, bundleRows: BundleRow[]):
   }));
 }
 
-async function loadAddonRows(reader: CatalogReader, locationId: string, addonId?: string) {
+async function loadAddonRows(reader: DbReader, locationId: string, addonId?: string) {
   return reader.query.addons.findMany({
     where: addonId
       ? and(eq(addons.locationId, locationId), eq(addons.id, addonId))
@@ -101,7 +100,7 @@ async function loadAddonRows(reader: CatalogReader, locationId: string, addonId?
   });
 }
 
-async function loadBundleRows(reader: CatalogReader, locationId: string, bundleId?: string) {
+async function loadBundleRows(reader: DbReader, locationId: string, bundleId?: string) {
   return reader.query.bundles.findMany({
     where: bundleId
       ? and(eq(bundles.locationId, locationId), eq(bundles.id, bundleId))
@@ -116,7 +115,7 @@ async function loadBundleRows(reader: CatalogReader, locationId: string, bundleI
 }
 
 async function insertAddonMappings(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   addonId: string,
   input: AddonEditorInput,
 ) {
@@ -130,7 +129,7 @@ async function insertAddonMappings(
 }
 
 async function insertAddonDefinition(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   locationId: string,
   input: AddonEditorInput,
 ) {
@@ -154,7 +153,7 @@ async function insertAddonDefinition(
 }
 
 async function insertBundleComponents(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   bundleId: string,
   input: BundleEditorInput,
 ) {
@@ -229,7 +228,7 @@ export async function listAddons(locationId: string) {
   return (await loadAddonRows(db, locationId)).map(serializeAddon);
 }
 
-export async function getAddon(locationId: string, addonId: string, reader: CatalogReader = db) {
+export async function getAddon(locationId: string, addonId: string, reader: DbReader = db) {
   const [addon] = await loadAddonRows(reader, locationId, addonId);
   return addon ? serializeAddon(addon) : null;
 }
@@ -311,7 +310,7 @@ export async function listBundles(locationId: string) {
   return serializeBundles(db, await loadBundleRows(db, locationId));
 }
 
-export async function getBundle(locationId: string, bundleId: string, reader: CatalogReader = db) {
+export async function getBundle(locationId: string, bundleId: string, reader: DbReader = db) {
   const bundleItems = await serializeBundles(reader, await loadBundleRows(reader, locationId, bundleId));
   return bundleItems[0] ?? null;
 }

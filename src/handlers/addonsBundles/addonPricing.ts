@@ -1,4 +1,4 @@
-import type { db } from "@/db/db";
+import type { DbReader } from "@/db/db";
 import {
   addonPlanPriceOverrides,
   memberSubscriptionAddons,
@@ -6,7 +6,6 @@ import {
 } from "@/subtrees/schemas";
 import { and, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 
-type PricingReader = Pick<typeof db, "select" | "query">;
 
 export type ActiveAddonPriceOverride = {
   addonId: string;
@@ -22,7 +21,7 @@ export function hasConflictingReplacementPricing(
 }
 
 export async function loadActiveAddonPriceOverrides(
-  database: PricingReader,
+  database: DbReader,
   sourcePlanPricingId: string,
   addonIds: Iterable<string>,
   at = new Date(),
@@ -43,7 +42,7 @@ export async function loadActiveAddonPriceOverrides(
 }
 
 export async function hasConflictingAddonPriceOverrides(
-  database: PricingReader,
+  database: DbReader,
   sourcePlanPricingId: string,
   addonIds: Iterable<string>,
   at = new Date(),
@@ -54,7 +53,7 @@ export async function hasConflictingAddonPriceOverrides(
 }
 
 export async function hasConflictingSubscriptionAddonPricing(
-  database: PricingReader,
+  database: DbReader,
   memberSubscriptionId: string,
   additionalAddonIds: Iterable<string> = [],
   at = new Date(),

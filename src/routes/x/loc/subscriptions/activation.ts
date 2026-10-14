@@ -1,4 +1,4 @@
-import type { db } from "@/db/db";
+import type { DbReader, DbTransaction } from "@/db/db";
 import { memberLocations, memberSubscriptions, promos } from "@/subtrees/schemas";
 import type { CheckoutDiscount } from "@/subtrees/types";
 import { getAdditionalFeesForCheckout } from "@/utils/additionalFees";
@@ -7,8 +7,6 @@ import { and, eq, sql } from "drizzle-orm";
 import { resolveInitialSubscriptionPricing } from "./effectivePricing";
 import type { PromoDiscount } from "./shared";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type Reader = Pick<typeof db, "query">;
 
 type StoredPromo = {
     id?: string;
@@ -50,7 +48,7 @@ type ChargeableSubscription = {
 
 /** Prices a subscription's first charge. Takes a transaction so bundle checkout
  * can price subscriptions it has inserted but not committed. */
-export async function quoteInitialSubscriptionCharge(database: Reader, input: {
+export async function quoteInitialSubscriptionCharge(database: DbReader, input: {
     subscription: ChargeableSubscription;
     locationId: string;
     discount?: CheckoutDiscount;
@@ -103,7 +101,7 @@ export async function quoteInitialSubscriptionCharge(database: Reader, input: {
 /** The subscription writes for a first payment. A payment that is still
  * settling only saves the payment method; a finalized one also activates the
  * subscription and the member's location. */
-export async function markSubscriptionActivated(tx: Transaction, input: {
+export async function markSubscriptionActivated(tx: DbTransaction, input: {
     subscription: { id: string; memberId: string; locationId: string; metadata: Record<string, unknown> };
     payment: {
         paymentMethodId: string;

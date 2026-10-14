@@ -1,5 +1,5 @@
 import { bundlePreparationSchema } from "./preparationFacts";
-import { db } from "@/db/db";
+import { db, type DbTransaction } from "@/db/db";
 import { enqueueSubscriptionAddonJob, enqueueSubscriptionAddonPaymentRetry, scheduleBundledRenewal } from "@/queues";
 import {
   bundlePurchases,
@@ -16,7 +16,6 @@ import { z } from "zod";
 import { hasConflictingAddonPriceOverrides, OPEN_ADDON_PURCHASE_STATUSES } from "../addonPricing";
 import { markSubscriptionActivated } from "@/routes/x/loc/subscriptions/activation";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Invoice = typeof memberInvoices.$inferSelect;
 
 const bundleInvoiceMetadataSchema = z.looseObject({
@@ -79,7 +78,7 @@ type BundleJobs = {
 /** Activates everything a paid bundle invoice bought. Runs in the transaction
  * that marked the invoice paid; returns the jobs to schedule after it commits. */
 async function activateBundleComponents(
-  tx: Transaction,
+  tx: DbTransaction,
   invoice: Pick<Invoice, "id" | "locationId" | "items" | "metadata">,
 ): Promise<BundleJobs> {
   const [locked] = await tx.select({ id: bundlePurchases.id }).from(bundlePurchases)

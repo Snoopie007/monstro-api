@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+import { db, type DbTransaction } from "@/db/db";
 import { removeRenewalJobs, removeSubscriptionAddonJobs } from "@/queues";
 import {
   bundlePurchases,
@@ -11,7 +11,6 @@ import {
 } from "@/subtrees/schemas";
 import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type BundleRefundInput = {
   locationId: string;
@@ -26,7 +25,7 @@ export type CanceledBundle = {
   addonPurchaseIds: string[];
 };
 
-async function cancelMemberWithoutAccess(tx: Transaction, locationId: string, memberId: string, now: Date) {
+async function cancelMemberWithoutAccess(tx: DbTransaction, locationId: string, memberId: string, now: Date) {
   await tx.select({ memberId: memberLocations.memberId }).from(memberLocations)
     .where(and(eq(memberLocations.locationId, locationId), eq(memberLocations.memberId, memberId)))
     .for("update");

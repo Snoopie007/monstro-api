@@ -1,11 +1,10 @@
-import type { db } from "@/db/db";
+import type { DbReader } from "@/db/db";
 import { memberSubscriptions } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 
 // Accepts a transaction so a caller can price rows it has not committed yet.
-type PricingReader = Pick<typeof db, "query">;
 
-export async function resolveInitialSubscriptionPricing(database: PricingReader, memberSubscriptionId: string) {
+export async function resolveInitialSubscriptionPricing(database: DbReader, memberSubscriptionId: string) {
   const subscription = await database.query.memberSubscriptions.findFirst({
     where: eq(memberSubscriptions.id, memberSubscriptionId),
     with: {

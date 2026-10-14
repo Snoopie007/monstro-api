@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+import { db, type DbTransaction } from "@/db/db";
 import { createHash } from "node:crypto";
 import { memberInvoices, transactions } from "@/subtrees/schemas";
 import type { TransactionMetadata, TransactionRefund } from "@/subtrees/types";
@@ -7,7 +7,6 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { BundleRefundCharge } from "./charges";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const refundAttemptSchema = z.object({
   amount: z.number().int().nonnegative(),
@@ -167,7 +166,7 @@ export async function claimBundleRefund(charge: BundleRefundCharge, binding: Bun
 }
 
 async function saveRefundOutcome(
-  tx: Transaction,
+  tx: DbTransaction,
   transactionId: string,
   attempt: BundleRefundAttempt,
   outcome: BundleRefundOutcome,
@@ -226,7 +225,7 @@ export async function saveBundleRefundOutcome(charge: BundleRefundCharge, attemp
 
 /** Authorize follow-on webhooks use the same locked refund write. They must not
  * add the same refund twice or treat a pending credit as returned money. */
-export async function recordBundleAuthorizeRefund(tx: Transaction, input: {
+export async function recordBundleAuthorizeRefund(tx: DbTransaction, input: {
   transactionId: string;
   refundId: string;
   paymentId: string | undefined;
@@ -317,7 +316,7 @@ export function isBundleRefundPaymentReplay(metadata: TransactionMetadata, payme
 
 /** Bundle retry responses can arrive after a refund committed. Lock in the
  * same order as refund finalization before deciding whether to save payment. */
-export async function lockBundleRefundPaymentReplay(tx: Transaction, transactionId: string, paymentId: string | null) {
+export async function lockBundleRefundPaymentReplay(tx: DbTransaction, transactionId: string, paymentId: string | null) {
   await tx.select({ id: memberInvoices.id }).from(memberInvoices)
     .where(eq(memberInvoices.transactionId, transactionId)).for("update");
 

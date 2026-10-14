@@ -1,5 +1,5 @@
 import { bundlePreparationSchema } from "./preparationFacts";
-import { db } from "@/db/db";
+import { db, type DbTransaction } from "@/db/db";
 import { calculateThresholdDate } from "@/utils/enrollUtils";
 import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
 import { getCurrency } from "@/utils/getCurrency";
@@ -26,7 +26,6 @@ import { createBundleInvoice, type BundleCardPayment } from "./invoice";
 import { getBundlePurchaseSummary } from "../bundleSummary";
 import { hasConflictingAddonPriceOverrides } from "../addonPricing";
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type PrepareBundlePurchaseInput = PurchaseBundleInput & {
   locationId: string;
@@ -106,7 +105,7 @@ async function resolveCardPayment(
 }
 
 async function validateBundleSelection(
-  tx: Transaction,
+  tx: DbTransaction,
   input: PrepareBundlePurchaseInput,
 ): Promise<BundleSelection | BundlePurchaseError> {
   const { locationId, memberId } = input;
@@ -228,7 +227,7 @@ function subscriptionCancelAt(pricing: BundlePricing, startsAt: Date) {
   return calculateThresholdDate({ startDate: startsAt, threshold: pricing.expireThreshold, interval: pricing.expireInterval });
 }
 
-async function createPendingBundleRecords(tx: Transaction, input: BundlePurchaseDraft, selection: BundleSelection) {
+async function createPendingBundleRecords(tx: DbTransaction, input: BundlePurchaseDraft, selection: BundleSelection) {
   const { locationId, memberId, paymentType } = input;
   const { startsAt } = selection;
   const [purchase] = await tx.insert(bundlePurchases).values({
