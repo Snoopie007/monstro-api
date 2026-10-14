@@ -21,6 +21,16 @@ export function readPromo(metadata: Record<string, unknown>): StoredPromo | unde
     return metadata.promo as StoredPromo | undefined;
 }
 
+/** The checkout discount for a stored promo. Older promos saved only an amount. */
+export function promoCheckoutDiscount(promo: StoredPromo | undefined): CheckoutDiscount | undefined {
+    if (!promo?.discount) return undefined;
+
+    return {
+        type: promo.discount.type ?? "fixed_amount",
+        value: promo.discount.value ?? promo.discount.amount,
+    };
+}
+
 /** A bundle price replaces the plan price, downpayment included. */
 export function initialDownpayment(
     pricingSource: { type: string },

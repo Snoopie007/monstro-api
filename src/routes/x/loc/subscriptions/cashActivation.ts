@@ -6,6 +6,7 @@ import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import { isFuture } from "date-fns";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
+import { promoCheckoutDiscount, readPromo } from "./activation";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Reader = Pick<typeof db, "query">;
@@ -52,17 +53,6 @@ export function hasCashBillingDefinition(sub: CashSubscription): sub is Billable
     return !!sub.member && !!sub.location && !!sub.pricing;
 }
 
-type CashPromo = {
-    id?: string;
-    applied?: boolean;
-    discount?: { amount: number; type?: "fixed_amount" | "percentage"; value?: number };
-};
-
-function readCashPromo(metadata: Record<string, unknown>): CashPromo | undefined {
-    // SAFETY: enrollment stores metadata.promo in this shape; activation only reads it back.
-    return metadata.promo as CashPromo | undefined;
-}
-
 export type CashActivation =
     | { status: "trialing" }
     | { status: "active"; quote: CashInvoiceQuote };
@@ -72,13 +62,7 @@ export type CashActivation =
 export async function planCashActivation(sub: BillableCashSubscription, locationId: string): Promise<CashActivation> {
     if (sub.trialEnd && isFuture(sub.trialEnd)) return { status: "trialing" };
 
-    const promoMeta = readCashPromo(sub.metadata);
-    const discount = promoMeta?.discount
-        ? {
-            type: promoMeta.discount.type ?? "fixed_amount",
-            value: promoMeta.discount.value ?? promoMeta.discount.amount,
-        }
-        : undefined;
+    const discount = promoCheckoutDiscount(readPromo(sub.metadata));
     const quote = await buildSubscriptionInvoiceQuote({
         memberId: sub.memberId,
         locationId, subscriptionId: sub.id, parentId: sub.parentId,
@@ -99,7 +83,7 @@ export async function activateCashSubscription(
     locationId: string,
     activation: CashActivation,
 ) {
-    const promoMeta = readCashPromo(sub.metadata);
+    const promoMeta = readPromo(sub.metadata);
 
     if (activation.status === "active") {
         await ensureCashInvoice(tx, {

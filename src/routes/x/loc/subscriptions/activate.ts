@@ -1,4 +1,4 @@
-import { markSubscriptionActivated, quoteInitialSubscriptionCharge, readPromo } from "./activation";
+import { markSubscriptionActivated, promoCheckoutDiscount, quoteInitialSubscriptionCharge, readPromo } from "./activation";
 import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
@@ -127,12 +127,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
 
         const nextBillingAt = getNextBillingDate(sub);
         const promoMeta = readPromo(sub.metadata);
-        const discount = promoMeta?.discount
-            ? {
-                type: promoMeta.discount.type ?? "fixed_amount",
-                value: promoMeta.discount.value ?? promoMeta.discount.amount,
-            }
-            : undefined;
+        const discount = promoCheckoutDiscount(promoMeta);
         const location = sub.location;
         const currency = getCurrency(location.country);
         const billingQuote = getSubscriptionBillingQuote(sub);
