@@ -1,5 +1,4 @@
 import { db } from "@/db/db";
-import { enqueueSubscriptionAddonJob } from "@/queues/subscriptionAddons";
 import { bundlePurchases, memberInvoices, memberSubscriptions } from "@/subtrees/schemas";
 import type { BundlePaymentResponse, BundlePaymentState } from "@/subtrees/types";
 import { chargeWithGateway } from "@/utils/checkoutUtil";
@@ -14,11 +13,12 @@ import {
   type CashActivation,
 } from "../subscriptions/cashActivation";
 import { chargeBundleInvoice } from "./bundleCharge";
-import { activateBundlePurchase, getBundlePurchaseSummary } from "./bundlePurchases";
+import { getBundlePurchaseSummary } from "./bundlePurchases";
 import {
   bundlePaymentState,
   collectBundlePayment,
   readBundleInvoice,
+  reconcileBundlePurchase,
   recordBundlePayment,
 } from "./bundleSettlement";
 
@@ -134,13 +134,7 @@ async function activateCashBundle(locationId: string, purchaseId: string): Promi
   });
   if (!collecting) return "inactive";
 
-  const bundleActivation = await activateBundlePurchase(locationId, purchaseId);
-
-  if (bundleActivation.status === "ready") {
-    await Promise.all(bundleActivation.addonPurchaseIds.map((addonPurchaseId) =>
-      enqueueSubscriptionAddonJob("activate", addonPurchaseId)
-    ));
-  }
+  await reconcileBundlePurchase(locationId, purchaseId);
 
   return "active";
 }

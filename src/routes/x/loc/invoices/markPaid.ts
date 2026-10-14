@@ -2,7 +2,7 @@ import { settleSubscriptionAddonInvoice } from "@/subtrees/utils/server/subscrip
 import { addInterval } from "./shared";
 import { enqueueSubscriptionAddonJob } from "@/queues";
 import { hasConflictingSubscriptionAddonPricing } from "../addonsBundles/subscriptionAddonPricing";
-import { activateBundlePurchase } from "../addonsBundles/bundlePurchases";
+import { reconcileBundlePurchase } from "../addonsBundles/bundleSettlement";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { Wallet } from "@/libs/wallet";
@@ -269,10 +269,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         }
         if (bundlePurchase.value) {
             try {
-                const activation = await activateBundlePurchase(lid, bundlePurchase.value);
-                if (activation.status === "ready") {
-                    await Promise.all(activation.addonPurchaseIds.map(purchaseId => enqueueSubscriptionAddonJob("activate", purchaseId)));
-                }
+                await reconcileBundlePurchase(lid, bundlePurchase.value);
             } catch (error) {
                 console.error("Add-on was paid but its bundle could not be reconciled", error);
             }

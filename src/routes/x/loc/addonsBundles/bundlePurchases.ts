@@ -25,10 +25,7 @@ import { commissionBillingSnapshot } from "@/subtrees/utils/invoiceItems";
 import { generateUUID } from "@/subtrees/utils";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { createBundleInvoice, type BundleCardPayment } from "./bundleInvoice";
-import {
-  hasConflictingAddonPriceOverrides,
-  OPEN_ADDON_PURCHASE_STATUSES,
-} from "./subscriptionAddonPricing";
+import { hasConflictingAddonPriceOverrides } from "./subscriptionAddonPricing";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -428,95 +425,6 @@ export async function prepareBundlePurchase(input: PrepareBundlePurchaseInput): 
   const purchase = await getBundlePurchaseSummary(input.locationId, result.purchaseId);
   if (!purchase) throw new Error("Bundle purchase was not found after preparation");
   return { status: "created", value: { purchase, subscriptionIds: result.subscriptionIds, addonPurchaseIds: result.addonPurchaseIds } };
-}
-
-export async function activateBundlePurchase(locationId: string, bundlePurchaseId: string) {
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`
-      select ${bundlePurchases.id}
-      from ${bundlePurchases}
-      inner join ${bundles} on ${bundles.id} = ${bundlePurchases.bundleId}
-      where ${bundlePurchases.id} = ${bundlePurchaseId}
-        and ${bundles.locationId} = ${locationId}
-      for update
-    `);
-    const purchase = await tx.query.bundlePurchases.findFirst({
-      where: eq(bundlePurchases.id, bundlePurchaseId),
-      with: {
-        bundle: {
-          columns: { locationId: true },
-          with: { components: { columns: { id: true, addonId: true, required: true } } },
-        },
-        subscriptions: { columns: { id: true, memberPlanPricingId: true, status: true, paymentType: true, gatewayPaymentId: true } },
-        addonPurchases: { columns: { id: true, status: true, bundleComponentId: true } },
-      },
-    });
-
-    if (!purchase || purchase.bundle?.locationId !== locationId) return { status: "not-found" as const };
-
-    if (purchase.status === "canceled" || purchase.status === "expired") {
-      return { status: "inactive" as const };
-    }
-
-    const subscriptionPaid = (subscription: typeof purchase.subscriptions[number]) =>
-      ["active", "trialing"].includes(subscription.status)
-      && (subscription.paymentType === "cash" || !!subscription.gatewayPaymentId);
-
-    if (!purchase.subscriptions.every(subscriptionPaid)) return { status: "subscriptions-not-ready" as const };
-
-    const subscriptionIds = purchase.subscriptions.map((subscription) => subscription.id);
-    const openAddonPurchases = subscriptionIds.length === 0 ? [] : await tx.select({
-      memberSubscriptionId: memberSubscriptionAddons.memberSubscriptionId,
-      addonId: memberSubscriptionAddons.addonId,
-    }).from(memberSubscriptionAddons).where(and(
-      inArray(memberSubscriptionAddons.memberSubscriptionId, subscriptionIds),
-      inArray(memberSubscriptionAddons.status, [...OPEN_ADDON_PURCHASE_STATUSES]),
-    ));
-    const addonIdsBySubscription = new Map<string, string[]>();
-
-    for (const addon of openAddonPurchases) {
-      addonIdsBySubscription.set(addon.memberSubscriptionId, [
-        ...addonIdsBySubscription.get(addon.memberSubscriptionId) ?? [],
-        addon.addonId,
-      ]);
-    }
-
-    const pricedSubscriptions: Array<{ id: string; pricingId: string }> = [];
-
-    for (const subscription of purchase.subscriptions) {
-      if (!subscription.memberPlanPricingId) return { status: "subscriptions-not-ready" as const };
-
-      pricedSubscriptions.push({ id: subscription.id, pricingId: subscription.memberPlanPricingId });
-    }
-
-    const pricingConflicts = await Promise.all(pricedSubscriptions.map((subscription) =>
-      hasConflictingAddonPriceOverrides(
-        tx,
-        subscription.pricingId,
-        addonIdsBySubscription.get(subscription.id) ?? [],
-        new Date(),
-      )
-    ));
-
-    if (pricingConflicts.some(Boolean)) return { status: "pricing-conflict" as const };
-
-    const requiredAddonComponentIds = new Set(purchase.bundle?.components.flatMap((component) =>
-      component.addonId && component.required ? [component.id] : []
-    ) ?? []);
-    const requiredAddonsReady = requiredAddonComponentIds.size === 0 || [...requiredAddonComponentIds].every((componentId) =>
-      purchase.addonPurchases.some((addon) => addon.bundleComponentId === componentId && addon.status === "active")
-    );
-
-    if (requiredAddonsReady) {
-      await tx.update(bundlePurchases).set({ status: "active", updated: new Date() })
-        .where(eq(bundlePurchases.id, bundlePurchaseId));
-    }
-
-    return {
-      status: "ready" as const,
-      addonPurchaseIds: purchase.addonPurchases.flatMap((addon) => addon.status === "pending" ? [addon.id] : []),
-    };
-  });
 }
 
 export async function cancelBundlePurchase(locationId: string, bundlePurchaseId: string, reason?: string, expectedBundleId?: string) {

@@ -1,6 +1,7 @@
 import { enqueueSubscriptionAddonJob } from "@/queues/subscriptionAddons";
 import { Elysia, t } from "elysia";
-import { activateBundlePurchase, cancelBundlePurchase } from "./bundlePurchases";
+import { cancelBundlePurchase } from "./bundlePurchases";
+import { reconcileBundlePurchase } from "./bundleSettlement";
 import { resolveLocationAccess, resolveMemberBillingAccess } from "./routeAccess";
 import {
 	cancelSubscriptionAddon,
@@ -70,16 +71,10 @@ export const subscriptionAddonRoutes = new Elysia({ prefix: "/subscriptions/:sid
 
 		// A paid cash add-on can complete its pending bundle.
 		if (renewal.bundlePurchaseId) {
-			const bundleActivation = await activateBundlePurchase(locationId, renewal.bundlePurchaseId);
+			const bundleActivation = await reconcileBundlePurchase(locationId, renewal.bundlePurchaseId);
 
 			if (bundleActivation.status === "pricing-conflict") {
 				return status(409, { error: "Bundled add-ons would apply conflicting subscription prices" });
-			}
-
-			if (bundleActivation.status === "ready") {
-				await Promise.all(bundleActivation.addonPurchaseIds.map((addonPurchaseId) =>
-					enqueueSubscriptionAddonJob("activate", addonPurchaseId)
-				));
 			}
 		}
 

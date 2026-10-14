@@ -1,5 +1,5 @@
-import { enqueueSubscriptionAddonJob } from "@/queues";
-import { activateBundlePurchase, cancelBundlePurchase } from "@/routes/x/loc/addonsBundles/bundlePurchases";
+import { cancelBundlePurchase } from "@/routes/x/loc/addonsBundles/bundlePurchases";
+import { reconcileBundlePurchase } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 import { isBundleRefundPaymentReplay } from "@/routes/x/loc/addonsBundles/bundleRefundState";
 import { strict as assert } from "node:assert";
 
@@ -295,8 +295,5 @@ export async function handleStripePlanCharge({
         await cancelBundlePurchase(locationId, bundlePurchaseId, "Bundled subscription payment failed");
         return;
     }
-    const activation = await activateBundlePurchase(locationId, bundlePurchaseId);
-    if (activation.status === "ready") {
-        await Promise.all(activation.addonPurchaseIds.map(purchaseId => enqueueSubscriptionAddonJob("activate", purchaseId)));
-    }
+    await reconcileBundlePurchase(locationId, bundlePurchaseId);
 }

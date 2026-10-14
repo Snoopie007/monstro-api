@@ -1,9 +1,9 @@
 import { bundlePreparationSchema } from "./bundlePreparation";
 import { db } from "@/db/db";
-import { enqueueSubscriptionAddonJob, enqueueSubscriptionAddonPaymentRetry } from "@/queues/subscriptionAddons";
-import { scheduleBundledRenewal } from "@/queues/subscriptions";
+import { enqueueSubscriptionAddonJob, enqueueSubscriptionAddonPaymentRetry, scheduleBundledRenewal } from "@/queues";
 import {
   bundlePurchases,
+  bundles,
   memberInvoices,
   memberSubscriptionAddons,
 } from "@/subtrees/schemas";
@@ -11,9 +11,9 @@ import type { BundlePaymentState } from "@/subtrees/types";
 import { addonBillingPeriod } from "@/subtrees/utils/invoiceItems";
 import { collectInvoicePayment, recordInvoicePayment, type InvoicePaymentOwner, type InvoicePaymentRecord } from "@/subtrees/utils/server/invoicePayments";
 import { settleSubscriptionAddonInvoice, type SubscriptionAddonSettlement } from "@/subtrees/utils/server/subscriptionAddonInvoices";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { activateBundlePurchase } from "./bundlePurchases";
+import { hasConflictingAddonPriceOverrides, OPEN_ADDON_PURCHASE_STATUSES } from "./subscriptionAddonPricing";
 import { markSubscriptionActivated } from "../subscriptions/activation";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -175,6 +175,112 @@ async function scheduleBundleJobs(jobs: BundleJobs) {
   }
 }
 
+/** Activates a pending bundle once its separately paid subscriptions and
+ * required add-ons are ready. Settling a bundled add-on invoice calls this
+ * without starting add-ons; every other caller uses reconcileBundlePurchase. */
+async function reconcileBundleReadiness(locationId: string, bundlePurchaseId: string) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`
+      select ${bundlePurchases.id}
+      from ${bundlePurchases}
+      inner join ${bundles} on ${bundles.id} = ${bundlePurchases.bundleId}
+      where ${bundlePurchases.id} = ${bundlePurchaseId}
+        and ${bundles.locationId} = ${locationId}
+      for update
+    `);
+    const purchase = await tx.query.bundlePurchases.findFirst({
+      where: eq(bundlePurchases.id, bundlePurchaseId),
+      with: {
+        bundle: {
+          columns: { locationId: true },
+          with: { components: { columns: { id: true, addonId: true, required: true } } },
+        },
+        subscriptions: { columns: { id: true, memberPlanPricingId: true, status: true, paymentType: true, gatewayPaymentId: true } },
+        addonPurchases: { columns: { id: true, status: true, bundleComponentId: true } },
+      },
+    });
+
+    if (!purchase || purchase.bundle?.locationId !== locationId) return { status: "not-found" as const };
+
+    if (purchase.status === "canceled" || purchase.status === "expired") {
+      return { status: "inactive" as const };
+    }
+
+    const subscriptionPaid = (subscription: typeof purchase.subscriptions[number]) =>
+      ["active", "trialing"].includes(subscription.status)
+      && (subscription.paymentType === "cash" || !!subscription.gatewayPaymentId);
+
+    if (!purchase.subscriptions.every(subscriptionPaid)) return { status: "subscriptions-not-ready" as const };
+
+    const subscriptionIds = purchase.subscriptions.map((subscription) => subscription.id);
+    const openAddonPurchases = subscriptionIds.length === 0 ? [] : await tx.select({
+      memberSubscriptionId: memberSubscriptionAddons.memberSubscriptionId,
+      addonId: memberSubscriptionAddons.addonId,
+    }).from(memberSubscriptionAddons).where(and(
+      inArray(memberSubscriptionAddons.memberSubscriptionId, subscriptionIds),
+      inArray(memberSubscriptionAddons.status, [...OPEN_ADDON_PURCHASE_STATUSES]),
+    ));
+    const addonIdsBySubscription = new Map<string, string[]>();
+
+    for (const addon of openAddonPurchases) {
+      addonIdsBySubscription.set(addon.memberSubscriptionId, [
+        ...addonIdsBySubscription.get(addon.memberSubscriptionId) ?? [],
+        addon.addonId,
+      ]);
+    }
+
+    const pricedSubscriptions: Array<{ id: string; pricingId: string }> = [];
+
+    for (const subscription of purchase.subscriptions) {
+      if (!subscription.memberPlanPricingId) return { status: "subscriptions-not-ready" as const };
+
+      pricedSubscriptions.push({ id: subscription.id, pricingId: subscription.memberPlanPricingId });
+    }
+
+    const pricingConflicts = await Promise.all(pricedSubscriptions.map((subscription) =>
+      hasConflictingAddonPriceOverrides(
+        tx,
+        subscription.pricingId,
+        addonIdsBySubscription.get(subscription.id) ?? [],
+        new Date(),
+      )
+    ));
+
+    if (pricingConflicts.some(Boolean)) return { status: "pricing-conflict" as const };
+
+    const requiredAddonComponentIds = new Set(purchase.bundle?.components.flatMap((component) =>
+      component.addonId && component.required ? [component.id] : []
+    ) ?? []);
+    const requiredAddonsReady = requiredAddonComponentIds.size === 0 || [...requiredAddonComponentIds].every((componentId) =>
+      purchase.addonPurchases.some((addon) => addon.bundleComponentId === componentId && addon.status === "active")
+    );
+
+    if (requiredAddonsReady) {
+      await tx.update(bundlePurchases).set({ status: "active", updated: new Date() })
+        .where(eq(bundlePurchases.id, bundlePurchaseId));
+    }
+
+    return {
+      status: "ready" as const,
+      addonPurchaseIds: purchase.addonPurchases.flatMap((addon) => addon.status === "pending" ? [addon.id] : []),
+    };
+  });
+}
+
+/** Reconciles a bundle whose components were paid separately, then starts
+ * activation for its pending add-ons once it is ready. */
+export async function reconcileBundlePurchase(locationId: string, bundlePurchaseId: string) {
+  const reconciliation = await reconcileBundleReadiness(locationId, bundlePurchaseId);
+
+  if (reconciliation.status === "ready") {
+    await Promise.all(reconciliation.addonPurchaseIds.map((addonPurchaseId) =>
+      enqueueSubscriptionAddonJob("activate", addonPurchaseId)
+    ));
+  }
+
+  return reconciliation;
+}
+
 type PaymentJobs = {
   bundle?: BundleJobs;
   addon?: SubscriptionAddonSettlement | null;
@@ -198,7 +304,7 @@ const bundleInvoicePaymentOwner: InvoicePaymentOwner<PaymentJobs> = {
       return;
     }
     if (jobs.addon.runAt) await enqueueSubscriptionAddonJob("renew", jobs.addon.purchaseId, jobs.addon.runAt);
-    if (jobs.addon.bundlePurchaseId) await activateBundlePurchase(jobs.locationId, jobs.addon.bundlePurchaseId);
+    if (jobs.addon.bundlePurchaseId) await reconcileBundleReadiness(jobs.locationId, jobs.addon.bundlePurchaseId);
   },
 };
 

@@ -12,15 +12,15 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
     const tables = ["member_subscriptions", "member_invoices", "transactions", "integrations", "bundles", "bundle_components", "bundle_purchases", "member_subscription_addons", "addon_plan_price_overrides"];
     const enqueue = mock(async (..._args: unknown[]) => {});
     let handle: typeof import("./stripePlanCharge").handleStripePlanCharge;
-    let activate: typeof import("@/routes/x/loc/addonsBundles/bundlePurchases").activateBundlePurchase;
+    let reconcile: typeof import("@/routes/x/loc/addonsBundles/bundleSettlement").reconcileBundlePurchase;
     beforeAll(async () => {
         if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url!).hostname)) throw new Error("Local Postgres required");
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         mock.module("@/db/db", () => ({ db }));
-        mock.module("@/queues", () => ({ enqueueSubscriptionAddonJob: enqueue }));
+        mock.module("@/queues", () => ({ enqueueSubscriptionAddonJob: enqueue, enqueueSubscriptionAddonPaymentRetry: async () => {}, scheduleBundledRenewal: async () => {} }));
         ({ handleStripePlanCharge: handle } = await import("./stripePlanCharge"));
-        ({ activateBundlePurchase: activate } = await import("@/routes/x/loc/addonsBundles/bundlePurchases"));
+        ({ reconcileBundlePurchase: reconcile } = await import("@/routes/x/loc/addonsBundles/bundleSettlement"));
     });
     afterAll(async () => { await sql.end(); await admin`drop schema if exists ${admin(namespace)} cascade`; await admin.end(); });
     beforeEach(async () => {
@@ -44,9 +44,9 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
         await success();
         expect((await db.select().from(schema.memberInvoices))[0]?.paid).toBe(true);
         expect(enqueue).not.toHaveBeenCalled();
-        expect(await activate("loc", "purchase")).toMatchObject({ status: "subscriptions-not-ready" });
+        expect(await reconcile("loc", "purchase")).toMatchObject({ status: "subscriptions-not-ready" });
         await sql`update member_subscriptions set gateway_payment_id='method'`;
-        expect(await activate("loc", "purchase")).toMatchObject({ status: "ready", addonPurchaseIds: ["addon-purchase"] });
+        expect(await reconcile("loc", "purchase")).toMatchObject({ status: "ready", addonPurchaseIds: ["addon-purchase"] });
     });
     test("success redelivery repairs a failed enqueue without rewriting accounting", async () => {
         enqueue.mockRejectedValueOnce(new Error("Queue unavailable"));

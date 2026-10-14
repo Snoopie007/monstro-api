@@ -42,10 +42,10 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		purchaseSubscriptionAddon,
 	} = await import("./subscriptionAddons");
 	const {
-		activateBundlePurchase,
 		cancelBundlePurchase,
 		prepareBundlePurchase,
 	} = await import("./bundlePurchases");
+	const { reconcileBundlePurchase } = await import("./bundleSettlement");
 
 	const suffix = crypto.randomUUID().replaceAll("-", "");
 	const createdUserIds: string[] = [];
@@ -236,7 +236,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			paidPeriodEndsAt: bundlePeriodEnd,
 			nextBillAt: bundlePeriodEnd,
 		}).where(inArray(memberSubscriptionAddons.id, runtimePurchase.value.addonPurchaseIds));
-		expect((await activateBundlePurchase(primaryLocation.id, runtimePurchase.value.purchase.id)).status).toBe("ready");
+		expect((await reconcileBundlePurchase(primaryLocation.id, runtimePurchase.value.purchase.id)).status).toBe("ready");
 		const bundledOverview = await getSubscriptionAddonOverview(
 			primaryLocation.id,
 			runtimePurchase.value.subscriptionIds[0]!,
@@ -472,7 +472,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			sourcePlanPricingId: regularPrice.id,
 			replacementPlanPricingId: otherMemberPrice.id,
 		});
-		expect((await activateBundlePurchase(
+		expect((await reconcileBundlePurchase(
 			primaryLocation.id,
 			activationConflictPurchase.value.purchase.id,
 		)).status).toBe("pricing-conflict");
