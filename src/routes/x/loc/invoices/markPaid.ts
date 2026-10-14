@@ -1,8 +1,8 @@
 import { settleSubscriptionAddonInvoice } from "@/subtrees/utils/server/subscriptionAddonInvoices";
 import { addInterval } from "./shared";
 import { enqueueSubscriptionAddonJob } from "@/queues";
-import { hasConflictingSubscriptionAddonPricing } from "../addonsBundles/subscriptionAddonPricing";
-import { reconcileBundlePurchase } from "../addonsBundles/bundleSettlement";
+import { hasConflictingSubscriptionAddonPricing } from "@/handlers/addonsBundles/addonPricing";
+import { reconcileBundlePurchase } from "@/handlers/addonsBundles/checkout/settlement";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { Wallet } from "@/libs/wallet";

@@ -13,7 +13,7 @@ import type { Currency } from "square";
 import { canEditLocationMember } from "@/utils/locationAccess";
 import { sendCashInvoice } from "./cashEmail";
 import { CashInvoiceError } from "@/subtrees/utils/server/cashInvoices";
-import { isBundleInvoice } from "../addonsBundles/bundleSettlement";
+import { isBundleInvoice } from "@/handlers/addonsBundles/checkout/settlement";
 
 type InvoiceChargeMetadata = {
     collectionMethod?: "send_invoice" | "charge_automatically";

@@ -1,8 +1,8 @@
 import type { AuthorizeTransactionDetails } from "@/libs/PaymentGateway/AuthorizePayment";
 import { z } from "zod";
-import type { BundleRefundCharge } from "./bundleChargeOwnership";
-import { submitRefund, type BundleRefundGateway } from "./bundleRefundGateways";
-import { bundleRefundAmounts, type BundleRefundAttempt, type BundleRefundOutcome } from "./bundleRefundState";
+import type { BundleRefundCharge } from "./charges";
+import { submitRefund, type BundleRefundGateway } from "./gateway";
+import { bundleRefundAmounts, type BundleRefundAttempt, type BundleRefundOutcome } from "./state";
 
 function authorizeAmount(details: AuthorizeTransactionDetails) {
   const settled = details.transactionStatus === "settledSuccessfully" || details.transactionStatus === "refundSettledSuccessfully";

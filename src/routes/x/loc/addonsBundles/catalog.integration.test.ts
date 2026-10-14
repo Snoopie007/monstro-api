@@ -41,9 +41,9 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		getSubscriptionAddonOverview,
 		purchaseSubscriptionAddon,
 	} = await import("./subscriptionAddons");
-	const { cancelBundlePurchase } = await import("./bundleCancellation");
-	const { prepareBundlePurchase } = await import("./bundlePurchases");
-	const { reconcileBundlePurchase } = await import("./bundleSettlement");
+	const { cancelBundlePurchase } = await import("@/handlers/addonsBundles/cancellation");
+	const { prepareBundlePurchase } = await import("@/handlers/addonsBundles/checkout/prepare");
+	const { reconcileBundlePurchase } = await import("@/handlers/addonsBundles/checkout/settlement");
 
 	const suffix = crypto.randomUUID().replaceAll("-", "");
 	const createdUserIds: string[] = [];

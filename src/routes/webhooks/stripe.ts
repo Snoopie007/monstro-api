@@ -1,4 +1,4 @@
-import { isBundleInvoice, recordBundlePayment } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { isBundleInvoice, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
 import { memberInvoices } from "@/subtrees/schemas";
 import { Elysia, t } from "elysia";
 import Stripe from "stripe";

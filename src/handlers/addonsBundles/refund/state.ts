@@ -5,7 +5,7 @@ import type { TransactionMetadata, TransactionRefund } from "@/subtrees/types";
 import { getRefundAmounts } from "@/utils/refunds";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { BundleRefundCharge } from "./bundleChargeOwnership";
+import type { BundleRefundCharge } from "./charges";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

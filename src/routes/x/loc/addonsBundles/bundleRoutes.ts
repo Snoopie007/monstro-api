@@ -1,8 +1,8 @@
 import { Elysia, t } from "elysia";
-import { cancelBundlePurchase } from "./bundleCancellation";
-import { prepareBundlePurchase, type BundlePurchaseErrorStatus } from "./bundlePurchases";
-import { payBundlePurchase } from "./bundlePayment";
-import { refundBundlePurchase } from "./bundleRefund";
+import { cancelBundlePurchase } from "@/handlers/addonsBundles/cancellation";
+import { prepareBundlePurchase, type BundlePurchaseErrorStatus } from "@/handlers/addonsBundles/checkout/prepare";
+import { payBundlePurchase } from "@/handlers/addonsBundles/checkout/pay";
+import { refundBundlePurchase } from "@/handlers/addonsBundles/refund/refundPurchase";
 import {
 	archiveBundle,
 	createBundle,

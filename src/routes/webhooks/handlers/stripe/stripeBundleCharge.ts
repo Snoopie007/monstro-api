@@ -1,5 +1,5 @@
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
-import { recordBundlePayment } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
 
 interface HandleStripeBundleChargeProps {
     invoiceId: string;

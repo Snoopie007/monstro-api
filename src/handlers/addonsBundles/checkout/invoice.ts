@@ -1,4 +1,4 @@
-import { bundlePreparationSchema } from "./bundlePreparation";
+import { bundlePreparationSchema } from "./preparationFacts";
 import type { db } from "@/db/db";
 import {
   bundlePurchases,
@@ -21,7 +21,7 @@ import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type { CheckoutContext } from "@/utils/getCheckoutContext";
 import { getCurrency } from "@/utils/getCurrency";
 import { eq, sql } from "drizzle-orm";
-import { quoteInitialSubscriptionCharge } from "../subscriptions/activation";
+import { quoteInitialSubscriptionCharge } from "@/routes/x/loc/subscriptions/activation";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

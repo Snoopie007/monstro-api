@@ -1,4 +1,4 @@
-import { bundlePreparationSchema } from "./bundlePreparation";
+import { bundlePreparationSchema } from "./preparationFacts";
 import { db } from "@/db/db";
 import { enqueueSubscriptionAddonJob, enqueueSubscriptionAddonPaymentRetry, scheduleBundledRenewal } from "@/queues";
 import {
@@ -13,8 +13,8 @@ import { collectInvoicePayment, recordInvoicePayment, type InvoicePaymentOwner, 
 import { settleSubscriptionAddonInvoice, type SubscriptionAddonSettlement } from "@/subtrees/utils/server/subscriptionAddonInvoices";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { hasConflictingAddonPriceOverrides, OPEN_ADDON_PURCHASE_STATUSES } from "./subscriptionAddonPricing";
-import { markSubscriptionActivated } from "../subscriptions/activation";
+import { hasConflictingAddonPriceOverrides, OPEN_ADDON_PURCHASE_STATUSES } from "../addonPricing";
+import { markSubscriptionActivated } from "@/routes/x/loc/subscriptions/activation";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Invoice = typeof memberInvoices.$inferSelect;

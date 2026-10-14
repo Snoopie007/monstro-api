@@ -16,12 +16,12 @@ import type {
   SubscriptionAddonPurchaseItem,
 } from "@/subtrees/types";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { getSubscriptionBundleSummary } from "./bundleSummary";
+import { getSubscriptionBundleSummary } from "@/handlers/addonsBundles/bundleSummary";
 import {
   hasConflictingAddonPriceOverrides,
   loadActiveAddonPriceOverrides,
   OPEN_ADDON_PURCHASE_STATUSES,
-} from "./subscriptionAddonPricing";
+} from "@/handlers/addonsBundles/addonPricing";
 
 type SubscriptionContext = {
   id: string;

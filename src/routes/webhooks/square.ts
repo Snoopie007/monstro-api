@@ -8,7 +8,7 @@ import { handleSquarePlanFail } from "./handlers/square/squarePlanFail";
 import { handleSquareOrderSuccess } from "./handlers/square/squareOrderSuccess";
 import { handleSquareOrderFail } from "./handlers/square/squareOrderFail";
 import { handleSquareBundleFail, handleSquareBundleSuccess, handleSquareBundleProcessing } from "./handlers/square/squareBundlePayment";
-import { isBundleInvoice } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { isBundleInvoice } from "@/handlers/addonsBundles/checkout/settlement";
 
 const ALLOWED_EVENTS = ["payment.created", "payment.updated"];
 

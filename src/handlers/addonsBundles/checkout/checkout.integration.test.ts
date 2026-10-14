@@ -33,8 +33,8 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         const [database, schema, purchases, payment, stripe, square, invoices, subscriptionQueue, addonQueue] = await Promise.all([
             import("@/db/db"),
             import("@/subtrees/schemas"),
-            import("./bundlePurchases"),
-            import("./bundlePayment"),
+            import("./prepare"),
+            import("./pay"),
             import("@/routes/webhooks/handlers/stripe/stripeBundleCharge"),
             import("@/routes/webhooks/handlers/square/squareBundlePayment"),
             import("@/subtrees/utils/server/subscriptionInvoices"),

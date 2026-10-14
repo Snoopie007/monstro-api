@@ -23,7 +23,7 @@ mock.module("./handlers/square/squareOrderFail", () => ({ handleSquareOrderFail:
 mock.module("./handlers/square/squareBundlePayment", () => ({
     handleSquareBundleSuccess: async () => {}, handleSquareBundleFail: async () => {},
 }));
-mock.module("@/routes/x/loc/addonsBundles/bundleSettlement", () => ({ isBundleInvoice: async () => false }));
+mock.module("@/handlers/addonsBundles/checkout/settlement", () => ({ isBundleInvoice: async () => false }));
 const { squareWebhookRoutes } = await import("./square");
 const request = () => new Request("http://localhost/square", {
     method: "POST",

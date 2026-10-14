@@ -12,7 +12,7 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
     const tables = ["member_subscriptions", "member_invoices", "transactions", "integrations", "bundles", "bundle_components", "bundle_purchases", "member_subscription_addons", "addon_plan_price_overrides"];
     const enqueue = mock(async (..._args: unknown[]) => {});
     let handle: typeof import("./stripePlanCharge").handleStripePlanCharge;
-    let reconcile: typeof import("@/routes/x/loc/addonsBundles/bundleSettlement").reconcileBundlePurchase;
+    let reconcile: typeof import("@/handlers/addonsBundles/checkout/settlement").reconcileBundlePurchase;
     beforeAll(async () => {
         if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url!).hostname)) throw new Error("Local Postgres required");
         await admin`create schema ${admin(namespace)}`;
@@ -26,7 +26,7 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
             removeSubscriptionAddonJobs: async () => {},
         }));
         ({ handleStripePlanCharge: handle } = await import("./stripePlanCharge"));
-        ({ reconcileBundlePurchase: reconcile } = await import("@/routes/x/loc/addonsBundles/bundleSettlement"));
+        ({ reconcileBundlePurchase: reconcile } = await import("@/handlers/addonsBundles/checkout/settlement"));
     });
     afterAll(async () => { await sql.end(); await admin`drop schema if exists ${admin(namespace)} cascade`; await admin.end(); });
     beforeEach(async () => {

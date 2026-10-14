@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { SquareError } from "square";
 import Stripe from "stripe";
 import { z } from "zod";
-import type { BundleRefundCharge } from "./bundleChargeOwnership";
+import type { BundleRefundCharge } from "./charges";
 import {
   bundleRefundAmounts,
   readBundleRefundAttempt,
@@ -13,7 +13,7 @@ import {
   type BundleRefundAttempt,
   type BundleRefundBinding,
   type BundleRefundOutcome,
-} from "./bundleRefundState";
+} from "./state";
 
 const paymentBindingSchema = z.object({
   gatewayService: z.enum(["stripe", "square", "authorize"]).optional(),

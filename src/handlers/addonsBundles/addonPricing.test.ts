@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { hasConflictingReplacementPricing } from "./subscriptionAddonPricing";
+import { hasConflictingReplacementPricing } from "./addonPricing";
 
 describe("subscription add-on replacement pricing", () => {
   test("allows add-ons with no replacement pricing or the same replacement price", () => {

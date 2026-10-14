@@ -1,8 +1,8 @@
 import type Stripe from "stripe";
 import { z } from "zod";
-import type { BundleRefundCharge } from "./bundleChargeOwnership";
-import { noRemainingRefund, refundableRemainder, submitRefund, type BundleRefundGateway } from "./bundleRefundGateways";
-import { bundleRefundKey, type BundleRefundAttempt, type BundleRefundOutcome } from "./bundleRefundState";
+import type { BundleRefundCharge } from "./charges";
+import { noRemainingRefund, refundableRemainder, submitRefund, type BundleRefundGateway } from "./gateway";
+import { bundleRefundKey, type BundleRefundAttempt, type BundleRefundOutcome } from "./state";
 
 function stripeRefundOutcome(refund: Stripe.Refund, completed: number): BundleRefundOutcome {
   const status = refund.status === "succeeded" ? "completed"

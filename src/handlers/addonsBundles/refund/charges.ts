@@ -11,7 +11,7 @@ import { parseInvoiceItem } from "@/subtrees/utils/invoiceItems";
 import { readSubscriptionInvoice } from "@/subtrees/utils/server/subscriptionInvoices";
 import { and, asc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { CanceledBundle } from "./bundleCancellation";
+import type { CanceledBundle } from "../cancellation";
 
 type Invoice = typeof memberInvoices.$inferSelect;
 

@@ -1,7 +1,7 @@
 import { enqueueSubscriptionAddonJob } from "@/queues/subscriptionAddons";
 import { Elysia, t } from "elysia";
-import { cancelBundlePurchase } from "./bundleCancellation";
-import { reconcileBundlePurchase } from "./bundleSettlement";
+import { cancelBundlePurchase } from "@/handlers/addonsBundles/cancellation";
+import { reconcileBundlePurchase } from "@/handlers/addonsBundles/checkout/settlement";
 import { resolveLocationAccess, resolveMemberBillingAccess } from "./routeAccess";
 import {
 	cancelSubscriptionAddon,

@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { integrations, memberInvoices } from "@/subtrees/schemas";
 import type { InvoicePaymentOutcome } from "@/subtrees/utils/server/invoicePayments";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
-import { readBundleInvoice, recordBundlePayment } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { readBundleInvoice, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
 import { and, eq } from "drizzle-orm";
 
 type SquareBinding = {
