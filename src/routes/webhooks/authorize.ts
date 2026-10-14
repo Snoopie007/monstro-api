@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { isBundleInvoice, readBundleInvoice, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
+import { authorizeAttemptReference } from "@/utils/checkoutUtil";
 import { getDeferredInvoiceBilling, prepareAuthorizeInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
@@ -485,8 +485,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
             const binding = readBundleInvoice(featureInvoice.metadata);
             const attempt = binding.billingAttempt;
             if (!attempt || binding.gatewayIntegrationId !== integration.id || featureInvoice.locationId !== integration.locationId) throw new Error("Authorize.net invoice binding does not match");
-            const reference = createHash("sha256").update(attempt.id).digest("hex").slice(0, 20);
-            if (details.order?.invoiceNumber !== reference && attempt.paymentIntentId !== providerTransactionId) throw new Error("Authorize.net payment belongs to another attempt");
+            if (details.order?.invoiceNumber !== authorizeAttemptReference(attempt.id) && attempt.paymentIntentId !== providerTransactionId) throw new Error("Authorize.net payment belongs to another attempt");
             const state = authorizePaymentState(details);
                         if ((details.profile?.customerProfileId && details.profile.customerProfileId !== attempt.gatewayCustomerId)
                 || (details.profile?.customerPaymentProfileId && details.profile.customerPaymentProfileId !== attempt.paymentMethodId)) throw new Error("Authorize.net customer or method does not match the invoice");

@@ -6,6 +6,11 @@ import type { PaymentType } from "@/subtrees/types";
 import type { Currency, Payment } from "square";
 import type Stripe from "stripe";
 
+/** Authorize.net invoiceNumber for an invoice billing attempt. The webhook matches payments on it. */
+export function authorizeAttemptReference(attemptId: string) {
+	return createHash("sha256").update(attemptId).digest("hex").slice(0, 20);
+}
+
 export class PaymentChargeError extends Error {
 	readonly status: 400;
 	readonly code?: string;
@@ -156,7 +161,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 				total,
 				currency,
 				idempotencyKey: transactionId,
-				referenceId: attempt ? createHash("sha256").update(attempt.id).digest("hex").slice(0, 20) : transactionId,
+				referenceId: attempt ? authorizeAttemptReference(attempt.id) : transactionId,
 				orderDescription: attempt ? `monstro-invoice:${attempt.invoiceId}` : description,
 			});
 			const gatewayMetadata = {
