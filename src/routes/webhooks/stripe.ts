@@ -1,5 +1,4 @@
-import { recordInvoicePayment } from "@/subtrees/utils/server/invoicePayments";
-import { bundleInvoicePaymentOwner } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { isBundleInvoice, recordBundlePayment } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 import { memberInvoices } from "@/subtrees/schemas";
 import { Elysia, t } from "elysia";
 import Stripe from "stripe";
@@ -9,7 +8,6 @@ import { memberLocations } from "@/subtrees/schemas";
 import type { PaymentType } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
 import { handleStripeBundleCharge, handleStripeOrderCharge, handleStripePlanCharge } from "@/routes/webhooks/handlers/stripe";
-import { isBundleInvoice } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 
 /**
  * Stripe Webhook Handler for Member Billing Events
@@ -373,8 +371,8 @@ async function handleBundlePaymentIntent(event: Extract<Stripe.Event, {
     if (!customerId) throw new Error("Stripe bundle payment has no customer binding");
     const gateway = { service: "stripe" as const, stripeAccountId: event.account ?? null, customerId, paymentMethodId: typeof intent.payment_method === "string" ? intent.payment_method : intent.payment_method?.id };
     if (intent.status === "succeeded") {
-        await recordInvoicePayment(db, { status: "succeeded", invoiceId, attemptId: intent.metadata.billingAttemptId, paymentIntentId: intent.id, amount: intent.amount_received, currency: intent.currency, gateway }, bundleInvoicePaymentOwner);
+        await recordBundlePayment({ status: "succeeded", invoiceId, attemptId: intent.metadata.billingAttemptId, paymentIntentId: intent.id, amount: intent.amount_received, currency: intent.currency, gateway });
     } else if (intent.status === "processing" || intent.status === "requires_action") {
-        await recordInvoicePayment(db, { status: intent.status, invoiceId, attemptId: intent.metadata.billingAttemptId, paymentIntentId: intent.id, gateway }, bundleInvoicePaymentOwner);
+        await recordBundlePayment({ status: intent.status, invoiceId, attemptId: intent.metadata.billingAttemptId, paymentIntentId: intent.id, gateway });
     }
 }

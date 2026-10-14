@@ -9,7 +9,7 @@ import {
 } from "@/subtrees/schemas";
 import type { BundlePaymentState } from "@/subtrees/types";
 import { addonBillingPeriod } from "@/subtrees/utils/invoiceItems";
-import { recordInvoicePayment, type InvoicePaymentOwner, type InvoicePaymentRecord } from "@/subtrees/utils/server/invoicePayments";
+import { collectInvoicePayment, recordInvoicePayment, type InvoicePaymentOwner, type InvoicePaymentRecord } from "@/subtrees/utils/server/invoicePayments";
 import { settleSubscriptionAddonInvoice, type SubscriptionAddonSettlement } from "@/subtrees/utils/server/subscriptionAddonInvoices";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -175,17 +175,6 @@ async function scheduleBundleJobs(jobs: BundleJobs) {
   }
 }
 
-export type InvoicePayment = {
-  invoiceId: string;
-  // Present when the gateway echoes the attempt: the pay response and Stripe metadata.
-  attemptId?: string;
-  paymentIntentId: string;
-  amount: number;
-  currency?: string;
-  gateway: ({ service: "stripe"; accountId: string | null } | { service: "square" | "authorize" }) & { integrationId?: string; customerId?: string; paymentMethodId?: string };
-  receiptUrl?: string | null;
-};
-
 type PaymentJobs = {
   bundle?: BundleJobs;
   addon?: SubscriptionAddonSettlement | null;
@@ -194,7 +183,7 @@ type PaymentJobs = {
   invoiceId: string;
 };
 
-export const bundleInvoicePaymentOwner: InvoicePaymentOwner<PaymentJobs> = {
+const bundleInvoicePaymentOwner: InvoicePaymentOwner<PaymentJobs> = {
   async settle(tx, invoice, outcome) {
     if (invoice.memberSubscriptionAddonId) {
       return { addon: await settleSubscriptionAddonInvoice(tx, invoice, outcome), locationId: invoice.locationId, invoiceId: invoice.id, declined: outcome.status === "failed" };
@@ -214,39 +203,13 @@ export const bundleInvoicePaymentOwner: InvoicePaymentOwner<PaymentJobs> = {
 };
 
 /** Response and webhook use the same financial recorder, including bundled add-ons. */
-export async function onInvoicePaid(payment: InvoicePayment) {
-  const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, payment.invoiceId), columns: { currency: true } });
-  if (!invoice?.currency) throw new Error("Invoice currency is missing");
-  return recordInvoicePayment(db, {
-    ...payment, status: "succeeded", currency: payment.currency ?? invoice.currency,
-    gateway: {
-      service: payment.gateway.service,
-      stripeAccountId: payment.gateway.service === "stripe" ? payment.gateway.accountId : undefined,
-      integrationId: payment.gateway.integrationId || undefined,
-      customerId: payment.gateway.customerId || undefined,
-      paymentMethodId: payment.gateway.paymentMethodId || undefined,
-    },
-  }, bundleInvoicePaymentOwner);
+export function recordBundlePayment(record: InvoicePaymentRecord) {
+  return recordInvoicePayment(db, record, bundleInvoicePaymentOwner);
 }
 
-export type InvoiceDecline = {
-  invoiceId: string;
-  attemptId?: string;
-  paymentIntentId?: string;
-  reason: string;
-  code: string;
-  workflowDecline: boolean;
-  amount?: number;
-  currency?: string;
-  gateway?: InvoicePaymentRecord["gateway"];
-};
-
-export async function recordBundleDecline(decline: InvoiceDecline) {
-  const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, decline.invoiceId) });
-  if (!invoice) throw new Error("Invoice was not found");
-  const binding = readBundleInvoice(invoice.metadata);
-  return recordInvoicePayment(db, {
-    ...decline, status: "failed", retryable: true,
-    gateway: decline.gateway ?? { service: binding.gatewayService, integrationId: binding.gatewayIntegrationId, stripeAccountId: binding.billingAttempt?.stripeAccountId },
-  }, bundleInvoicePaymentOwner);
+export function collectBundlePayment(
+  input: Parameters<typeof collectInvoicePayment>[1],
+  charge: Parameters<typeof collectInvoicePayment>[2],
+) {
+  return collectInvoicePayment(db, input, charge, bundleInvoicePaymentOwner);
 }

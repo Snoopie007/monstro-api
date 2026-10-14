@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { integrations, memberInvoices } from "@/subtrees/schemas";
-import { recordInvoicePayment, type InvoicePaymentOutcome } from "@/subtrees/utils/server/invoicePayments";
+import type { InvoicePaymentOutcome } from "@/subtrees/utils/server/invoicePayments";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
-import { bundleInvoicePaymentOwner, readBundleInvoice } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { readBundleInvoice, recordBundlePayment } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 import { and, eq } from "drizzle-orm";
 
 type SquareBinding = {
@@ -25,10 +25,10 @@ async function recordSquareBundle(input: SquareBinding, outcome: InvoicePaymentO
     if (!integration || integration.service !== "square" || !input.locationId || integration.metadata?.squareLocationId !== input.locationId
         || !input.customerId || input.customerId !== binding.billingAttempt?.gatewayCustomerId) throw new Error("Square payment binding does not match the invoice");
     if (input.amount !== invoice.total || input.currency?.toUpperCase() !== invoice.currency?.toUpperCase()) throw new Error("Square payment amount or currency does not match the invoice");
-    return recordInvoicePayment(db, {
+    return recordBundlePayment({
         ...outcome, invoiceId: input.invoiceId, attemptId: input.billingAttemptId,
         gateway: { service: "square", integrationId: integration.id, customerId: input.customerId },
-    }, bundleInvoicePaymentOwner);
+    });
 }
 
 export async function handleSquareBundleSuccess(input: SquareBinding & { receiptUrl: string | null }) {

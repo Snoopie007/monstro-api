@@ -13,14 +13,13 @@ import {
   type BillableCashSubscription,
   type CashActivation,
 } from "../subscriptions/cashActivation";
-import { collectInvoicePayment } from "@/subtrees/utils/server/invoicePayments";
 import { chargeBundleInvoice } from "./bundleCharge";
 import { activateBundlePurchase, getBundlePurchaseSummary } from "./bundlePurchases";
 import {
   bundlePaymentState,
-  onInvoicePaid,
+  collectBundlePayment,
   readBundleInvoice,
-  bundleInvoicePaymentOwner,
+  recordBundlePayment,
 } from "./bundleSettlement";
 
 type PayBundlePurchaseInput = { locationId: string; bundleId: string; purchaseId: string; paymentMethodId?: string; paymentType?: "card" | "us_bank_account" };
@@ -61,16 +60,18 @@ async function collectBundleInvoice(
   if (!invoice?.transaction) throw new Error(`Bundle invoice ${input.invoiceId} has no pending charge`);
   const binding = readBundleInvoice(invoice.metadata);
   if (invoice.paid && binding.billingAttempt?.paymentIntentId) {
-    await onInvoicePaid({
-      invoiceId: invoice.id, attemptId: binding.billingAttempt.id, paymentIntentId: binding.billingAttempt.paymentIntentId,
-      amount: invoice.total, currency: invoice.currency ?? undefined,
-      gateway: binding.gatewayService === "stripe" ? { service: "stripe", accountId: binding.billingAttempt.stripeAccountId ?? null } : { service: binding.gatewayService },
+    if (!invoice.currency) throw new Error("Invoice currency is missing");
+
+    await recordBundlePayment({
+      status: "succeeded", invoiceId: invoice.id, attemptId: binding.billingAttempt.id, paymentIntentId: binding.billingAttempt.paymentIntentId,
+      amount: invoice.total, currency: invoice.currency,
+      gateway: { service: binding.gatewayService, stripeAccountId: binding.gatewayService === "stripe" ? binding.billingAttempt.stripeAccountId ?? null : undefined },
     });
     return "active";
   }
   const { gateway, gatewayCustomerId } = await getCheckoutContext({ lid: input.locationId, mid: input.memberId });
   if (input.paymentMethodId && gateway.service !== "stripe" && input.paymentType !== "card") throw new Error("This gateway only accepts saved cards");
-  await collectInvoicePayment(db, {
+  await collectBundlePayment({
     invoiceId: invoice.id,
     gateway: {
       service: gateway.service,
@@ -83,7 +84,7 @@ async function collectBundleInvoice(
       paymentMethodId: input.paymentMethodId,
       paymentType: input.paymentType ?? invoice.transaction.paymentType,
     } : undefined,
-  }, request => chargeBundleInvoice(request, gateway, charge), bundleInvoicePaymentOwner);
+  }, request => chargeBundleInvoice(request, gateway, charge));
   const current = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoice.id), columns: { paid: true, metadata: true } });
   if (!current) throw new Error(`Bundle invoice ${invoice.id} disappeared during payment`);
   return bundlePaymentState(current);

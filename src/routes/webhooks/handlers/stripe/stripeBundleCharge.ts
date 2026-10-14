@@ -1,5 +1,5 @@
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
-import { onInvoicePaid, recordBundleDecline } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { recordBundlePayment } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 
 interface HandleStripeBundleChargeProps {
     invoiceId: string;
@@ -24,24 +24,27 @@ export async function handleStripeBundleCharge(props: HandleStripeBundleChargePr
     if (!paymentIntentId) throw new Error(`Stripe payment for bundle invoice ${invoiceId} has no PaymentIntent`);
 
     if (props.success) {
-        await onInvoicePaid({
+        await recordBundlePayment({
+            status: "succeeded",
             invoiceId,
             attemptId,
             paymentIntentId,
             amount: props.amount,
             currency: props.currency,
-            gateway: { service: "stripe", accountId: props.stripeAccountId, customerId: props.customerId, paymentMethodId: props.paymentMethodId },
+            gateway: { service: "stripe", stripeAccountId: props.stripeAccountId, customerId: props.customerId, paymentMethodId: props.paymentMethodId },
             receiptUrl: props.receiptUrl,
         });
         return;
     }
 
-    await recordBundleDecline({
+    await recordBundlePayment({
+        status: "failed",
         invoiceId,
         attemptId,
         paymentIntentId,
         reason: props.failedReason ?? "Payment failed",
         code: failedCode ?? "payment_failed",
+        retryable: true,
         workflowDecline: isPaymentDecline("stripe", failedCode),
         amount: props.amount, currency: props.currency,
         gateway: { service: "stripe", stripeAccountId: props.stripeAccountId, customerId: props.customerId, paymentMethodId: props.paymentMethodId },
