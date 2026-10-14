@@ -352,7 +352,10 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         } else {
             await app.handleSquareBundleSuccess({
                 invoiceId: invoiceIdOf(attemptId),
+                billingAttemptId: attemptId,
                 squarePaymentId: "square_payment",
+                locationId: "square_location",
+                customerId: "square_customer",
                 amount: 14000,
                 currency: "USD",
                 receiptUrl: null,
@@ -370,9 +373,10 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         const prepared = await prepare();
         const uncertain = processing();
         await pay(prepared.purchase.id, uncertain.charge);
+        const attemptId = attemptIdOf(uncertain.calls);
 
-        await expect(stripeWebhook({ attemptId: attemptIdOf(uncertain.calls), paymentIntentId: "pi_processing", amount: 8000 }))
-            .rejects.toThrow("Payment amount does not match");
+        await expect(stripeWebhook({ attemptId, paymentIntentId: "pi_processing", amount: 8000 }))
+            .rejects.toThrow(`Payment amount or currency does not match invoice ${invoiceIdOf(attemptId)}`);
 
         const current = await state();
         expect(current.invoices[0]).toMatchObject({ paid: false });
