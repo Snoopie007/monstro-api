@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
 import {
   addons,
+  bundlePurchases,
   memberInvoices,
   memberPlanPricing,
   memberPlans,
@@ -44,8 +45,8 @@ function isEffectivePurchase(purchase: PurchaseRow, periodStart: Date, periodEnd
   return true;
 }
 
-async function loadSubscriptionContext(locationId: string, subscriptionId: string): Promise<SubscriptionContext | null> {
-  const [row] = await db.select({
+async function loadSubscriptionContext(database: Pick<typeof db, "select">, locationId: string, subscriptionId: string): Promise<SubscriptionContext | null> {
+  const [row] = await database.select({
     id: memberSubscriptions.id,
     memberId: memberSubscriptions.memberId,
     status: memberSubscriptions.status,
@@ -100,7 +101,7 @@ async function loadPriceEffects(
 ) {
   if (addonIds.length === 0) return new Map<string, SubscriptionAddonPriceEffect>();
 
-  const mappings = await loadActiveAddonPriceOverrides(basePricing.id, addonIds, at);
+  const mappings = await loadActiveAddonPriceOverrides(db, basePricing.id, addonIds, at);
   if (mappings.length === 0) return new Map<string, SubscriptionAddonPriceEffect>();
 
   const replacementIds = Array.from(new Set(mappings.map((mapping) => mapping.replacementPlanPricingId)));
@@ -163,7 +164,7 @@ export async function getSubscriptionAddonOverview(
   periodStart = new Date(),
   periodEnd = periodStart,
 ): Promise<SubscriptionAddonOverview | null> {
-  const subscription = await loadSubscriptionContext(locationId, subscriptionId);
+  const subscription = await loadSubscriptionContext(db, locationId, subscriptionId);
   if (!subscription) return null;
 
   const [purchaseRows, addonRows, bundlePurchase] = await Promise.all([
@@ -256,7 +257,7 @@ export async function purchaseSubscriptionAddon(locationId: string, subscription
         and ${memberSubscriptions.locationId} = ${locationId}
       for update
     `);
-    const subscription = await loadSubscriptionContext(locationId, subscriptionId);
+    const subscription = await loadSubscriptionContext(tx, locationId, subscriptionId);
     if (!subscription) return { status: "subscription-not-found" as const };
     if (!['active', 'trialing'].includes(subscription.status)) {
       return { status: "subscription-inactive" as const };
@@ -279,6 +280,7 @@ export async function purchaseSubscriptionAddon(locationId: string, subscription
     if (duplicate) return { status: "already-purchased" as const, purchaseId: duplicate.id };
 
     const hasPricingConflict = await hasConflictingAddonPriceOverrides(
+      tx,
       subscription.basePricing.id,
       [...openPurchases.map((purchase) => purchase.addonId), addonId],
       new Date(),
@@ -297,8 +299,21 @@ export async function purchaseSubscriptionAddon(locationId: string, subscription
   });
 }
 
-export async function cancelSubscriptionAddon(locationId: string, purchaseId: string) {
+export async function cancelSubscriptionAddon(locationId: string, purchaseId: string, subscriptionId?: string) {
   return db.transaction(async (tx) => {
+    const owner = await tx.query.memberSubscriptionAddons.findFirst({
+      where: eq(memberSubscriptionAddons.id, purchaseId), columns: { bundlePurchaseId: true },
+    });
+    if (owner?.bundlePurchaseId) {
+      await tx.select({ id: bundlePurchases.id }).from(bundlePurchases)
+        .where(eq(bundlePurchases.id, owner.bundlePurchaseId)).for("update");
+      await tx.select({ id: memberSubscriptions.id }).from(memberSubscriptions)
+        .where(eq(memberSubscriptions.bundlePurchaseId, owner.bundlePurchaseId))
+        .orderBy(asc(memberSubscriptions.id)).for("update");
+      await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons)
+        .where(eq(memberSubscriptionAddons.bundlePurchaseId, owner.bundlePurchaseId))
+        .orderBy(asc(memberSubscriptionAddons.id)).for("update");
+    }
     await tx.execute(sql`
       select ${memberSubscriptionAddons.id}
       from ${memberSubscriptionAddons}
@@ -316,7 +331,7 @@ export async function cancelSubscriptionAddon(locationId: string, purchaseId: st
         bundleComponent: { columns: { required: true } },
       },
     });
-    if (!purchase || purchase.subscription?.locationId !== locationId) return { status: "not-found" as const };
+    if (!purchase || purchase.subscription?.locationId !== locationId || (subscriptionId && purchase.memberSubscriptionId !== subscriptionId)) return { status: "not-found" as const };
     if (
       purchase.bundlePurchaseId
       && purchase.bundleComponent?.required
@@ -369,13 +384,13 @@ export async function getSubscriptionAddonPurchase(locationId: string, subscript
   return overview?.purchases.find((purchase) => purchase.id === purchaseId) ?? null;
 }
 
-export async function getSubscriptionAddonRenewal(locationId: string, purchaseId: string) {
+export async function getSubscriptionAddonRenewal(locationId: string, purchaseId: string, subscriptionId?: string) {
   const purchase = await db.query.memberSubscriptionAddons.findFirst({
     where: eq(memberSubscriptionAddons.id, purchaseId),
-    columns: { id: true, status: true, nextBillAt: true, bundlePurchaseId: true },
+    columns: { id: true, status: true, nextBillAt: true, bundlePurchaseId: true, memberSubscriptionId: true },
     with: { subscription: { columns: { locationId: true } } },
   });
-  if (!purchase || purchase.subscription?.locationId !== locationId) return null;
+  if (!purchase || purchase.subscription?.locationId !== locationId || (subscriptionId && purchase.memberSubscriptionId !== subscriptionId)) return null;
   return purchase.status === "active" && purchase.nextBillAt
     ? { purchaseId: purchase.id, runAt: purchase.nextBillAt, bundlePurchaseId: purchase.bundlePurchaseId }
     : { purchaseId: purchase.id, runAt: null, bundlePurchaseId: purchase.bundlePurchaseId };

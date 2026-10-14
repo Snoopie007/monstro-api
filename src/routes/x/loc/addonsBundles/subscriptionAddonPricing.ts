@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+import type { db } from "@/db/db";
 import {
   addonPlanPriceOverrides,
   memberSubscriptionAddons,
@@ -9,9 +9,12 @@ import { hasConflictingReplacementPricing } from "./subscriptionAddonPricingRule
 
 export { hasConflictingReplacementPricing } from "./subscriptionAddonPricingRules";
 
+type PricingReader = Pick<typeof db, "select" | "query">;
+
 export const OPEN_ADDON_PURCHASE_STATUSES = ["pending", "active", "past_due"] as const;
 
 export async function loadActiveAddonPriceOverrides(
+  database: PricingReader,
   sourcePlanPricingId: string,
   addonIds: Iterable<string>,
   at = new Date(),
@@ -19,7 +22,7 @@ export async function loadActiveAddonPriceOverrides(
   const uniqueAddonIds = Array.from(new Set(addonIds));
   if (uniqueAddonIds.length === 0) return [];
 
-  return db.select({
+  return database.select({
     addonId: addonPlanPriceOverrides.addonId,
     replacementPlanPricingId: addonPlanPriceOverrides.replacementPlanPricingId,
   }).from(addonPlanPriceOverrides).where(and(
@@ -32,27 +35,29 @@ export async function loadActiveAddonPriceOverrides(
 }
 
 export async function hasConflictingAddonPriceOverrides(
+  database: PricingReader,
   sourcePlanPricingId: string,
   addonIds: Iterable<string>,
   at = new Date(),
 ) {
   return hasConflictingReplacementPricing(
-    await loadActiveAddonPriceOverrides(sourcePlanPricingId, addonIds, at),
+    await loadActiveAddonPriceOverrides(database, sourcePlanPricingId, addonIds, at),
   );
 }
 
 export async function hasConflictingSubscriptionAddonPricing(
+  database: PricingReader,
   memberSubscriptionId: string,
   additionalAddonIds: Iterable<string> = [],
   at = new Date(),
 ) {
-  const subscription = await db.query.memberSubscriptions.findFirst({
+  const subscription = await database.query.memberSubscriptions.findFirst({
     where: eq(memberSubscriptions.id, memberSubscriptionId),
     columns: { memberPlanPricingId: true },
   });
   if (!subscription?.memberPlanPricingId) return false;
 
-  const purchases = await db.query.memberSubscriptionAddons.findMany({
+  const purchases = await database.query.memberSubscriptionAddons.findMany({
     where: and(
       eq(memberSubscriptionAddons.memberSubscriptionId, memberSubscriptionId),
       inArray(memberSubscriptionAddons.status, [...OPEN_ADDON_PURCHASE_STATUSES]),
@@ -61,6 +66,7 @@ export async function hasConflictingSubscriptionAddonPricing(
   });
 
   return hasConflictingAddonPriceOverrides(
+    database,
     subscription.memberPlanPricingId,
     [...purchases.map((purchase) => purchase.addonId), ...additionalAddonIds],
     at,

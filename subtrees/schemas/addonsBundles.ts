@@ -11,6 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { IntervalType } from "./DatabaseEnums";
+import { memberInvoices } from "./invoice";
 import { locations } from "./locations";
 import { memberSubscriptions } from "./MemberEnrollment";
 import { memberPlanPricing } from "./MemberPlan";
@@ -119,11 +120,14 @@ export const bundlePurchases = pgTable("bundle_purchases", {
   startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   cancelReason: text("cancel_reason"),
+  // The purchase's one combined invoice. Null on purchases made before this change and on cash purchases.
+  invoiceId: text("invoice_id").references((): AnyPgColumn => memberInvoices.id, { onDelete: "restrict" }),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 }, (table) => [
   index("bundle_purchases_member_status_idx").on(table.memberId, table.status),
   index("bundle_purchases_bundle_idx").on(table.bundleId),
+  uniqueIndex("bundle_purchases_invoice_unique").on(table.invoiceId).where(sql`${table.invoiceId} is not null`),
   check("bundle_purchases_date_order", sql`${table.endedAt} is null or ${table.endedAt} >= ${table.startsAt}`),
 ]);
 

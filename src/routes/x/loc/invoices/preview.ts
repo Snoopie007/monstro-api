@@ -62,6 +62,7 @@ export async function previewInvoiceRoutes(app: Elysia) {
 
             const cycle = sub.currentPeriodEnd <= new Date() ? getNextCashCycle(sub, sub.location.timezone) : null;
             const quote = await buildSubscriptionInvoiceQuote({
+                memberId: sub.memberId,
                 locationId: lid,
                 subscriptionId: sub.id,
                 parentId: sub.parentId,

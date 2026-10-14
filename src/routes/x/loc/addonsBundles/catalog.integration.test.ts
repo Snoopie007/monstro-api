@@ -5,7 +5,8 @@ import { Elysia } from "elysia";
 
 test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and versions purchased definitions", async () => {
 	if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(Bun.env.DATABASE_URL!).hostname)) throw new Error("Local Postgres required");
-	mock.module("@/queues", () => ({ enqueueSubscriptionAddonJob: async () => ({ id: "catalog-test" }) }));
+	mock.module("@/queues/subscriptionAddons", () => ({ enqueueSubscriptionAddonJob: async () => ({ id: "catalog-test" }) }));
+	mock.module("@/queues/subscriptions", () => ({ scheduleRenewalRepair: async () => {}, scheduleBundledRenewal: async () => {} }));
 	const { db } = await import("@/db/db");
 	const {
 		addonPlanPriceOverrides,
@@ -43,7 +44,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 	const {
 		activateBundlePurchase,
 		cancelBundlePurchase,
-		purchaseBundle,
+		prepareBundlePurchase,
 	} = await import("./bundlePurchases");
 
 	const suffix = crypto.randomUUID().replaceAll("-", "");
@@ -148,7 +149,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		const { xAddonsBundles } = await import("./root");
 		const unauthorizedApp = new Elysia().group("/x/loc/:lid", (group) => group.use(xAddonsBundles));
 		const unauthorizedResponse = await unauthorizedApp.handle(new Request(
-			`http://localhost/x/loc/${primaryLocation.id}/addons-bundles/options`,
+			`http://localhost/x/loc/${primaryLocation.id}/addons/options`,
 		));
 		expect(unauthorizedResponse.status).toBe(403);
 
@@ -156,7 +157,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			.derive(() => ({ vendorId: vendor.id }))
 			.group("/x/loc/:lid", (group) => group.use(xAddonsBundles));
 		const authorizedResponse = await authorizedApp.handle(new Request(
-			`http://localhost/x/loc/${primaryLocation.id}/addons-bundles/options`,
+			`http://localhost/x/loc/${primaryLocation.id}/addons/options`,
 		));
 		expect(authorizedResponse.status).toBe(200);
 
@@ -211,7 +212,9 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			status: "active",
 		});
 
-		const runtimePurchase = await purchaseBundle(primaryLocation.id, member.id, {
+		const runtimePurchase = await prepareBundlePurchase({
+			locationId: primaryLocation.id,
+			memberId: member.id,
 			bundleId: createdBundle.id,
 			paymentType: "cash",
 			selectedOptionalComponentIds: [],
@@ -289,7 +292,9 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		createdBundleIds.push(multiBundle.id);
 		expect(multiBundle.components[2]?.targetMemberPlanPricingId).toBe(privatePrice.id);
 
-		const multiPurchase = await purchaseBundle(primaryLocation.id, member.id, {
+		const multiPurchase = await prepareBundlePurchase({
+			locationId: primaryLocation.id,
+			memberId: member.id,
 			bundleId: multiBundle.id,
 			paymentType: "cash",
 			selectedOptionalComponentIds: [],
@@ -410,7 +415,9 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			],
 		});
 		createdBundleIds.push(purchaseConflictBundle.id);
-		const rejectedBundlePurchase = await purchaseBundle(primaryLocation.id, member.id, {
+		const rejectedBundlePurchase = await prepareBundlePurchase({
+			locationId: primaryLocation.id,
+			memberId: member.id,
 			bundleId: purchaseConflictBundle.id,
 			paymentType: "cash",
 			selectedOptionalComponentIds: [],
@@ -447,7 +454,9 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			],
 		});
 		createdBundleIds.push(activationConflictBundle.id);
-		const activationConflictPurchase = await purchaseBundle(primaryLocation.id, member.id, {
+		const activationConflictPurchase = await prepareBundlePurchase({
+			locationId: primaryLocation.id,
+			memberId: member.id,
 			bundleId: activationConflictBundle.id,
 			paymentType: "cash",
 			selectedOptionalComponentIds: [],
@@ -467,14 +476,6 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			primaryLocation.id,
 			activationConflictPurchase.value.purchase.id,
 		)).status).toBe("pricing-conflict");
-		const blockedActivationResponse = await authorizedApp.handle(new Request(
-			`http://localhost/x/loc/${primaryLocation.id}/addons-bundles/bundle-purchases/${activationConflictPurchase.value.purchase.id}/activate`,
-			{ method: "POST" },
-		));
-		expect(blockedActivationResponse.status).toBe(409);
-		expect(await blockedActivationResponse.json()).toEqual({
-			error: "Bundled add-ons would apply conflicting subscription prices",
-		});
 		const [blockedBundlePurchase] = await db.select({ status: bundlePurchases.status })
 			.from(bundlePurchases)
 			.where(eq(bundlePurchases.id, activationConflictPurchase.value.purchase.id));
@@ -484,7 +485,10 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			.where(eq(memberSubscriptionAddons.bundlePurchaseId, activationConflictPurchase.value.purchase.id));
 		expect(blockedAddonPurchases.map((purchase) => purchase.status)).toEqual(["pending", "pending"]);
 		const renewalAt = new Date(Date.now() + 86_400_000);
-		const [renewalCandidate] = await db.select({ id: memberSubscriptionAddons.id })
+		const [renewalCandidate] = await db.select({
+			id: memberSubscriptionAddons.id,
+			subscriptionId: memberSubscriptionAddons.memberSubscriptionId,
+		})
 			.from(memberSubscriptionAddons)
 			.where(eq(memberSubscriptionAddons.bundlePurchaseId, activationConflictPurchase.value.purchase.id))
 			.limit(1);
@@ -492,7 +496,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		await db.update(memberSubscriptionAddons).set({ status: "active", nextBillAt: renewalAt })
 			.where(eq(memberSubscriptionAddons.id, renewalCandidate.id));
 		const blockedRenewalResponse = await authorizedApp.handle(new Request(
-			`http://localhost/x/loc/${primaryLocation.id}/addons-bundles/subscription-addons/${renewalCandidate.id}/schedule-renewal`,
+			`http://localhost/x/loc/${primaryLocation.id}/subscriptions/${renewalCandidate.subscriptionId}/addons/${renewalCandidate.id}/renewal`,
 			{ method: "POST" },
 		));
 		expect(blockedRenewalResponse.status).toBe(409);

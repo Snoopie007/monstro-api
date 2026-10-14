@@ -39,7 +39,12 @@ export type ChargeWithGatewayInput = {
 	note: string;
 	metadata: Record<string, string>;
 	paymentType: PaymentType;
-	deferredBilling?: boolean;
+	// An invoice billing attempt. Authorize.net then references the attempt and
+	// invoice, so its webhook can settle a charge whose response was lost, and
+	// reports a held charge as uncertain instead of failed.
+	attempt?: { id: string; invoiceId: string };
+	// Square payment reference. Defaults to transactionId.
+	referenceId?: string;
 };
 
 export type ChargeWithGatewayResult =
@@ -146,13 +151,13 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		}
 		const authorize = new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey);
 		try {
-			const billingAttemptId = input.deferredBilling ? metadata.billingAttemptId : undefined;
+			const { attempt } = input;
 			const charge = await authorize.createCharge(gatewayCustomerId, paymentMethodId, {
 				total,
 				currency,
 				idempotencyKey: transactionId,
-				referenceId: billingAttemptId ? createHash("sha256").update(billingAttemptId).digest("hex").slice(0, 20) : transactionId,
-				orderDescription: billingAttemptId && metadata.invoiceId ? `monstro-invoice:${metadata.invoiceId}` : description,
+				referenceId: attempt ? createHash("sha256").update(attempt.id).digest("hex").slice(0, 20) : transactionId,
+				orderDescription: attempt ? `monstro-invoice:${attempt.invoiceId}` : description,
 			});
 			const gatewayMetadata = {
 				gatewayService: "authorize",
@@ -171,8 +176,8 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 					};
 				case "held":
 					// TODO(billing): handle held payments as pending across ordinary checkout in a separate PR.
-					// Keep the existing failure result unless this is a deferred subscription payment.
-					if (!input.deferredBilling) return {
+					// Keep the existing failure result unless the charge belongs to an invoice attempt.
+					if (!attempt) return {
 						status: "failed",
 						failureReason: charge.responseMessage ?? "Authorize.net held the transaction for review",
 						failureCode: "4", paymentType: "card", gatewayMetadata,
@@ -262,7 +267,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			total,
 			feesAmount,
 			currency: currency as Currency,
-			referenceId: transactionId,
+			referenceId: input.referenceId ?? transactionId,
 			squareLocationId,
 			note,
 			idempotencyKey: transactionId,

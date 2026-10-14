@@ -1,5 +1,6 @@
 import { enqueueSubscriptionAddonJob } from "@/queues";
 import { activateBundlePurchase, cancelBundlePurchase } from "@/routes/x/loc/addonsBundles/bundlePurchases";
+import { isBundleRefundPaymentReplay } from "@/routes/x/loc/addonsBundles/bundleRefundState";
 import { strict as assert } from "node:assert";
 
 import type { PaymentType } from "@/subtrees/types";
@@ -166,6 +167,15 @@ export async function handleStripePlanCharge({
         }
         const expectedPaymentIntentId = currentAttemptPaymentIntentId ?? persistedPaymentIntentId;
         if (paymentIntentId && expectedPaymentIntentId && expectedPaymentIntentId !== paymentIntentId) return;
+        if (success && current.transactionId) {
+            const paidTransaction = await tx.query.transactions.findFirst({
+                where: eq(transactions.id, current.transactionId),
+                columns: { metadata: true },
+            });
+
+            if (paidTransaction && isBundleRefundPaymentReplay(paidTransaction.metadata, paymentIntentId)) return;
+        }
+
         if (current.paid || current.status === "paid") {
             // A valid success replay can repair bundle activation after the payment committed.
             if (success && !memberPlanId.startsWith("pkg_")) {

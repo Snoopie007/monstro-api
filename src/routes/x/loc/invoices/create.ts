@@ -115,6 +115,7 @@ export async function createInvoiceRoutes(app: Elysia) {
                 const end = new Date(periodEnd ?? renewal?.periodEnd ?? sub.currentPeriodEnd);
                 if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return status(400, { error: "Invalid billing period" });
                 const quote = await buildSubscriptionInvoiceQuote({
+                    memberId: sub.memberId,
                     locationId: lid, subscriptionId: sub.id, parentId: sub.parentId,
                     subscriptionMetadata: sub.metadata, pricing: sub.pricing, periodStart: start, periodEnd: end,
                     memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId, location: sub.location,
@@ -134,6 +135,7 @@ export async function createInvoiceRoutes(app: Elysia) {
             if (getDeferredBilling(sub.metadata)) return status(400, { error: "This subscription collects through its scheduled payment. Use Retry payment for an unpaid invoice." });
 
             const quote = await buildSubscriptionInvoiceQuote({
+                memberId: sub.memberId,
                 locationId: lid,
                 subscriptionId: sub.id,
                 parentId: sub.parentId,

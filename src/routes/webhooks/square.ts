@@ -7,6 +7,8 @@ import { handleSquarePlanSuccess } from "./handlers/square/squarePlanSuccess";
 import { handleSquarePlanFail } from "./handlers/square/squarePlanFail";
 import { handleSquareOrderSuccess } from "./handlers/square/squareOrderSuccess";
 import { handleSquareOrderFail } from "./handlers/square/squareOrderFail";
+import { handleSquareBundleFail, handleSquareBundleSuccess, handleSquareBundleProcessing } from "./handlers/square/squareBundlePayment";
+import { isBundleInvoice } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 
 const ALLOWED_EVENTS = ["payment.created", "payment.updated"];
 
@@ -48,11 +50,14 @@ export function squareWebhookRoutes(app: Elysia) {
             const invoice = reference?.startsWith("inv_") && await db.query.memberInvoices.findFirst({
                 where: (row, { eq }) => eq(row.id, reference), columns: { memberPlanId: true },
             });
-            if (invoice && await getDeferredInvoiceBilling(db, invoice.memberPlanId)) {
-                // Square must retry a deferred callback if saving or scheduling its renewal fails.
-                await processSquareEvent(event);
+            const bundleInvoice = invoice && reference && invoice.memberPlanId === null
+                ? await isBundleInvoice(reference)
+                : false;
+            if (bundleInvoice || (invoice && await getDeferredInvoiceBilling(db, invoice.memberPlanId))) {
+                // Square must retry a deferred or bundle callback if saving or scheduling fails.
+                await processSquareEvent(event, bundleInvoice);
             } else {
-                processSquareEvent(event).catch((err) => {
+                processSquareEvent(event, bundleInvoice).catch((err) => {
                     console.error("[SQUARE WEBHOOK] Failed to process event:", err);
                 });
             }
@@ -70,7 +75,10 @@ export function squareWebhookRoutes(app: Elysia) {
     return app;
 }
 
-async function processSquareEvent(event: { type?: string; data?: { object?: { payment?: SquareWebhookPayment } } }): Promise<void> {
+async function processSquareEvent(
+    event: { type?: string; data?: { object?: { payment?: SquareWebhookPayment } } },
+    bundleInvoice: boolean,
+): Promise<void> {
     if (!event.type || !ALLOWED_EVENTS.includes(event.type)) return;
 
     const payment = event.data?.object?.payment;
@@ -83,16 +91,18 @@ async function processSquareEvent(event: { type?: string; data?: { object?: { pa
         case "payment.created":
         case "payment.updated":
             if ((payment.status || "").toUpperCase() === "COMPLETED") {
-                await handleSquarePaymentSuccess(payment);
-            } else {
-                await handleSquarePaymentFailed(payment);
+                await handleSquarePaymentSuccess(payment, bundleInvoice);
+            } else if (bundleInvoice && payment.reference_id && ["PENDING", "APPROVED"].includes(payment.status ?? "")) {
+                await handleSquareBundleProcessing({ invoiceId: payment.reference_id, squarePaymentId: payment.id, billingAttemptId: parseNote(payment.note ?? "").billingAttemptId, locationId: payment.location_id, customerId: payment.customer_id, amount: payment.total_money?.amount ?? 0, currency: payment.total_money?.currency });
+            } else if (!bundleInvoice || ["FAILED", "CANCELED"].includes(payment.status ?? "")) {
+                await handleSquarePaymentFailed(payment, bundleInvoice);
             }
             break;
 
     }
 }
 
-async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
+async function handleSquarePaymentSuccess(payment: SquareWebhookPayment, bundleInvoice: boolean) {
     const { reference_id, total_money } = payment;
     const parsedNote = parseNote(payment.note ?? "");
     const { pmid } = parsedNote;
@@ -122,7 +132,17 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
         });
     }
 
-    if (reference_id.startsWith("inv_")) {
+    if (reference_id.startsWith("inv_") && bundleInvoice) {
+        await handleSquareBundleSuccess({
+            invoiceId: reference_id,
+            squarePaymentId,
+            amount,
+            currency: total_money?.currency,
+            receiptUrl,
+            billingAttemptId: parseNote(payment.note ?? "").billingAttemptId, locationId: payment.location_id, customerId: payment.customer_id,
+            brand: payment.card_details?.card?.card_brand, last4: payment.card_details?.card?.last_4,
+        });
+    } else if (reference_id.startsWith("inv_")) {
         const invoiceId = reference_id;
         await handleSquarePlanSuccess({
             invoiceId,
@@ -137,7 +157,7 @@ async function handleSquarePaymentSuccess(payment: SquareWebhookPayment) {
     }
 }
 
-async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
+async function handleSquarePaymentFailed(payment: SquareWebhookPayment, bundleInvoice: boolean) {
     const { reference_id, total_money } = payment;
     const parsedNote = parseNote(payment.note ?? "");
     const { pmid } = parsedNote;
@@ -167,7 +187,16 @@ async function handleSquarePaymentFailed(payment: SquareWebhookPayment) {
         });
     }
 
-    if (reference_id.startsWith("inv_")) {
+    if (reference_id.startsWith("inv_") && bundleInvoice) {
+        await handleSquareBundleFail({
+            invoiceId: reference_id,
+            squarePaymentId,
+            squarePaymentStatus,
+            failedReason,
+            failedCode, amount, currency: total_money?.currency,
+            billingAttemptId: parseNote(payment.note ?? "").billingAttemptId, locationId: payment.location_id, customerId: payment.customer_id,
+        });
+    } else if (reference_id.startsWith("inv_")) {
         const invoiceId = reference_id;
         await handleSquarePlanFail({
             invoiceId,

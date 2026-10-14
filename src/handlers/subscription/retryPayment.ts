@@ -1,16 +1,17 @@
+import { lockBundleRefundPaymentReplay, preserveBundleRefundProgress } from "@/routes/x/loc/addonsBundles/bundleRefundState";
 import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
-import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { db } from "@/db/db";
 import { BillingContextError, assertImportedSubscriptionRetrySafe, resolveSubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";
 import {
+    chargeInvoiceAttempt,
     claimInvoiceAttempt,
     saveInvoiceAttemptResult,
 } from "@/routes/x/loc/subscriptions/invoiceAttempts";
 import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
 import { scheduleRenewalRepair } from "@/queues/subscriptions";
 import type { SubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";
-import { chargeWithGateway, stripePaymentIntentFromError, type ChargeWithGatewayResult } from "@/utils/checkoutUtil";
+import type { chargeWithGateway } from "@/utils/checkoutUtil";
 import type { TransactionActivity } from "@/subtrees/types";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { and, eq, or, sql } from "drizzle-orm";
@@ -52,12 +53,6 @@ function readBillingAttempt(metadata: unknown): BillingAttemptSnapshot | null {
             ...(typeof value.paymentIntentId === "string" ? { paymentIntentId: value.paymentIntentId } : {}),
         }
         : null;
-}
-function classifyPaymentIntentStatus(status: string | undefined): "failed" | "processing" | "requires_action" | "unknown" {
-    if (status === "requires_payment_method" || status === "canceled") return "failed";
-    if (status === "processing") return "processing";
-    if (status === "requires_action") return "requires_action";
-    return "unknown";
 }
 
 async function recordMigrationGateFailure(input: {
@@ -189,6 +184,8 @@ export async function retrySubscriptionPayment(props: {
                 paymentIntentId: paymentIntent.id,
             });
             await db.transaction(async (tx) => {
+                if (sub.bundlePurchaseId && await lockBundleRefundPaymentReplay(tx, transaction.id, paymentIntent.id)) return;
+
                 await tx.update(transactions).set({
                     status: "paid",
                     paymentMethodId,
@@ -272,14 +269,16 @@ export async function retrySubscriptionPayment(props: {
         );
     }
 
-    let charge: ChargeWithGatewayResult;
-    try {
-        charge = await chargeWithGateway({
+    const attempt = await chargeInvoiceAttempt({
+        invoiceId: invoice.id,
+        attemptId,
+        charge: {
             gateway: billingContext.gateway as Parameters<typeof chargeWithGateway>[0]["gateway"],
             gatewayCustomerId: billingContext.gatewayCustomerId,
             paymentMethodId,
             transactionId: attemptId,
-            deferredBilling: !!getDeferredBilling(sub.metadata),
+            // Only deferred subscriptions bind Authorize.net charges to their invoice attempt.
+            attempt: getDeferredBilling(sub.metadata) ? { id: attemptId, invoiceId: invoice.id } : undefined,
             total: invoice.total,
             feesAmount: transaction.feeAmount,
             currency: transaction.currency,
@@ -293,24 +292,16 @@ export async function retrySubscriptionPayment(props: {
                 billingAttemptId: attemptId,
             },
             paymentType,
-        });
-    } catch (error) {
-        const paymentIntent = stripePaymentIntentFromError(error);
-        const attemptStatus = classifyPaymentIntentStatus(paymentIntent?.status);
-        await saveInvoiceAttemptResult({
-            invoiceId: invoice.id,
-            attemptId,
-            status: attemptStatus,
-            paymentIntentId: paymentIntent?.id,
-            retryable: attemptStatus === "failed",
-            workflowDecline: !!paymentFailureFromError(error),
-        });
-        return fail(
-            attemptStatus === "failed" ? "CHARGE_FAILED" : "PAYMENT_UNKNOWN",
-            error instanceof Error ? error.message : "Payment outcome is unknown",
-        );
+        },
+    });
 
+    if (!attempt.charge) {
+        return fail(
+            attempt.status === "failed" ? "CHARGE_FAILED" : "PAYMENT_UNKNOWN",
+            attempt.error instanceof Error ? attempt.error.message : "Payment outcome is unknown",
+        );
     }
+    const { charge, status: attemptStatus } = attempt;
     const now = new Date();
     const activity: TransactionActivity = charge.status === "approved"
         ? {
@@ -327,32 +318,22 @@ export async function retrySubscriptionPayment(props: {
             brand: charge.brand,
             last4: charge.last4,
         };
-    const attemptStatus = charge.status === "approved"
-        ? "succeeded"
-        : charge.status === "failed"
-            ? "failed"
-            : classifyPaymentIntentStatus(charge.paymentIntentStatus);
-    await saveInvoiceAttemptResult({
-        invoiceId: invoice.id,
-        attemptId,
-        status: attemptStatus,
-        paymentIntentId: "paymentIntentId" in charge ? charge.paymentIntentId : undefined,
-        retryable: attemptStatus === "failed",
-        workflowDecline: charge.status === "failed" && isPaymentDecline(billingContext.gateway.service, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode),
-    });
     const migration = sub.metadata?.stripeMigration;
     const importedMigrationArmed = migration
         && typeof migration === "object"
         && !Array.isArray(migration)
         && (migration as { state?: unknown }).state === "armed";
     await db.transaction(async (tx) => {
+        if (sub.bundlePurchaseId && charge.status === "approved"
+            && await lockBundleRefundPaymentReplay(tx, transaction.id, charge.paymentIntentId ?? null)) return;
+
         await tx.update(transactions).set({
             ...(charge.status === "approved" ? { status: "paid" as const } : attemptStatus === "failed" ? { status: "failed" as const } : {}),
             paymentMethodId,
             paymentType: charge.paymentType ?? paymentType,
             ...("paymentIntentId" in charge && charge.paymentIntentId ? { paymentIntentId: charge.paymentIntentId } : {}),
             activities: [...(transaction.activities ?? []), activity],
-            metadata: { ...transaction.metadata, ...charge.gatewayMetadata },
+            metadata: preserveBundleRefundProgress({ ...transaction.metadata, ...charge.gatewayMetadata }),
             updated: now,
         }).where(eq(transactions.id, transaction.id));
         if (charge.status === "approved") {

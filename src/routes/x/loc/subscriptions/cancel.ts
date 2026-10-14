@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { removeRenewalJobs } from "@/queues/subscriptions";
-import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
+import { bundlePurchases, memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, desc, eq, or, sql } from "drizzle-orm";
@@ -20,6 +20,21 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
         }
         if (sub.parentId) {
             return status(400, { error: "Cancel the root subscription to update participant access", code: "SUBSCRIPTION_CHILD" });
+        }
+
+
+        if (refund?.enabled && sub.bundlePurchaseId) {
+            const purchase = await db.query.bundlePurchases.findFirst({
+                where: eq(bundlePurchases.id, sub.bundlePurchaseId),
+                columns: { bundleId: true },
+            });
+
+            return status(409, {
+                error: "Use Refund & cancel bundle to refund every bundled subscription and add-on.",
+                code: "BUNDLE_REFUND_BLOCKED",
+                bundleId: purchase?.bundleId,
+                bundlePurchaseId: sub.bundlePurchaseId,
+            });
         }
 
         if (mode === "now") {

@@ -4,8 +4,7 @@ import type { SubscriptionAddonOverview } from "@/subtrees/types";
 import { getDeferredBilling, deferredChargeAmount } from "@/subtrees/utils/deferredBilling";
 import type { AdditionalFee, CheckoutDiscount } from "@/subtrees/types";
 import { getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
-import { memberInvoices } from "@/subtrees/schemas";
-import { and, eq } from "drizzle-orm";
+import { countPaidSubscriptionInvoices } from "@/subtrees/utils/server/subscriptionInvoices";
 import { db } from "@/db/db";
 import { calculateChargeDetails } from "@/utils/enrollUtils";
 import { getAdditionalFeesForCheckout } from "@/utils/additionalFees";
@@ -99,20 +98,24 @@ export function quoteSubscriptionInvoice({
     const productName = pricing.plan?.name
         ? `${pricing.plan.name} - ${effective.name}`
         : effective.name;
+    const attribution = {
+        sourceType: "subscription" as const,
+        sourceId: subscriptionId,
+        pricingSource: pricingSource ?? { type: "base" as const },
+        basePlanPricingId: pricing.id,
+        effectivePlanPricingId: effective.id,
+    };
     const productLines = [{
         name: productName,
         description: billingPhase === "renewal" ? "Subscription renewal" : "Subscription billing period",
         quantity: 1,
         price: chargeDetails.unitCost,
         discount: chargeDetails.productDiscount,
-        billingSource: { type: "subscription" as const, memberSubscriptionId: subscriptionId },
-        pricingSource: pricingSource ?? { type: "base" as const },
-        basePlanPricingId: pricing.id,
-        effectivePlanPricingId: effective.id,
+        ...attribution,
     }];
 
     return {
-        items: [...productLines, ...chargeDetails.additionalFeeLines],
+        items: [...productLines, ...chargeDetails.additionalFeeLines.map(line => ({ ...line, ...attribution }))],
         subTotal: chargeDetails.subTotal,
         total: chargeDetails.total,
         tax: chargeDetails.tax,
@@ -125,25 +128,20 @@ export function quoteSubscriptionInvoice({
     };
 }
 
-export async function buildSubscriptionInvoiceQuote(props: BuildSubscriptionInvoiceQuoteProps) {
+export async function buildSubscriptionInvoiceQuote(props: BuildSubscriptionInvoiceQuoteProps & { memberId: string }) {
     const startsAtRenewal = props.subscriptionMetadata?.additionalFeesStartAtRenewal === true;
-    const paidInvoices = await db.query.memberInvoices.findMany({
-            where: and(
-                eq(memberInvoices.memberPlanId, props.subscriptionId),
-                eq(memberInvoices.locationId, props.locationId),
-                eq(memberInvoices.paid, true),
-            ),
-            columns: { id: true },
-        });
-    const billingPhase = props.billingPhase ?? (paidInvoices.length || startsAtRenewal ? "renewal" : "initial");
+    const paidInvoiceCount = await countPaidSubscriptionInvoices(db, {
+        subscriptionId: props.subscriptionId, memberId: props.memberId, locationId: props.locationId,
+    });
+    const billingPhase = props.billingPhase ?? (paidInvoiceCount || startsAtRenewal ? "renewal" : "initial");
     const promo = props.subscriptionMetadata?.promo as {
         discount?: { amount: number; duration?: number; type?: "fixed_amount" | "percentage"; value?: number };
     } | undefined;
-    const discount = props.discount ?? (promo?.discount && paidInvoices.length < (promo.discount.duration ?? 1)
+    const discount = props.discount ?? (promo?.discount && paidInvoiceCount < (promo.discount.duration ?? 1)
         ? { type: promo.discount.type ?? "fixed_amount", value: promo.discount.value ?? promo.discount.amount }
         : undefined);
     const additionalFees = await getAdditionalFeesForCheckout(props.locationId, "subscription", billingPhase);
-    const initial = billingPhase === "initial" ? await resolveInitialSubscriptionPricing(props.subscriptionId) : null;
+    const initial = billingPhase === "initial" ? await resolveInitialSubscriptionPricing(db, props.subscriptionId) : null;
     const overview = props.periodStart && props.periodEnd
         ? await getSubscriptionAddonOverview(props.locationId, props.subscriptionId, props.periodStart, props.periodEnd)
         : null;

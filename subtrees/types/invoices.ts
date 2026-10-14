@@ -1,6 +1,7 @@
 import { memberInvoices } from "../schemas/invoice";
 import type { Location } from "./location";
 import type { Member, MemberSubscription } from "./member";
+import type { InvoiceItem } from "../utils/invoiceItems";
 
 export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     member?: Member;
@@ -9,47 +10,6 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     memberSubscription?: MemberSubscription;
 }
 
-type InvoiceItemBase = {
-    name: string;
-    quantity: number;
-    price: number;
-    productId?: string;
-    discount?: number;
-    tax?: number;
-    feeId?: string;
-    refundable?: boolean;
-}
-
-type SubscriptionPricingSource =
-    | { type: "base" }
-    | { type: "addon"; memberSubscriptionAddonId: string }
-    | { type: "bundle"; bundlePurchaseId: string; bundleComponentId: string };
-
-type AddonChargePricingSource =
-    | { type: "addon"; addonId: string }
-    | { type: "bundle"; bundlePurchaseId: string; bundleComponentId: string };
-
-type UnattributedInvoiceItem = InvoiceItemBase & {
-    billingSource?: never;
-    pricingSource?: never;
-    basePlanPricingId?: never;
-    effectivePlanPricingId?: never;
-};
-
-type SubscriptionInvoiceItem = InvoiceItemBase & {
-    billingSource: { type: "subscription"; memberSubscriptionId: string };
-    pricingSource: SubscriptionPricingSource;
-    basePlanPricingId: string;
-    effectivePlanPricingId: string;
-};
-
-type SubscriptionAddonInvoiceItem = InvoiceItemBase & {
-    billingSource: { type: "subscription_addon"; memberSubscriptionAddonId: string };
-    pricingSource: AddonChargePricingSource;
-    basePlanPricingId?: never;
-    effectivePlanPricingId?: never;
-};
-
-export type InvoiceItem = UnattributedInvoiceItem | SubscriptionInvoiceItem | SubscriptionAddonInvoiceItem;
+export type { InvoiceItem } from "../utils/invoiceItems";
 
 export type NewInvoice = typeof memberInvoices.$inferInsert;

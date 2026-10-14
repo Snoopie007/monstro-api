@@ -2,49 +2,27 @@ import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { scheduleCashRenewal } from "@/queues/subscriptions";
 import { getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { db } from "@/db/db";
-import { WorkflowEvents } from "@/subtrees/constants/workflow";
-import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
-import { memberLocations, memberSubscriptions, promos } from "@/subtrees/schemas";
-import { isFuture } from "date-fns";
+import { memberLocations, memberSubscriptions } from "@/subtrees/schemas";
 import type Elysia from "elysia";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
-import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
-import { ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
+import {
+    activateCashSubscription,
+    findCashSubscriptions,
+    hasCashBillingDefinition,
+    planCashActivation,
+} from "./cashActivation";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async ({ params, status }) => {
         const { lid, sid } = params as { lid: string; sid: string };
 
-        const sub = await db.query.memberSubscriptions.findFirst({
-            where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid)),
-            with: {
-                member: {
-                    columns: {
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                    },
-                },
-                pricing: { with: { plan: true } },
-                location: {
-                    with: {
-                        taxRates: true,
-                        locationState: true,
-                    },
-                    columns: {
-                        country: true,
-                        name: true,
-                        email: true,
-                        phone: true,
-                        address: true,
-                        vendorId: true,
-                    },
-                },
-            },
-        });
+        const [sub] = await findCashSubscriptions(db, and(
+            eq(memberSubscriptions.id, sid),
+            eq(memberSubscriptions.locationId, lid),
+        ));
 
-        if (!sub || !sub.member || !sub.location || !sub.pricing) {
+        if (!sub || !hasCashBillingDefinition(sub)) {
             return status(404, { error: "Subscription billing definition not found" });
         }
         if (sub.parentId) {
@@ -70,74 +48,11 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             return status(200, { status: "active", nextBillingAt: due, scheduledJobKey: `cashInvoiceDue_${sid}_${due.getTime()}` });
         }
 
-        const isTrialing = !!(sub.trialEnd && isFuture(sub.trialEnd));
-        const promoMeta = sub.metadata?.promo as {
-            id?: string;
-            applied?: boolean;
-            discount?: { amount: number; type?: "fixed_amount" | "percentage"; value?: number };
-        } | undefined;
-        const discount = promoMeta?.discount
-            ? {
-                type: promoMeta.discount.type ?? "fixed_amount",
-                value: promoMeta.discount.value ?? promoMeta.discount.amount,
-            }
-            : undefined;
-
-        if (!isTrialing) {
-            const quote = await buildSubscriptionInvoiceQuote({
-                locationId: lid, subscriptionId: sid, parentId: sub.parentId,
-                subscriptionMetadata: sub.metadata, pricing: sub.pricing,
-                memberPlanPricingId: sub.memberPlanPricingId, promoId: sub.promoId,
-                location: sub.location, discount,
-                periodStart: new Date(sub.currentPeriodStart), periodEnd: new Date(sub.currentPeriodEnd),
-            });
-            await db.transaction(tx => ensureCashInvoice(tx, {
-                subscriptionId: sid, locationId: lid, memberId: sub.memberId,
-                periodStart: new Date(sub.currentPeriodStart), periodEnd: new Date(sub.currentPeriodEnd), quote,
-            }));
-        }
-
-        await db.transaction(async (tx) => {
-            await tx.update(memberSubscriptions).set({
-                status: isTrialing ? "trialing" : "active",
-                ...(!isTrialing && promoMeta ? {
-                    metadata: {
-                        ...(sub.metadata || {}),
-                        promo: { ...promoMeta, applied: true },
-                    },
-                } : {}),
-                updated: new Date(),
-            }).where(eq(memberSubscriptions.id, sid));
-
-            // A staff-assigned trial needs no charge, but its activation must commit.
-            if (isTrialing && !sub.parentId) {
-                await dispatchWorkflowTrigger(tx, {
-                    type: WorkflowEvents.trial.CHECKED_OUT,
-                    locationId: lid,
-                    memberId: sub.memberId,
-                });
-            }
-
-            if (!isTrialing) {
-                await tx.update(memberLocations).set({
-                    status: "active",
-                    updated: new Date(),
-                }).where(and(
-                    eq(memberLocations.memberId, sub.memberId),
-                    eq(memberLocations.locationId, lid),
-                ));
-
-                if (promoMeta?.id && !promoMeta.applied) {
-                    await tx.update(promos).set({
-                        redemptionCount: sql`${promos.redemptionCount} + 1`,
-                        updated: new Date(),
-                    }).where(eq(promos.id, promoMeta.id));
-                }
-            }
-        });
+        const activation = await planCashActivation(sub, lid);
+        await db.transaction(tx => activateCashSubscription(tx, sub, lid, activation));
 
         return status(200, {
-            status: isTrialing ? "trialing" : "active",
+            status: activation.status,
             nextBillingAt: getNextBillingDate(sub),
             scheduledJobKey: null,
         });

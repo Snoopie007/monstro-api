@@ -13,6 +13,7 @@ import type { Currency } from "square";
 import { canEditLocationMember } from "@/utils/locationAccess";
 import { sendCashInvoice } from "./cashEmail";
 import { CashInvoiceError } from "@/subtrees/utils/server/cashInvoices";
+import { isBundleInvoice } from "../addonsBundles/bundleSettlement";
 
 type InvoiceChargeMetadata = {
     collectionMethod?: "send_invoice" | "charge_automatically";
@@ -82,6 +83,13 @@ export async function sendInvoiceRoutes(app: Elysia) {
 
         if (!invoice) {
             return status(404, { error: "Invoice not found" });
+        }
+
+        if (await isBundleInvoice(invoice.id)) {
+            return status(409, {
+                error: "Use the bundle purchase to manage this invoice",
+                code: "BUNDLE_INVOICE_OWNED",
+            });
         }
 
         if (invoice.paymentType === "cash") {

@@ -3,7 +3,8 @@ import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
-import type { CashSubscriptionJobData, RecursiveSubscriptionJobData, SubscriptionJobData } from "@/subtrees/bullmq/types";
+import { type CashSubscriptionJobData, type RecursiveSubscriptionJobData, type SubscriptionJobData } from "@/subtrees/bullmq/types";
+import type { SubscriptionBillingQuote } from "@/subtrees/types/subscriptionBilling";
 import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { sleep } from "bun";
 
@@ -149,7 +150,7 @@ export async function scheduleRecursiveRenewal({
     throw lastError ?? new Error("scheduleRecursiveRenewal failed");
 }
 
-export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
+async function loadRenewalContext(sid: string, lid: string, dueAt: Date | null) {
     if (!dueAt) return;
     const dueAtMs = dueAt.getTime();
     if (!Number.isFinite(dueAtMs)) throw new Error("Invalid renewal repair dueAt");
@@ -185,9 +186,10 @@ export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Dat
     if (!sub || sub.parentId || sub.paymentType === "cash" || !sub.pricing || !sub.member || !sub.location) return;
 
     const migration = getStripeMigration(sub.metadata);
-    if (!getDeferredBilling(sub.metadata) && (!migration || !["armed", "first_payment_verified"].includes(migration.state))) return;
+    const bundled = sub.bundlePurchaseId !== null;
+    if (!bundled && !getDeferredBilling(sub.metadata) && (!migration || !["armed", "first_payment_verified"].includes(migration.state))) return;
 
-    if (getDeferredBilling(sub.metadata) && (
+    if ((bundled || getDeferredBilling(sub.metadata)) && (
         !["active", "past_due"].includes(sub.status)
         || sub.currentPeriodEnd.getTime() !== dueAtMs
         || (sub.cancelAt && sub.cancelAt.getTime() <= Date.now())
@@ -217,11 +219,52 @@ export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Dat
             intervalThreshold: billingQuote.intervalThreshold,
         },
     };
+
+    return { bundled, billingQuote, payload, dueAt, dueAtMs };
+}
+
+/** Schedule the normal next renewal after a bundle payment activates its subscription. */
+export async function scheduleBundledRenewal(sid: string, lid: string, dueAt: Date | null) {
+    const renewal = await loadRenewalContext(sid, lid, dueAt);
+    if (!renewal?.bundled) return;
+
+    await enqueueBundledRenewal(renewal.dueAt, renewal.billingQuote, {
+        ...renewal.payload,
+        expectedDueAt: undefined,
+    });
+}
+
+/** Recover the next renewal, including callers that already repair bundled subscriptions. */
+export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
+    const renewal = await loadRenewalContext(sid, lid, dueAt);
+    if (!renewal) return;
+
+    const { bundled, billingQuote, payload, dueAt: startDate, dueAtMs } = renewal;
+    if (bundled) {
+        await enqueueBundledRenewal(startDate, billingQuote, {
+            ...payload,
+            expectedDueAt: undefined,
+        });
+        return;
+    }
+
     await subQueue.add("renewal:static", payload, {
         ...EXACT_RENEWAL_JOB_OPTIONS,
         jobId: `renewal-exact-${sid}-${dueAtMs}-recovery`,
         delay: Math.max(0, dueAtMs - Date.now()),
     });
+}
+
+/** A bundled subscription renews on the schedule activation gives any
+ * subscription: a cron for single month or year intervals, otherwise a chain of
+ * recursive jobs. Both job ids are stable, so a repeat call is harmless. */
+async function enqueueBundledRenewal(startDate: Date, quote: SubscriptionBillingQuote, data: SubscriptionJobData) {
+    if ((quote.interval === "month" || quote.interval === "year") && quote.intervalThreshold === 1) {
+        await scheduleCronBasedRenewal({ startDate: new Date(startDate), interval: quote.interval, data });
+        return;
+    }
+
+    await scheduleRecursiveRenewal({ startDate, data: { ...data, recurrenceCount: 1 } });
 }
 
 export async function removeRenewalJobs(sid: string) {

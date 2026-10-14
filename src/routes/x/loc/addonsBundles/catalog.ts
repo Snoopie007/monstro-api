@@ -1,7 +1,9 @@
+import { getCurrency } from "@/utils/getCurrency";
 import { db } from "@/db/db";
 import {
   addonPlanPriceOverrides,
   addons,
+  locations,
   bundleComponents,
   bundlePurchases,
   bundles,
@@ -132,12 +134,14 @@ async function insertAddonDefinition(
   locationId: string,
   input: AddonEditorInput,
 ) {
+  const location = await tx.query.locations.findFirst({ where: eq(locations.id, locationId), columns: { country: true } });
+  if (!location) throw new Error("Location was not found");
   const [addon] = await tx.insert(addons).values({
     locationId,
     name: input.name.trim(),
     description: input.description,
     amount: input.amount,
-    currency: input.currency.toUpperCase(),
+    currency: getCurrency(location.country),
     billingType: input.billingType,
     interval: input.interval,
     intervalThreshold: input.intervalThreshold,
@@ -216,7 +220,9 @@ export async function getCatalogOptions(locationId: string): Promise<AddonBundle
     .where(and(eq(addons.locationId, locationId), eq(addons.archived, false)))
     .orderBy(asc(addons.name));
 
-  return { planPricings, addons: addonOptions };
+  const location = await db.query.locations.findFirst({ where: eq(locations.id, locationId), columns: { country: true } });
+  if (!location) throw new Error("Location was not found");
+  return { planPricings, addons: addonOptions, currency: getCurrency(location.country) };
 }
 
 export async function listAddons(locationId: string) {
@@ -243,10 +249,15 @@ export async function updateAddon(locationId: string, addonId: string, input: Ad
     `);
     const existing = await tx.query.addons.findFirst({
       where: and(eq(addons.id, addonId), eq(addons.locationId, locationId)),
-      columns: { id: true, archived: true },
+      columns: { id: true, archived: true, currency: true },
     });
     if (!existing) return { status: "not-found" as const };
 
+    const location = await tx.query.locations.findFirst({ where: eq(locations.id, locationId), columns: { country: true } });
+    if (!location) throw new Error("Location was not found");
+    if (existing.currency.toUpperCase() !== getCurrency(location.country)) {
+      return { status: "currency-repair-required" as const };
+    }
     const purchase = await tx.query.memberSubscriptionAddons.findFirst({
       where: eq(memberSubscriptionAddons.addonId, addonId),
       columns: { id: true },
@@ -265,7 +276,7 @@ export async function updateAddon(locationId: string, addonId: string, input: Ad
       name: input.name.trim(),
       description: input.description,
       amount: input.amount,
-      currency: input.currency.toUpperCase(),
+      currency: existing.currency,
       billingType: input.billingType,
       interval: input.interval,
       intervalThreshold: input.intervalThreshold,

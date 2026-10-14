@@ -1,25 +1,25 @@
-import { resolveInitialSubscriptionPricing } from "./effectivePricing";
+import { markSubscriptionActivated, quoteInitialSubscriptionCharge, readPromo } from "./activation";
 import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { WorkflowEvents } from "@/subtrees/constants/workflow";
 import { dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { calculateChargeDetails, getAdditionalFeesForCheckout, getCurrency } from "@/utils";
+import { getCurrency } from "@/utils";
 import {
     removeRenewalJobs,
     scheduleCronBasedRenewal,
     scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
 import {
+    bundlePurchases,
     memberInvoices,
     memberLocations,
     memberSubscriptions,
-    promos,
     transactions,
 } from "@/subtrees/schemas";
 import type { SubscriptionJobData } from "@/subtrees/bullmq/types";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { isFuture } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
@@ -80,6 +80,12 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         if (!sub || !sub.member || !sub.location || !sub.pricing) {
             return status(404, { error: "Subscription billing definition not found" });
         }
+        if (sub.bundlePurchaseId) {
+            const owner = await db.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, sub.bundlePurchaseId), columns: { id: true, invoiceId: true, status: true } });
+            if (owner?.invoiceId && owner.status === "pending") {
+                return status(409, { error: "Complete this subscription's bundle payment", code: "BUNDLE_PAYMENT_REQUIRED", purchaseId: owner.id });
+            }
+        }
         if (sub.parentId) {
             return status(400, { error: "Only root subscriptions can be activated", code: "SUBSCRIPTION_CHILD" });
         }
@@ -120,11 +126,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         };
 
         const nextBillingAt = getNextBillingDate(sub);
-        const promoMeta = (sub.metadata?.promo as {
-            id?: string;
-            discount?: PromoDiscount;
-            applied?: boolean;
-        } | undefined);
+        const promoMeta = readPromo(sub.metadata);
         const discount = promoMeta?.discount
             ? {
                 type: promoMeta.discount.type ?? "fixed_amount",
@@ -266,32 +268,11 @@ export async function activateSubscriptionRoutes(app: Elysia) {
             });
         }
 
-        const taxRate = sub.location.taxRates?.find((t) => t.isDefault) || sub.location.taxRates?.[0];
-        const { pricing, basePricing, pricingSource } = await resolveInitialSubscriptionPricing(sub.id);
-        const planName = sub.pricing?.plan?.name
-            ? `${sub.pricing.plan.name}/${pricing.name}`
-            : pricing.name;
-        const isDownpayment = pricingSource.type !== "bundle" && !!sub.pricing.downpayment;
-        const billedAmount = isDownpayment ? sub.pricing.downpayment! : pricing.price;
-        const additionalFees = await getAdditionalFeesForCheckout(lid, "subscription");
-        const chargeDetails = calculateChargeDetails({
-            amount: billedAmount,
+        const { taxRate, pricing, planName, isDownpayment, chargeDetails, lineItems } = await quoteInitialSubscriptionCharge(db, {
+            subscription: { id: sub.id, pricing: sub.pricing, location: sub.location },
+            locationId: lid,
             discount,
-            taxRate: taxRate?.percentage ?? 0,
-            planId: sub.location.locationState?.planId ?? 0,
-            additionalFees,
         });
-        const lineItems = [{
-            name: planName,
-            description: isDownpayment ? "Subscription downpayment" : "Subscription billing period",
-            quantity: 1,
-            price: chargeDetails.unitCost,
-            discount: chargeDetails.productDiscount,
-            billingSource: { type: "subscription" as const, memberSubscriptionId: sub.id },
-            pricingSource,
-            basePlanPricingId: basePricing.id,
-            effectivePlanPricingId: pricing.id,
-        }, ...chargeDetails.additionalFeeLines];
 
         const commissionBilling = sub.metadata?.commissionBilling as Record<string, unknown> | undefined;
         const [invoice] = await db.insert(memberInvoices).values({
@@ -444,24 +425,17 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     },
                 }).where(eq(memberInvoices.id, invoice.id));
 
-                await tx.update(memberSubscriptions).set({
-                    gatewayPaymentId: paymentMethod.value.id,
-                    ...(finalizedImmediately ? { status: "active" } : {}),
-                    metadata: {
-                        ...(sub.metadata || {}),
-                        hasPaidDownpayment: isDownpayment,
+                await markSubscriptionActivated(tx, {
+                    subscription: { id: sub.id, memberId: sub.memberId, locationId: lid, metadata: sub.metadata },
+                    payment: {
                         paymentMethodId: paymentMethod.value.id,
                         gatewayService,
                         gatewayIntegrationId: integration.id,
                         gatewayCustomerId: billingContext.gatewayCustomerId,
-                        ...(promoMeta && {
-                            promo: {
-                                ...promoMeta,
-                                applied: true,
-                            },
-                        }),
                     },
-                }).where(eq(memberSubscriptions.id, sub.id));
+                    paidDownpayment: isDownpayment,
+                    finalized: finalizedImmediately,
+                });
 
                 if (finalizedImmediately) {
                     const txValues = {
@@ -494,21 +468,6 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     const [transaction] = await tx.insert(transactions).values(txValues).returning({ id: transactions.id });
                     assert(transaction);
                     await tx.update(memberInvoices).set({ transactionId: transaction.id }).where(eq(memberInvoices.id, invoice.id));
-
-                    await tx.update(memberLocations).set({
-                        status: "active",
-                        updated: new Date(),
-                    }).where(and(
-                        eq(memberLocations.memberId, sub.memberId),
-                        eq(memberLocations.locationId, lid)
-                    ));
-                }
-
-                if (promoMeta?.id && !promoMeta.applied) {
-                    await tx.update(promos).set({
-                        redemptionCount: sql`${promos.redemptionCount} + 1`,
-                        updated: new Date(),
-                    }).where(eq(promos.id, promoMeta.id));
                 }
             });
         } catch (error) {

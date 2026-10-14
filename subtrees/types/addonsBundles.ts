@@ -66,6 +66,7 @@ export type AddonBundlePlanPricingOption = Pick<MemberPlanPricing, "id" | "membe
 };
 
 export type AddonBundleCatalogOptions = {
+  currency?: string;
   planPricings: AddonBundlePlanPricingOption[];
   addons: Array<Pick<AddonCatalogItem, "id" | "name" | "amount" | "currency" | "billingType" | "interval" | "intervalThreshold">>;
 };
@@ -148,6 +149,7 @@ export type SubscriptionBundleSummary = {
 };
 
 export type PurchaseBundleInput = {
+  purchaseId?: string;
   bundleId: string;
   paymentType: "cash" | "card" | "us_bank_account";
   paymentMethodId?: string;
@@ -159,6 +161,39 @@ export type BundlePurchaseResponse = {
   purchase: SubscriptionBundleSummary;
   subscriptionIds: string[];
   addonPurchaseIds: string[];
+};
+
+// Paid card bundles and enrolled cash bundles are active. A card payment can
+// stay processing until its gateway confirms it.
+export type BundlePaymentState = "active" | "processing" | "declined";
+
+export type BundlePaymentResponse = {
+  purchase: SubscriptionBundleSummary;
+  payment: BundlePaymentState;
+};
+
+
+export type BundleRefundChargeResult = {
+  transactionId: string;
+  invoiceId: string;
+  description: string;
+  chargedAt: string;
+  currency: string;
+  gateway: "cash" | "stripe" | "square" | "authorize" | "unavailable";
+  chargedAmount: number;
+  refundableAmount: number;
+  refundedAmount: number;
+  remainingAmount: number;
+  nonRefundableAmount: number;
+  status: "refunded" | "pending" | "failed" | "skipped";
+  message: string | null;
+};
+
+export type BundleRefundResponse = {
+  purchase: SubscriptionBundleSummary;
+  charges: BundleRefundChargeResult[];
+  cancellationWarnings: string[];
+  unfinished: boolean;
 };
 
 type AddonEditorBaseInput = Pick<Addon, "name" | "description" | "amount" | "currency" | "classAccessOverride"> & {

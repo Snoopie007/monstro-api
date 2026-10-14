@@ -1,3 +1,6 @@
+import { recordInvoicePayment } from "@/subtrees/utils/server/invoicePayments";
+import { bundleInvoicePaymentOwner } from "@/routes/x/loc/addonsBundles/bundleSettlement";
+import { memberInvoices } from "@/subtrees/schemas";
 import { Elysia, t } from "elysia";
 import Stripe from "stripe";
 import { VendorStripePayments } from "@/libs/stripe";
@@ -5,7 +8,8 @@ import { db } from "@/db/db";
 import { memberLocations } from "@/subtrees/schemas";
 import type { PaymentType } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
-import { handleStripeOrderCharge, handleStripePlanCharge } from "@/routes/webhooks/handlers/stripe";
+import { handleStripeBundleCharge, handleStripeOrderCharge, handleStripePlanCharge } from "@/routes/webhooks/handlers/stripe";
+import { isBundleInvoice } from "@/routes/x/loc/addonsBundles/bundleSettlement";
 
 /**
  * Stripe Webhook Handler for Member Billing Events
@@ -19,6 +23,8 @@ const allowedEvents: Stripe.Event.Type[] = [
     "payment_intent.payment_failed",
     "payment_intent.canceled",
     "payment_intent.succeeded",
+    "payment_intent.processing",
+    "payment_intent.requires_action",
     "application_fee.created",
     "application_fee.refunded",
     "customer.created",
@@ -118,6 +124,11 @@ async function processEvent(event: Stripe.Event) {
                 await handleCharge(event);
                 break;
 
+            case "payment_intent.succeeded":
+            case "payment_intent.processing":
+            case "payment_intent.requires_action":
+                await handleBundlePaymentIntent(event);
+                break;
             case "payment_intent.payment_failed":
             case "payment_intent.canceled":
                 await handlePaymentIntentFailure(event);
@@ -212,7 +223,24 @@ async function handleCharge(event: Stripe.Event) {
         return;
     }
 
-
+    if (!metadata.memberPlanId && metadata.invoiceId && await isBundleInvoice(metadata.invoiceId)) {
+        await handleStripeBundleCharge({
+            invoiceId: metadata.invoiceId,
+            billingAttemptId: metadata.billingAttemptId ?? null,
+            customerId: typeof charge.customer === "string" ? charge.customer : charge.customer?.id,
+            paymentMethodId: charge.payment_method ?? undefined,
+            success: charge.paid,
+            amount: charge.amount,
+            currency: charge.currency,
+            paymentIntentId,
+            stripeAccountId: event.account ?? null,
+            receiptUrl,
+            failedReason: charge.failure_message,
+            failedCode: charge.failure_code || charge.outcome?.reason || null,
+        });
+        console.log(`[STRIPE WEBHOOK] Bundle charge ${charge.id} processed successfully`);
+        return;
+    }
 
     if (metadata.memberPlanId && metadata.invoiceId) {
 
@@ -269,6 +297,24 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
         || lastPaymentError?.decline_code
         || (event.type === "payment_intent.canceled" ? "canceled" : null);
 
+    if (!metadata.memberPlanId && metadata.invoiceId && await isBundleInvoice(metadata.invoiceId)) {
+        await handleStripeBundleCharge({
+            invoiceId: metadata.invoiceId,
+            billingAttemptId: metadata.billingAttemptId ?? null,
+            customerId: typeof paymentIntent.customer === "string" ? paymentIntent.customer : paymentIntent.customer?.id,
+            paymentMethodId: typeof paymentIntent.payment_method === "string" ? paymentIntent.payment_method : paymentIntent.payment_method?.id,
+            success: false,
+            amount: paymentIntent.amount,
+            currency: paymentIntent.currency,
+            paymentIntentId: paymentIntent.id || null,
+            stripeAccountId: event.account ?? null,
+            receiptUrl: null,
+            failedReason,
+            failedCode,
+        });
+        console.log(`[STRIPE WEBHOOK] Bundle charge ${paymentIntent.id} failed`);
+        return;
+    }
 
     if (metadata.invoiceId && metadata.memberPlanId) {
 
@@ -313,4 +359,22 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
         return;
     }
 
+}
+
+async function handleBundlePaymentIntent(event: Extract<Stripe.Event, {
+    type: "payment_intent.succeeded" | "payment_intent.processing" | "payment_intent.requires_action";
+}>) {
+    const intent = event.data.object;
+    const invoiceId = intent.metadata.invoiceId;
+    if (!invoiceId || !await isBundleInvoice(invoiceId)) return;
+    const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoiceId) });
+    if (!invoice || intent.metadata.locationId !== invoice.locationId || intent.metadata.memberId !== invoice.memberId) throw new Error("Stripe bundle invoice ownership does not match");
+    const customerId = typeof intent.customer === "string" ? intent.customer : intent.customer?.id;
+    if (!customerId) throw new Error("Stripe bundle payment has no customer binding");
+    const gateway = { service: "stripe" as const, stripeAccountId: event.account ?? null, customerId, paymentMethodId: typeof intent.payment_method === "string" ? intent.payment_method : intent.payment_method?.id };
+    if (intent.status === "succeeded") {
+        await recordInvoicePayment(db, { status: "succeeded", invoiceId, attemptId: intent.metadata.billingAttemptId, paymentIntentId: intent.id, amount: intent.amount_received, currency: intent.currency, gateway }, bundleInvoicePaymentOwner);
+    } else if (intent.status === "processing" || intent.status === "requires_action") {
+        await recordInvoicePayment(db, { status: intent.status, invoiceId, attemptId: intent.metadata.billingAttemptId, paymentIntentId: intent.id, gateway }, bundleInvoicePaymentOwner);
+    }
 }
