@@ -15,6 +15,7 @@ import {
   commissionAllowanceSchema,
   isAlignedCommissionBasis,
   type CommissionBasis,
+  type ItemBilling,
 } from "@/subtrees/utils/invoiceItems";
 import { nextBillingBoundary } from "@/subtrees/utils/subscriptionBilling";
 import { calculateChargeDetails } from "@/utils/enrollUtils";
@@ -37,15 +38,6 @@ type BundleLocation = {
   country: string;
   taxRates: Array<{ percentage: number; isDefault: boolean }>;
   locationState: { planId: number } | null;
-};
-
-type LineBilling = {
-  subTotal: number;
-  tax: number;
-  total: number;
-  forPeriodStart: string;
-  forPeriodEnd: string | null;
-  commissionBasis?: CommissionBasis;
 };
 
 /** Matches how commissions read single-subscription invoices: an aligned visit
@@ -193,7 +185,7 @@ function loadBundledAddons(tx: Transaction, purchaseId: string) {
 }
 
 // Fee lines count toward tax and total, not subtotal, as on single-subscription invoices.
-function invoiceAmounts(items: Array<{ feeId?: string; billing: LineBilling }>) {
+function invoiceAmounts(items: Array<{ feeId?: string; billing: ItemBilling }>) {
   let subTotal = 0;
   let tax = 0;
   let total = 0;
