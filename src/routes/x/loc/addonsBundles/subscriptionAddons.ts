@@ -7,6 +7,7 @@ import {
   memberSubscriptionAddons,
   memberSubscriptions,
 } from "@/subtrees/schemas";
+import { hasEnded } from "@/subtrees/utils/addonsBundles";
 import type {
   AvailableSubscriptionAddon,
   SubscriptionAddonOverview,
@@ -335,7 +336,7 @@ export async function cancelSubscriptionAddon(locationId: string, purchaseId: st
         bundlePurchaseId: purchase.bundlePurchaseId,
       };
     }
-    if (["canceled", "expired"].includes(purchase.status)) {
+    if (hasEnded(purchase.status)) {
       return { status: "unchanged" as const, runAt: null };
     }
 

@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
 import { bundlePurchases, memberInvoices, memberSubscriptions } from "@/subtrees/schemas";
+import { hasEnded } from "@/subtrees/utils/addonsBundles";
 import type { BundlePaymentResponse, BundlePaymentState, PaymentType } from "@/subtrees/types";
 import { chargeWithGateway } from "@/utils/checkoutUtil";
 import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
@@ -44,7 +45,7 @@ async function findPayableBundle(input: PayBundlePurchaseInput): Promise<Payable
 
   if (!purchase || purchase.bundle.locationId !== input.locationId) return { status: "not-found" };
 
-  if (purchase.status === "canceled" || purchase.status === "expired") return { status: "inactive" };
+  if (hasEnded(purchase.status)) return { status: "inactive" };
 
   return { status: "payable", memberId: purchase.memberId, invoiceId: purchase.invoiceId };
 }
@@ -137,7 +138,7 @@ async function activateCashBundle(locationId: string, purchaseId: string): Promi
   const collecting = await db.transaction(async (tx) => {
     await tx.select({ id: bundlePurchases.id }).from(bundlePurchases).where(eq(bundlePurchases.id, purchaseId)).for("update");
     const purchase = await tx.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, purchaseId), columns: { status: true, memberId: true } });
-    if (!purchase || ["canceled", "expired"].includes(purchase.status)) return false;
+    if (!purchase || hasEnded(purchase.status)) return false;
     const currentSubscriptions = await tx.select().from(memberSubscriptions)
       .where(eq(memberSubscriptions.bundlePurchaseId, purchaseId))
       .orderBy(asc(memberSubscriptions.id)).for("update");

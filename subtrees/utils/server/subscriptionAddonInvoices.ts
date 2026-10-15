@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { bundlePurchases, memberSubscriptionAddons, memberSubscriptions } from "../../schemas";
+import { addonNotCollectible } from "../addonsBundles";
 import type { InvoicePaymentOutcome, InvoicePaymentTransaction, PaymentInvoice } from "./invoicePayments";
 
 export type SubscriptionAddonSettlement = {
@@ -23,17 +24,14 @@ export async function settleSubscriptionAddonInvoice(
     where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId),
   });
   if (!purchase) throw new Error(`Invoice ${invoice.id}'s add-on was not found`);
-  const bundle = purchase.bundlePurchaseId && await tx.query.bundlePurchases.findFirst({
+  const bundle = purchase.bundlePurchaseId ? await tx.query.bundlePurchases.findFirst({
     where: eq(bundlePurchases.id, purchase.bundlePurchaseId), columns: { status: true },
-  });
-  if (["canceled", "expired"].includes(purchase.status)
-    || (bundle && ["canceled", "expired"].includes(bundle.status))) return null;
+  }) : null;
   const subscription = await tx.query.memberSubscriptions.findFirst({
     where: eq(memberSubscriptions.id, purchase.memberSubscriptionId),
     columns: { status: true, cancelAt: true },
   });
-  if (!subscription || !["active", "trialing", "past_due"].includes(subscription.status)
-    || (subscription.cancelAt && subscription.cancelAt <= new Date()) || (purchase.cancelAt && purchase.cancelAt <= new Date())) return null;
+  if (addonNotCollectible(purchase, bundle, subscription)) return null;
   const jobs: SubscriptionAddonSettlement = {
     purchaseId: purchase.id, subscriptionId: purchase.memberSubscriptionId,
     bundlePurchaseId: purchase.bundlePurchaseId, runAt: null,

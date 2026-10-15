@@ -7,6 +7,7 @@ import {
   memberInvoices,
   memberSubscriptionAddons,
 } from "@/subtrees/schemas";
+import { hasEnded } from "@/subtrees/utils/addonsBundles";
 import type { BundlePaymentState } from "@/subtrees/types";
 import { addonBillingPeriod } from "@/subtrees/utils/invoiceItems";
 import { collectInvoicePayment, recordInvoicePayment, type InvoicePaymentOwner, type InvoicePaymentRecord } from "@/subtrees/utils/server/invoicePayments";
@@ -97,7 +98,7 @@ async function activateBundleComponents(
   if (!purchase) throw new Error(`Invoice ${invoice.id} does not belong to a bundle purchase`);
 
   // A purchase canceled while its payment settled keeps the payment for support to refund.
-  if (["canceled", "expired"].includes(purchase.status)) return { locationId: invoice.locationId, subscriptions: [], addonRenewals: [] };
+  if (hasEnded(purchase.status)) return { locationId: invoice.locationId, subscriptions: [], addonRenewals: [] };
   if (purchase.status === "active") {
     const addonRenewals: BundleJobs["addonRenewals"] = [];
     for (const addon of purchase.addonPurchases) {
@@ -200,7 +201,7 @@ async function reconcileBundleReadiness(locationId: string, bundlePurchaseId: st
 
     if (!purchase || purchase.bundle?.locationId !== locationId) return { status: "not-found" as const };
 
-    if (purchase.status === "canceled" || purchase.status === "expired") {
+    if (hasEnded(purchase.status)) {
       return { status: "inactive" as const };
     }
 

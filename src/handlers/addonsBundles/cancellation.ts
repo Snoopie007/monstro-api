@@ -9,6 +9,7 @@ import {
   memberSubscriptionAddons,
   memberSubscriptions,
 } from "@/subtrees/schemas";
+import { hasEnded } from "@/subtrees/utils/addonsBundles";
 import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 
 
@@ -69,7 +70,7 @@ export async function cancelBundlePurchase(locationId: string, bundlePurchaseId:
       with: { bundle: { columns: { locationId: true } } },
     });
     if (!purchase || purchase.bundle?.locationId !== locationId || (expectedBundleId && purchase.bundleId !== expectedBundleId)) return { status: "not-found" as const };
-    if (purchase.status === "canceled" || purchase.status === "expired") {
+    if (hasEnded(purchase.status)) {
       return { status: "unchanged" as const, addonPurchaseIds: [] };
     }
 

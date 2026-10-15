@@ -3,6 +3,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import * as schema from "../../schemas";
 import type { PaymentType, SubscriptionBillingAttempt, TransactionMetadata } from "../../types";
+import { addonNotCollectible, hasEnded } from "../addonsBundles";
 import { dispatchPaymentFailed } from "./workflows";
 
 const { bundlePurchases, memberSubscriptions, memberSubscriptionAddons, memberInvoices, transactions } = schema;
@@ -233,16 +234,12 @@ export async function collectInvoicePayment<Jobs>(database: Database, input: {
       if (!prior?.paymentIntentId) throw new Error(`Paid invoice ${invoice.id} has no payment attempt`);
       return { status: "paid" as const, replay: { invoice, prior } };
     }
-    if (invoice.status === "void" || !purchase || ["canceled", "expired"].includes(purchase.status)
-      || (addon && ["canceled", "expired"].includes(addon.status))) {
+    if (invoice.status === "void" || !purchase || hasEnded(purchase.status) || (addon && hasEnded(addon.status))) {
       return { status: "inactive" as const };
     }
     if (addon) {
       const subscription = await tx.query.memberSubscriptions.findFirst({ where: eq(memberSubscriptions.id, addon.memberSubscriptionId) });
-      if (!subscription || subscription.bundlePurchaseId !== purchase.id
-        || !["active", "trialing", "past_due"].includes(subscription.status)
-        || (addon.cancelAt && addon.cancelAt <= new Date())
-        || (subscription.cancelAt && subscription.cancelAt <= new Date())) {
+      if (addonNotCollectible(addon, purchase, subscription) || subscription?.bundlePurchaseId !== purchase.id) {
         return { status: "inactive" as const };
       }
     }
