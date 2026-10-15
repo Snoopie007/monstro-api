@@ -44,6 +44,7 @@ export async function chargeBundleInvoice(
       status: "failed", paymentIntentId: decline.paymentIntentId, reason: decline.failureReason,
       code: decline.failureCode, retryable: true, workflowDecline: true,
     };
+    console.error("Bundle charge threw without a decline", { invoiceId: request.invoiceId, attemptId: request.attemptId, error });
     const intent = stripePaymentIntentFromError(error);
     return {
       status: intent?.status === "processing" || intent?.status === "requires_action" ? intent.status : "unknown",

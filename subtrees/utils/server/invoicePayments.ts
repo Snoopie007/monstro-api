@@ -296,12 +296,16 @@ export async function collectInvoicePayment<Jobs>(database: Database, input: {
   }
   if (!claim.request) return claim.status;
   let outcome: InvoicePaymentOutcome;
+  const { invoiceId, attemptId } = claim.request;
   try {
     outcome = await charge(claim.request);
-  } catch {
+  } catch (error) {
+    // The gateway may have charged. The attempt stays unknown until a webhook or support settles it.
+    console.error("Invoice payment result is unknown", { invoiceId, attemptId, error });
     outcome = { status: "unknown" };
   }
-  return recordInvoicePayment(database, {
-    ...outcome, invoiceId: claim.request.invoiceId, attemptId: claim.request.attemptId, gateway: input.gateway,
-  }, owner);
+  return recordInvoicePayment(database, { ...outcome, invoiceId, attemptId, gateway: input.gateway }, owner).catch((error) => {
+    console.error("Invoice payment was charged but could not be saved", { invoiceId, attemptId, outcome, error });
+    throw error;
+  });
 }

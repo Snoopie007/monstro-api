@@ -114,9 +114,10 @@ export async function listBundleRefundCharges(locationId: string, bundle: Cancel
       if (!scope || scope.total <= 0) continue;
 
       charges.push({ ...candidate, total: Math.min(candidate.transaction.total, scope.total), items: scope.items });
-    } catch {
+    } catch (error) {
       // Invalid matching attribution blocks this charge only. Other owned
       // charges can still be canceled/refunded without guessing its amount.
+      console.error("Bundle refund could not read a charge's line attribution", { transactionId: candidate.transaction.id, error });
       charges.push({
         ...candidate,
         total: candidate.transaction.total,
