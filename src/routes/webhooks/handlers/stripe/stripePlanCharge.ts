@@ -1,4 +1,3 @@
-import { cancelBundlePurchase } from "@/handlers/addonsBundles/cancellation";
 import { reconcileBundlePurchase } from "@/handlers/addonsBundles/checkout/settlement";
 import { isBundleRefundPaymentReplay } from "@/handlers/addonsBundles/refund/state";
 import { strict as assert } from "node:assert";
@@ -290,10 +289,7 @@ export async function handleStripePlanCharge({
             sql`${memberSubscriptions.parentId} is null`,
         ));
     });
-    if (!bundlePurchaseId) return;
-    if (!success) {
-        await cancelBundlePurchase(locationId, bundlePurchaseId, "Bundled subscription payment failed");
-        return;
-    }
+    // A declined renewal leaves the subscription past due, as it does outside a bundle.
+    if (!success || !bundlePurchaseId) return;
     await reconcileBundlePurchase(locationId, bundlePurchaseId);
 }

@@ -45,6 +45,7 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
         });
     });
     const success = () => handle({ invoiceId: "invoice", memberPlanId: "sub", locationId: "loc", memberId: "member", amount: 100, currency: "USD", paymentType: "card", failedReason: null, failedCode: null, success: true, receiptUrl: null, paymentMethodId: "method", paymentIntentId: "pi_test", feeAmount: 0, stripeAccountId: "acct_test", billingAttemptId: "attempt" });
+    const decline = () => handle({ invoiceId: "invoice", memberPlanId: "sub", locationId: "loc", memberId: "member", amount: 100, paymentType: "card", failedReason: "Declined", failedCode: "card_declined", success: false, receiptUrl: null, paymentMethodId: "method", paymentIntentId: "pi_test", feeAmount: 0, stripeAccountId: "acct_test", billingAttemptId: "attempt" });
     test("an early webhook settles payment but waits for the saved method before activating add-ons", async () => {
         await sql`update member_subscriptions set gateway_payment_id=null`;
         await success();
@@ -67,10 +68,16 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
     });
     test("a decline replay cannot cancel a paid bundle", async () => {
         await success(); enqueue.mockClear();
-        await handle({ invoiceId: "invoice", memberPlanId: "sub", locationId: "loc", memberId: "member", amount: 100, paymentType: "card", failedReason: "Declined", failedCode: "card_declined", success: false, receiptUrl: null, paymentMethodId: "method", paymentIntentId: "pi_test", feeAmount: 0, stripeAccountId: "acct_test", billingAttemptId: "attempt" });
+        await decline();
         expect((await db.select().from(schema.bundlePurchases))[0]?.status).toBe("pending");
         expect((await db.select().from(schema.memberSubscriptionAddons))[0]?.status).toBe("pending");
         expect(enqueue).not.toHaveBeenCalled();
+    });
+    test("a decline leaves the bundle and its add-ons for the normal retry flow", async () => {
+        await decline();
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("past_due");
+        expect((await db.select().from(schema.bundlePurchases))[0]?.status).toBe("pending");
+        expect((await db.select().from(schema.memberSubscriptionAddons))[0]?.status).toBe("pending");
     });
     test.each(["paused", "canceled"] as const)("valid success preserves %s and starts no add-ons", async status => {
         await sql`update member_subscriptions set status=${status}`;
