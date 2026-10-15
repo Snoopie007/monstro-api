@@ -248,7 +248,6 @@ export async function collectInvoicePayment<Jobs>(database: Database, input: {
     }
     if (prior && prior.status !== "failed") return { status: prior.status };
     if (prior?.status === "failed" && !input.retry) return { status: "failed" as const };
-    if (input.method && prior?.status !== "failed") throw new Error("Resolve the previous payment before changing its method");
     const prepared = z.looseObject({
       gatewayIntegrationId: z.string(), gatewayCustomerId: z.string(), stripeAccountId: z.string().optional(),
     }).parse(transaction.metadata.billingAttempt ?? {
