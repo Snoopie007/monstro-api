@@ -7,7 +7,7 @@ import {
   transactions,
 } from "@/subtrees/schemas";
 import type { InvoiceItem } from "@/subtrees/types";
-import { parseInvoiceItem } from "@/subtrees/utils/invoiceItems";
+import { invoiceItemSchema } from "@/subtrees/utils/invoiceItems";
 import { readSubscriptionInvoice } from "@/subtrees/utils/server/subscriptionInvoices";
 import { and, asc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -23,34 +23,18 @@ export type BundleRefundCharge = {
   attributionError?: string;
 };
 
-const sourceProbe = z.object({ sourceId: z.unknown().optional(), billingSource: z.unknown().optional() });
-const legacySourceProbe = z.object({
-  memberSubscriptionId: z.unknown().optional(),
-  memberSubscriptionAddonId: z.unknown().optional(),
-});
+const sourceProbe = z.object({ sourceId: z.string().optional() });
 
 function invoiceReferencesBundle(invoice: Invoice, subscriptionIds: Set<string>, addonIds: Set<string>) {
   if (invoice.memberSubscriptionAddonId) return addonIds.has(invoice.memberSubscriptionAddonId);
 
   if (invoice.memberPlanId) return subscriptionIds.has(invoice.memberPlanId);
 
-  for (const item of invoice.items ?? []) {
-    const source = sourceProbe.safeParse(item);
+  return (invoice.items ?? []).some((item) => {
+    const sourceId = sourceProbe.safeParse(item).data?.sourceId;
 
-    if (!source.success) continue;
-
-    const legacy = legacySourceProbe.safeParse(source.data.billingSource);
-
-    for (const id of subscriptionIds) {
-      if (source.data.sourceId === id || legacy.success && legacy.data.memberSubscriptionId === id) return true;
-    }
-
-    for (const id of addonIds) {
-      if (source.data.sourceId === id || legacy.success && legacy.data.memberSubscriptionAddonId === id) return true;
-    }
-  }
-
-  return false;
+    return !!sourceId && (subscriptionIds.has(sourceId) || addonIds.has(sourceId));
+  });
 }
 
 /** Scalar links are authoritative. Attributed lines are used only for combined
@@ -74,7 +58,7 @@ function attributedCharge(invoice: Invoice, subscriptionIds: Set<string>, addonI
   }
 
   for (const raw of invoice.items ?? []) {
-    const item = parseInvoiceItem(raw);
+    const item = invoiceItemSchema.parse(raw);
     const ownedSubscription = item.sourceType === "subscription" && subscriptionIds.has(item.sourceId);
     const ownedAddon = item.sourceType === "subscription_addon" && addonIds.has(item.sourceId);
 
@@ -170,7 +154,7 @@ export async function findBundleChargeOwner(locationId: string, transactionId: s
     subscriptionIds.push(charge.invoice.memberPlanId);
   } else {
     for (const raw of charge.invoice.items ?? []) {
-      const item = parseInvoiceItem(raw);
+      const item = invoiceItemSchema.parse(raw);
 
       if (item.sourceType === "subscription") subscriptionIds.push(item.sourceId);
 

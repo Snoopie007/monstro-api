@@ -8,7 +8,7 @@ import {
   subscriptionBillingItems,
   type CommissionBasis,
   type CommissionAllowance,
-  type StoredInvoiceItem,
+  type InvoiceItem,
 } from "../invoiceItems";
 
 type InvoiceDatabase = Pick<PostgresJsDatabase, "select">;
@@ -33,7 +33,7 @@ type StoredInvoice = Pick<
   | "forPeriodStart"
   | "forPeriodEnd"
   | "metadata"
-> & { items: readonly StoredInvoiceItem[] | null };
+> & { items: readonly InvoiceItem[] | null };
 
 export type SubscriptionBillingPeriod = {
   forPeriodStart: Date | null;
@@ -172,7 +172,6 @@ function subscriptionInvoiceWhere(scope: SubscriptionInvoiceScope) {
         sql`exists (
         select 1 from unnest(${memberInvoices.items}) as item
         where item->>'sourceId' = ${scope.subscriptionId}
-          or item->'billingSource'->>'memberSubscriptionId' = ${scope.subscriptionId}
       )`,
       ),
     ),

@@ -39,20 +39,12 @@ async function findPayableBundle(input: PayBundlePurchaseInput): Promise<Payable
   const purchase = await db.query.bundlePurchases.findFirst({
     where: and(eq(bundlePurchases.id, input.purchaseId), eq(bundlePurchases.bundleId, input.bundleId)),
     columns: { status: true, memberId: true, invoiceId: true },
-    with: {
-      bundle: { columns: { locationId: true } },
-      subscriptions: { columns: { paymentType: true } },
-    },
+    with: { bundle: { columns: { locationId: true } } },
   });
 
   if (!purchase || purchase.bundle.locationId !== input.locationId) return { status: "not-found" };
 
-  const cash = purchase.subscriptions.every((subscription) => subscription.paymentType === "cash");
-
-  // Card purchases made before server checkout have no invoice to charge.
-  if (purchase.status === "canceled" || purchase.status === "expired" || (!purchase.invoiceId && !cash)) {
-    return { status: "inactive" };
-  }
+  if (purchase.status === "canceled" || purchase.status === "expired") return { status: "inactive" };
 
   return { status: "payable", memberId: purchase.memberId, invoiceId: purchase.invoiceId };
 }

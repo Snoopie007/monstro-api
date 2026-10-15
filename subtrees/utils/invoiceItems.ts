@@ -181,85 +181,14 @@ export const invoiceItemSchema = z
   });
 export type InvoiceItem = z.infer<typeof invoiceItemSchema>;
 
-type SubscriptionInvoiceItem = Extract<
-  InvoiceItem,
-  { sourceType: "subscription" }
->;
-type AddonInvoiceItem = Extract<
-  InvoiceItem,
-  { sourceType: "subscription_addon" }
->;
-export type StoredInvoiceItem =
-  | InvoiceItem
-  | (Omit<SubscriptionInvoiceItem, "sourceType" | "sourceId"> & {
-      billingSource: { type: "subscription"; memberSubscriptionId: string };
-    })
-  | (Omit<AddonInvoiceItem, "sourceType" | "sourceId"> & {
-      billingSource: {
-        type: "subscription_addon";
-        memberSubscriptionAddonId: string;
-      };
-    });
-
-const storedItem = z.looseObject({
-  sourceType: z.unknown().optional(),
-  sourceId: z.unknown().optional(),
-  billingSource: z.unknown().optional(),
-});
-
-const legacySource = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("subscription"),
-    memberSubscriptionId: identifier,
-  }),
-  z.object({
-    type: z.literal("subscription_addon"),
-    memberSubscriptionAddonId: identifier,
-  }),
-]);
-
-/** The only compatibility boundary for saved billingSource JSON. */
-export function parseInvoiceItem(raw: StoredInvoiceItem): InvoiceItem {
-  const item = storedItem.parse(raw);
-
-  if (item.billingSource !== undefined) {
-    const source = legacySource.parse(item.billingSource);
-    const sourceId =
-      source.type === "subscription"
-        ? source.memberSubscriptionId
-        : source.memberSubscriptionAddonId;
-
-    if (
-      (item.sourceType !== undefined && item.sourceType !== source.type) ||
-      (item.sourceId !== undefined && item.sourceId !== sourceId)
-    ) {
-      throw new Error("Invoice item has conflicting billing attribution");
-    }
-
-    return invoiceItemSchema.parse({
-      ...item,
-      sourceType: source.type,
-      sourceId,
-    });
-  }
-
-  return invoiceItemSchema.parse(item);
-}
-
-const legacySubscriptionProbe = z.object({
-  type: z.unknown().optional(),
-  memberSubscriptionId: z.unknown().optional(),
-});
-
 const sourceProbe = z.object({
   sourceType: z.unknown().optional(),
   sourceId: z.unknown().optional(),
-  billingSource: z.unknown().optional(),
 });
 
 /** Ignore unrelated merchandise, but never swallow invalid matching billing data. */
 export function subscriptionBillingItems(
-  items: readonly StoredInvoiceItem[] | null,
+  items: readonly InvoiceItem[] | null,
   subscriptionId: string,
 ) {
   const result: Array<
@@ -272,17 +201,14 @@ export function subscriptionBillingItems(
     const source = sourceProbe.safeParse(item);
     if (!source.success) continue;
 
-    const legacy = legacySubscriptionProbe.safeParse(source.data.billingSource);
-    const matches =
-      (source.data.sourceId === subscriptionId &&
-        source.data.sourceType !== "subscription_addon") ||
-      (legacy.success &&
-        legacy.data.memberSubscriptionId === subscriptionId &&
-        legacy.data.type !== "subscription_addon");
+    if (
+      source.data.sourceId !== subscriptionId ||
+      source.data.sourceType === "subscription_addon"
+    ) {
+      continue;
+    }
 
-    if (!matches) continue;
-
-    const parsed = parseInvoiceItem(item);
+    const parsed = invoiceItemSchema.parse(item);
 
     if (
       parsed.sourceType !== "subscription" ||
@@ -378,11 +304,11 @@ export function assertCompleteBundleInvoice(
 
 /** The period a combined invoice paid for one add-on purchase. */
 export function addonBillingPeriod(
-  items: readonly StoredInvoiceItem[] | null,
+  items: readonly InvoiceItem[] | null,
   addonPurchaseId: string,
 ): { forPeriodStart: Date; forPeriodEnd: Date | null } {
   for (const raw of items ?? []) {
-    const item = parseInvoiceItem(raw);
+    const item = invoiceItemSchema.parse(raw);
 
     if (
       item.sourceType !== "subscription_addon" ||

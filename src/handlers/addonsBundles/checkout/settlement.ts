@@ -116,10 +116,9 @@ async function activateBundleComponents(
   const addonRenewals: BundleJobs["addonRenewals"] = [];
 
   for (const subscription of purchase.subscriptions) {
-    const saved = bundlePreparationSchema.parse(subscription.metadata.billingAttempt ?? {}).initialDownpayment;
-    const serviceLine = invoice.items?.find(item => item.sourceType === "subscription" && item.sourceId === subscription.id && !item.feeId);
-    const legacyLine = z.looseObject({ description: z.string().optional(), pricingSource: z.object({ type: z.string() }) }).parse(serviceLine);
-    const paidDownpayment = typeof saved === "boolean" ? saved : legacyLine.pricingSource.type !== "bundle" && legacyLine.description === "Subscription downpayment";
+    // Creating the bundle invoice saved whether each first charge was a downpayment.
+    const { initialDownpayment } = bundlePreparationSchema.required({ initialDownpayment: true })
+      .parse(subscription.metadata.billingAttempt);
 
     await markSubscriptionActivated(tx, {
       subscription: {
@@ -134,7 +133,7 @@ async function activateBundleComponents(
         gatewayIntegrationId: attempt.gatewayIntegrationId,
         gatewayCustomerId: attempt.gatewayCustomerId,
       },
-      paidDownpayment,
+      paidDownpayment: initialDownpayment,
       finalized: true,
     });
   }
