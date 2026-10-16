@@ -1,6 +1,8 @@
+import { getDeferredBilling, resumeDeferredBilling, type DeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import {
     removeRenewalJobs,
+    scheduleCashRenewal,
     scheduleCronBasedRenewal,
     scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
@@ -45,6 +47,8 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                         phone: true,
                         address: true,
                         country: true,
+                        timezone: true,
+                        vendorId: true,
                     },
                 },
             },
@@ -59,6 +63,9 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
         if (sub.status === "canceled" || (sub.cancelAt && sub.cancelAt.getTime() <= Date.now())) {
             return status(400, { error: "Canceled subscriptions cannot be resumed", code: "SUBSCRIPTION_CANCELED" });
         }
+        const deferred = getDeferredBilling(sub.metadata);
+        const resumeError = getDeferredResumeError(deferred, sub.currentPeriodEnd, resumeAt);
+        if (resumeError) return status(resumeError.status, { error: resumeError.error });
         const inFlight = await findInFlightSubscriptionAttempt(sub.id);
         if (inFlight) {
             return status(409, {
@@ -81,6 +88,7 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             }
         }
         const location = sub.location;
+        const taxRate = location.taxRates?.find(rate => rate.isDefault)?.percentage || 0;
         const nextBillingAt = resumeAt ? new Date(resumeAt) : getNextBillingDate(sub);
         if (
             billingContext?.gateway.service === "stripe"
@@ -95,16 +103,22 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
 
         const billingQuote = getSubscriptionBillingQuote(sub);
 
+        const resumedMetadata = deferred
+            ? { ...sub.metadata, deferredBilling: resumeDeferredBilling(deferred, new Date(), sub.location.timezone, sub.startDate) }
+            : sub.metadata;
+
         const resumedStatus = sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active";
         await db.transaction(async (tx) => {
             const values = {
                 status: resumedStatus,
-                cancelAt: null,
+                metadata: resumedMetadata,
+                cancelAt: deferred ? sub.cancelAt : null,
                 cancelAtPeriodEnd: false,
                 updated: new Date(),
             } as const;
             await tx.update(memberSubscriptions).set(values).where(eq(memberSubscriptions.id, sid));
-            await tx.update(memberSubscriptions).set(values).where(eq(memberSubscriptions.parentId, sid));
+            const { metadata: _metadata, ...accessValues } = values;
+            await tx.update(memberSubscriptions).set(accessValues).where(eq(memberSubscriptions.parentId, sid));
         });
 
         if (sub.paymentType !== "cash" && billingContext) {
@@ -123,14 +137,14 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
                     phone: location.phone,
                     address: location.address,
                 },
-                taxRate: location.taxRates?.find((t) => t.isDefault)?.percentage || 0,
+                taxRate,
                 pricing: {
                     name: billingQuote.name,
                     price: billingQuote.price,
                     interval: billingQuote.interval,
                     intervalThreshold: billingQuote.intervalThreshold,
                 },
-                ...(billingContext.gateway.service === "stripe" && getStripeMigration(sub.metadata)
+                ...((billingContext.gateway.service === "stripe" && getStripeMigration(sub.metadata)) || deferred
                     ? { expectedDueAt: nextBillingAt.toISOString() }
                     : {}),
                 ...(promoMeta?.discount ? { discount: promoMeta.discount } : {}),
@@ -154,6 +168,13 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             }
         }
 
+        if (sub.paymentType === "cash" && deferred) {
+            await scheduleCashRenewal(nextBillingAt, {
+                sid, lid, vendorId: location.vendorId, member: sub.member, location,
+                pricing: billingQuote, taxRate,
+            });
+        }
+
         return status(200, {
             status: sub.trialEnd && isFuture(sub.trialEnd) ? "trialing" : "active",
             nextBillingAt,
@@ -164,4 +185,16 @@ export async function resumeSubscriptionRoutes(app: Elysia) {
             resumeAt: t.Optional(t.String()),
         }),
     });
+}
+
+/** Reject resume if a billing date has passed or a date override would change the next billing date. */
+function getDeferredResumeError(schedule: DeferredBilling | null, dueAt: Date, resumeAt?: string) {
+    if (!schedule) return null;
+    if (dueAt <= new Date()) {
+        return { status: 409 as const, error: "A billing date passed while this subscription was paused. Cancel it and enroll again with a new first payment date to avoid charging for paused access." };
+    }
+    if (resumeAt && new Date(resumeAt).getTime() !== dueAt.getTime()) {
+        return { status: 400 as const, error: "Clear the date override to preserve the chosen billing schedule" };
+    }
+    return null;
 }

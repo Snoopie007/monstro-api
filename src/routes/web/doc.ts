@@ -1,11 +1,9 @@
 import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
-import type { MemberPlanPricing } from "@/subtrees/types";
-import { and, eq } from "drizzle-orm";
-import { memberContracts } from "@/subtrees/schemas";
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
+import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
 
 export const webDocRoutes = new Elysia({ prefix: "/docs" })
     .use(WebAuthMiddleware)
@@ -148,99 +146,20 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
             return status(401, { message: "No member provided" });
         }
         try {
-            const member = await db.query.members.findFirst({
-                where: (m, { eq }) => eq(m.id, mid),
-            });
-            if (!member) {
-                return status(404, { message: "Member not found" });
+            const { doc, newlySigned } = await signMemberDocument({ mid, lid, did: docId, signature: body.signature });
+            if (newlySigned) {
+                setTimeout(() => {
+                    const content = renderContractContent(doc.contractTemplate.content, {
+                        location: doc.location,
+                        member: doc.member,
+                        pricing: doc.pricing,
+                    });
+                    generatePDF({ did: docId, mid, lid, title: doc.contractTemplate.title, content });
+                }, 1000);
             }
-
-            const doc = await db.query.memberContracts.findFirst({
-                where: (mc, { eq, and }) => and(
-                    eq(mc.id, docId),
-                    eq(mc.memberId, mid),
-                    eq(mc.locationId, lid),
-                ),
-                with: {
-                    contractTemplate: {
-                        with: {
-                            location: true,
-                        },
-                    },
-                    pricing: {
-                        with: {
-                            plan: true,
-                        },
-                    },
-                },
-            });
-            if (!doc) {
-                return status(404, { message: "Contract not found" });
-            }
-            if (!doc.contractTemplate || doc.contractTemplate.location?.id !== lid) {
-                return status(404, { message: "Template not found" });
-            }
-            if (doc.pricing && doc.pricing.plan?.locationId !== lid) {
-                return status(404, { message: "Pricing not found" });
-            }
-
-            const [mc] = await db.update(memberContracts).set({
-                signature: body.signature,
-                signedOn: new Date(),
-            }).where(and(
-                eq(memberContracts.id, docId),
-                eq(memberContracts.memberId, mid),
-                eq(memberContracts.locationId, lid),
-            )).returning();
-
-            if (!mc) {
-                return status(404, { message: "Contract not found" });
-            }
-
-            let pricing: MemberPlanPricing | null = null;
-            const pricingId = mc.pricingId;
-            if (pricingId) {
-                const p = await db.query.memberPlanPricing.findFirst({
-                    where: (p, { eq }) => eq(p.id, pricingId),
-                    with: {
-                        plan: true,
-                    },
-                });
-                if (p?.plan?.locationId === lid) {
-                    pricing = p;
-                }
-            }
-
-            const template = await db.query.contractTemplates.findFirst({
-                where: (ct, { eq, and }) => and(
-                    eq(ct.id, mc.templateId),
-                    eq(ct.locationId, lid),
-                ),
-                with: {
-                    location: true,
-                },
-            });
-            if (!template) {
-                return status(404, { message: "Template not found" });
-            }
-            //Generate PDF
-            setTimeout(() => {
-                const content = renderContractContent(template.content, {
-                    location: template.location,
-                    member,
-                    pricing,
-                });
-
-                generatePDF({
-                    did: docId,
-                    mid: member.id,
-                    lid,
-                    title: template.title,
-                    content,
-                });
-            }, 1000);
             return status(200, { message: "Contract signed successfully" });
         } catch (error) {
+            if (error instanceof MemberDocumentError) return status(error.status, { message: error.message });
             console.error(error);
             return status(500, { error: "Failed to fetch contract" });
         }

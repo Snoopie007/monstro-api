@@ -1,3 +1,5 @@
+import { db } from "@/db/db";
+import { getDeferredInvoiceBilling } from "@/utils/invoiceAttempts";
 import { Elysia, t } from "elysia";
 import { WebhooksHelper } from "square";
 import type { NoteData, SquareWebhookPayment } from "./handlers/square/type";
@@ -42,9 +44,18 @@ export function squareWebhookRoutes(app: Elysia) {
             }
 
             const event = JSON.parse(rawText) as { type?: string; data?: { object?: { payment?: SquareWebhookPayment } } };
-            processSquareEvent(event).catch((err) => {
-                console.error("[SQUARE WEBHOOK] Failed to process event:", err);
+            const reference = event.data?.object?.payment?.reference_id;
+            const invoice = reference?.startsWith("inv_") && await db.query.memberInvoices.findFirst({
+                where: (row, { eq }) => eq(row.id, reference), columns: { memberPlanId: true },
             });
+            if (invoice && await getDeferredInvoiceBilling(db, invoice.memberPlanId)) {
+                // Square must retry a deferred callback if saving or scheduling its renewal fails.
+                await processSquareEvent(event);
+            } else {
+                processSquareEvent(event).catch((err) => {
+                    console.error("[SQUARE WEBHOOK] Failed to process event:", err);
+                });
+            }
             return status(200, { message: "[SQUARE WEBHOOK] Event accepted" });
         } catch (err) {
             console.error("[SQUARE WEBHOOK] Failed to process event:", err);

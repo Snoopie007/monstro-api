@@ -163,7 +163,8 @@ export class AdsSetupError extends Error {
 
 export type AdsSitelinkProgram = {
     name: string;
-    slug: string;
+    /** Resolved path of the program's published detail page. */
+    path: string;
 };
 
 export type AdsLocationAssets = {
@@ -171,7 +172,7 @@ export type AdsLocationAssets = {
     phone?: string;
     country?: string;
     pages?: Array<{ pageKey: string; path: string }>;
-    /** Visible site programs with a /programs/{slug} page (showLearnMore). */
+    /** Visible Learn More programs with their resolved published page paths. */
     programs?: AdsSitelinkProgram[];
 };
 
@@ -239,50 +240,86 @@ export function mxSitelinkSpecs(
         { linkText: "Pricing", url: joinUrl(origin, pricing) },
     ];
 
-    // One sitelink per program that has a public /programs/{slug} page.
+    // One sitelink per program at its actual published page path.
     for (const program of programs) {
-        const slug = program.slug?.trim();
+        const path = program.path?.trim();
         const name = clip(program.name, 25);
-        if (!slug || !name) continue;
+        if (!path || !name) continue;
         links.push({
             linkText: name,
-            url: joinUrl(origin, `/programs/${slug}`),
+            url: joinUrl(origin, path),
         });
     }
 
     return links;
 }
 
-type MxAssetOp = {
-    entity: "asset" | "customer_asset";
-    operation: "create";
-    resource: Record<string, unknown>;
+type MxAssetOp =
+    | {
+        entity: "asset" | "customer_asset";
+        operation: "create";
+        resource: Record<string, unknown>;
+    }
+    | {
+        entity: "customer_asset";
+        operation: "remove";
+        resource: string;
+    };
+
+type ExistingSitelink = {
+    resourceName: string;
+    name: string;
+    linkText: string;
+    finalUrls: string[];
 };
 
 type IndexedMxAssets = {
-    sitelinkByText: Map<string, string>;
+    sitelinks: ExistingSitelink[];
+    assetNames: Set<string>;
     calloutByText: Map<string, string>;
     callResourceName: string;
 };
 
+/** Prefix of every asset this setup creates; only these are ever unlinked. */
+const MX_ASSET_NAME_PREFIX = "MX ";
+
+function comparableUrl(url: string) {
+    try {
+        return new URL(url).href;
+    } catch {
+        return url;
+    }
+}
+
 function indexExistingMxAssets(assetRows: Array<{ asset?: Record<string, any> | null }>): IndexedMxAssets {
-    const sitelinkByText = new Map<string, string>();
+    const sitelinks: ExistingSitelink[] = [];
+    const assetNames = new Set<string>();
     const calloutByText = new Map<string, string>();
     let callResourceName = "";
 
     for (const row of assetRows) {
         const resourceName = String(row.asset?.resource_name ?? "");
         if (!resourceName) continue;
+        const name = String(row.asset?.name ?? "");
+        if (name) assetNames.add(name);
         const type = adsEnum(row.asset?.type, enums.AssetType);
         const sitelinkText = row.asset?.sitelink_asset?.link_text?.trim().toLowerCase();
-        if (type === "SITELINK" && sitelinkText) sitelinkByText.set(sitelinkText, resourceName);
+        if (type === "SITELINK" && sitelinkText) {
+            const finalUrls: unknown[] = Array.isArray(row.asset?.final_urls) ? row.asset.final_urls : [];
+            sitelinks.push({
+                resourceName,
+                name,
+                linkText: sitelinkText,
+                finalUrls: finalUrls.map((url) => comparableUrl(String(url))),
+            });
+        }
         const calloutText = row.asset?.callout_asset?.callout_text?.trim().toLowerCase();
         if (type === "CALLOUT" && calloutText) calloutByText.set(calloutText, resourceName);
         const phone = row.asset?.call_asset?.phone_number?.replace(/\D/g, "");
         if (type === "CALL" && phone) callResourceName ||= resourceName;
     }
 
-    return { sitelinkByText, calloutByText, callResourceName };
+    return { sitelinks, assetNames, calloutByText, callResourceName };
 }
 
 export async function ensureMxAssets(
@@ -305,7 +342,9 @@ export async function ensureMxAssets(
         customer.query(`
 			SELECT
 				asset.resource_name,
+				asset.name,
 				asset.type,
+				asset.final_urls,
 				asset.sitelink_asset.link_text,
 				asset.call_asset.phone_number,
 				asset.callout_asset.callout_text
@@ -314,6 +353,7 @@ export async function ensureMxAssets(
 		`),
         customer.query(`
 			SELECT
+				customer_asset.resource_name,
 				customer_asset.asset,
 				customer_asset.field_type,
 				customer_asset.status
@@ -325,6 +365,14 @@ export async function ensureMxAssets(
     const linked = new Set(
         linkedRows.map((row) => String(row.customer_asset?.asset ?? "")).filter(Boolean),
     );
+    // Account-level sitelink links, by asset, so a superseded managed one can be unlinked.
+    const sitelinkLinks = new Map<string, string>();
+    for (const row of linkedRows) {
+        const asset = String(row.customer_asset?.asset ?? "");
+        const resourceName = String(row.customer_asset?.resource_name ?? "");
+        const fieldType = adsEnum(row.customer_asset?.field_type, enums.AssetFieldType);
+        if (asset && resourceName && fieldType === "SITELINK") sitelinkLinks.set(asset, resourceName);
+    }
     const existing = indexExistingMxAssets(assetRows);
 
     const operations: MxAssetOp[] = [];
@@ -365,19 +413,58 @@ export async function ensureMxAssets(
         byKey.set(key.toLowerCase(), resourceName);
     };
 
+    // A sitelink is reused only when both its text and its final URL match.
+    // When a page moves, a new managed asset is linked and the account-level link
+    // of the superseded managed asset is removed. Assets are never edited in
+    // place, so other campaigns, ad groups, and manual assets are untouched.
+    const removals: MxAssetOp[] = [];
+    const desiredUrls = new Map<string, Set<string>>();
     for (const spec of sitelinks) {
-        ensureNamedAsset(
-            existing.sitelinkByText,
-            spec.linkText,
-            enums.AssetFieldType.SITELINK,
-            (resourceName) => ({
-                resource_name: resourceName,
-                name: `MX ${spec.linkText}`,
-                final_urls: [spec.url],
-                sitelink_asset: { link_text: spec.linkText },
-            }),
+        const key = spec.linkText.toLowerCase();
+        desiredUrls.set(key, (desiredUrls.get(key) ?? new Set()).add(comparableUrl(spec.url)));
+    }
+    for (const spec of sitelinks) {
+        const key = spec.linkText.toLowerCase();
+        const match = existing.sitelinks.find(
+            (asset) => asset.linkText === key && asset.finalUrls.includes(comparableUrl(spec.url)),
         );
+        if (match) {
+            linkCustomerAsset(match.resourceName, enums.AssetFieldType.SITELINK);
+        } else {
+            const resourceName = ResourceNames.asset(cid, String(-tempId));
+            tempId += 1;
+            const baseName = `${MX_ASSET_NAME_PREFIX}${spec.linkText}`;
+            let name = baseName;
+            for (let copy = 1; existing.assetNames.has(name); copy += 1) {
+                name = `${baseName} (${new URL(spec.url).pathname})${copy > 1 ? ` ${copy}` : ""}`;
+            }
+            operations.push({
+                entity: "asset",
+                operation: "create",
+                resource: {
+                    resource_name: resourceName,
+                    name,
+                    final_urls: [spec.url],
+                    sitelink_asset: { link_text: spec.linkText },
+                },
+            });
+            linkCustomerAsset(resourceName, enums.AssetFieldType.SITELINK);
+            existing.assetNames.add(name);
+            existing.sitelinks.push({ resourceName, name, linkText: key, finalUrls: [comparableUrl(spec.url)] });
+        }
         ensuredSitelinks.push(spec.linkText);
+    }
+    for (const asset of existing.sitelinks) {
+        const wanted = desiredUrls.get(asset.linkText);
+        const link = sitelinkLinks.get(asset.resourceName);
+        if (
+            !wanted ||
+            !link ||
+            !asset.name.startsWith(MX_ASSET_NAME_PREFIX) ||
+            asset.finalUrls.some((url) => wanted.has(url))
+        ) continue;
+        removals.push({ entity: "customer_asset", operation: "remove", resource: link });
+        sitelinkLinks.delete(asset.resourceName);
     }
 
     for (const text of MX_CALLOUTS) {
@@ -417,7 +504,9 @@ export async function ensureMxAssets(
         ensuredCall = call.phone_number;
     }
 
-    if (operations.length) await customer.mutateResources(operations);
+    // One atomic batch: a failed replacement leaves the superseded link in place.
+    const mutations = [...removals, ...operations];
+    if (mutations.length) await customer.mutateResources<Record<string, unknown> | string>(mutations);
 
     return {
         sitelinks: ensuredSitelinks,

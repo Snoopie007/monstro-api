@@ -124,3 +124,20 @@ export type UpcomingPaymentsResponse = {
   manual: UpcomingPaymentPage;
   automatic: UpcomingPaymentPage;
 };
+
+// Queue receipts and results describe an execution, not a new billing attempt.
+export type SubscriptionRetryExecution = {
+  invoiceId: string;
+  executionId: string;
+  jobId: string;
+  queuedAt: number;
+  status: "queued" | "running" | "succeeded" | "already_paid" | "declined" | "blocked" | "processing" | "requires_action" | "unknown";
+  code: string;
+  message: string;
+  completedAt?: string;
+  deliveryAttempt?: number;
+};
+
+export type SubscriptionRetryReceipt =
+  | { enqueued: true; repairOnly?: false; invoiceId: string; transactionId: string; jobId: string; execution: SubscriptionRetryExecution; gatewayService: string }
+  | { enqueued: false; repairOnly: true; invoiceId: string; renewalRepairEnqueued: boolean };

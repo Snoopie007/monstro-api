@@ -105,7 +105,7 @@ export async function mobileResetPassword(app: Elysia) {
                 await redis.set(redisKey, `${code}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt });
                 await sendResetEmail({
                     name: user.name,
-                    email: 'steve00006@gmail.com',
+                    email: user.email,
                     code,
                 });
             }

@@ -9,15 +9,22 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
     const admin = postgres(url, { max: 1, onnotice: () => {} });
     const sql = postgres(url, { max: 4, prepare: false, connection: { search_path: `${namespace},public,extensions` }, onnotice: () => {} });
     const db = drizzle(sql, { schema });
-    const tables = ["member_invoices", "transactions", "members", "workflows", "workflow_triggers", "workflow_queues"];
+    const tables = ["member_subscriptions", "member_invoices", "transactions", "members", "workflows", "workflow_triggers", "workflow_queues"];
+    const repair = mock(async (..._args: unknown[]) => {});
     let save: typeof import("./invoiceAttempts").saveInvoiceAttemptResult;
+    let claim: typeof import("./invoiceAttempts").claimInvoiceAttempt;
+    let squareSuccess: typeof import("@/routes/webhooks/handlers/square/squarePlanSuccess").handleSquarePlanSuccess;
+    let squareFailure: typeof import("@/routes/webhooks/handlers/square/squarePlanFail").handleSquarePlanFail;
     beforeAll(async () => {
         if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname)) throw new Error("Local Postgres required");
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         await sql`alter table member_invoices add column if not exists renewal_key text`;
         mock.module("@/db/db", () => ({ db }));
-        ({ saveInvoiceAttemptResult: save } = await import("./invoiceAttempts"));
+        mock.module("@/queues/subscriptions", () => ({ scheduleRenewalRepair: repair }));
+        ({ saveInvoiceAttemptResult: save, claimInvoiceAttempt: claim } = await import("./invoiceAttempts"));
+        ({ handleSquarePlanSuccess: squareSuccess } = await import("@/routes/webhooks/handlers/square/squarePlanSuccess"));
+        ({ handleSquarePlanFail: squareFailure } = await import("@/routes/webhooks/handlers/square/squarePlanFail"));
     });
     afterAll(async () => {
         await sql.end();
@@ -25,6 +32,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         await admin.end();
     });
     beforeEach(async () => {
+        repair.mockReset();
         for (const table of tables) await sql`truncate ${sql(namespace)}.${sql(table)}`;
         await sql`insert into members (id,user_id,first_name,email) values ('member','user','QA','qa@example.invalid')`;
         await db.insert(schema.workflows).values({ id: "workflow", locationId: "location", name: "Decline", status: "active", nodes: [
@@ -33,7 +41,98 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("accepted billing outco
         ] });
         await db.insert(schema.workflowTriggers).values({ workflowId: "workflow", type: "payment::failed", data: { label: "Decline" } });
         await db.insert(schema.transactions).values({ id: "txn", memberId: "member", locationId: "location", type: "inbound", status: "failed", paymentType: "card" });
-        await db.insert(schema.memberInvoices).values({ id: "invoice", memberId: "member", locationId: "location", transactionId: "txn", status: "unpaid", tax: 0, total: 100, subTotal: 100, metadata: { billingAttempt: { id: "attempt", status: "in_flight", paymentType: "card" } } });
+        await db.insert(schema.memberSubscriptions).values({
+            id: "sub", memberId: "member", locationId: "location", status: "active", paymentType: "card",
+            startDate: new Date("2026-01-01"), currentPeriodStart: new Date("2026-01-01"), currentPeriodEnd: new Date("2026-02-01"),
+            metadata: { deferredBilling: { version: 1, firstPaymentAt: "2026-02-01T09:00:00Z", prorate: true, prorationAmount: 40 } },
+        });
+        await db.insert(schema.memberInvoices).values({ id: "invoice", memberPlanId: "sub", memberId: "member", locationId: "location", transactionId: "txn", status: "unpaid", tax: 0, total: 100, subTotal: 100, metadata: { billingAttempt: { id: "attempt", status: "in_flight", paymentType: "card" } } });
+    });
+    const squarePayment = {
+        invoiceId: "invoice", paymentType: "card" as const, paymentMethodId: undefined,
+        feeAmount: 0, squarePaymentId: "sq_current", squarePaymentStatus: "COMPLETED",
+        amount: 100, receiptUrl: null, failedCode: null, failedReason: null,
+    };
+    test("late Square success repairs renewal again after an enqueue failure", async () => {
+        const dueAt = new Date("2026-02-01T00:00:00Z");
+        await db.update(schema.memberInvoices).set({ forPeriodEnd: dueAt });
+        repair.mockRejectedValueOnce(new Error("Queue unavailable"));
+        await expect(squareSuccess(squarePayment)).rejects.toThrow("Queue unavailable");
+        expect((await db.select().from(schema.memberInvoices))[0]?.paid).toBe(true);
+        await squareSuccess(squarePayment);
+        expect(repair).toHaveBeenCalledTimes(2);
+        expect(repair).toHaveBeenLastCalledWith("sub", "location", dueAt);
+    });
+    test.each(["succeeded", "failed"] as const)("Square %s settles the current attempt and preserves invoice metadata", async outcome => {
+        await db.update(schema.memberInvoices).set({ metadata: {
+            collectionPolicy: "deferred", billingAttempt: {
+                id: "attempt", status: "processing", paymentIntentId: "sq_current", paymentMethodId: "saved-method",
+            },
+        } });
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await settle({ ...squarePayment, squarePaymentStatus: outcome === "succeeded" ? "COMPLETED" : "FAILED" });
+        const [invoice] = await db.select().from(schema.memberInvoices);
+        expect(invoice).toMatchObject({ paid: outcome === "succeeded", metadata: {
+            collectionPolicy: "deferred", billingAttempt: { id: "attempt", status: outcome, paymentIntentId: "sq_current" },
+        } });
+        expect((await db.select().from(schema.transactions))[0]).toMatchObject({
+            paymentMethodId: "saved-method", metadata: { collectionPolicy: "deferred", billingAttempt: { status: outcome } },
+        });
+    });
+    test.each([
+        ["succeeded", "paid"], ["failed", "paid"],
+        ["succeeded", "obsolete"], ["failed", "obsolete"],
+    ] as const)("Square %s ignores a callback for a %s invoice/attempt", async (outcome, reason) => {
+        await db.update(schema.memberInvoices).set({ paid: reason === "paid", metadata: {
+            billingAttempt: { id: "attempt", status: "processing", paymentIntentId: "sq_current" },
+        } });
+        const beforeInvoices = await db.select().from(schema.memberInvoices);
+        const beforeTransactions = await db.select().from(schema.transactions);
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await settle({ ...squarePayment, squarePaymentId: reason === "obsolete" ? "sq_old" : "sq_current" });
+        expect(await db.select().from(schema.memberInvoices)).toEqual(beforeInvoices);
+        expect(await db.select().from(schema.transactions)).toEqual(beforeTransactions);
+    });
+    test.each(["succeeded", "failed"] as const)("Square %s rejects an incorrect amount before writing", async outcome => {
+        const beforeInvoices = await db.select().from(schema.memberInvoices);
+        const beforeTransactions = await db.select().from(schema.transactions);
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await expect(settle({ ...squarePayment, amount: 101 })).rejects.toThrow("amount does not match invoice");
+        expect(await db.select().from(schema.memberInvoices)).toEqual(beforeInvoices);
+        expect(await db.select().from(schema.transactions)).toEqual(beforeTransactions);
+    });
+    test.each(["succeeded", "failed"] as const)("Square %s keeps legacy invoices free of attempt metadata", async outcome => {
+        await db.update(schema.memberInvoices).set({ metadata: { legacyNote: "retain" } });
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await settle({ ...squarePayment, squarePaymentStatus: outcome === "succeeded" ? "COMPLETED" : "FAILED" });
+        expect((await db.select().from(schema.memberInvoices))[0]).toMatchObject({
+            paid: outcome === "succeeded", metadata: { legacyNote: "retain" },
+        });
+        const [transaction] = await db.select().from(schema.transactions);
+        expect(transaction?.metadata).toMatchObject({ gatewayService: "square", squarePaymentId: "sq_current" });
+        expect(transaction?.metadata?.billingAttempt).toBeUndefined();
+    });
+    test.each(["succeeded", "failed"] as const)("ordinary Square %s retains previous callback behavior", async outcome => {
+        await db.update(schema.memberSubscriptions).set({ status: "paused", metadata: {} });
+        await db.update(schema.memberInvoices).set({ paid: true, metadata: {
+            billingAttempt: { id: "old-attempt", status: "succeeded", paymentIntentId: "old-payment" },
+        } });
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await settle({ ...squarePayment, paymentMethodId: "legacy-method", amount: 101 });
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe(outcome === "succeeded" ? "active" : "past_due");
+        expect((await db.select().from(schema.memberInvoices))[0]?.metadata).toMatchObject({ billingAttempt: { status: "succeeded", paymentIntentId: "old-payment" } });
+    });
+    test.each(["succeeded", "failed"] as const)("deferred Square %s does not change a paused subscription", async outcome => {
+        await db.update(schema.memberSubscriptions).set({ status: "paused" });
+        const settle = outcome === "succeeded" ? squareSuccess : squareFailure;
+        await settle({ ...squarePayment, paymentMethodId: "saved-method" });
+        expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("paused");
+    });
+    test("held provider payments block another billing attempt", async () => {
+        await save({ invoiceId: "invoice", attemptId: "attempt", status: "processing", paymentIntentId: "held-id", retryable: false });
+        const result = await claim({ invoiceId: "invoice", gatewayIntegrationId: "gateway", gatewayCustomerId: "customer", paymentMethodId: "method", paymentType: "card" });
+        expect(result).toMatchObject({ ok: false, reason: "unknown" });
+        expect((await db.select().from(schema.memberInvoices))[0]?.metadata).toMatchObject({ billingAttempt: { id: "attempt", status: "processing", paymentIntentId: "held-id" } });
     });
     const decline = (workflowDecline: boolean, attemptId = "attempt") => save({ invoiceId: "invoice", attemptId, status: "failed", paymentIntentId: "pi_declined", workflowDecline });
     test("accepted provider decline creates the workflow with its durable attempt outcome", async () => {

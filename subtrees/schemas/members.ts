@@ -58,7 +58,7 @@ export const memberReferrals = pgTable("member_referrals", {
 );
 
 export const memberContracts = pgTable("member_contracts", {
-    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     templateId: text("contract_id").notNull().references(() => contractTemplates.id, { onDelete: "cascade" }),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),

@@ -1,3 +1,4 @@
+import { getDeferredBilling, deferredChargeAmount } from "@/subtrees/utils/deferredBilling";
 import type { AdditionalFee, CheckoutDiscount } from "@/subtrees/types";
 import { getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { memberInvoices } from "@/subtrees/schemas";
@@ -11,6 +12,7 @@ type SubscriptionPricing = {
     id: string;
     name: string;
     price: number;
+    downpayment?: number | null;
     interval: "day" | "week" | "month" | "year" | null;
     intervalThreshold: number | null;
     plan?: {
@@ -40,6 +42,7 @@ type BuildSubscriptionInvoiceQuoteProps = {
     promoId?: string | null;
     location: SubscriptionLocation;
     billingPhase?: "initial" | "renewal";
+    periodStart?: Date;
     discount?: CheckoutDiscount | number;
 };
 
@@ -55,6 +58,7 @@ export function quoteSubscriptionInvoice({
     billingPhase,
     discount,
     additionalFees,
+    periodStart,
 }: BuildSubscriptionInvoiceQuoteProps & {
     billingPhase: "initial" | "renewal";
     additionalFees: AdditionalFee[];
@@ -77,7 +81,7 @@ export function quoteSubscriptionInvoice({
     });
     const taxRate = location.taxRates.find((rate) => rate.isDefault);
     const chargeDetails = calculateChargeDetails({
-        amount: billingQuote.price,
+        amount: periodStart ? deferredChargeAmount(getDeferredBilling(subscriptionMetadata), periodStart, billingQuote.price, pricing.downpayment) : billingQuote.price,
         discount,
         taxRate: taxRate?.percentage ?? 0,
         planId: location.locationState?.planId ?? 0,

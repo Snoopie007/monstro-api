@@ -1,3 +1,4 @@
+import { getLocationWaiverTemplate } from "@/utils/locationWaiver";
 import { dispatchPaymentFailed, dispatchWorkflowTrigger } from "@/subtrees/utils/server/workflows";
 import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { addDays, isFuture } from "date-fns";
@@ -8,7 +9,6 @@ import {
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
-    recoverEnrollUnsignedDocs,
     triggerPurchase,
     fetchPromoDiscount,
     getAdditionalFeesForCheckout,
@@ -79,8 +79,8 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
     const { ml, gateway, taxRates, gatewayCustomerId } = checkout;
     const locationState = ml.location.locationState;
     const contractId = pricing.plan.contractId;
-    const waiverId = locationState.waiverId;
-    const templateIds = [contractId, waiverId].filter((id): id is string => Boolean(id));
+    await getLocationWaiverTemplate(db, lid, locationState.waiverId);
+    const templateIds = [contractId].filter((id): id is string => Boolean(id));
     if (templateIds.length > 0) {
         const templates = await Promise.all(templateIds.map((templateId) =>
             db.query.contractTemplates.findFirst({
@@ -97,31 +97,6 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
     }
 
     const { planId, currency } = locationState;
-    const signedWaiverId = ml.signedWaiverId;
-    if (signedWaiverId) {
-        if (!waiverId) {
-            throw new CheckoutError(404, "Contract not found");
-        }
-        const signedWaiver = await db.query.memberContracts.findFirst({
-            where: (memberContract, { eq, and, isNotNull }) => and(
-                eq(memberContract.id, signedWaiverId),
-                eq(memberContract.memberId, mid),
-                eq(memberContract.locationId, lid),
-                eq(memberContract.templateId, waiverId),
-                isNotNull(memberContract.signedOn),
-            ),
-            with: {
-                contractTemplate: {
-                    columns: {
-                        locationId: true,
-                    },
-                },
-            },
-        });
-        if (!signedWaiver || signedWaiver.contractTemplate?.locationId !== lid) {
-            throw new CheckoutError(404, "Contract not found");
-        }
-    }
     const today = new Date();
 
     const subscriptionStart = startDate ? new Date(startDate) : today;
@@ -198,6 +173,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
             authorizeCustomerProfileId: gatewayCustomerId,
         } : {}),
         checkoutKind: "subscription",
+        commissionBilling: {
+            allowanceInterval: pricing.plan.classLimitInterval,
+            billingInterval: pricing.interval,
+            billingThreshold: pricing.intervalThreshold,
+            visitAllowance: pricing.plan.totalClassLimit,
+        },
     };
     const transactionId = generateUUID('txn_');
     const items = [{
@@ -273,6 +254,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     paymentType,
                     gatewayPaymentId: paymentMethodId,
                     metadata: {
+                        commissionBilling: {
+                            allowanceInterval: pricing.plan.classLimitInterval,
+                            billingInterval: pricing.interval,
+                            billingThreshold: pricing.intervalThreshold,
+                            visitAllowance: pricing.plan.totalClassLimit,
+                        },
                         gatewayIntegrationId: gateway.integrationId,
                         gatewayCustomerId,
                         allowProration: resolvedAllowProration,
@@ -291,6 +278,12 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     locationId: lid,
                     paymentType,
                     ...chargeDetails,
+                    metadata: {
+                        commissionAllowanceInterval: pricing.plan.classLimitInterval,
+                        commissionBillingInterval: pricing.interval,
+                        commissionBillingThreshold: pricing.intervalThreshold,
+                        commissionVisitAllowance: pricing.plan.totalClassLimit,
+                    },
                     forPeriodStart: result.currentPeriodStart,
                     forPeriodEnd: result.currentPeriodEnd,
                     currency,
@@ -304,8 +297,6 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     lid,
                     memberPlanId: result.id,
                     contractId,
-                    waiverId,
-                    signedWaiverId,
                 });
                 await tx.update(memberLocations).set({
                     status: "active",

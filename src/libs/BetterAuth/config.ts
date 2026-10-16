@@ -42,6 +42,7 @@ export const auth = betterAuth({
         },
     }),
     account: {
+        skipStateCookieCheck: true,
         fields: {
             providerId: "provider",
             createdAt: 'created',
