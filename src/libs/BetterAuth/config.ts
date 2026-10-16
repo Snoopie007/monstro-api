@@ -23,8 +23,6 @@ const baseURL = Bun.env.BETTER_AUTH_BASE_URL ?? "http://localhost:3001";
 
 const useSecureCookies = isProduction || isPreview || baseURL.startsWith("https://");
 
-console.log("baseURL", baseURL);
-
 
 // Generate Apple secret at startup (will be refreshed on each deploy/restart)
 const appleClientSecret = await generateAppleClientSecret();
