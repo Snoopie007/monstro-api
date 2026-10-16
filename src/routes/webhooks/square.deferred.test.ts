@@ -20,6 +20,10 @@ mock.module("./handlers/square/squarePlanSuccess", () => ({ handleSquarePlanSucc
 mock.module("./handlers/square/squarePlanFail", () => ({ handleSquarePlanFail: async () => {} }));
 mock.module("./handlers/square/squareOrderSuccess", () => ({ handleSquareOrderSuccess: async () => {} }));
 mock.module("./handlers/square/squareOrderFail", () => ({ handleSquareOrderFail: async () => {} }));
+mock.module("./handlers/square/squareBundlePayment", () => ({
+    handleSquareBundleSuccess: async () => {}, handleSquareBundleFail: async () => {},
+}));
+mock.module("@/handlers/addonsBundles/checkout/settlement", () => ({ isBundleInvoice: async () => false }));
 const { squareWebhookRoutes } = await import("./square");
 const request = () => new Request("http://localhost/square", {
     method: "POST",

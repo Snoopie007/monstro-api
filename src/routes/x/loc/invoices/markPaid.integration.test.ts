@@ -34,11 +34,14 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
             "locations",
             "location_state",
             "tax_rates",
+            "addons",
+            "member_subscription_addons",
         ];
         let app: Pick<Elysia, "handle">;
         let allowed = true;
         let walletSuccess = true;
         const walletCharge = mock(async () => walletSuccess);
+        const enqueueAddon = mock(async (..._args: unknown[]) => {});
 
         beforeAll(async () => {
             if (
@@ -62,7 +65,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
                     charge = walletCharge;
                 },
             }));
-            mock.module("@/queues", () => ({ invoiceQueue: {} }));
+            mock.module("@/queues", () => ({ invoiceQueue: {}, enqueueSubscriptionAddonJob: enqueueAddon, enqueueSubscriptionAddonPaymentRetry: async () => {}, scheduleBundledRenewal: async () => {} }));
             const { markPaidInvoiceRoutes } = await import("./markPaid");
             const routes = await markPaidInvoiceRoutes(new Elysia());
             app = new Elysia()
@@ -80,6 +83,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
             allowed = true;
             walletSuccess = true;
             walletCharge.mockClear();
+            enqueueAddon.mockClear();
             for (const table of tables)
                 await sql`truncate ${sql(namespace)}.${sql(table)}`;
             await sql`insert into locations (id,name,slug,vendor_id,country,timezone) values ('loc','Cash test','cash-test','vendor','US','America/New_York')`;
@@ -88,6 +92,32 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
             await sql`insert into member_plan_pricing (id,member_plan_id,name,price,interval,interval_threshold) values ('price','plan','Weekly',10000,'week',1)`;
             await sql`insert into member_subscriptions (id,member_id,location_id,member_plan_pricing_id,payment_type,status,start_date,current_period_start,current_period_end,metadata) values ('sub','member','loc','price','cash','active','2026-09-26T12:00:00Z','2026-09-26T12:00:00Z','2026-10-03T12:00:00Z','{}')`;
             await sql`insert into member_invoices (id,member_id,location_id,member_plan_id,payment_type,status,total,subtotal,tax,currency,due_date,for_period_start,for_period_end,metadata) values ('invoice','member','loc','sub','cash','sent',10000,10000,0,'USD','2026-10-03T12:00:00Z','2026-09-26T12:00:00Z','2026-10-03T12:00:00Z','{"platformFeeAmount":0}')`;
+        });
+
+        const addonInvoice = async (status = "pending") => {
+            await sql`insert into addons (id,location_id,name,amount,billing_type,interval,interval_threshold) values ('addon','loc','Extra classes',10000,'recurring','week',1)`;
+            await sql`insert into member_subscription_addons (id,member_subscription_id,addon_id,status,starts_at) values ('addon-purchase','sub','addon',${status},'2026-09-26T12:00:00Z')`;
+            await sql`update member_invoices set member_plan_id=null,member_subscription_addon_id='addon-purchase' where id='invoice'`;
+        };
+        test("concurrent add-on confirmations activate the paid period once without advancing the subscription", async () => {
+            await addonInvoice();
+            const before = await db.select().from(schema.memberSubscriptions);
+            const responses = await Promise.all([pay(), pay()]);
+            expect(responses.map(response => response.status)).toEqual([200, 200]);
+            expect(await db.select().from(schema.transactions)).toHaveLength(1);
+            expect(await db.select().from(schema.memberSubscriptions)).toEqual(before);
+            expect((await db.select().from(schema.memberSubscriptionAddons))[0]).toMatchObject({
+                status: "active", paidPeriodStartsAt: new Date("2026-09-26T12:00:00Z"),
+                paidPeriodEndsAt: new Date("2026-10-03T12:00:00Z"), nextBillAt: new Date("2026-10-03T12:00:00Z"),
+            });
+            expect(enqueueAddon).toHaveBeenCalledTimes(1);
+        });
+        test.each(["canceled", "expired"])("an ended %s add-on cannot be reactivated by payment", async status => {
+            await addonInvoice(status);
+            expect((await pay()).status).toBe(409);
+            expect((await db.select().from(schema.memberInvoices))[0]?.paid).toBe(false);
+            expect(await db.select().from(schema.transactions)).toHaveLength(0);
+            expect(enqueueAddon).not.toHaveBeenCalled();
         });
 
         const pay = (location = "loc", body: Record<string, unknown> = {}) =>

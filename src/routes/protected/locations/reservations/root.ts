@@ -11,7 +11,7 @@ import {
 import { and, count, eq, sql } from "drizzle-orm";
 
 import { differenceInMilliseconds, differenceInMinutes } from "date-fns";
-import { checkSubClassCredits, getSessionState } from "./utils";
+import { checkSubClassCredits, getSessionState, hasUnlimitedSubscriptionAddon } from "./utils";
 import { triggerFirstBooking } from "@/utils/triggers";
 import { broadcastAchievement } from "@/libs/broadcast";
 
@@ -104,6 +104,7 @@ export async function locationReservations(app: Elysia) {
                 let pkg = undefined;
                 let sub = undefined;
                 let classLimitReached = false;
+                let hasUnlimitedAccess = false;
                 let memberId = undefined;
                 if (isPackage) {
                     pkg = await db.query.memberPackages.findFirst({
@@ -143,7 +144,8 @@ export async function locationReservations(app: Elysia) {
                         },
                     });
 
-                    if (plan.classLimitInterval === 'term' && sub?.classCredits === 0) {
+                    hasUnlimitedAccess = sub ? await hasUnlimitedSubscriptionAddon(sub.id) : false;
+                    if (!hasUnlimitedAccess && plan.classLimitInterval === 'term' && sub?.classCredits === 0) {
                         return status(200, { success: false, message: "No credits available for your plan." });
                     }
 
@@ -241,6 +243,7 @@ export async function locationReservations(app: Elysia) {
                 const sessionDuration = differenceInMinutes(utcEndTime, utcStartTime);
 
 
+                const subscriptionCreditConsumed = Boolean(sub && !hasUnlimitedAccess && plan.classLimitInterval === "term");
                 const reservation = await db.transaction(async (tx) => {
                     // The earlier check gives fast feedback; this locked reread closes
                     // the race with a vendor changing program mode during plan validation.
@@ -261,6 +264,7 @@ export async function locationReservations(app: Elysia) {
                         startOn: utcStartTime,
                         endOn: utcEndTime,
                         programId: session.programId,
+                        subscriptionCreditConsumed: isPackage ? null : subscriptionCreditConsumed,
                         ...(isPackage ? {
                             memberPackageId: memberPlanId,
                         } : {
@@ -284,7 +288,7 @@ export async function locationReservations(app: Elysia) {
                     }
                     if (sub) {
 
-                        if (plan.classLimitInterval === 'term') {
+                        if (subscriptionCreditConsumed) {
                             await tx.update(memberSubscriptions).set({
                                 classCredits: Math.max((sub.classCredits || 0) - 1, 0)
                             }).where(eq(memberSubscriptions.id, memberPlanId));
@@ -445,7 +449,7 @@ export async function locationReservations(app: Elysia) {
                                 // Prevent decrementing below 0
                                 await tx.execute(sql`
                                     UPDATE ${memberPackages}
-                                    SET total_class_attended = CASE 
+                                    SET total_class_attended = CASE
                                         WHEN total_class_attended > 0 THEN total_class_attended - 1
                                         ELSE 0
                                     END
@@ -486,11 +490,11 @@ export async function locationReservations(app: Elysia) {
                                 if (pricing?.plan && pricing.plan.classLimitInterval) {
                                     const limit = pricing.plan.totalClassLimit;
 
-                                    if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0) {
+                                    if (pricing.plan.classLimitInterval === 'term' && limit && limit > 0 && (reservation.subscriptionCreditConsumed ?? true)) {
                                         // Make sure not to exceed the original classCredits limit
                                         await tx.execute(sql` UPDATE ${memberSubscriptions}
-                                            SET class_credits = 
-                                                CASE 
+                                            SET class_credits =
+                                                CASE
                                                     WHEN class_credits < ${limit} THEN class_credits + 1
                                                     ELSE class_credits
                                                 END
@@ -530,4 +534,3 @@ export async function locationReservations(app: Elysia) {
     })
     return app;
 }
-

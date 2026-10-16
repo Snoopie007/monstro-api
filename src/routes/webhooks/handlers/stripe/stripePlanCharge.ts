@@ -1,3 +1,5 @@
+import { reconcileBundlePurchase } from "@/handlers/addonsBundles/checkout/settlement";
+import { isBundleRefundPaymentReplay } from "@/handlers/addonsBundles/refund/state";
 import { strict as assert } from "node:assert";
 
 import type { PaymentType } from "@/subtrees/types";
@@ -52,6 +54,7 @@ export async function handleStripePlanCharge({
     currency,
 }: HandleStripePlanChargeProps) {
     const now = new Date();
+    let bundlePurchaseId: string | null = null;
     if (success && !stripeAccountId) throw new Error("Stripe webhook is missing connected account binding");
     let authoritative: Stripe.PaymentIntent | undefined;
     let reconciledAttemptId: string | undefined;
@@ -163,7 +166,28 @@ export async function handleStripePlanCharge({
         }
         const expectedPaymentIntentId = currentAttemptPaymentIntentId ?? persistedPaymentIntentId;
         if (paymentIntentId && expectedPaymentIntentId && expectedPaymentIntentId !== paymentIntentId) return;
-        if (current.paid || current.status === "paid") return;
+        if (success && current.transactionId) {
+            const paidTransaction = await tx.query.transactions.findFirst({
+                where: eq(transactions.id, current.transactionId),
+                columns: { metadata: true },
+            });
+
+            if (paidTransaction && isBundleRefundPaymentReplay(paidTransaction.metadata, paymentIntentId)) return;
+        }
+
+        if (current.paid || current.status === "paid") {
+            // A valid success replay can repair bundle activation after the payment committed.
+            if (success && !memberPlanId.startsWith("pkg_")) {
+                const subscription = await tx.query.memberSubscriptions.findFirst({
+                    where: eq(memberSubscriptions.id, memberPlanId),
+                    columns: { status: true, bundlePurchaseId: true },
+                });
+                if (subscription && !["canceled", "paused"].includes(subscription.status)) {
+                    bundlePurchaseId = subscription.bundlePurchaseId;
+                }
+            }
+            return;
+        }
         const [invoice] = await tx.update(memberInvoices).set({
             status: success ? "paid" : "unpaid",
             paid: success,
@@ -244,6 +268,14 @@ export async function handleStripePlanCharge({
             return;
         }
 
+        const subscription = await tx.query.memberSubscriptions.findFirst({
+            where: eq(memberSubscriptions.id, memberPlanId),
+            columns: { status: true, bundlePurchaseId: true },
+        });
+        if (subscription && !["canceled", "paused"].includes(subscription.status)) {
+            bundlePurchaseId = subscription.bundlePurchaseId;
+        }
+
         await tx.update(memberSubscriptions).set({
             ...(success ? {
                 metadata: sql`case when ${memberSubscriptions.metadata}->'stripeMigration'->>'state' = 'armed'
@@ -257,4 +289,7 @@ export async function handleStripePlanCharge({
             sql`${memberSubscriptions.parentId} is null`,
         ));
     });
+    // A declined renewal leaves the subscription past due, as it does outside a bundle.
+    if (!success || !bundlePurchaseId) return;
+    await reconcileBundlePurchase(locationId, bundlePurchaseId);
 }

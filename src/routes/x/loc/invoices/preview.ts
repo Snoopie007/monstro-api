@@ -1,3 +1,4 @@
+import { getNextCashCycle } from "@/subtrees/utils/cashBilling";
 import { getDeferredBilling, isDeferredFirstPeriod } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
@@ -59,12 +60,15 @@ export async function previewInvoiceRoutes(app: Elysia) {
                 return status(404, { error: "Subscription billing definition not found" });
             }
 
+            const cycle = sub.currentPeriodEnd <= new Date() ? getNextCashCycle(sub, sub.location.timezone) : null;
             const quote = await buildSubscriptionInvoiceQuote({
+                memberId: sub.memberId,
                 locationId: lid,
                 subscriptionId: sub.id,
                 parentId: sub.parentId,
                 subscriptionMetadata: sub.metadata,
-                periodStart: sub.currentPeriodEnd <= new Date() ? sub.currentPeriodEnd : sub.currentPeriodStart,
+                periodStart: new Date(cycle?.periodStart ?? sub.currentPeriodStart),
+                periodEnd: new Date(cycle?.periodEnd ?? sub.currentPeriodEnd),
                 pricing: sub.pricing,
                 memberPlanPricingId: sub.memberPlanPricingId,
                 promoId: sub.promoId,

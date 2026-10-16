@@ -2,7 +2,7 @@ import type { db } from "@/db/db";
 import { memberSubscriptions } from "@/subtrees/schemas";
 import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { eq } from "drizzle-orm";
-import { createHash } from "node:crypto";
+import { authorizeAttemptReference } from "./checkoutUtil";
 
 /** Read the subscription settings so new callback rules apply only to deferred billing. */
 export async function getDeferredInvoiceBilling(tx: Pick<typeof db, "query">, subscriptionId: string | null | undefined) {
@@ -58,8 +58,7 @@ function matchesAuthorizeInvoiceAttempt(
     if (typeof attempt.id !== "string") return true;
     if (invoice?.paid || attempt.status === "succeeded") return false;
     if (typeof attempt.paymentIntentId === "string") return attempt.paymentIntentId === paymentIntentId;
-    const reference = createHash("sha256").update(attempt.id).digest("hex").slice(0, 20);
-    return invoiceNumber === reference;
+    return invoiceNumber === authorizeAttemptReference(attempt.id);
 }
 
 /** Build updates for the matching Authorize.net payment result. The caller must lock the invoice before calling and save the updates afterward. */

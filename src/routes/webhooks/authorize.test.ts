@@ -106,9 +106,11 @@ mock.module("@/utils", () => ({ createEnrollUnsignedDocs: mock(async () => []) }
 const repairRenewal = mock(async (..._args: unknown[]) => {});
 mock.module("@/queues/subscriptions", () => ({
     scheduleRenewalRepair: repairRenewal,
+    scheduleBundledRenewal: repairRenewal,
     scheduleCronBasedRenewal: mock(async () => undefined),
     scheduleRecursiveRenewal: mock(async () => undefined),
 }));
+mock.module("@/queues/subscriptionAddons", () => ({ enqueueSubscriptionAddonJob: mock(async () => undefined) }));
 const { authorizeWebhookRoutes, verifyAuthorizeWebhookSignature } = await import("./authorize");
 
 const event = {

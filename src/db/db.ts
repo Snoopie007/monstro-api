@@ -55,3 +55,5 @@ const admindb = drizzle(adminClient, { schema: adminSchema, logger: false });
 
 
 export { db, admindb };
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type DbReader = Pick<typeof db, "query" | "select">;
