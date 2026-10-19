@@ -17,7 +17,7 @@ import type {
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { getBundleSummary } from "@/handlers/addonsBundles/bundleSummary";
 import { pricingColumns } from "./catalog";
-import { lockBundle } from "@/subtrees/utils/server/bundlePayments";
+import { lockBundle, lockStandaloneAddon } from "@/subtrees/utils/server/bundlePayments";
 import { cancelAddonsNow } from "@/subtrees/utils/server/addonInvoices";
 import { hasAddonConflict, getActiveOverrides } from "@/subtrees/utils/server/addonPricing";
 
@@ -251,14 +251,13 @@ export async function purchaseAddon(locationId: string, subscriptionId: string, 
 export async function cancelAddon(locationId: string, purchaseId: string, subscriptionId?: string) {
   return db.transaction(async (tx) => {
     const owner = await tx.query.memberSubscriptionAddons.findFirst({
-      where: eq(memberSubscriptionAddons.id, purchaseId), columns: { bundlePurchaseId: true },
+      where: eq(memberSubscriptionAddons.id, purchaseId), columns: { bundlePurchaseId: true, memberSubscriptionId: true },
     });
-    if (owner?.bundlePurchaseId) await lockBundle(tx, owner.bundlePurchaseId);
+    if (!owner) return { status: "not-found" as const };
 
-    // Locks the add-on and its subscription, scoped to the location.
-    await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons)
-      .innerJoin(memberSubscriptions, eq(memberSubscriptions.id, memberSubscriptionAddons.memberSubscriptionId))
-      .where(and(eq(memberSubscriptionAddons.id, purchaseId), eq(memberSubscriptions.locationId, locationId))).for("update");
+    // Locks in the order billing and mark-paid use, before the add-on's invoices are voided.
+    if (owner.bundlePurchaseId) await lockBundle(tx, owner.bundlePurchaseId);
+    else await lockStandaloneAddon(tx, owner.memberSubscriptionId, purchaseId);
     const purchase = await tx.query.memberSubscriptionAddons.findFirst({
       where: eq(memberSubscriptionAddons.id, purchaseId),
       with: {

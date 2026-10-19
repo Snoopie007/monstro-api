@@ -128,7 +128,7 @@ type LockedPayment = Awaited<ReturnType<typeof lockPayment>>;
 async function lockPayment(tx: InvoicePaymentTransaction, invoiceId: string) {
   const discovered = await findInvoiceOwner(tx, invoiceId);
   if (!discovered) throw new Error(`Invoice ${invoiceId} has no payment owner`);
-  if (discovered.purchaseId === null) await lockAddon(tx, discovered.subscriptionId, discovered.addonId);
+  if (discovered.purchaseId === null) await lockStandaloneAddon(tx, discovered.subscriptionId, discovered.addonId);
   else await lockBundle(tx, discovered.purchaseId);
   const { invoice, transaction } = await lockInvoice(tx, invoiceId);
   return { invoice, transaction, ...await getLockedOwner(tx, invoice, discovered) };
@@ -152,8 +152,9 @@ export async function findInvoiceOwner(tx: Pick<Database, "query">, invoiceId: s
   return { purchaseId: null, addonId: addon.id, subscriptionId: addon.memberSubscriptionId };
 }
 
-/** Locks a standalone add-on's subscription, then the add-on: the order the worker bills in. */
-async function lockAddon(tx: InvoicePaymentTransaction, subscriptionId: string, addonId: string) {
+/** Locks a standalone add-on's subscription, then the add-on. Billing, payment
+ * collection, mark-paid and add-on cancellation all lock it this way. */
+export async function lockStandaloneAddon(tx: InvoicePaymentTransaction, subscriptionId: string, addonId: string) {
   await tx.select({ id: memberSubscriptions.id }).from(memberSubscriptions).where(eq(memberSubscriptions.id, subscriptionId)).for("update");
   await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons).where(eq(memberSubscriptionAddons.id, addonId)).for("update");
 }

@@ -31,14 +31,17 @@ export function addonNotCollectible(
   return null;
 }
 
-/** The end of an add-on period that starts at `start`. One-time add-ons have none. */
+/** The end of an add-on period that starts at `start`. Periods keep the billing
+ * day of `anchor`, the add-on's start: one bought on Jan 31 renews on Feb 28,
+ * then Mar 31. One-time add-ons have none. */
 export function addonPeriodEnd(
   addon: { id: string; billingType: string; interval: Interval | null; intervalThreshold: number | null },
-  start: Date,
+  anchor: Date,
+  start = anchor,
 ): Date | null {
   if (addon.billingType !== "recurring") return null;
 
   if (!addon.interval || !addon.intervalThreshold) throw new Error(`Recurring add-on ${addon.id} has no billing interval`);
 
-  return nextBillingBoundary(start, start, addon.interval, addon.intervalThreshold);
+  return nextBillingBoundary(anchor, start, addon.interval, addon.intervalThreshold);
 }

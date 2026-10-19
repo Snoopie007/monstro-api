@@ -110,7 +110,46 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
                 status: "active", paidPeriodStartsAt: new Date("2026-09-26T12:00:00Z"),
                 paidPeriodEndsAt: new Date("2026-10-03T12:00:00Z"), nextBillAt: new Date("2026-10-03T12:00:00Z"),
             });
-            expect(enqueueAddon).toHaveBeenCalledTimes(1);
+            // Each confirmation schedules the same renewal job, which the queue keeps once.
+            expect(enqueueAddon).toHaveBeenCalled();
+            for (const call of enqueueAddon.mock.calls) expect(call).toEqual(["renew", "addon-purchase", new Date("2026-10-03T12:00:00Z")]);
+        });
+        test("confirming a paid add-on invoice again schedules its renewal, so a lost job recovers", async () => {
+            await addonInvoice();
+            expect((await pay()).status).toBe(200);
+            enqueueAddon.mockClear();
+
+            expect((await pay()).status).toBe(200);
+            expect(enqueueAddon).toHaveBeenCalledWith("renew", "addon-purchase", new Date("2026-10-03T12:00:00Z"));
+            expect(await db.select().from(schema.transactions)).toHaveLength(1);
+        });
+        test("paying an older add-on invoice never moves a newer paid period back", async () => {
+            await addonInvoice("active");
+            await sql`update member_subscription_addons set paid_period_starts_at='2026-10-03T12:00:00Z', paid_period_ends_at='2026-10-10T12:00:00Z', next_bill_at='2026-10-10T12:00:00Z'`;
+
+            expect((await pay()).status).toBe(200);
+            // toEqual, not toMatchObject: Bun's toMatchObject treats any two dates as equal.
+            const [addon] = await db.select().from(schema.memberSubscriptionAddons);
+            expect([addon?.paidPeriodStartsAt, addon?.nextBillAt]).toEqual([new Date("2026-10-03T12:00:00Z"), new Date("2026-10-10T12:00:00Z")]);
+        });
+        test("a confirmation waits for an add-on cancel in progress instead of deadlocking", async () => {
+            await addonInvoice("active");
+            const other = postgres(url, { max: 1, connection: { search_path: `${namespace},public,extensions` }, onnotice: () => {} });
+            let paying: Promise<Response> | undefined;
+
+            // Cancel locks the subscription and add-on, then voids the add-on's invoice.
+            await other.begin(async (tx) => {
+                await tx`select id from member_subscriptions where id = 'sub' for update`;
+                await tx`select id from member_subscription_addons where id = 'addon-purchase' for update`;
+                paying = pay();
+                await Bun.sleep(200);
+                await tx`update member_subscription_addons set status = 'canceled'`;
+                await tx`update member_invoices set status = 'void' where id = 'invoice'`;
+            });
+            await other.end();
+
+            expect((await paying)?.status).toBe(409);
+            expect(await db.select().from(schema.transactions)).toHaveLength(0);
         });
         test.each(["canceled", "expired"])("an ended %s add-on cannot be reactivated by payment", async status => {
             await addonInvoice(status);

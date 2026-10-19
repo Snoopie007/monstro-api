@@ -1,5 +1,5 @@
 import {
-    getInvoiceAddon, lockInvoiceAddon, lockOpenBundle, markPaidBlocker, runAddonFollowUp, settleMarkedAddon,
+    getInvoiceAddon, lockAddonOwner, lockInvoiceAddon, markPaidBlocker, runAddonFollowUp,
 } from "@/handlers/addonsBundles/markPaid";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
@@ -8,7 +8,7 @@ import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, eq, inArray, lte } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
-import type { AddonSettlement } from "@/subtrees/utils/server/addonInvoices";
+import { settleAddonInvoice, type AddonSettlement } from "@/subtrees/utils/server/addonInvoices";
 import type { Currency } from "@/subtrees/types/currency";
 import { canEditLocationMember } from "@/utils/locationAccess";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
@@ -32,8 +32,8 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
 
         if (invoice.paymentType !== "cash") return status(400, { error: "Only cash invoices can be marked as paid" });
         const addon = await getInvoiceAddon(invoice);
-        // A paid bundled add-on continues below, so a lost activation or renewal is settled again.
-        if ((invoice.paid || invoice.status === "paid") && !addon?.bundlePurchaseId) return paidResponse();
+        // A paid add-on invoice continues below, so a lost activation or renewal is settled again.
+        if ((invoice.paid || invoice.status === "paid") && !addon) return paidResponse();
         if (expectedTotal !== undefined && expectedTotal !== invoice.total) return status(409, { error: "The invoice amount changed. Please review it again." });
         if (!invoice.paid && !["sent", "unpaid"].includes(invoice.status)) {
             return status(400, { error: "Invoice must be issued before marking as paid" });
@@ -128,14 +128,14 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
             // Wallet debits have their own invoice-specific deduplication. Keep
             // them outside this transaction so the two-connection pool cannot
             // deadlock while another confirmation waits for the invoice lock.
-            // A bundled add-on locks its bundle first, in the same order as cancellation.
-            if (!await lockOpenBundle(tx, addon)) return "addon-ended";
+            // An add-on invoice locks its bundle or subscription and add-on first, in the same order as billing and cancellation.
+            if (!await lockAddonOwner(tx, addon)) return "addon-ended";
             const [locked] = await tx.select().from(memberInvoices)
                 .where(and(eq(memberInvoices.id, iid), eq(memberInvoices.locationId, lid))).for("update");
             if (!locked) return "missing";
             if (locked.paid || locked.status === "paid") {
-                // A paid bundled add-on invoice settles again, so a lost activation or renewal recovers.
-                addonFollowUp.value = addon?.bundlePurchaseId ? await settleMarkedAddon(tx, locked, addon) : null;
+                // A paid add-on invoice settles again, so a lost activation or renewal recovers.
+                addonFollowUp.value = addon ? await settleAddonInvoice(tx, locked, { status: "succeeded" }) : null;
                 return "paid";
             }
             if (!["sent", "unpaid"].includes(locked.status) || locked.paymentType !== "cash" || locked.total !== quotedTotal) return "changed";
@@ -200,7 +200,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 transactionId,
                 updated: new Date(),
             }).where(eq(memberInvoices.id, iid));
-            addonFollowUp.value = await settleMarkedAddon(tx, { ...invoice, paid: true, status: "paid" }, lockedAddon);
+            addonFollowUp.value = lockedAddon ? await settleAddonInvoice(tx, { ...invoice, paid: true, status: "paid" }, { status: "succeeded" }) : null;
             if (invoice.memberPlanId) {
                 const [sub] = await tx.select().from(memberSubscriptions)
                     .where(and(eq(memberSubscriptions.id, invoice.memberPlanId), eq(memberSubscriptions.locationId, lid))).for("update");
