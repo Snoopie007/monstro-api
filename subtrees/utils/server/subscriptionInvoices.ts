@@ -49,7 +49,7 @@ type SubscriptionInvoiceBilling = {
   transactionId: string | null;
   currency: string | null;
   representation: "direct" | "items";
-  periods: SubscriptionBillingPeriod[];
+  period: SubscriptionBillingPeriod;
 };
 
 export function readSubscriptionInvoice(
@@ -75,85 +75,43 @@ export function readSubscriptionInvoice(
     return {
       ...identity,
       representation: "direct",
-      periods: [
-        {
-          forPeriodStart: invoice.forPeriodStart,
-          forPeriodEnd: invoice.forPeriodEnd,
-          serviceAmountMinor: invoice.subTotal,
-          tax: invoice.tax,
-          total: invoice.total,
-          commissionBasis: basis.success
-            ? { type: "allowance", ...basis.data }
-            : null,
-        },
-      ],
+      period: {
+        forPeriodStart: invoice.forPeriodStart,
+        forPeriodEnd: invoice.forPeriodEnd,
+        serviceAmountMinor: invoice.subTotal,
+        tax: invoice.tax,
+        total: invoice.total,
+        commissionBasis: basis.success
+          ? { type: "allowance", ...basis.data }
+          : null,
+      },
     };
   }
 
   if (invoice.memberSubscriptionAddonId !== null) return null;
 
   const items = subscriptionBillingItems(invoice.items, subscriptionId);
-  if (!items.length) return null;
-
-  const periods = new Map<string, SubscriptionBillingPeriod>();
-  const servicePeriods = new Set<string>();
-
-  for (const item of items) {
-    const billing = item.billing;
-    const start = new Date(billing.forPeriodStart);
-    const end =
-      billing.forPeriodEnd === null ? null : new Date(billing.forPeriodEnd);
-    const key = `${start.getTime()}/${end?.getTime() ?? ""}`;
-    let period = periods.get(key);
-
-    if (!period) {
-      period = {
-        forPeriodStart: start,
-        forPeriodEnd: end,
-        serviceAmountMinor: 0,
-        tax: 0,
-        total: 0,
-        commissionBasis: null,
-      };
-      periods.set(key, period);
-    }
-
-    // Additional fees belong to the component total, but never its service value.
-    if (!item.feeId) {
-      const basis = billing.commissionBasis ?? null;
-
-      if (
-        servicePeriods.has(key) &&
-        JSON.stringify(period.commissionBasis) !== JSON.stringify(basis)
-      ) {
-        throw new Error(
-          `Invoice ${invoice.id} has conflicting commission bases`,
-        );
-      }
-
-      servicePeriods.add(key);
-      period.commissionBasis = basis;
-      period.serviceAmountMinor += billing.subTotal;
-    }
-
-    period.tax += billing.tax;
-    period.total += billing.total;
-
-    if (
-      ![period.serviceAmountMinor, period.tax, period.total].every(
-        Number.isSafeInteger,
-      )
-    ) {
-      throw new Error(
-        `Invoice ${invoice.id} component amounts exceed safe integer limits`,
-      );
-    }
-  }
+  // A bundle invoice bills each subscription once, and its fee lines share that
+  // line's period. A custom cash invoice stores its lines as sent, so service
+  // lines still add up.
+  const service = items.find((item) => !item.feeId);
+  if (!service) return null;
 
   return {
     ...identity,
     representation: "items",
-    periods: [...periods.values()],
+    period: {
+      forPeriodStart: new Date(service.billing.forPeriodStart),
+      forPeriodEnd:
+        service.billing.forPeriodEnd === null
+          ? null
+          : new Date(service.billing.forPeriodEnd),
+      // Fee lines count toward the total, never the service value.
+      serviceAmountMinor: items.reduce((sum, item) => sum + (item.feeId ? 0 : item.billing.subTotal), 0),
+      tax: items.reduce((sum, item) => sum + item.billing.tax, 0),
+      total: items.reduce((sum, item) => sum + item.billing.total, 0),
+      commissionBasis: service.billing.commissionBasis ?? null,
+    },
   };
 }
 
@@ -210,7 +168,6 @@ export async function getSubscriptionCommissionValue(
 
   const covered: Array<{
     invoice: SubscriptionInvoiceBilling;
-    period: SubscriptionBillingPeriod;
     transactionId: string;
     transactionCurrency: string;
   }> = [];
@@ -226,38 +183,36 @@ export async function getSubscriptionCommissionValue(
 
     if (invoice.representation === "items") hasComponentInvoices = true;
 
-    for (const period of invoice.periods) {
-      if (
-        !period.forPeriodStart ||
-        !period.forPeriodEnd ||
-        input.at < period.forPeriodStart ||
-        input.at >= period.forPeriodEnd
-      ) {
-        continue;
-      }
-
-      if (invoice.representation === "items") hasComponentPeriod = true;
-
-      const transaction = row.transaction;
-      if (
-        !row.invoice.paid ||
-        row.invoice.status !== "paid" ||
-        !transaction ||
-        transaction.status !== "paid" ||
-        transaction.type !== "inbound" ||
-        transaction.memberId !== input.scope.memberId ||
-        transaction.locationId !== input.scope.locationId
-      ) {
-        continue;
-      }
-
-      covered.push({
-        invoice,
-        period,
-        transactionId: transaction.id,
-        transactionCurrency: transaction.currency,
-      });
+    const { period } = invoice;
+    if (
+      !period.forPeriodStart ||
+      !period.forPeriodEnd ||
+      input.at < period.forPeriodStart ||
+      input.at >= period.forPeriodEnd
+    ) {
+      continue;
     }
+
+    if (invoice.representation === "items") hasComponentPeriod = true;
+
+    const transaction = row.transaction;
+    if (
+      !row.invoice.paid ||
+      row.invoice.status !== "paid" ||
+      !transaction ||
+      transaction.status !== "paid" ||
+      transaction.type !== "inbound" ||
+      transaction.memberId !== input.scope.memberId ||
+      transaction.locationId !== input.scope.locationId
+    ) {
+      continue;
+    }
+
+    covered.push({
+      invoice,
+      transactionId: transaction.id,
+      transactionCurrency: transaction.currency,
+    });
   }
 
   if (hasComponentInvoices && covered.length === 0) return null;
@@ -278,7 +233,8 @@ export async function getSubscriptionCommissionValue(
 
   if (covered.length !== 1) return null;
 
-  const { invoice, period, transactionId, transactionCurrency } = covered[0]!;
+  const { invoice, transactionId, transactionCurrency } = covered[0]!;
+  const { period } = invoice;
 
   if (
     invoice.currency?.toUpperCase() !== input.scope.currency.toUpperCase() ||

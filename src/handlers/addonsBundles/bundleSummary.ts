@@ -65,20 +65,17 @@ export async function getBundleSummary(
   ]);
   const subscriptionsByComponent = new Map(subscriptionRows.map((subscription) => [subscription.componentId, subscription.id]));
   const addonsByComponent = new Map(addonPurchaseRows.map((addon) => [addon.componentId, addon.id]));
-  const purchasedComponentIds = new Set([
-    ...subscriptionsByComponent.keys(),
-    ...addonsByComponent.keys(),
-  ]);
 
+  // Components reference their plan price or add-on with a restricting foreign key, so every name exists.
   const describe = (component: typeof componentRows[number]) => component.memberPlanPricingId
-    ? { type: "subscription" as const, name: pricingNames.get(component.memberPlanPricingId) ?? "Subscription" }
-    : { type: "addon" as const, name: addonNames.get(component.addonId ?? "") ?? "Add-on" };
+    ? { type: "subscription" as const, name: pricingNames.get(component.memberPlanPricingId)! }
+    : { type: "addon" as const, name: addonNames.get(component.addonId!)! };
 
   return {
     ...purchase,
     startsAt: purchase.startsAt.toISOString(),
     endedAt: purchase.endedAt?.toISOString() ?? null,
-    components: componentRows.flatMap((component) => purchasedComponentIds.has(component.id)
+    components: componentRows.flatMap((component) => subscriptionsByComponent.has(component.id) || addonsByComponent.has(component.id)
       ? [{
         id: component.id,
         ...describe(component),

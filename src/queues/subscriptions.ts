@@ -3,7 +3,7 @@ import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { redisConfig } from "@/config";
 import { Queue } from "bullmq";
-import { type CashSubscriptionJobData, type RecursiveSubscriptionJobData, type SubscriptionJobData } from "@/subtrees/bullmq/types";
+import type { CashSubscriptionJobData, RecursiveSubscriptionJobData, SubscriptionJobData } from "@/subtrees/bullmq/types";
 import type { SubscriptionBillingQuote } from "@/subtrees/types/subscriptionBilling";
 import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { sleep } from "bun";
@@ -150,7 +150,7 @@ export async function scheduleRecursiveRenewal({
     throw lastError ?? new Error("scheduleRecursiveRenewal failed");
 }
 
-async function loadRenewalContext(sid: string, lid: string, dueAt: Date | null) {
+export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
     if (!dueAt) return;
     const dueAtMs = dueAt.getTime();
     if (!Number.isFinite(dueAtMs)) throw new Error("Invalid renewal repair dueAt");
@@ -220,19 +220,8 @@ async function loadRenewalContext(sid: string, lid: string, dueAt: Date | null) 
         },
     };
 
-    return { bundled, billingQuote, payload, dueAt, dueAtMs };
-}
-
-export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
-    const renewal = await loadRenewalContext(sid, lid, dueAt);
-    if (!renewal) return;
-
-    const { bundled, billingQuote, payload, dueAt: startDate, dueAtMs } = renewal;
     if (bundled) {
-        await enqueueBundledRenewal(startDate, billingQuote, {
-            ...payload,
-            expectedDueAt: undefined,
-        });
+        await enqueueBundledRenewal(dueAt, billingQuote, { ...payload, expectedDueAt: undefined });
         return;
     }
 

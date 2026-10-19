@@ -42,7 +42,7 @@ export type AddonBundlePlanPricingOption = Pick<MemberPlanPricing, "id" | "membe
 };
 
 export type AddonBundleCatalogOptions = {
-  currency?: string;
+  currency: string;
   planPricings: AddonBundlePlanPricingOption[];
   addons: Array<Pick<AddonCatalogItem, "id" | "name" | "amount" | "currency" | "billingType" | "interval" | "intervalThreshold">>;
 };
@@ -53,10 +53,7 @@ export type BundleCatalogResponse = { bundles: BundleCatalogItem[] };
 export type BundleDetailResponse = { bundle: BundleCatalogItem };
 export type AddonBundleOptionsResponse = { options: AddonBundleCatalogOptions };
 
-export type SubscriptionAddonPricing = Pick<
-  AddonBundlePlanPricingOption,
-  "id" | "memberPlanId" | "name" | "planName" | "price" | "interval" | "intervalThreshold"
->;
+export type SubscriptionAddonPricing = AddonBundlePlanPricingOption;
 
 export type SubscriptionAddonPriceEffect = {
   sourcePricing: SubscriptionAddonPricing;

@@ -144,8 +144,6 @@ async function validateSelection(
     }
   }
 
-  if (pricingIdByComponent.size === 0) return invalidSelection("A bundle purchase needs at least one subscription");
-
   if ([...addonsByTarget.keys()].some((targetId) => !pricingIdByComponent.has(targetId))) {
     return invalidSelection("Every selected add-on must be attached to a selected subscription");
   }
@@ -198,12 +196,9 @@ async function validateSelection(
     return invalidSelection(`Every bundled add-on must be priced in ${currency}`);
   }
 
-  const pricingConflicts = await Promise.all(subscriptions.map((subscription) => hasAddonConflict(
-    tx,
-    subscription.pricing.id,
-    subscription.addons.map((addon) => addon.addonId),
-    startsAt,
-  )));
+  const pricingConflicts = await Promise.all(subscriptions.map((subscription) =>
+    hasAddonConflict(tx, subscription.pricing.id, subscription.addons.map((addon) => addon.addonId))
+  ));
 
   if (pricingConflicts.some(Boolean)) {
     return { status: "pricing-conflict", error: "Selected add-ons would apply conflicting subscription prices" };
@@ -287,12 +282,12 @@ async function getPreparedPurchase(database: Pick<typeof db, "query">, input: Bu
   });
   if (!purchase) return null;
   if (input.startDate && !Number.isFinite(new Date(input.startDate).getTime())) return invalidSelection("Start date is invalid");
-  const checkout = bundleCheckoutSchema.parse(purchase.subscriptions[0]?.metadata?.bundleCheckout ?? {}).checkout;
+  // Preparation saves the checkout on every subscription it creates, and a bundle always has one.
+  const { checkout } = bundleCheckoutSchema.parse(purchase.subscriptions[0]!.metadata.bundleCheckout);
   const requested = [...new Set(input.selectedOptionalComponentIds)].sort();
-  const selected = checkout?.selectedOptionalComponentIds;
-  const startMatches = checkout && (input.startDate ? new Date(input.startDate).toISOString() : null) === checkout.startDate;
+  const startMatches = (input.startDate ? new Date(input.startDate).toISOString() : null) === checkout.startDate;
   if (purchase.bundleId !== input.bundleId || purchase.memberId !== input.memberId || purchase.bundle.locationId !== input.locationId
-    || JSON.stringify(selected) !== JSON.stringify(requested) || !startMatches
+    || JSON.stringify(checkout.selectedOptionalComponentIds) !== JSON.stringify(requested) || !startMatches
     || purchase.subscriptions.some(sub => (sub.paymentType === "cash") !== (input.paymentType === "cash"))) {
     return { status: "intent-conflict" as const, error: "This checkout belongs to a different bundle selection. Resolve it before starting another checkout." };
   }

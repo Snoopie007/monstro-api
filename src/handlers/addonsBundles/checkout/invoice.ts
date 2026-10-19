@@ -84,7 +84,7 @@ async function quoteBundledSubscription(
     forPeriodStart: subscription.currentPeriodStart.toISOString(),
     forPeriodEnd: subscription.currentPeriodEnd.toISOString(),
   };
-  await tx.update(memberSubscriptions).set({ metadata: { ...subscription.metadata, bundleCheckout: { ...bundleCheckoutSchema.parse(subscription.metadata.bundleCheckout ?? {}), initialDownpayment: quote.isDownpayment } } }).where(eq(memberSubscriptions.id, subscription.id));
+  await tx.update(memberSubscriptions).set({ metadata: { ...subscription.metadata, bundleCheckout: { ...bundleCheckoutSchema.parse(subscription.metadata.bundleCheckout), initialDownpayment: quote.isDownpayment } } }).where(eq(memberSubscriptions.id, subscription.id));
   const feeLines = quote.feeLines.map((line) => {
     const subTotal = line.price * line.quantity - (line.discount ?? 0);
     const tax = line.tax ?? 0;
@@ -115,11 +115,12 @@ function quoteBundledAddon(
   purchaseId: string,
   addonPurchase: Awaited<ReturnType<typeof getBundledAddons>>[number],
 ) {
-  const { addon, bundleComponent } = addonPurchase;
-  const bundlePrice = bundleComponent?.priceOverride ?? null;
-  const price = bundleComponent && bundlePrice !== null
+  const { addon } = addonPurchase;
+  // Preparation gives every bundled add-on its component in the same transaction.
+  const bundleComponent = addonPurchase.bundleComponent!;
+  const price = bundleComponent.priceOverride !== null
     ? {
-      amount: bundlePrice,
+      amount: bundleComponent.priceOverride,
       source: { type: "bundle" as const, bundlePurchaseId: purchaseId, bundleComponentId: bundleComponent.id },
     }
     : { amount: addon.amount, source: { type: "addon" as const, addonId: addon.id } };

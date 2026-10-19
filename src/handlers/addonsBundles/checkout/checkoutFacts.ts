@@ -7,7 +7,7 @@ export const bundleCheckoutSchema = z.object({
   checkout: z.object({
     selectedOptionalComponentIds: z.array(z.string()),
     startDate: z.string().nullable(),
-  }).optional(),
+  }),
   // Whether the subscription's first charge was a downpayment, saved when the invoice is created.
   initialDownpayment: z.boolean().optional(),
 });

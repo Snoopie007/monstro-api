@@ -10,7 +10,7 @@ import { reconcileBundle } from "./checkout/settlement";
 
 // The add-on side of marking a cash invoice paid. The route calls these at fixed points.
 
-type Invoice = { id: string; memberSubscriptionAddonId: string | null; forPeriodStart: Date | null };
+type Invoice = { id: string; memberSubscriptionAddonId: string | null };
 type AddonPurchase = typeof memberSubscriptionAddons.$inferSelect;
 
 /** The add-on purchase an invoice pays for, read without locks. Undefined for other invoices. */
@@ -25,7 +25,7 @@ export async function markPaidBlocker(invoice: Invoice, addon: AddonPurchase | u
   if (!addon || hasEnded(addon.status)) return "Canceled or expired add-on invoices cannot be marked paid";
 
   // Paying the add-on would switch its subscription to a price another add-on also sets.
-  if (await hasSubscriptionConflict(db, addon.memberSubscriptionId, invoice.forPeriodStart ?? new Date())) {
+  if (await hasSubscriptionConflict(db, addon.memberSubscriptionId)) {
     return "This add-on would apply a conflicting subscription price";
   }
   return null;

@@ -54,7 +54,7 @@ function attributedCharge(invoice: Invoice, subscriptionIds: Set<string>, addonI
   for (const subscriptionId of subscriptionIds) {
     const billing = readSubscriptionInvoice(invoice, subscriptionId);
 
-    if (billing) total += billing.periods.reduce((sum, period) => sum + period.total, 0);
+    if (billing) total += billing.period.total;
   }
 
   for (const raw of invoice.items ?? []) {

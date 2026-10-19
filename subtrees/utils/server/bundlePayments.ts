@@ -402,12 +402,8 @@ async function claimBlocker(tx: InvoicePaymentTransaction, locked: LockedPayment
 
 /** The gateway and customer the invoice was prepared to charge. Throws when the
  * caller would charge through a different gateway, integration, customer or Stripe account. */
-function getChargeBinding({ invoice, transaction }: LockedPayment, gateway: InvoiceGateway, prior: Attempt | null) {
-  const binding = chargeBindingSchema.parse(transaction.metadata.chargeBinding ?? {
-    gatewayIntegrationId: invoice.metadata?.gatewayIntegrationId,
-    gatewayCustomerId: invoice.metadata?.gatewayCustomerId,
-    stripeAccountId: prior?.stripeAccountId,
-  });
+function getChargeBinding({ invoice, transaction }: LockedPayment, gateway: InvoiceGateway) {
+  const binding = chargeBindingSchema.parse(transaction.metadata.chargeBinding);
   const changed = gateway.service !== invoice.metadata?.gatewayService
     || gateway.integrationId !== binding.gatewayIntegrationId || gateway.customerId !== binding.gatewayCustomerId
     || (gateway.service === "stripe" && binding.stripeAccountId !== undefined && gateway.stripeAccountId !== binding.stripeAccountId);
@@ -439,7 +435,7 @@ function frozenRequest({ invoice, transaction }: LockedPayment, prior: Attempt |
 async function claimAttempt(tx: InvoicePaymentTransaction, locked: LockedPayment, input: CollectInput) {
   const { invoice, transaction } = locked;
   const prior = getAttempt(invoice);
-  const binding = getChargeBinding(locked, input.gateway, prior);
+  const binding = getChargeBinding(locked, input.gateway);
   const paymentMethodId = input.method?.paymentMethodId ?? transaction.paymentMethodId;
   if (!paymentMethodId) throw new Error(`Invoice ${invoice.id} has no saved payment method`);
   const paymentType = input.method?.paymentType ?? transaction.paymentType;

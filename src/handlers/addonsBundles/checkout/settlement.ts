@@ -209,12 +209,7 @@ async function activateWhenReady(locationId: string, bundlePurchaseId: string) {
     }
 
     const pricingConflicts = await Promise.all(pricedSubscriptions.map((subscription) =>
-      hasAddonConflict(
-        tx,
-        subscription.pricingId,
-        (addonsBySubscription.get(subscription.id) ?? []).map((addon) => addon.addonId),
-        new Date(),
-      )
+      hasAddonConflict(tx, subscription.pricingId, (addonsBySubscription.get(subscription.id) ?? []).map((addon) => addon.addonId))
     ));
 
     if (pricingConflicts.some(Boolean)) return { status: "pricing-conflict" as const };

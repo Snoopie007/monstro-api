@@ -40,8 +40,15 @@ export async function chargeBundleInvoice(
   charge?: typeof chargeWithGateway,
 ): Promise<InvoicePaymentOutcome> {
   try {
-    // SAFETY: pay rejects a Square charge over $0 without a location before claiming the attempt.
-    if (!charge && gateway.service === "square" && request.total > 0) return await chargeSquareBundle(request, gateway, gateway.metadata.squareLocationId!);
+    if (!charge && gateway.service === "square" && request.total > 0) {
+      const payment = await new SquarePaymentGateway(gateway.accessToken).createCharge(request.gateway.customerId, request.paymentMethodId, {
+        total: request.total, feesAmount: request.feesAmount, currency: z.enum(Currency).parse(request.currency),
+        referenceId: request.referenceId, note: request.note, idempotencyKey: request.attemptId,
+        // SAFETY: pay rejects a Square charge over $0 without a location before claiming the attempt.
+        squareLocationId: gateway.metadata.squareLocationId!,
+      });
+      return squareOutcome(payment, request);
+    }
     const result = await (charge ?? chargeWithGateway)({
       ...request, gateway, gatewayCustomerId: request.gateway.customerId,
       transactionId: request.attemptId, attempt: { id: request.attemptId, invoiceId: request.invoiceId },
@@ -79,16 +86,4 @@ export async function chargeBundleInvoice(
       paymentIntentId: intent?.id,
     };
   }
-}
-
-async function chargeSquareBundle(
-  request: InvoicePaymentRequest,
-  gateway: Extract<CheckoutContext["gateway"], { service: "square" }>,
-  squareLocationId: string,
-): Promise<InvoicePaymentOutcome> {
-  const payment = await new SquarePaymentGateway(gateway.accessToken).createCharge(request.gateway.customerId, request.paymentMethodId, {
-    total: request.total, feesAmount: request.feesAmount, currency: z.enum(Currency).parse(request.currency),
-    referenceId: request.referenceId, note: request.note, idempotencyKey: request.attemptId, squareLocationId,
-  });
-  return squareOutcome(payment, request);
 }

@@ -261,11 +261,11 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
 
         const billedBySubscription = Object.fromEntries(current.subscriptions.map((subscription) => [
             subscription.memberPlanPricingId,
-            invoice && app.readSubscriptionInvoice(invoice, subscription.id)?.periods,
+            invoice && app.readSubscriptionInvoice(invoice, subscription.id)?.period,
         ]));
         expect(billedBySubscription).toMatchObject({
-            "price-a": [{ total: 8000, commissionBasis: { type: "allowance", visitAllowance: 8 } }],
-            "price-b": [{ total: 4000, commissionBasis: { type: "fixed", sessionValueMinor: 500 } }],
+            "price-a": { total: 8000, commissionBasis: { type: "allowance", visitAllowance: 8 } },
+            "price-b": { total: 4000, commissionBasis: { type: "fixed", sessionValueMinor: 500 } },
         });
 
         const [addon] = current.addonPurchases;
@@ -641,7 +641,8 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
 
         const current = await state();
         expect(current.invoices).toMatchObject([{ id: "inv-solo", paid: true, status: "paid" }]);
-        expect(current.addonPurchases).toMatchObject([{ id: "msa-solo", status: "active", paidPeriodStartsAt: periodStart, nextBillAt: periodEnd }]);
+        // objectContaining, not toMatchObject: Bun's toMatchObject treats any two dates as equal.
+        expect(current.addonPurchases).toEqual([expect.objectContaining({ id: "msa-solo", status: "active", paidPeriodStartsAt: periodStart, nextBillAt: periodEnd })]);
         const jobs = await app.subscriptionAddonQueue.getJobs(["delayed", "waiting"]);
         expect(jobs.some((job) => job.name === "renew" && job.data.memberSubscriptionAddonId === "msa-solo")).toBe(true);
     });

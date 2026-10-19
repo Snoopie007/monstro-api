@@ -100,8 +100,7 @@ export async function cancelForRefund(input: BundleRefundInput): Promise<Cancele
 
     await tx.update(bundlePurchases).set({
       status: "canceled",
-      // Legacy purchases can start in the future. Respect their date constraint.
-      endedAt: purchase.endedAt ?? new Date(Math.max(now.getTime(), purchase.startsAt.getTime())),
+      endedAt: purchase.endedAt ?? now,
       cancelReason: input.reason?.trim() || purchase.cancelReason,
       updated: now,
     }).where(eq(bundlePurchases.id, purchase.id));

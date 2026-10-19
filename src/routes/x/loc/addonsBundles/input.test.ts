@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { validateAddonInput, validateBundleInput } from "./input";
 
 const options: AddonBundleCatalogOptions = {
+  currency: "USD",
   planPricings: [
     { id: "singles_regular", memberPlanId: "singles", planName: "Singles", name: "Regular", price: 50000, interval: "month", intervalThreshold: 1 },
     { id: "singles_member", memberPlanId: "singles", planName: "Singles", name: "Member", price: 35000, interval: "month", intervalThreshold: 1 },

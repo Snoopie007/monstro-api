@@ -1,5 +1,4 @@
 import type Stripe from "stripe";
-import { z } from "zod";
 import type { BundleRefundCharge } from "./charges";
 import { noRemainingRefund, refundableRemainder, submitRefund, type BundleRefundGateway } from "./gateway";
 import { refundKey, type BundleRefundAttempt, type BundleRefundOutcome } from "./state";
@@ -18,11 +17,6 @@ function stripeRefundOutcome(refund: Stripe.Refund, completed: number): BundleRe
       : status === "pending" ? "Stripe is still processing this refund. Check again later." : undefined,
   };
 }
-
-const stripePaymentReferenceSchema = z.union([
-  z.string(),
-  z.object({ id: z.string() }).transform((payment) => payment.id),
-]).nullable();
 
 export async function refundStripeCharge(
   gateway: Extract<BundleRefundGateway, { service: "stripe" }>,
@@ -45,9 +39,8 @@ export async function refundStripeCharge(
       return { status: "unknown", amount: attempt.amount, operation: "refund", error: "Stripe has not confirmed this refund. Staff must check it before another refund is submitted." };
     }
 
-    const paymentId = stripePaymentReferenceSchema.parse(refund.payment_intent);
-
-    if (paymentId !== attempt.paymentId || refund.amount !== attempt.amount) throw new Error("Stripe's refund does not match this charge and amount.");
+    // Refunds are read without expand, so payment_intent is the payment's id.
+    if (refund.payment_intent !== attempt.paymentId || refund.amount !== attempt.amount) throw new Error("Stripe's refund does not match this charge and amount.");
 
     const returned = completed + (refund.status === "succeeded" && !refunds.some((candidate) => candidate.id === refund.id) ? refund.amount : 0);
 

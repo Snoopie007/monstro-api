@@ -106,10 +106,11 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
             expect(responses.map(response => response.status)).toEqual([200, 200]);
             expect(await db.select().from(schema.transactions)).toHaveLength(1);
             expect(await db.select().from(schema.memberSubscriptions)).toEqual(before);
-            expect((await db.select().from(schema.memberSubscriptionAddons))[0]).toMatchObject({
+            // objectContaining, not toMatchObject: Bun's toMatchObject treats any two dates as equal.
+            expect((await db.select().from(schema.memberSubscriptionAddons))[0]).toEqual(expect.objectContaining({
                 status: "active", paidPeriodStartsAt: new Date("2026-09-26T12:00:00Z"),
                 paidPeriodEndsAt: new Date("2026-10-03T12:00:00Z"), nextBillAt: new Date("2026-10-03T12:00:00Z"),
-            });
+            }));
             // Each confirmation schedules the same renewal job, which the queue keeps once.
             expect(enqueueAddon).toHaveBeenCalled();
             for (const call of enqueueAddon.mock.calls) expect(call).toEqual(["renew", "addon-purchase", new Date("2026-10-03T12:00:00Z")]);
@@ -128,9 +129,9 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
             await sql`update member_subscription_addons set paid_period_starts_at='2026-10-03T12:00:00Z', paid_period_ends_at='2026-10-10T12:00:00Z', next_bill_at='2026-10-10T12:00:00Z'`;
 
             expect((await pay()).status).toBe(200);
-            // toEqual, not toMatchObject: Bun's toMatchObject treats any two dates as equal.
-            const [addon] = await db.select().from(schema.memberSubscriptionAddons);
-            expect([addon?.paidPeriodStartsAt, addon?.nextBillAt]).toEqual([new Date("2026-10-03T12:00:00Z"), new Date("2026-10-10T12:00:00Z")]);
+            expect((await db.select().from(schema.memberSubscriptionAddons))[0]).toEqual(expect.objectContaining({
+                status: "active", paidPeriodStartsAt: new Date("2026-10-03T12:00:00Z"), nextBillAt: new Date("2026-10-10T12:00:00Z"),
+            }));
         });
         test("a confirmation waits for an add-on cancel in progress instead of deadlocking", async () => {
             await addonInvoice("active");

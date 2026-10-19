@@ -66,36 +66,20 @@ async function getPurchaseRows(subscriptionId: string) {
   });
 }
 
-async function getPriceEffects(
-  basePricing: SubscriptionAddonPricing,
-  addonIds: string[],
-  at: Date,
-) {
-  if (addonIds.length === 0) return new Map<string, SubscriptionAddonPriceEffect>();
-
-  const mappings = await getActiveOverrides(db, basePricing.id, addonIds, at);
+async function getPriceEffects(basePricing: SubscriptionAddonPricing, addonIds: string[]) {
+  const mappings = await getActiveOverrides(db, basePricing.id, addonIds);
   if (mappings.length === 0) return new Map<string, SubscriptionAddonPriceEffect>();
 
-  const replacementIds = Array.from(new Set(mappings.map((mapping) => mapping.replacementPlanPricingId)));
-  const replacements = await db.select({
-    id: memberPlanPricing.id,
-    memberPlanId: memberPlanPricing.memberPlanId,
-    name: memberPlanPricing.name,
-    price: memberPlanPricing.price,
-    interval: memberPlanPricing.interval,
-    intervalThreshold: memberPlanPricing.intervalThreshold,
-    planName: memberPlans.name,
-  }).from(memberPlanPricing)
+  const replacements = await db.select(pricingColumns).from(memberPlanPricing)
     .innerJoin(memberPlans, eq(memberPlans.id, memberPlanPricing.memberPlanId))
-    .where(inArray(memberPlanPricing.id, replacementIds));
+    .where(inArray(memberPlanPricing.id, mappings.map((mapping) => mapping.replacementPlanPricingId)));
   const pricingById = new Map(replacements.map((pricing) => [pricing.id, pricing]));
 
-  return new Map(mappings.flatMap((mapping) => {
-    const replacementPricing = pricingById.get(mapping.replacementPlanPricingId);
-    return replacementPricing
-      ? [[mapping.addonId, { sourcePricing: basePricing, replacementPricing }] as const]
-      : [];
-  }));
+  // Each replacement price is a required foreign key, so every mapping has one.
+  return new Map(mappings.map((mapping) => [
+    mapping.addonId,
+    { sourcePricing: basePricing, replacementPricing: pricingById.get(mapping.replacementPlanPricingId)! },
+  ]));
 }
 
 function serializePurchase(
@@ -138,7 +122,7 @@ export async function getAddonOverview(
     ...purchaseRows.map((purchase) => purchase.addonId),
     ...addonRows.map((addon) => addon.id),
   ]));
-  const priceEffects = await getPriceEffects(subscription.basePricing, allAddonIds, periodStart);
+  const priceEffects = await getPriceEffects(subscription.basePricing, allAddonIds);
   const purchases = purchaseRows.map((purchase) => {
     const effective = isEffectivePurchase(purchase, periodStart, periodEnd);
     return serializePurchase(purchase, priceEffects.get(purchase.addonId) ?? null, effective);
@@ -228,12 +212,7 @@ export async function purchaseAddon(locationId: string, subscriptionId: string, 
     const duplicate = openPurchases.find((purchase) => purchase.addonId === addonId);
     if (duplicate) return { status: "already-purchased" as const, purchaseId: duplicate.id };
 
-    const hasPricingConflict = await hasAddonConflict(
-      tx,
-      subscription.basePricing.id,
-      [...openPurchases.map((purchase) => purchase.addonId), addonId],
-      new Date(),
-    );
+    const hasPricingConflict = await hasAddonConflict(tx, subscription.basePricing.id, [...openPurchases.map((purchase) => purchase.addonId), addonId]);
     if (hasPricingConflict) {
       return { status: "pricing-conflict" as const };
     }
