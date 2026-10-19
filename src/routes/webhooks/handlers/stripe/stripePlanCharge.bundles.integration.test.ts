@@ -21,7 +21,7 @@ describe.skipIf(!url)("bundles after guarded Stripe settlement", () => {
         mock.module("@/queues", () => ({
             enqueueAddonJob: enqueue,
             enqueueAddonRetry: async () => {},
-            scheduleBundledRenewal: async () => {},
+            scheduleRenewalRepair: async () => {},
             removeRenewalJobs: async () => {},
             removeAddonJobs: async () => {},
         }));

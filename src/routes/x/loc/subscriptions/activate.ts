@@ -12,7 +12,6 @@ import {
     scheduleRecursiveRenewal,
 } from "@/queues/subscriptions";
 import {
-    bundlePurchases,
     memberInvoices,
     memberLocations,
     memberSubscriptions,
@@ -45,6 +44,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid)),
             with: {
+                bundlePurchase: { columns: { id: true, invoiceId: true, status: true } },
                 member: {
                     columns: {
                         id: true,
@@ -80,11 +80,9 @@ export async function activateSubscriptionRoutes(app: Elysia) {
         if (!sub || !sub.member || !sub.location || !sub.pricing) {
             return status(404, { error: "Subscription billing definition not found" });
         }
-        if (sub.bundlePurchaseId) {
-            const owner = await db.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, sub.bundlePurchaseId), columns: { id: true, invoiceId: true, status: true } });
-            if (owner?.invoiceId && owner.status === "pending") {
-                return status(409, { error: "Complete this subscription's bundle payment", code: "BUNDLE_PAYMENT_REQUIRED", purchaseId: owner.id });
-            }
+        // A bundle's subscription activates through the bundle's own payment.
+        if (sub.bundlePurchase?.invoiceId && sub.bundlePurchase.status === "pending") {
+            return status(409, { error: "Complete this subscription's bundle payment", code: "BUNDLE_PAYMENT_REQUIRED", purchaseId: sub.bundlePurchase.id });
         }
         if (sub.parentId) {
             return status(400, { error: "Only root subscriptions can be activated", code: "SUBSCRIPTION_CHILD" });

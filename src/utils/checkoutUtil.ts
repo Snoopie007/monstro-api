@@ -48,8 +48,6 @@ export type ChargeWithGatewayInput = {
 	// invoice, so its webhook can settle a charge whose response was lost, and
 	// reports a held charge as uncertain instead of failed.
 	attempt?: { id: string; invoiceId: string };
-	// Square payment reference. Defaults to transactionId.
-	referenceId?: string;
 };
 
 export type ChargeWithGatewayResult =
@@ -272,7 +270,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 			total,
 			feesAmount,
 			currency: currency as Currency,
-			referenceId: input.referenceId ?? transactionId,
+			referenceId: transactionId,
 			squareLocationId,
 			note,
 			idempotencyKey: transactionId,

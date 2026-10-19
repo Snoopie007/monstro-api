@@ -1,6 +1,5 @@
 import { Elysia } from "elysia";
 import {
-	archiveAddon,
 	createAddon,
 	getAddon,
 	getCatalogOptions,
@@ -52,11 +51,4 @@ export const addonRoutes = new Elysia({ prefix: "/addons" })
 			case "versioned":
 				return status(200, { addon: result.addon });
 		}
-	}, { body: addonEditorBody })
-	.post("/:addonId/archive", async ({ locationId, params, status }) => {
-		const addon = await archiveAddon(locationId, params.addonId);
-
-		if (!addon) return status(404, { error: "Add-on not found" });
-
-		return status(200, { addon });
-	});
+	}, { body: addonEditorBody });

@@ -26,6 +26,8 @@ const leftJoin = mock(() => ({
     })),
 }));
 const updates: Record<string, unknown>[] = [];
+const findBundleChargeOwner = mock(async (): Promise<{ id: string; bundleId: string } | null> => null);
+let bundlePurchaseId: string | null = null;
 const db = {
     query: {
         memberSubscriptions: {
@@ -34,6 +36,7 @@ const db = {
                 memberId: "member-1",
                 currentPeriodEnd: new Date("2030-02-01T00:00:00.000Z"),
                 metadata: {},
+                bundlePurchaseId,
             })),
         },
         locationState: { findFirst: mock(async () => ({ paymentGatewayId: "integration-1" })) },
@@ -66,6 +69,7 @@ mock.module("@/libs/PaymentGateway", () => ({
 mock.module("@/queues/subscriptions", () => ({
     removeRenewalJobs: mock(async () => undefined),
 }));
+mock.module("@/handlers/addonsBundles/refund/charges", () => ({ findBundleChargeOwner }));
 
 const { cancelSubscriptionRoutes } = await import("./cancel");
 const app = await cancelSubscriptionRoutes(new Elysia({ prefix: "/:lid" }) as never);
@@ -73,10 +77,11 @@ const app = await cancelSubscriptionRoutes(new Elysia({ prefix: "/:lid" }) as ne
 beforeEach(() => {
     mock.clearAllMocks();
     updates.length = 0;
+    bundlePurchaseId = null;
 });
 
-test("finds a refundable subscription charge through its invoice instead of transaction metadata", async () => {
-    const response = await app.handle(new Request(
+function cancelNowWithRefund() {
+    return app.handle(new Request(
         "http://localhost/location-1/subscription-1/cancel",
         {
             method: "POST",
@@ -87,6 +92,10 @@ test("finds a refundable subscription charge through its invoice instead of tran
             }),
         },
     ));
+}
+
+test("finds a refundable subscription charge through its invoice instead of transaction metadata", async () => {
+    const response = await cancelNowWithRefund();
 
     expect(response.status).toBe(200);
     expect(leftJoin).toHaveBeenCalledTimes(1);
@@ -107,4 +116,26 @@ test("finds a refundable subscription charge through its invoice instead of tran
         refunded: true,
         refundedAmount: 1000,
     }));
+});
+
+test("a charge the bundle made is refunded with the bundle, not here", async () => {
+    bundlePurchaseId = "purchase-1";
+    findBundleChargeOwner.mockResolvedValueOnce({ id: "purchase-1", bundleId: "bundle-1" });
+
+    const response = await cancelNowWithRefund();
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: "BUNDLE_REFUND_BLOCKED" });
+    expect(findBundleChargeOwner).toHaveBeenCalledWith("location-1", "transaction-1");
+    expect(refundPayment).not.toHaveBeenCalled();
+    expect(updates).toHaveLength(0);
+});
+
+test("a renewal after the bundle ended is the subscription's own to refund", async () => {
+    bundlePurchaseId = "purchase-1";
+
+    const response = await cancelNowWithRefund();
+
+    expect(response.status).toBe(200);
+    expect(refundPayment).toHaveBeenCalledWith("square-payment-1", 1000, "Subscription cancellation");
 });

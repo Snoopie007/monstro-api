@@ -13,7 +13,7 @@ import {
 
 type InvoiceDatabase = Pick<PostgresJsDatabase, "select">;
 
-export type SubscriptionInvoiceScope = {
+type SubscriptionInvoiceScope = {
   subscriptionId: string;
   memberId: string;
   locationId: string;
@@ -35,7 +35,7 @@ type StoredInvoice = Pick<
   | "metadata"
 > & { items: readonly InvoiceItem[] | null };
 
-export type SubscriptionBillingPeriod = {
+type SubscriptionBillingPeriod = {
   forPeriodStart: Date | null;
   forPeriodEnd: Date | null;
   serviceAmountMinor: number;
@@ -44,7 +44,7 @@ export type SubscriptionBillingPeriod = {
   commissionBasis: CommissionBasis | null;
 };
 
-export type SubscriptionInvoiceBilling = {
+type SubscriptionInvoiceBilling = {
   invoiceId: string;
   transactionId: string | null;
   currency: string | null;
@@ -188,32 +188,8 @@ export async function countPaidSubscriptionInvoices(
     .from(memberInvoices)
     .where(and(subscriptionInvoiceWhere(scope), eq(memberInvoices.paid, true)));
 
-  let count = 0;
-
-  for (const invoice of invoices) {
-    if (readSubscriptionInvoice(invoice, scope.subscriptionId)) count++;
-  }
-
-  return count;
+  return invoices.filter((invoice) => readSubscriptionInvoice(invoice, scope.subscriptionId)).length;
 }
-
-type CommissionValue = {
-  serviceAmountMinor: number;
-  visitAllowance: number;
-  snapshot: {
-    aligned?: boolean;
-    invoiceId?: string;
-    transactionId?: string;
-    periodStart?: Date;
-    periodEnd?: Date;
-    originalAllowance?: number;
-    allowanceInterval?: string;
-    billingInterval?: string;
-    billingThreshold?: number;
-    sessionCommissionValueMinor?: number | null;
-    serviceAmountMinor?: number;
-  };
-};
 
 /** Component snapshots are authoritative. The supplied legacy basis/fallback only
  * applies to scalar invoices and subscriptions without an item billing record. */
@@ -225,7 +201,7 @@ export async function getSubscriptionCommissionValue(
     legacyBasis: CommissionAllowance | null;
     fallbackSessionValueMinor: number | null;
   },
-): Promise<CommissionValue | null> {
+) {
   const rows = await db
     .select({ invoice: memberInvoices, transaction: transactions })
     .from(memberInvoices)

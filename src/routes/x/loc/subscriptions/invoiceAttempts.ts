@@ -3,13 +3,6 @@ import { memberInvoices } from "@/subtrees/schemas";
 import type { SubscriptionBillingAttempt } from "@/subtrees/types/subscriptionBilling";
 import { and, eq, sql } from "drizzle-orm";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
-import { isPaymentDecline, paymentFailureFromError } from "@/subtrees/utils/workflow/payments";
-import {
-    chargeWithGateway,
-    stripePaymentIntentFromError,
-    type ChargeWithGatewayInput,
-    type ChargeWithGatewayResult,
-} from "@/utils/checkoutUtil";
 
 export type InvoiceAttemptClaim =
     | { ok: true; invoiceId: string; attempt: SubscriptionBillingAttempt; attemptCount: number }
@@ -77,7 +70,6 @@ export async function claimInvoiceAttempt(input: {
 }
 
 const UNSETTLED_STATUSES = ["processing", "requires_action", "unknown"] as const;
-type UnsettledStatus = (typeof UNSETTLED_STATUSES)[number];
 
 export async function saveInvoiceAttemptResult(input: {
     invoiceId: string;
@@ -119,123 +111,4 @@ export async function saveInvoiceAttemptResult(input: {
             await dispatchPaymentFailed(tx, invoice.transactionId);
         }
     });
-}
-
-// The gateway's answer, or the error it threw instead.
-type GatewayAnswer =
-    | { charge: ChargeWithGatewayResult; error?: never }
-    | { charge?: never; error: unknown };
-
-type InvoiceAttemptCharge = GatewayAnswer & (
-    | { status: "succeeded"; paymentIntentId: string }
-    | { status: "failed"; paymentIntentId?: string; failure: { reason: string; code: string } }
-    | { status: UnsettledStatus; paymentIntentId?: string }
-);
-
-type ClassifiedAttempt = { attempt: InvoiceAttemptCharge; workflowDecline: boolean };
-
-/** A charge that neither succeeded nor declined outright. A PaymentIntent that
- * needs a new payment method, or was canceled, still counts as a failure. */
-function classifyUnsettled(
-    answer: GatewayAnswer,
-    paymentIntent: { id?: string; status?: string },
-    message: string,
-): InvoiceAttemptCharge {
-    const { id, status } = paymentIntent;
-
-    if (status === "requires_payment_method" || status === "canceled") {
-        return { ...answer, status: "failed", paymentIntentId: id, failure: { reason: message, code: status } };
-    }
-
-    if (status === "processing" || status === "requires_action") {
-        return { ...answer, status, paymentIntentId: id };
-    }
-
-    return { ...answer, status: "unknown", paymentIntentId: id };
-}
-
-function classifyAnswer(charge: ChargeWithGatewayResult, service: string): ClassifiedAttempt {
-    switch (charge.status) {
-        case "approved":
-            return {
-                attempt: { charge, status: "succeeded", paymentIntentId: charge.paymentIntentId },
-                workflowDecline: false,
-            };
-        case "failed":
-            return {
-                attempt: {
-                    charge,
-                    status: "failed",
-                    paymentIntentId: charge.paymentIntentId,
-                    failure: { reason: charge.failureReason, code: charge.failureCode },
-                },
-                workflowDecline: isPaymentDecline(
-                    service,
-                    charge.failureCode,
-                    charge.gatewayMetadata.squarePaymentStatus,
-                    charge.gatewayMetadata.authorizeResponseCode,
-                ),
-            };
-        case "uncertain":
-            return {
-                attempt: classifyUnsettled(
-                    { charge },
-                    { id: charge.paymentIntentId, status: charge.paymentIntentStatus },
-                    charge.message,
-                ),
-                workflowDecline: false,
-            };
-    }
-}
-
-function classifyError(error: unknown): ClassifiedAttempt {
-    const decline = paymentFailureFromError(error);
-    const paymentIntent = stripePaymentIntentFromError(error);
-
-    if (decline) {
-        return {
-            attempt: {
-                error,
-                status: "failed",
-                paymentIntentId: decline.paymentIntentId ?? paymentIntent?.id,
-                failure: { reason: decline.failureReason, code: decline.failureCode },
-            },
-            workflowDecline: true,
-        };
-    }
-
-    const message = error instanceof Error ? error.message : "Payment outcome is unknown";
-
-    return {
-        attempt: classifyUnsettled({ error }, paymentIntent ?? {}, message),
-        workflowDecline: false,
-    };
-}
-
-/** Charges a claimed attempt and records the gateway's answer on the invoice,
- * so an uncertain or lost answer is never charged twice. Shared by subscription
- * retries and bundle checkout. */
-export async function chargeInvoiceAttempt(
-    input: { invoiceId: string; attemptId: string; charge: ChargeWithGatewayInput },
-    charge = chargeWithGateway,
-): Promise<InvoiceAttemptCharge> {
-    let classified: ClassifiedAttempt;
-
-    try {
-        classified = classifyAnswer(await charge(input.charge), input.charge.gateway.service);
-    } catch (error) {
-        classified = classifyError(error);
-    }
-
-    const { attempt, workflowDecline } = classified;
-    await saveInvoiceAttemptResult({
-        invoiceId: input.invoiceId,
-        attemptId: input.attemptId,
-        status: attempt.status,
-        paymentIntentId: attempt.paymentIntentId,
-        retryable: attempt.status === "failed",
-        workflowDecline,
-    });
-
-    return attempt;
 }

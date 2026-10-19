@@ -22,7 +22,8 @@ import type {
   BundleComponent,
   BundleEditorInput,
 } from "@/subtrees/types";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
+import { getComponentNames } from "@/handlers/addonsBundles/bundleSummary";
 
 type AddonRow = Addon & { planPriceOverrides: AddonPlanPriceOverride[] };
 type BundleRow = Bundle & { components: BundleComponent[] };
@@ -45,27 +46,7 @@ function serializeAddon(addon: AddonRow): AddonCatalogItem {
 async function serializeBundles(reader: DbReader, bundleRows: BundleRow[]): Promise<BundleCatalogItem[]> {
   if (bundleRows.length === 0) return [];
 
-  const planPricingIds = Array.from(new Set(bundleRows.flatMap((bundle) =>
-    bundle.components.flatMap((component) => component.memberPlanPricingId ? [component.memberPlanPricingId] : [])
-  )));
-  const addonIds = Array.from(new Set(bundleRows.flatMap((bundle) =>
-    bundle.components.flatMap((component) => component.addonId ? [component.addonId] : [])
-  )));
-
-  const planPricingRows = planPricingIds.length === 0 ? [] : await reader.select({
-    id: memberPlanPricing.id,
-    name: memberPlanPricing.name,
-    planName: memberPlans.name,
-  }).from(memberPlanPricing)
-    .innerJoin(memberPlans, eq(memberPlans.id, memberPlanPricing.memberPlanId))
-    .where(inArray(memberPlanPricing.id, planPricingIds));
-  const addonRows = addonIds.length === 0 ? [] : await reader.select({
-    id: addons.id,
-    name: addons.name,
-  }).from(addons).where(inArray(addons.id, addonIds));
-
-  const planPricingNames = new Map(planPricingRows.map((pricing) => [pricing.id, `${pricing.planName} · ${pricing.name}`]));
-  const addonNames = new Map(addonRows.map((addon) => [addon.id, addon.name]));
+  const { pricingNames, addonNames } = await getComponentNames(reader, bundleRows.flatMap((bundle) => bundle.components));
 
   return bundleRows.map((bundle) => ({
     ...bundle,
@@ -76,7 +57,7 @@ async function serializeBundles(reader: DbReader, bundleRows: BundleRow[]): Prom
       created: component.created.toISOString(),
       updated: component.updated?.toISOString() ?? null,
       displayName: component.memberPlanPricingId
-        ? planPricingNames.get(component.memberPlanPricingId)!
+        ? pricingNames.get(component.memberPlanPricingId)!
         : addonNames.get(component.addonId!)!,
       targetMemberPlanPricingId: component.targetSubscriptionComponentId
         ? bundle.components.find((candidate) => candidate.id === component.targetSubscriptionComponentId)?.memberPlanPricingId ?? null
@@ -87,9 +68,7 @@ async function serializeBundles(reader: DbReader, bundleRows: BundleRow[]): Prom
 
 async function getAddonRows(reader: DbReader, locationId: string, addonId?: string) {
   return reader.query.addons.findMany({
-    where: addonId
-      ? and(eq(addons.locationId, locationId), eq(addons.id, addonId))
-      : eq(addons.locationId, locationId),
+    where: and(eq(addons.locationId, locationId), addonId ? eq(addons.id, addonId) : undefined),
     with: {
       planPriceOverrides: {
         where: eq(addonPlanPriceOverrides.archived, false),
@@ -128,6 +107,11 @@ async function insertAddonMappings(
   })));
 }
 
+/** The add-on columns the editor sets. */
+function addonFields({ name, description, amount, billingType, interval, intervalThreshold, classAccessOverride }: AddonEditorInput) {
+  return { name: name.trim(), description, amount, billingType, interval, intervalThreshold, classAccessOverride };
+}
+
 async function insertAddonDefinition(
   tx: DbTransaction,
   locationId: string,
@@ -135,17 +119,8 @@ async function insertAddonDefinition(
 ) {
   const location = await tx.query.locations.findFirst({ where: eq(locations.id, locationId), columns: { country: true } });
   if (!location) throw new Error("Location was not found");
-  const [addon] = await tx.insert(addons).values({
-    locationId,
-    name: input.name.trim(),
-    description: input.description,
-    amount: input.amount,
-    currency: getCurrency(location.country),
-    billingType: input.billingType,
-    interval: input.interval,
-    intervalThreshold: input.intervalThreshold,
-    classAccessOverride: input.classAccessOverride,
-  }).returning({ id: addons.id });
+  const [addon] = await tx.insert(addons).values({ locationId, ...addonFields(input), currency: getCurrency(location.country) })
+    .returning({ id: addons.id });
   if (!addon) throw new Error("Add-on was not created");
 
   await insertAddonMappings(tx, addon.id, input);
@@ -190,16 +165,19 @@ async function insertBundleComponents(
   }
 }
 
+/** A plan price with its plan's name, as the add-on and bundle pickers show it. */
+export const pricingColumns = {
+  id: memberPlanPricing.id,
+  memberPlanId: memberPlanPricing.memberPlanId,
+  name: memberPlanPricing.name,
+  price: memberPlanPricing.price,
+  interval: memberPlanPricing.interval,
+  intervalThreshold: memberPlanPricing.intervalThreshold,
+  planName: memberPlans.name,
+};
+
 export async function getCatalogOptions(locationId: string): Promise<AddonBundleCatalogOptions> {
-  const planPricings = await db.select({
-    id: memberPlanPricing.id,
-    memberPlanId: memberPlanPricing.memberPlanId,
-    name: memberPlanPricing.name,
-    price: memberPlanPricing.price,
-    interval: memberPlanPricing.interval,
-    intervalThreshold: memberPlanPricing.intervalThreshold,
-    planName: memberPlans.name,
-  }).from(memberPlanPricing)
+  const planPricings = await db.select(pricingColumns).from(memberPlanPricing)
     .innerJoin(memberPlans, eq(memberPlans.id, memberPlanPricing.memberPlanId))
     .where(and(
       eq(memberPlans.locationId, locationId),
@@ -239,17 +217,8 @@ export async function createAddon(locationId: string, input: AddonEditorInput) {
 
 export async function updateAddon(locationId: string, addonId: string, input: AddonEditorInput) {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`
-      select ${addons.id}
-      from ${addons}
-      where ${addons.id} = ${addonId}
-        and ${addons.locationId} = ${locationId}
-      for update
-    `);
-    const existing = await tx.query.addons.findFirst({
-      where: and(eq(addons.id, addonId), eq(addons.locationId, locationId)),
-      columns: { id: true, archived: true, currency: true },
-    });
+    const [existing] = await tx.select({ archived: addons.archived, currency: addons.currency }).from(addons)
+      .where(and(eq(addons.id, addonId), eq(addons.locationId, locationId))).for("update");
     if (!existing) return { status: "not-found" as const };
 
     const location = await tx.query.locations.findFirst({ where: eq(locations.id, locationId), columns: { country: true } });
@@ -271,17 +240,7 @@ export async function updateAddon(locationId: string, addonId: string, input: Ad
       return { status: "versioned" as const, addon: replacement };
     }
 
-    await tx.update(addons).set({
-      name: input.name.trim(),
-      description: input.description,
-      amount: input.amount,
-      currency: existing.currency,
-      billingType: input.billingType,
-      interval: input.interval,
-      intervalThreshold: input.intervalThreshold,
-      classAccessOverride: input.classAccessOverride,
-      updated: now,
-    }).where(eq(addons.id, addonId));
+    await tx.update(addons).set({ ...addonFields(input), updated: now }).where(eq(addons.id, addonId));
 
     await tx.update(addonPlanPriceOverrides).set({
       archived: true,
@@ -297,15 +256,6 @@ export async function updateAddon(locationId: string, addonId: string, input: Ad
   });
 }
 
-export async function archiveAddon(locationId: string, addonId: string) {
-  const [addon] = await db.update(addons).set({
-    archived: true,
-    updated: new Date(),
-  }).where(and(eq(addons.id, addonId), eq(addons.locationId, locationId))).returning({ id: addons.id });
-
-  return addon ? getAddon(locationId, addonId) : null;
-}
-
 export async function listBundles(locationId: string) {
   return serializeBundles(db, await getBundleRows(db, locationId));
 }
@@ -315,33 +265,27 @@ export async function getBundle(locationId: string, bundleId: string, reader: Db
   return bundleItems[0] ?? null;
 }
 
+/** Inserts a bundle with its components and returns the new bundle's id. */
+async function insertBundleDefinition(tx: DbTransaction, locationId: string, input: BundleEditorInput) {
+  const [bundle] = await tx.insert(bundles).values({ locationId, name: input.name.trim(), description: input.description })
+    .returning({ id: bundles.id });
+  if (!bundle) throw new Error("Bundle was not created");
+
+  await insertBundleComponents(tx, bundle.id, input);
+  return bundle.id;
+}
+
 export async function createBundle(locationId: string, input: BundleEditorInput) {
   return db.transaction(async (tx) => {
-    const [bundle] = await tx.insert(bundles).values({
-      locationId,
-      name: input.name.trim(),
-      description: input.description,
-    }).returning();
-    if (!bundle) throw new Error("Bundle was not created");
-
-    await insertBundleComponents(tx, bundle.id, input);
-    return (await getBundle(locationId, bundle.id, tx))!;
+    const bundleId = await insertBundleDefinition(tx, locationId, input);
+    return (await getBundle(locationId, bundleId, tx))!;
   });
 }
 
 export async function updateBundle(locationId: string, bundleId: string, input: BundleEditorInput) {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`
-      select ${bundles.id}
-      from ${bundles}
-      where ${bundles.id} = ${bundleId}
-        and ${bundles.locationId} = ${locationId}
-      for update
-    `);
-    const existing = await tx.query.bundles.findFirst({
-      where: and(eq(bundles.id, bundleId), eq(bundles.locationId, locationId)),
-      columns: { id: true, archived: true },
-    });
+    const [existing] = await tx.select({ archived: bundles.archived }).from(bundles)
+      .where(and(eq(bundles.id, bundleId), eq(bundles.locationId, locationId))).for("update");
     if (!existing) return { status: "not-found" as const };
 
     const purchase = await tx.query.bundlePurchases.findFirst({
@@ -353,17 +297,10 @@ export async function updateBundle(locationId: string, bundleId: string, input: 
     if (purchase) {
       if (existing.archived) return { status: "archived" as const };
 
-      const [replacement] = await tx.insert(bundles).values({
-        locationId,
-        name: input.name.trim(),
-        description: input.description,
-      }).returning({ id: bundles.id });
-      if (!replacement) throw new Error("Replacement bundle was not created");
-
-      await insertBundleComponents(tx, replacement.id, input);
+      const replacementId = await insertBundleDefinition(tx, locationId, input);
       await tx.update(bundles).set({ archived: true, updated: now }).where(eq(bundles.id, bundleId));
 
-      return { status: "versioned" as const, bundle: (await getBundle(locationId, replacement.id, tx))! };
+      return { status: "versioned" as const, bundle: (await getBundle(locationId, replacementId, tx))! };
     }
 
     await tx.update(bundles).set({
@@ -376,13 +313,4 @@ export async function updateBundle(locationId: string, bundleId: string, input: 
 
     return { status: "updated" as const, bundle: (await getBundle(locationId, bundleId, tx))! };
   });
-}
-
-export async function archiveBundle(locationId: string, bundleId: string) {
-  const [bundle] = await db.update(bundles).set({
-    archived: true,
-    updated: new Date(),
-  }).where(and(eq(bundles.id, bundleId), eq(bundles.locationId, locationId))).returning({ id: bundles.id });
-
-  return bundle ? getBundle(locationId, bundleId) : null;
 }

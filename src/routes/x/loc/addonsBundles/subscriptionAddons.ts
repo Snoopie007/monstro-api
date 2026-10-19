@@ -1,13 +1,12 @@
 import { db } from "@/db/db";
 import {
   addons,
-  memberInvoices,
   memberPlanPricing,
   memberPlans,
   memberSubscriptionAddons,
   memberSubscriptions,
 } from "@/subtrees/schemas";
-import { hasEnded } from "@/subtrees/utils/addonsBundles";
+import { hasEnded, OPEN_ADDON_PURCHASE_STATUSES } from "@/subtrees/utils/addonsBundles";
 import type {
   AvailableSubscriptionAddon,
   SubscriptionAddonOverview,
@@ -15,27 +14,22 @@ import type {
   SubscriptionAddonPricing,
   SubscriptionAddonPurchaseItem,
 } from "@/subtrees/types";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { getSubscriptionBundle } from "@/handlers/addonsBundles/bundleSummary";
-import { lockBundleComponents } from "@/handlers/addonsBundles/bundleLocks";
-import {
-  hasAddonConflict,
-  getActiveOverrides,
-  OPEN_ADDON_PURCHASE_STATUSES,
-} from "@/handlers/addonsBundles/addonPricing";
-
-type SubscriptionContext = {
-  id: string;
-  memberId: string;
-  status: string;
-  memberPlanPricingId: string;
-  basePricing: SubscriptionAddonPricing;
-};
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { getBundleSummary } from "@/handlers/addonsBundles/bundleSummary";
+import { pricingColumns } from "./catalog";
+import { lockBundle } from "@/subtrees/utils/server/bundlePayments";
+import { cancelAddonsNow } from "@/subtrees/utils/server/addonInvoices";
+import { hasAddonConflict, getActiveOverrides } from "@/subtrees/utils/server/addonPricing";
 
 type PurchaseRow = Awaited<ReturnType<typeof getPurchaseRows>>[number];
 
 function serializeDate(value: Date | null) {
   return value?.toISOString() ?? null;
+}
+
+/** The add-on fields a subscription's add-on list shows. */
+function addonSummary({ id, name, description, amount, currency, billingType, interval, intervalThreshold, classAccessOverride }: typeof addons.$inferSelect) {
+  return { id, name, description, amount, currency, billingType, interval, intervalThreshold, classAccessOverride };
 }
 
 function isEffectivePurchase(purchase: PurchaseRow, periodStart: Date, periodEnd: Date) {
@@ -46,19 +40,12 @@ function isEffectivePurchase(purchase: PurchaseRow, periodStart: Date, periodEnd
   return true;
 }
 
-async function getSubscriptionContext(database: Pick<typeof db, "select">, locationId: string, subscriptionId: string): Promise<SubscriptionContext | null> {
+/** The subscription's status, bundle and current plan price. Null without a plan price. */
+async function getSubscriptionContext(database: Pick<typeof db, "select">, locationId: string, subscriptionId: string) {
   const [row] = await database.select({
-    id: memberSubscriptions.id,
-    memberId: memberSubscriptions.memberId,
     status: memberSubscriptions.status,
-    memberPlanPricingId: memberSubscriptions.memberPlanPricingId,
-    pricingId: memberPlanPricing.id,
-    pricingName: memberPlanPricing.name,
-    pricingPrice: memberPlanPricing.price,
-    pricingInterval: memberPlanPricing.interval,
-    pricingIntervalThreshold: memberPlanPricing.intervalThreshold,
-    planId: memberPlans.id,
-    planName: memberPlans.name,
+    bundlePurchaseId: memberSubscriptions.bundlePurchaseId,
+    basePricing: pricingColumns,
   }).from(memberSubscriptions)
     .innerJoin(memberPlanPricing, eq(memberPlanPricing.id, memberSubscriptions.memberPlanPricingId))
     .innerJoin(memberPlans, eq(memberPlans.id, memberPlanPricing.memberPlanId))
@@ -68,23 +55,7 @@ async function getSubscriptionContext(database: Pick<typeof db, "select">, locat
     ))
     .limit(1);
 
-  if (!row || !row.memberPlanPricingId) return null;
-
-  return {
-    id: row.id,
-    memberId: row.memberId,
-    status: row.status,
-    memberPlanPricingId: row.memberPlanPricingId,
-    basePricing: {
-      id: row.pricingId,
-      memberPlanId: row.planId,
-      name: row.pricingName,
-      planName: row.planName,
-      price: row.pricingPrice,
-      interval: row.pricingInterval,
-      intervalThreshold: row.pricingIntervalThreshold,
-    },
-  };
+  return row ?? null;
 }
 
 async function getPurchaseRows(subscriptionId: string) {
@@ -143,17 +114,7 @@ function serializePurchase(
     endedAt: serializeDate(purchase.endedAt),
     created: purchase.created.toISOString(),
     updated: serializeDate(purchase.updated),
-    addon: {
-      id: purchase.addon.id,
-      name: purchase.addon.name,
-      description: purchase.addon.description,
-      amount: purchase.addon.amount,
-      currency: purchase.addon.currency,
-      billingType: purchase.addon.billingType,
-      interval: purchase.addon.interval,
-      intervalThreshold: purchase.addon.intervalThreshold,
-      classAccessOverride: purchase.addon.classAccessOverride,
-    },
+    addon: addonSummary(purchase.addon),
     priceEffect,
     effective,
   };
@@ -171,7 +132,7 @@ export async function getAddonOverview(
   const [purchaseRows, addonRows, bundlePurchase] = await Promise.all([
     getPurchaseRows(subscriptionId),
     db.select().from(addons).where(and(eq(addons.locationId, locationId), eq(addons.archived, false))).orderBy(asc(addons.name)),
-    getSubscriptionBundle(locationId, subscriptionId),
+    subscription.bundlePurchaseId ? getBundleSummary(locationId, subscription.bundlePurchaseId) : null,
   ]);
   const allAddonIds = Array.from(new Set([
     ...purchaseRows.map((purchase) => purchase.addonId),
@@ -214,15 +175,7 @@ export async function getAddonOverview(
     }
 
     return {
-      id: addon.id,
-      name: addon.name,
-      description: addon.description,
-      amount: addon.amount,
-      currency: addon.currency,
-      billingType: addon.billingType,
-      interval: addon.interval,
-      intervalThreshold: addon.intervalThreshold,
-      classAccessOverride: addon.classAccessOverride,
+      ...addonSummary(addon),
       priceEffect,
       unavailableReason,
     };
@@ -251,13 +204,8 @@ export async function getAddonOverview(
 
 export async function purchaseAddon(locationId: string, subscriptionId: string, addonId: string) {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`
-      select ${memberSubscriptions.id}
-      from ${memberSubscriptions}
-      where ${memberSubscriptions.id} = ${subscriptionId}
-        and ${memberSubscriptions.locationId} = ${locationId}
-      for update
-    `);
+    await tx.select({ id: memberSubscriptions.id }).from(memberSubscriptions)
+      .where(and(eq(memberSubscriptions.id, subscriptionId), eq(memberSubscriptions.locationId, locationId))).for("update");
     const subscription = await getSubscriptionContext(tx, locationId, subscriptionId);
     if (!subscription) return { status: "subscription-not-found" as const };
     if (!['active', 'trialing'].includes(subscription.status)) {
@@ -305,17 +253,12 @@ export async function cancelAddon(locationId: string, purchaseId: string, subscr
     const owner = await tx.query.memberSubscriptionAddons.findFirst({
       where: eq(memberSubscriptionAddons.id, purchaseId), columns: { bundlePurchaseId: true },
     });
-    if (owner?.bundlePurchaseId) await lockBundleComponents(tx, owner.bundlePurchaseId);
+    if (owner?.bundlePurchaseId) await lockBundle(tx, owner.bundlePurchaseId);
 
-    await tx.execute(sql`
-      select ${memberSubscriptionAddons.id}
-      from ${memberSubscriptionAddons}
-      inner join ${memberSubscriptions}
-        on ${memberSubscriptions.id} = ${memberSubscriptionAddons.memberSubscriptionId}
-      where ${memberSubscriptionAddons.id} = ${purchaseId}
-        and ${memberSubscriptions.locationId} = ${locationId}
-      for update
-    `);
+    // Locks the add-on and its subscription, scoped to the location.
+    await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons)
+      .innerJoin(memberSubscriptions, eq(memberSubscriptions.id, memberSubscriptionAddons.memberSubscriptionId))
+      .where(and(eq(memberSubscriptionAddons.id, purchaseId), eq(memberSubscriptions.locationId, locationId))).for("update");
     const purchase = await tx.query.memberSubscriptionAddons.findFirst({
       where: eq(memberSubscriptionAddons.id, purchaseId),
       with: {
@@ -345,28 +288,10 @@ export async function cancelAddon(locationId: string, purchaseId: string, subscr
       ? purchase.paidPeriodEndsAt
       : now;
     const cancelImmediately = runAt <= now;
-    await tx.update(memberSubscriptionAddons).set(cancelImmediately ? {
-      status: "canceled",
-      cancelAt: now,
-      canceledAt: now,
-      endedAt: now,
-      nextBillAt: null,
-      updated: now,
-    } : {
-      cancelAt: runAt,
-      nextBillAt: null,
-      updated: now,
-    }).where(eq(memberSubscriptionAddons.id, purchaseId));
 
-    if (cancelImmediately) {
-      await tx.update(memberInvoices).set({
-        status: "void",
-        updated: now,
-      }).where(and(
-        eq(memberInvoices.memberSubscriptionAddonId, purchaseId),
-        inArray(memberInvoices.status, ["draft", "sent", "unpaid"]),
-      ));
-    }
+    // A paid period runs to its end; anything else ends now.
+    if (cancelImmediately) await cancelAddonsNow(tx, [purchaseId], now);
+    else await tx.update(memberSubscriptionAddons).set({ cancelAt: runAt, nextBillAt: null, updated: now }).where(eq(memberSubscriptionAddons.id, purchaseId));
 
     return { status: "canceled" as const, runAt: cancelImmediately ? null : runAt };
   });
@@ -375,16 +300,4 @@ export async function cancelAddon(locationId: string, purchaseId: string, subscr
 export async function getAddonPurchase(locationId: string, subscriptionId: string, purchaseId: string) {
   const overview = await getAddonOverview(locationId, subscriptionId);
   return overview?.purchases.find((purchase) => purchase.id === purchaseId) ?? null;
-}
-
-export async function getAddonRenewal(locationId: string, purchaseId: string, subscriptionId?: string) {
-  const purchase = await db.query.memberSubscriptionAddons.findFirst({
-    where: eq(memberSubscriptionAddons.id, purchaseId),
-    columns: { id: true, status: true, nextBillAt: true, bundlePurchaseId: true, memberSubscriptionId: true },
-    with: { subscription: { columns: { locationId: true } } },
-  });
-  if (!purchase || purchase.subscription?.locationId !== locationId || (subscriptionId && purchase.memberSubscriptionId !== subscriptionId)) return null;
-  return purchase.status === "active" && purchase.nextBillAt
-    ? { purchaseId: purchase.id, runAt: purchase.nextBillAt, bundlePurchaseId: purchase.bundlePurchaseId }
-    : { purchaseId: purchase.id, runAt: null, bundlePurchaseId: purchase.bundlePurchaseId };
 }

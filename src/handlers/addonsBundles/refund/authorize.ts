@@ -30,11 +30,7 @@ async function reconcileAuthorizeRefund(
   if (!attempt.id) {
     // A still-settled original charge says nothing about an interrupted credit.
     // Authorize has no idempotent follow-on operation, so never resubmit it.
-    if (attempt.operation === "void" && details.transactionStatus === "voided") {
-      return completedOriginal(attempt, Math.min(charge.transaction.total, authorizeAmount(details)));
-    }
-
-    if (details.transactionStatus === "refunded") {
+    if ((attempt.operation === "void" && details.transactionStatus === "voided") || details.transactionStatus === "refunded") {
       return completedOriginal(attempt, Math.min(charge.transaction.total, authorizeAmount(details)));
     }
 
@@ -122,15 +118,10 @@ export async function refundAuthorizeCharge(
   }
 
   return submitRefund(charge, attempt, { amount, operation }, async () => {
-    let refund: AuthorizeTransactionDetails;
-
-    if (operation === "void") {
-      refund = await gateway.client.voidTransaction(attempt.paymentId);
-    } else {
-      if (!last4) throw new Error("Authorize.net card details are unavailable.");
-
-      refund = await gateway.client.refundTransaction(attempt.paymentId, amount, last4);
-    }
+    // A credit without the card's last four digits was rejected above.
+    const refund = operation === "void"
+      ? await gateway.client.voidTransaction(attempt.paymentId)
+      : await gateway.client.refundTransaction(attempt.paymentId, amount, last4!);
 
     // Approved voids release the whole charge. An approved credit still needs
     // settlement, which a later lookup or follow-on webhook confirms.

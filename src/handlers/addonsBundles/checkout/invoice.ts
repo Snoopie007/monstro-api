@@ -9,7 +9,6 @@ import {
   memberSubscriptions,
   transactions,
 } from "@/subtrees/schemas";
-import type { Interval } from "@/subtrees/types";
 import {
   assertCompleteBundleInvoice,
   commissionAllowanceSchema,
@@ -17,7 +16,7 @@ import {
   type CommissionBasis,
   type ItemBilling,
 } from "@/subtrees/utils/invoiceItems";
-import { nextBillingBoundary } from "@/subtrees/utils/subscriptionBilling";
+import { addonPeriodEnd } from "@/subtrees/utils/addonsBundles";
 import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type { CheckoutContext } from "@/utils/getCheckoutContext";
 import { getCurrency } from "@/utils/getCurrency";
@@ -107,19 +106,6 @@ async function quoteBundledSubscription(
   };
 
   return { items: [serviceLine, ...feeLines], platformFee: quote.chargeDetails.feesAmount };
-}
-
-function addonPeriodEnd(
-  addon: { id: string; billingType: "one_time" | "recurring"; interval: Interval | null; intervalThreshold: number | null },
-  startsAt: Date,
-): Date | null {
-  if (addon.billingType === "one_time") return null;
-
-  if (!addon.interval || !addon.intervalThreshold) {
-    throw new Error(`Recurring add-on ${addon.id} has no billing interval`);
-  }
-
-  return nextBillingBoundary(startsAt, startsAt, addon.interval, addon.intervalThreshold);
 }
 
 /** Prices an add-on the way its worker bills it: the bundle price when the

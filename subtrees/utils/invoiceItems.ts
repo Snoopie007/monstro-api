@@ -181,11 +181,6 @@ export const invoiceItemSchema = z
   });
 export type InvoiceItem = z.infer<typeof invoiceItemSchema>;
 
-const sourceProbe = z.object({
-  sourceType: z.unknown().optional(),
-  sourceId: z.unknown().optional(),
-});
-
 /** Ignore unrelated merchandise, but never swallow invalid matching billing data. */
 export function subscriptionBillingItems(
   items: readonly InvoiceItem[] | null,
@@ -198,15 +193,8 @@ export function subscriptionBillingItems(
   > = [];
 
   for (const item of items ?? []) {
-    const source = sourceProbe.safeParse(item);
-    if (!source.success) continue;
-
-    if (
-      source.data.sourceId !== subscriptionId ||
-      source.data.sourceType === "subscription_addon"
-    ) {
-      continue;
-    }
+    // Lines for other sources, or not shaped like a line at all, are skipped.
+    if (item?.sourceId !== subscriptionId || item.sourceType === "subscription_addon") continue;
 
     const parsed = invoiceItemSchema.parse(item);
 

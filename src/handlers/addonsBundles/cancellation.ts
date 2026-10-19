@@ -10,7 +10,8 @@ import {
   memberSubscriptions,
 } from "@/subtrees/schemas";
 import { hasEnded } from "@/subtrees/utils/addonsBundles";
-import { and, asc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
+import { endBundle } from "@/subtrees/utils/server/addonInvoices";
+import { and, asc, eq, gt, inArray, isNull, or } from "drizzle-orm";
 
 
 export type BundleRefundInput = {
@@ -57,52 +58,16 @@ async function cancelMemberWithoutAccess(tx: DbTransaction, locationId: string, 
  * add-ons stop and their unpaid invoices are voided. */
 export async function cancelBundle(locationId: string, bundlePurchaseId: string, reason?: string, expectedBundleId?: string) {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`
-      select ${bundlePurchases.id}
-      from ${bundlePurchases}
-      inner join ${bundles} on ${bundles.id} = ${bundlePurchases.bundleId}
-      where ${bundlePurchases.id} = ${bundlePurchaseId}
-        and ${bundles.locationId} = ${locationId}
-      for update
-    `);
-    const purchase = await tx.query.bundlePurchases.findFirst({
-      where: eq(bundlePurchases.id, bundlePurchaseId),
-      with: { bundle: { columns: { locationId: true } } },
-    });
-    if (!purchase || purchase.bundle?.locationId !== locationId || (expectedBundleId && purchase.bundleId !== expectedBundleId)) return { status: "not-found" as const };
-    if (hasEnded(purchase.status)) {
-      return { status: "unchanged" as const, addonPurchaseIds: [] };
-    }
+    // Locks the purchase and its bundle, scoped to the location.
+    const [row] = await tx.select({ purchase: bundlePurchases }).from(bundlePurchases)
+      .innerJoin(bundles, eq(bundles.id, bundlePurchases.bundleId))
+      .where(and(eq(bundlePurchases.id, bundlePurchaseId), eq(bundles.locationId, locationId))).for("update");
+    const purchase = row?.purchase;
+    if (!purchase || (expectedBundleId && purchase.bundleId !== expectedBundleId)) return { status: "not-found" as const };
+    if (hasEnded(purchase.status)) return { status: "unchanged" as const };
 
-    const now = new Date();
-    const addonRows = await tx.select({ id: memberSubscriptionAddons.id })
-      .from(memberSubscriptionAddons)
-      .where(eq(memberSubscriptionAddons.bundlePurchaseId, bundlePurchaseId));
-    const addonPurchaseIds = addonRows.map((addon) => addon.id);
-    await tx.update(bundlePurchases).set({
-      status: "canceled",
-      endedAt: now,
-      cancelReason: reason?.trim() || null,
-      updated: now,
-    }).where(eq(bundlePurchases.id, bundlePurchaseId));
-    if (addonPurchaseIds.length > 0) {
-      await tx.update(memberSubscriptionAddons).set({
-        status: "canceled",
-        cancelAt: now,
-        canceledAt: now,
-        endedAt: now,
-        nextBillAt: null,
-        updated: now,
-      }).where(and(
-        inArray(memberSubscriptionAddons.id, addonPurchaseIds),
-        inArray(memberSubscriptionAddons.status, ["pending", "active", "past_due"]),
-      ));
-      await tx.update(memberInvoices).set({ status: "void", updated: now }).where(and(
-        inArray(memberInvoices.memberSubscriptionAddonId, addonPurchaseIds),
-        inArray(memberInvoices.status, ["draft", "sent", "unpaid"]),
-      ));
-    }
-    return { status: "canceled" as const, addonPurchaseIds };
+    await endBundle(tx, bundlePurchaseId, reason?.trim() || null);
+    return { status: "canceled" as const };
   });
 }
 

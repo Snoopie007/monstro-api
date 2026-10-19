@@ -5,8 +5,17 @@ import { Elysia } from "elysia";
 
 test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and versions purchased definitions", async () => {
 	if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(Bun.env.DATABASE_URL!).hostname)) throw new Error("Local Postgres required");
-	mock.module("@/queues/subscriptionAddons", () => ({ enqueueAddonJob: async () => ({ id: "catalog-test" }) }));
-	mock.module("@/queues/subscriptions", () => ({ scheduleRenewalRepair: async () => {}, scheduleBundledRenewal: async () => {} }));
+	mock.module("@/queues/subscriptionAddons", () => ({
+		subscriptionAddonQueue: {},
+		enqueueAddonJob: async () => ({ id: "catalog-test" }),
+		enqueueAddonRetry: async () => ({ id: "catalog-test" }),
+		removeAddonJobs: async () => {},
+	}));
+	const noop = async () => {};
+	mock.module("@/queues/subscriptions", () => ({
+		subQueue: {}, scheduleCashRenewal: noop, scheduleCronBasedRenewal: noop, scheduleRecursiveRenewal: noop,
+		scheduleRenewalRepair: noop, removeRenewalJobs: noop,
+	}));
 	const { db } = await import("@/db/db");
 	const {
 		addonPlanPriceOverrides,
@@ -25,8 +34,6 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		vendors,
 	} = await import("@/subtrees/schemas");
 	const {
-		archiveAddon,
-		archiveBundle,
 		createAddon,
 		createBundle,
 		getBundle,
@@ -482,32 +489,12 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			.from(memberSubscriptionAddons)
 			.where(eq(memberSubscriptionAddons.bundlePurchaseId, activationConflictPurchase.value.purchase.id));
 		expect(blockedAddonPurchases.map((purchase) => purchase.status)).toEqual(["pending", "pending"]);
-		const renewalAt = new Date(Date.now() + 86_400_000);
-		const [renewalCandidate] = await db.select({
-			id: memberSubscriptionAddons.id,
-			subscriptionId: memberSubscriptionAddons.memberSubscriptionId,
-		})
-			.from(memberSubscriptionAddons)
-			.where(eq(memberSubscriptionAddons.bundlePurchaseId, activationConflictPurchase.value.purchase.id))
-			.limit(1);
-		if (!renewalCandidate) throw new Error("Pricing-conflict renewal candidate was not found");
-		await db.update(memberSubscriptionAddons).set({ status: "active", nextBillAt: renewalAt })
-			.where(eq(memberSubscriptionAddons.id, renewalCandidate.id));
-		const blockedRenewalResponse = await authorizedApp.handle(new Request(
-			`http://localhost/x/loc/${primaryLocation.id}/subscriptions/${renewalCandidate.subscriptionId}/addons/${renewalCandidate.id}/renewal`,
-			{ method: "POST" },
-		));
-		expect(blockedRenewalResponse.status).toBe(409);
-		expect(await blockedRenewalResponse.json()).toEqual({
-			error: "Bundled add-ons would apply conflicting subscription prices",
-		});
 
 		const cancellation = await cancelAddon(primaryLocation.id, subscriptionAddonPurchase.id);
 		expect(cancellation.status).toBe("canceled");
 		expect(cancellation.runAt?.toISOString()).toBe(periodEnd.toISOString());
-		await archiveAddon(primaryLocation.id, accessOnlyAddon.id);
-		await archiveAddon(primaryLocation.id, conflictingAddon.id);
-		await archiveAddon(primaryLocation.id, lateMappedAddon.id);
+		await db.update(addons).set({ archived: true })
+			.where(inArray(addons.id, [accessOnlyAddon.id, conflictingAddon.id, lateMappedAddon.id]));
 		await expect((async () => {
 			await db.update(addons).set({ amount: 1 }).where(eq(addons.id, addon.id));
 		})()).rejects.toThrow();
@@ -548,9 +535,6 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			versionedUpdate.bundle.id,
 		]));
 		expect(await listBundles(otherLocation.id)).toEqual([]);
-		expect((await archiveBundle(primaryLocation.id, versionedUpdate.bundle.id))?.archived).toBe(true);
-		expect((await archiveAddon(primaryLocation.id, versionedAddon.addon.id))?.archived).toBe(true);
-		expect((await getCatalogOptions(primaryLocation.id)).addons).toEqual([]);
 	} finally {
 		if (createdInvoiceIds.length > 0) await db.delete(memberInvoices).where(inArray(memberInvoices.id, createdInvoiceIds));
 		if (runtimeSubscriptionIds.length > 0) {

@@ -1,20 +1,20 @@
 import { bundleCheckoutSchema } from "./checkoutFacts";
 import { db, type DbTransaction } from "@/db/db";
-import { enqueueAddonJob, enqueueAddonRetry, scheduleBundledRenewal } from "@/queues";
+import { enqueueAddonJob, enqueueAddonRetry, scheduleRenewalRepair } from "@/queues";
 import {
   bundlePurchases,
   bundles,
   memberInvoices,
   memberSubscriptionAddons,
 } from "@/subtrees/schemas";
-import { hasEnded } from "@/subtrees/utils/addonsBundles";
+import { hasEnded, OPEN_ADDON_PURCHASE_STATUSES } from "@/subtrees/utils/addonsBundles";
 import type { BundlePaymentState } from "@/subtrees/types";
 import { addonBillingPeriod } from "@/subtrees/utils/invoiceItems";
-import { attemptSchema, collectPayment, recordPayment, type InvoicePaymentOwner, type InvoicePaymentRecord } from "@/subtrees/utils/server/bundlePayments";
+import { attemptSchema, collectPayment, findInvoiceOwner, recordPayment, type InvoicePaymentOwner, type InvoicePaymentRecord } from "@/subtrees/utils/server/bundlePayments";
 import { settleAddonInvoice, type AddonSettlement } from "@/subtrees/utils/server/addonInvoices";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { hasAddonConflict, OPEN_ADDON_PURCHASE_STATUSES } from "../addonPricing";
+import { hasAddonConflict } from "@/subtrees/utils/server/addonPricing";
 import { markSubscriptionActivated } from "@/routes/x/loc/subscriptions/activation";
 
 type Invoice = typeof memberInvoices.$inferSelect;
@@ -31,44 +31,22 @@ export function getBundleBinding(metadata: Invoice["metadata"]) {
   return bundleInvoiceMetadataSchema.parse(metadata ?? {});
 }
 
+/** True when a bundle owns this invoice: its checkout invoice or a bundled add-on's period. */
 export async function isBundleInvoice(invoiceId: string) {
-  const purchase = await db.query.bundlePurchases.findFirst({
-    where: eq(bundlePurchases.invoiceId, invoiceId),
-    columns: { id: true },
-  });
-
-  if (purchase) return true;
-  const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoiceId), columns: { memberSubscriptionAddonId: true } });
-  const addon = invoice?.memberSubscriptionAddonId && await db.query.memberSubscriptionAddons.findFirst({
-    where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId), columns: { bundlePurchaseId: true },
-  });
-  return Boolean(addon && addon.bundlePurchaseId);
+  return Boolean((await findInvoiceOwner(db, invoiceId))?.purchaseId);
 }
 
 /** True when the shared collector charges this invoice: a bundle checkout or
  * any add-on period, bundled or standalone. Gateway webhooks route these to it. */
 export async function isCollectorInvoice(invoiceId: string) {
-  const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoiceId), columns: { memberSubscriptionAddonId: true } });
-  if (invoice?.memberSubscriptionAddonId) return true;
-  return Boolean(await db.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.invoiceId, invoiceId), columns: { id: true } }));
+  return (await findInvoiceOwner(db, invoiceId)) !== null;
 }
 
 export function bundlePaymentState(invoice: Pick<Invoice, "paid" | "metadata">): BundlePaymentState {
   if (invoice.paid) return "active";
 
-  const attempt = getBundleBinding(invoice.metadata).billingAttempt;
-
-  switch (attempt?.status) {
-    case "failed":
-      return "declined";
-    case "succeeded":
-    case "in_flight":
-    case "processing":
-    case "unknown":
-    case "requires_action":
-    case undefined:
-      return "processing";
-  }
+  // A declined attempt can be paid again; any other attempt is still settling.
+  return getBundleBinding(invoice.metadata).billingAttempt?.status === "failed" ? "declined" : "processing";
 }
 
 type BundleJobs = {
@@ -118,10 +96,9 @@ async function activateBundle(
   const addonRenewals: BundleJobs["addonRenewals"] = [];
 
   for (const subscription of purchase.subscriptions) {
-    // Creating the bundle invoice saved whether each first charge was a downpayment;
-    // subscriptions prepared before the rename keep it under billingAttempt.
+    // Creating the bundle invoice saved whether each first charge was a downpayment.
     const { initialDownpayment } = bundleCheckoutSchema.required({ initialDownpayment: true })
-      .parse(subscription.metadata.bundleCheckout ?? subscription.metadata.billingAttempt);
+      .parse(subscription.metadata.bundleCheckout);
 
     await markSubscriptionActivated(tx, {
       subscription: {
@@ -168,7 +145,7 @@ async function activateBundle(
 
 async function scheduleBundleJobs(jobs: BundleJobs) {
   for (const subscription of jobs.subscriptions) {
-    await scheduleBundledRenewal(subscription.id, jobs.locationId, subscription.dueAt);
+    await scheduleRenewalRepair(subscription.id, jobs.locationId, subscription.dueAt);
   }
 
   for (const renewal of jobs.addonRenewals) {
@@ -221,14 +198,7 @@ async function activateWhenReady(locationId: string, bundlePurchaseId: string) {
       inArray(memberSubscriptionAddons.memberSubscriptionId, subscriptionIds),
       inArray(memberSubscriptionAddons.status, [...OPEN_ADDON_PURCHASE_STATUSES]),
     ));
-    const addonIdsBySubscription = new Map<string, string[]>();
-
-    for (const addon of openAddonPurchases) {
-      addonIdsBySubscription.set(addon.memberSubscriptionId, [
-        ...addonIdsBySubscription.get(addon.memberSubscriptionId) ?? [],
-        addon.addonId,
-      ]);
-    }
+    const addonsBySubscription = Map.groupBy(openAddonPurchases, (addon) => addon.memberSubscriptionId);
 
     const pricedSubscriptions: Array<{ id: string; pricingId: string }> = [];
 
@@ -242,19 +212,17 @@ async function activateWhenReady(locationId: string, bundlePurchaseId: string) {
       hasAddonConflict(
         tx,
         subscription.pricingId,
-        addonIdsBySubscription.get(subscription.id) ?? [],
+        (addonsBySubscription.get(subscription.id) ?? []).map((addon) => addon.addonId),
         new Date(),
       )
     ));
 
     if (pricingConflicts.some(Boolean)) return { status: "pricing-conflict" as const };
 
-    const requiredAddonComponentIds = new Set(purchase.bundle?.components.flatMap((component) =>
-      component.addonId && component.required ? [component.id] : []
-    ) ?? []);
-    const requiredAddonsReady = requiredAddonComponentIds.size === 0 || [...requiredAddonComponentIds].every((componentId) =>
-      purchase.addonPurchases.some((addon) => addon.bundleComponentId === componentId && addon.status === "active")
-    );
+    // The bundle is active once every required add-on is paid.
+    const requiredAddonsReady = (purchase.bundle?.components ?? [])
+      .filter((component) => component.addonId && component.required)
+      .every((component) => purchase.addonPurchases.some((addon) => addon.bundleComponentId === component.id && addon.status === "active"));
 
     if (requiredAddonsReady) {
       await tx.update(bundlePurchases).set({ status: "active", updated: new Date() })

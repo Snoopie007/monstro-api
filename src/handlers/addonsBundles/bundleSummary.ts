@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+import { db, type DbReader } from "@/db/db";
 import {
   addons,
   bundleComponents,
@@ -11,6 +11,23 @@ import {
 } from "@/subtrees/schemas";
 import type { SubscriptionBundleSummary } from "@/subtrees/types";
 import { and, asc, eq, inArray } from "drizzle-orm";
+
+/** Display names for bundle components: "Plan · Price" for a subscription, the add-on's own name otherwise. */
+export async function getComponentNames(reader: DbReader, components: Array<{ memberPlanPricingId: string | null; addonId: string | null }>) {
+  const pricingIds = [...new Set(components.flatMap((component) => component.memberPlanPricingId ? [component.memberPlanPricingId] : []))];
+  const addonIds = [...new Set(components.flatMap((component) => component.addonId ? [component.addonId] : []))];
+  const [pricingRows, addonRows] = await Promise.all([
+    pricingIds.length === 0 ? [] : reader.select({ id: memberPlanPricing.id, name: memberPlanPricing.name, planName: memberPlans.name })
+      .from(memberPlanPricing)
+      .innerJoin(memberPlans, eq(memberPlans.id, memberPlanPricing.memberPlanId))
+      .where(inArray(memberPlanPricing.id, pricingIds)),
+    addonIds.length === 0 ? [] : reader.select({ id: addons.id, name: addons.name }).from(addons).where(inArray(addons.id, addonIds)),
+  ]);
+  return {
+    pricingNames: new Map(pricingRows.map((pricing) => [pricing.id, `${pricing.planName} · ${pricing.name}`])),
+    addonNames: new Map(addonRows.map((addon) => [addon.id, addon.name])),
+  };
+}
 
 export async function getBundleSummary(
   locationId: string,
@@ -39,25 +56,13 @@ export async function getBundleSummary(
   }).from(bundleComponents)
     .where(eq(bundleComponents.bundleId, purchase.bundleId))
     .orderBy(asc(bundleComponents.sortOrder));
-  const pricingIds = componentRows.flatMap((component) => component.memberPlanPricingId ? [component.memberPlanPricingId] : []);
-  const addonIds = componentRows.flatMap((component) => component.addonId ? [component.addonId] : []);
-  const [pricingRows, addonRows, subscriptionRows, addonPurchaseRows] = await Promise.all([
-    pricingIds.length === 0 ? [] : db.select({
-      id: memberPlanPricing.id,
-      pricingName: memberPlanPricing.name,
-      planName: memberPlans.name,
-    }).from(memberPlanPricing)
-      .innerJoin(memberPlans, eq(memberPlans.id, memberPlanPricing.memberPlanId))
-      .where(inArray(memberPlanPricing.id, pricingIds)),
-    addonIds.length === 0 ? [] : db.select({ id: addons.id, name: addons.name })
-      .from(addons).where(inArray(addons.id, addonIds)),
+  const [{ pricingNames, addonNames }, subscriptionRows, addonPurchaseRows] = await Promise.all([
+    getComponentNames(db, componentRows),
     db.select({ id: memberSubscriptions.id, componentId: memberSubscriptions.bundleComponentId })
       .from(memberSubscriptions).where(eq(memberSubscriptions.bundlePurchaseId, purchase.id)),
     db.select({ id: memberSubscriptionAddons.id, componentId: memberSubscriptionAddons.bundleComponentId })
       .from(memberSubscriptionAddons).where(eq(memberSubscriptionAddons.bundlePurchaseId, purchase.id)),
   ]);
-  const pricingNames = new Map(pricingRows.map((pricing) => [pricing.id, `${pricing.planName} · ${pricing.pricingName}`]));
-  const addonNames = new Map(addonRows.map((addon) => [addon.id, addon.name]));
   const subscriptionsByComponent = new Map(subscriptionRows.map((subscription) => [subscription.componentId, subscription.id]));
   const addonsByComponent = new Map(addonPurchaseRows.map((addon) => [addon.componentId, addon.id]));
   const purchasedComponentIds = new Set([
@@ -84,14 +89,4 @@ export async function getBundleSummary(
       }]
       : []),
   };
-}
-
-export async function getSubscriptionBundle(locationId: string, subscriptionId: string) {
-  const subscription = await db.query.memberSubscriptions.findFirst({
-    where: and(eq(memberSubscriptions.id, subscriptionId), eq(memberSubscriptions.locationId, locationId)),
-    columns: { bundlePurchaseId: true },
-  });
-  return subscription?.bundlePurchaseId
-    ? getBundleSummary(locationId, subscription.bundlePurchaseId)
-    : null;
 }

@@ -250,11 +250,8 @@ export class StripePaymentGateway {
 
     async inspectPaymentRefunds(paymentIntentId: string) {
         const payment = await this._client.paymentIntents.retrieve(paymentIntentId);
-        const refunds: Stripe.Refund[] = [];
-
-        for await (const refund of this._client.refunds.list({ payment_intent: paymentIntentId, limit: 100 })) {
-            refunds.push(refund);
-        }
+        // Pages through every refund on the payment.
+        const refunds = await Array.fromAsync(this._client.refunds.list({ payment_intent: paymentIntentId, limit: 100 }));
 
         return { payment, refunds };
     }

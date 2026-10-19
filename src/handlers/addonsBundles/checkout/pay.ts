@@ -1,9 +1,8 @@
 import { db } from "@/db/db";
 import { bundlePurchases, memberInvoices, memberSubscriptions } from "@/subtrees/schemas";
 import { hasEnded } from "@/subtrees/utils/addonsBundles";
-import type { BundlePaymentResponse, BundlePaymentState, PaymentType } from "@/subtrees/types";
+import type { BundlePaymentResponse, BundlePaymentState } from "@/subtrees/types";
 import { chargeWithGateway } from "@/utils/checkoutUtil";
-import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
 import { and, asc, eq } from "drizzle-orm";
 import {
   activateCashSubscription,
@@ -13,7 +12,7 @@ import {
   type BillableCashSubscription,
   type CashActivation,
 } from "@/routes/x/loc/subscriptions/cashActivation";
-import { chargeBundleInvoice } from "./gatewayCharge";
+import { chargeBundleInvoice, checkoutGateway } from "./gatewayCharge";
 import {
   bundlePaymentState,
   collectBundlePayment,
@@ -50,20 +49,6 @@ async function getPayableBundle(input: PayBundlePurchaseInput): Promise<PayableB
   return { status: "payable", memberId: purchase.memberId, invoiceId: purchase.invoiceId };
 }
 
-/** Why the location's gateway cannot charge this saved payment, if it cannot.
- * Checked before the attempt is claimed, so the charge only fails on provider I/O. */
-function chargeUnavailable(gateway: CheckoutContext["gateway"], paymentType: PaymentType, total: number): string | null {
-  if (gateway.service === "stripe") return null;
-
-  if (paymentType !== "card") return "This location's payment gateway only accepts saved cards";
-
-  if (gateway.service === "square" && total > 0 && !gateway.metadata.squareLocationId) {
-    return "This location's Square gateway has no Square location configured";
-  }
-
-  return null;
-}
-
 async function collectBundleInvoice(
   input: { locationId: string; memberId: string; invoiceId: string; paymentMethodId?: string; paymentType?: "card" | "us_bank_account" },
   charge: typeof chargeWithGateway | undefined,
@@ -81,23 +66,14 @@ async function collectBundleInvoice(
     });
     return { status: "ok", payment: "active" };
   }
-  let context: CheckoutContext;
-
-  try {
-    context = await getCheckoutContext({ lid: input.locationId, mid: input.memberId });
-  } catch (error) {
-    if (error instanceof CheckoutError) return { status: "payment-unavailable", error: error.message };
-
-    throw error;
-  }
-
-  const { gateway, gatewayCustomerId } = context;
   const method = input.paymentMethodId
     ? { paymentMethodId: input.paymentMethodId, paymentType: input.paymentType ?? invoice.transaction.paymentType }
     : undefined;
-  const unavailable = chargeUnavailable(gateway, method?.paymentType ?? invoice.transaction.paymentType, invoice.total);
+  const checkout = await checkoutGateway(input.locationId, input.memberId, method?.paymentType ?? invoice.transaction.paymentType, invoice.total);
 
-  if (unavailable) return { status: "payment-unavailable", error: unavailable };
+  if (checkout.error !== undefined) return { status: "payment-unavailable", error: checkout.error };
+
+  const { gateway, gatewayCustomerId } = checkout.context;
 
   const collection = await collectBundlePayment({
     invoiceId: invoice.id,
@@ -168,14 +144,6 @@ async function activateCashBundle(locationId: string, purchaseId: string): Promi
   return { status: "ok", payment: "active" };
 }
 
-async function requireSummary(locationId: string, purchaseId: string) {
-  const purchase = await getBundleSummary(locationId, purchaseId);
-
-  if (!purchase) throw new Error(`Bundle purchase ${purchaseId} disappeared during payment`);
-
-  return purchase;
-}
-
 /** Charges a prepared card purchase, or activates a cash one. Safe to call
  * again: it reports the current payment state instead of charging twice. */
 export async function payBundle(
@@ -192,8 +160,9 @@ export async function payBundle(
 
   if (collected.status !== "ok") return collected;
 
-  return {
-    status: "ok",
-    value: { purchase: await requireSummary(input.locationId, input.purchaseId), payment: collected.payment },
-  };
+  const purchase = await getBundleSummary(input.locationId, input.purchaseId);
+
+  if (!purchase) throw new Error(`Bundle purchase ${input.purchaseId} disappeared during payment`);
+
+  return { status: "ok", value: { purchase, payment: collected.payment } };
 }

@@ -11,7 +11,8 @@ import {
 import { and, count, eq, sql } from "drizzle-orm";
 
 import { differenceInMilliseconds, differenceInMinutes } from "date-fns";
-import { checkSubClassCredits, getSessionState, hasUnlimitedSubscriptionAddon } from "./utils";
+import { checkSubClassCredits, getSessionState } from "./utils";
+import { hasUnlimitedAddon } from "@/subtrees/utils/server/addonPricing";
 import { triggerFirstBooking } from "@/utils/triggers";
 import { broadcastAchievement } from "@/libs/broadcast";
 
@@ -144,13 +145,14 @@ export async function locationReservations(app: Elysia) {
                         },
                     });
 
-                    hasUnlimitedAccess = sub ? await hasUnlimitedSubscriptionAddon(sub.id) : false;
+                    hasUnlimitedAccess = sub ? await hasUnlimitedAddon(db, sub.id) : false;
                     if (!hasUnlimitedAccess && plan.classLimitInterval === 'term' && sub?.classCredits === 0) {
                         return status(200, { success: false, message: "No credits available for your plan." });
                     }
 
                     memberId = sub?.memberId;
-                    classLimitReached = sub ? await checkSubClassCredits({
+                    // An unlimited-access add-on lifts the plan's class limit.
+                    classLimitReached = sub && !hasUnlimitedAccess ? await checkSubClassCredits({
                         sid: sub.id,
                         mid: sub.memberId,
                         classLimitInterval: plan.classLimitInterval,

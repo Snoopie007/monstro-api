@@ -18,7 +18,7 @@ subscriptionAddonQueue.on("error", (error) => {
 });
 
 export async function enqueueAddonJob(
-  name: "activate" | "renew" | "cancel" | "expire",
+  name: "activate" | "renew" | "cancel",
   memberSubscriptionAddonId: string,
   runAt = new Date(),
 ) {

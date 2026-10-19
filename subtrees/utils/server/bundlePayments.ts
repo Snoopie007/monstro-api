@@ -54,6 +54,32 @@ export type InvoicePaymentOwner<Jobs> = {
   schedule: (jobs: Jobs) => Promise<void>;
 };
 
+/** The fields of a Square payment the collector reads. */
+type SquareCharge = { id?: string; status?: string; receiptUrl?: string | null; cardDetails?: { card?: { cardBrand?: string; last4?: string } } };
+
+/** A Square card charge's answer as a collector outcome. PENDING and APPROVED
+ * payments are still settling, so their webhook decides them. */
+export function squareOutcome(payment: SquareCharge | undefined, request: InvoicePaymentRequest): InvoicePaymentOutcome {
+  const paymentIntentId = payment?.id;
+  switch (payment?.status) {
+    case "COMPLETED":
+      if (!paymentIntentId) return { status: "unknown" };
+      return {
+        status: "succeeded", paymentIntentId, amount: request.total, currency: request.currency, receiptUrl: payment.receiptUrl,
+        gatewayMetadata: { squarePaymentId: paymentIntentId, squarePaymentStatus: payment.status },
+        brand: payment.cardDetails?.card?.cardBrand, last4: payment.cardDetails?.card?.last4, paymentType: "card",
+      };
+    case "APPROVED":
+    case "PENDING":
+      return { status: "processing", paymentIntentId };
+    case "FAILED":
+    case "CANCELED":
+      return { status: "failed", paymentIntentId, reason: "Square payment failed", code: payment.status, retryable: true, workflowDecline: payment.status === "FAILED" };
+    default:
+      return { status: "unknown", paymentIntentId };
+  }
+}
+
 /** The invoice's billing attempt, in main's SubscriptionBillingAttempt shape.
  * The collector also keeps the request it sent, so a retry sends the same one. */
 export const attemptSchema = z.looseObject({
@@ -100,7 +126,8 @@ type LockedPayment = Awaited<ReturnType<typeof lockPayment>>;
  * and its transaction. The owner is reread under the locks; nothing financial
  * relies on the first read. */
 async function lockPayment(tx: InvoicePaymentTransaction, invoiceId: string) {
-  const discovered = await findOwner(tx, invoiceId);
+  const discovered = await findInvoiceOwner(tx, invoiceId);
+  if (!discovered) throw new Error(`Invoice ${invoiceId} has no payment owner`);
   if (discovered.purchaseId === null) await lockAddon(tx, discovered.subscriptionId, discovered.addonId);
   else await lockBundle(tx, discovered.purchaseId);
   const { invoice, transaction } = await lockInvoice(tx, invoiceId);
@@ -109,10 +136,11 @@ async function lockPayment(tx: InvoicePaymentTransaction, invoiceId: string) {
 
 /** The owner of an invoice, found without locks. A bundled add-on invoice
  * belongs to the add-on's bundle, a checkout invoice to the bundle it bought,
- * and a standalone add-on invoice to the add-on alone. */
-async function findOwner(tx: InvoicePaymentTransaction, invoiceId: string) {
+ * and a standalone add-on invoice to the add-on alone. Null when the collector
+ * doesn't charge the invoice. */
+export async function findInvoiceOwner(tx: Pick<Database, "query">, invoiceId: string) {
   const invoice = await tx.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, invoiceId) });
-  if (!invoice) throw new Error(`Invoice ${invoiceId} was not found`);
+  if (!invoice) return null;
   const addon = invoice.memberSubscriptionAddonId
     ? await tx.query.memberSubscriptionAddons.findFirst({ where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId) })
     : undefined;
@@ -120,7 +148,7 @@ async function findOwner(tx: InvoicePaymentTransaction, invoiceId: string) {
     ? await tx.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, addon.bundlePurchaseId) })
     : await tx.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.invoiceId, invoiceId) });
   if (purchase) return { purchaseId: purchase.id, addonId: invoice.memberSubscriptionAddonId };
-  if (!addon) throw new Error(`Invoice ${invoiceId} has no payment owner`);
+  if (!addon) return null;
   return { purchaseId: null, addonId: addon.id, subscriptionId: addon.memberSubscriptionId };
 }
 
@@ -130,8 +158,9 @@ async function lockAddon(tx: InvoicePaymentTransaction, subscriptionId: string, 
   await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons).where(eq(memberSubscriptionAddons.id, addonId)).for("update");
 }
 
-/** Locks the bundle, its root subscriptions, their child subscriptions and its add-ons, each in id order. */
-async function lockBundle(tx: InvoicePaymentTransaction, purchaseId: string) {
+/** Locks the bundle, its root subscriptions, their child subscriptions and its add-ons, each in id order.
+ * Bundle payment collection, mark-paid and bundled add-on cancellation lock a bundle this way. */
+export async function lockBundle(tx: InvoicePaymentTransaction, purchaseId: string) {
   await tx.select({ id: bundlePurchases.id }).from(bundlePurchases).where(eq(bundlePurchases.id, purchaseId)).for("update");
   const roots = await tx.select({ id: memberSubscriptions.id }).from(memberSubscriptions)
     .where(eq(memberSubscriptions.bundlePurchaseId, purchaseId)).orderBy(asc(memberSubscriptions.id)).for("update");
@@ -158,7 +187,7 @@ function isSameCharge(invoice: PaymentInvoice, transaction: PaymentTransaction) 
 
 /** Rereads the owner under the locks. Throws when the invoice moved to another
  * owner, or the owner's member or location no longer match the invoice. */
-async function getLockedOwner(tx: InvoicePaymentTransaction, invoice: PaymentInvoice, discovered: Awaited<ReturnType<typeof findOwner>>) {
+async function getLockedOwner(tx: InvoicePaymentTransaction, invoice: PaymentInvoice, discovered: NonNullable<Awaited<ReturnType<typeof findInvoiceOwner>>>) {
   // A standalone add-on has no bundle. A missing bundle row counts as moved below.
   const purchase = discovered.purchaseId === null ? null : await tx.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, discovered.purchaseId) });
   const addon = invoice.memberSubscriptionAddonId
@@ -373,8 +402,7 @@ async function claimBlocker(tx: InvoicePaymentTransaction, locked: LockedPayment
 /** The gateway and customer the invoice was prepared to charge. Throws when the
  * caller would charge through a different gateway, integration, customer or Stripe account. */
 function getChargeBinding({ invoice, transaction }: LockedPayment, gateway: InvoiceGateway, prior: Attempt | null) {
-  // Invoices prepared before the rename keep their binding under billingAttempt.
-  const binding = chargeBindingSchema.parse(transaction.metadata.chargeBinding ?? transaction.metadata.billingAttempt ?? {
+  const binding = chargeBindingSchema.parse(transaction.metadata.chargeBinding ?? {
     gatewayIntegrationId: invoice.metadata?.gatewayIntegrationId,
     gatewayCustomerId: invoice.metadata?.gatewayCustomerId,
     stripeAccountId: prior?.stripeAccountId,

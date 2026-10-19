@@ -4,13 +4,22 @@ import { strict as assert } from "node:assert";
 
 import type { PaymentType } from "@/subtrees/types";
 import type { Currency } from "@/subtrees/types/currency";
-import { db } from "@/db/db";
+import { db, type DbTransaction } from "@/db/db";
 import { integrations, locationState, memberInvoices, memberPackages, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { and, eq, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 
+
+/** The bundle a subscription belongs to, or null once the subscription is canceled or paused. */
+async function openBundleOf(tx: DbTransaction, memberPlanId: string) {
+    const subscription = await tx.query.memberSubscriptions.findFirst({
+        where: eq(memberSubscriptions.id, memberPlanId),
+        columns: { status: true, bundlePurchaseId: true },
+    });
+    return subscription && !["canceled", "paused"].includes(subscription.status) ? subscription.bundlePurchaseId : null;
+}
 
 interface HandleStripePlanChargeProps {
     invoiceId: string;
@@ -177,15 +186,7 @@ export async function handleStripePlanCharge({
 
         if (current.paid || current.status === "paid") {
             // A valid success replay can repair bundle activation after the payment committed.
-            if (success && !memberPlanId.startsWith("pkg_")) {
-                const subscription = await tx.query.memberSubscriptions.findFirst({
-                    where: eq(memberSubscriptions.id, memberPlanId),
-                    columns: { status: true, bundlePurchaseId: true },
-                });
-                if (subscription && !["canceled", "paused"].includes(subscription.status)) {
-                    bundlePurchaseId = subscription.bundlePurchaseId;
-                }
-            }
+            if (success && !memberPlanId.startsWith("pkg_")) bundlePurchaseId = await openBundleOf(tx, memberPlanId);
             return;
         }
         const [invoice] = await tx.update(memberInvoices).set({
@@ -268,13 +269,7 @@ export async function handleStripePlanCharge({
             return;
         }
 
-        const subscription = await tx.query.memberSubscriptions.findFirst({
-            where: eq(memberSubscriptions.id, memberPlanId),
-            columns: { status: true, bundlePurchaseId: true },
-        });
-        if (subscription && !["canceled", "paused"].includes(subscription.status)) {
-            bundlePurchaseId = subscription.bundlePurchaseId;
-        }
+        bundlePurchaseId = await openBundleOf(tx, memberPlanId);
 
         await tx.update(memberSubscriptions).set({
             ...(success ? {

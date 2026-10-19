@@ -106,7 +106,6 @@ mock.module("@/utils", () => ({ createEnrollUnsignedDocs: mock(async () => []) }
 const repairRenewal = mock(async (..._args: unknown[]) => {});
 mock.module("@/queues/subscriptions", () => ({
     scheduleRenewalRepair: repairRenewal,
-    scheduleBundledRenewal: repairRenewal,
     scheduleCronBasedRenewal: mock(async () => undefined),
     scheduleRecursiveRenewal: mock(async () => undefined),
 }));

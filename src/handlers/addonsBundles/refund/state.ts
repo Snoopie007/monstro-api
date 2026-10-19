@@ -106,7 +106,7 @@ export async function claimRefund(charge: BundleRefundCharge, binding: BundleRef
 
     const amounts = bundleRefundAmounts(current);
 
-    if (!existing && hasLegacyRefund(transaction)) {
+    if (hasLegacyRefund(transaction)) {
       const legacy = legacyRefundMetadataSchema.parse(transaction.metadata);
       const id = legacy.refund?.id ?? legacy.squareRefundId ?? legacy.authorizeRefundTransactionId ?? legacy.authorizeVoidTransactionId ?? undefined;
       const operation = legacy.authorizeRefundOperation ?? (legacy.authorizeVoidTransactionId ? "void" : "refund");
@@ -186,9 +186,8 @@ async function writeRefundOutcome(
   if (!current || current.attempt !== attempt.attempt || current.status === "completed") return transaction;
 
   const completed = outcome.status === "completed";
-  const refundedAmount = completed
-    ? Math.min(transaction.total, Math.max(transaction.refundedAmount + outcome.amount, outcome.refundedAmount ?? 0))
-    : Math.min(transaction.total, Math.max(transaction.refundedAmount, outcome.refundedAmount ?? 0));
+  // Never below what the provider reports refunded, never above the charge.
+  const refundedAmount = Math.min(transaction.total, Math.max(transaction.refundedAmount + (completed ? outcome.amount : 0), outcome.refundedAmount ?? 0));
   const { refundedAmount: _providerRefundedAmount, ...progress } = outcome;
   const refund: TransactionRefund = {
     ...transaction.metadata.refund,

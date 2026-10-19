@@ -223,18 +223,6 @@ async function loadRenewalContext(sid: string, lid: string, dueAt: Date | null) 
     return { bundled, billingQuote, payload, dueAt, dueAtMs };
 }
 
-/** Schedule the normal next renewal after a bundle payment activates its subscription. */
-export async function scheduleBundledRenewal(sid: string, lid: string, dueAt: Date | null) {
-    const renewal = await loadRenewalContext(sid, lid, dueAt);
-    if (!renewal?.bundled) return;
-
-    await enqueueBundledRenewal(renewal.dueAt, renewal.billingQuote, {
-        ...renewal.payload,
-        expectedDueAt: undefined,
-    });
-}
-
-/** Recover the next renewal, including callers that already repair bundled subscriptions. */
 export async function scheduleRenewalRepair(sid: string, lid: string, dueAt: Date | null) {
     const renewal = await loadRenewalContext(sid, lid, dueAt);
     if (!renewal) return;

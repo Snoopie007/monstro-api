@@ -20,7 +20,6 @@ const paymentBindingSchema = z.object({
   gatewayIntegrationId: z.string().optional(),
   authorizeIntegrationId: z.string().optional(),
   paymentIntentId: z.string().nullish(),
-  stripeChargeId: z.string().optional(),
   squarePaymentId: z.string().optional(),
   authorizeTransactionId: z.string().optional(),
   chargeId: z.string().optional(),
@@ -101,21 +100,22 @@ const rejectedAuthorizeRefundCodes = new Set([
 
 const squareErrorsSchema = z.object({ errors: z.array(z.object({ detail: z.string().optional() })).optional() });
 
+/** A 4xx the provider won't change its mind about; a 408 or 409 can still succeed. */
+function isRejection(statusCode: number | undefined) {
+  return statusCode !== undefined && statusCode >= 400 && statusCode < 500 && statusCode !== 408 && statusCode !== 409;
+}
+
 export function refundFailure(cause: unknown) {
   if (cause instanceof SquareError) {
     const body = squareErrorsSchema.safeParse(cause.body);
     const message = body.success ? body.data.errors?.[0]?.detail ?? cause.message : cause.message;
-    const definite = cause.statusCode !== undefined && cause.statusCode >= 400 && cause.statusCode < 500 && cause.statusCode !== 408 && cause.statusCode !== 409;
-
-    return { message, definite };
+    return { message, definite: isRejection(cause.statusCode) };
   }
 
   if (cause instanceof AuthorizeApiError) return { message: cause.message, definite: rejectedAuthorizeRefundCodes.has(cause.code) };
 
   if (cause instanceof Stripe.errors.StripeError) {
-    const definite = cause.statusCode !== undefined && cause.statusCode >= 400 && cause.statusCode < 500 && cause.statusCode !== 408 && cause.statusCode !== 409;
-
-    return { message: cause.message, definite };
+    return { message: cause.message, definite: isRejection(cause.statusCode) };
   }
 
   return { message: cause instanceof Error ? cause.message : "The gateway could not confirm this refund.", definite: false };

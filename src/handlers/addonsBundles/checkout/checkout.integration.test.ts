@@ -549,6 +549,42 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         expect(charges.map((charge) => charge.invoice.id)).toEqual([invoice.id]);
     });
 
+    test("a cash payment dated before the purchase time is still refunded with the bundle", async () => {
+        const prepared = await prepare("cash");
+        await pay(prepared.purchase.id, approve().charge);
+        const { db, schema, sql } = app;
+        const [purchase] = await db.select().from(schema.bundlePurchases);
+        const [invoice] = await db.select().from(schema.memberInvoices);
+        if (!purchase || !invoice) throw new Error("The cash bundle was not activated");
+
+        // Mark-paid dates cash at noon of the paid day, which can fall before an afternoon purchase.
+        await db.insert(schema.transactions).values({
+            id: "txn-cash", total: invoice.total, subTotal: invoice.subTotal, tax: invoice.tax, memberId: "member", locationId: "loc",
+            description: "Cash payment", type: "inbound", status: "paid", paymentType: "cash", currency: "USD", items: [], metadata: {},
+            chargeDate: new Date(purchase.created.getTime() - 3 * 3_600_000),
+        });
+        await sql`update member_invoices set transaction_id = 'txn-cash', status = 'paid', paid = true where id = ${invoice.id}`;
+
+        expect(await app.findBundleChargeOwner("loc", "txn-cash")).toMatchObject({ id: purchase.id });
+        const canceled = await app.cancelForRefund({ locationId: "loc", bundleId: "bundle", purchaseId: purchase.id });
+        if (!canceled) throw new Error("The bundle was not found");
+        expect((await app.getRefundCharges("loc", canceled)).map((charge) => charge.transaction.id)).toEqual(["txn-cash"]);
+    });
+
+    test("a legacy refund skips an older invoice whose lines don't fit the bundle shape", async () => {
+        const { db, schema } = app;
+        await db.insert(schema.transactions).values({
+            id: "txn-legacy", total: 1000, subTotal: 1000, tax: 0, memberId: "member", locationId: "loc", description: "Old sale",
+            type: "inbound", status: "paid", paymentType: "card", currency: "USD", items: [], metadata: {},
+        });
+        await db.insert(schema.memberInvoices).values({
+            id: "inv-legacy", total: 1000, subTotal: 1000, tax: 0, memberId: "member", locationId: "loc", transactionId: "txn-legacy",
+            status: "paid", paid: true, currency: "USD", items: [{ name: "Old sale", price: "10.00" } as never],
+        });
+
+        expect(await app.findBundleChargeOwner("loc", "txn-legacy")).toBeNull();
+    });
+
     test("replaying a paid period never reopens a past-due add-on", async () => {
         const prepared = await prepare();
         await pay(prepared.purchase.id, approve().charge);

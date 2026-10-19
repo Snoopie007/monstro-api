@@ -2,12 +2,11 @@ import { strict as assert } from "node:assert";
 import { eq } from "drizzle-orm";
 import { db, type DbTransaction } from "@/db/db";
 import { enqueueAddonJob } from "@/queues";
-import { addInterval } from "@/routes/x/loc/invoices/shared";
 import { bundlePurchases, memberSubscriptionAddons } from "@/subtrees/schemas";
-import { hasEnded } from "@/subtrees/utils/addonsBundles";
+import { addonPeriodEnd, hasEnded } from "@/subtrees/utils/addonsBundles";
 import { settleAddonInvoice, type AddonSettlement } from "@/subtrees/utils/server/addonInvoices";
-import { hasSubscriptionConflict } from "./addonPricing";
-import { lockBundleComponents } from "./bundleLocks";
+import { hasSubscriptionConflict } from "@/subtrees/utils/server/addonPricing";
+import { lockBundle } from "@/subtrees/utils/server/bundlePayments";
 import { reconcileBundle } from "./checkout/settlement";
 
 // The add-on side of marking a cash invoice paid. The route calls these at fixed points.
@@ -28,7 +27,7 @@ export async function markPaidBlocker(invoice: Invoice, addon: AddonPurchase | u
   if (!addon || hasEnded(addon.status)) return "Canceled or expired add-on invoices cannot be marked paid";
 
   // Paying the add-on would switch its subscription to a price another add-on also sets.
-  if (await hasSubscriptionConflict(db, addon.memberSubscriptionId, [], invoice.forPeriodStart ?? new Date())) {
+  if (await hasSubscriptionConflict(db, addon.memberSubscriptionId, invoice.forPeriodStart ?? new Date())) {
     return "This add-on would apply a conflicting subscription price";
   }
   return null;
@@ -39,7 +38,7 @@ export async function markPaidBlocker(invoice: Invoice, addon: AddonPurchase | u
 export async function lockOpenBundle(tx: DbTransaction, addon: AddonPurchase | undefined) {
   if (!addon?.bundlePurchaseId) return true;
 
-  await lockBundleComponents(tx, addon.bundlePurchaseId);
+  await lockBundle(tx, addon.bundlePurchaseId);
   const bundle = await tx.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, addon.bundlePurchaseId), columns: { status: true } });
   return Boolean(bundle && !hasEnded(bundle.status));
 }
@@ -53,12 +52,6 @@ export async function lockInvoiceAddon(tx: DbTransaction, invoice: Invoice, disc
     .where(eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId)).for("update");
   if (!addon || hasEnded(addon.status) || addon.bundlePurchaseId !== (discovered?.bundlePurchaseId ?? null)) return "ended";
   return addon;
-}
-
-/** A paid invoice for a bundled add-on settles again, so a lost activation or
- * renewal recovers. Null for every other invoice. */
-export async function settlePaidAddon(tx: DbTransaction, paidInvoice: PaidInvoice, addon: AddonPurchase | undefined) {
-  return addon?.bundlePurchaseId ? settleMarkedAddon(tx, paidInvoice, addon) : null;
 }
 
 /** Activates the paid period and returns the jobs to run after commit. A bundled
@@ -77,14 +70,12 @@ async function activateStandalone(tx: DbTransaction, invoice: Invoice, purchase:
 
   // An invoice without a stored period end gets one from the add-on's interval.
   const periodStart = invoice.forPeriodStart ?? new Date();
-  const periodEnd = addon.billingType === "recurring"
-    ? invoice.forPeriodEnd ?? addInterval(periodStart, addon.interval || "month", addon.intervalThreshold || 1)
-    : null;
+  const periodEnd = addon.billingType === "recurring" ? invoice.forPeriodEnd ?? addonPeriodEnd(addon, periodStart) : null;
   await tx.update(memberSubscriptionAddons).set({
     status: "active", paidPeriodStartsAt: periodStart, paidPeriodEndsAt: periodEnd,
     nextBillAt: periodEnd, updated: new Date(),
   }).where(eq(memberSubscriptionAddons.id, purchase.id));
-  return { purchaseId: purchase.id, subscriptionId: purchase.memberSubscriptionId, bundlePurchaseId: null, runAt: periodEnd };
+  return { purchaseId: purchase.id, bundlePurchaseId: null, runAt: periodEnd };
 }
 
 /** Schedules the renewal and reconciles the bundle. The payment already committed,

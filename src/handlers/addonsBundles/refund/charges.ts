@@ -9,7 +9,7 @@ import {
 import type { InvoiceItem } from "@/subtrees/types";
 import { invoiceItemSchema } from "@/subtrees/utils/invoiceItems";
 import { readSubscriptionInvoice } from "@/subtrees/utils/server/subscriptionInvoices";
-import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 import { z } from "zod";
 import type { CanceledBundle } from "../cancellation";
 
@@ -74,9 +74,10 @@ function attributedCharge(invoice: Invoice, subscriptionIds: Set<string>, addonI
   return items.length > 0 ? { total, items } : null;
 }
 
-/** Both invoice creation and charge time must follow the purchase, and the
- * invoice must precede the bundle's end. A legacy subscription attached to a
- * new bundle can retain an older initial invoice. */
+/** The invoice must be created between the purchase and the bundle's end. A
+ * legacy subscription attached to a new bundle can retain an older initial
+ * invoice. Charge time is not compared: cash marked paid is dated noon of the
+ * paid day, which can fall before the purchase. */
 export async function getRefundCharges(locationId: string, bundle: CanceledBundle): Promise<BundleRefundCharge[]> {
   const purchase = bundle.purchase;
   const candidates = await db.select({ transaction: transactions, invoice: memberInvoices }).from(transactions)
@@ -92,7 +93,6 @@ export async function getRefundCharges(locationId: string, bundle: CanceledBundl
         purchase.invoiceId ? eq(memberInvoices.id, purchase.invoiceId) : undefined,
         and(
           gte(memberInvoices.created, purchase.created),
-          sql`coalesce(${transactions.chargeDate}, ${transactions.created}) >= ${purchase.created.toISOString()}`,
           // A bundle already ended by a plain cancel keeps its subscriptions at full
           // price; their later renewals are not the bundle's to refund.
           purchase.endedAt ? lte(memberInvoices.created, purchase.endedAt) : undefined,
@@ -160,7 +160,10 @@ export async function findBundleChargeOwner(locationId: string, transactionId: s
     subscriptionIds.push(charge.invoice.memberPlanId);
   } else {
     for (const raw of charge.invoice.items ?? []) {
-      const item = invoiceItemSchema.parse(raw);
+      // Every refund passes through here; a line in an older shape is not a bundle's.
+      const item = invoiceItemSchema.safeParse(raw).data;
+
+      if (!item) continue;
 
       if (item.sourceType === "subscription") subscriptionIds.push(item.sourceId);
 
@@ -183,7 +186,6 @@ export async function findBundleChargeOwner(locationId: string, transactionId: s
       inArray(bundlePurchases.id, purchaseIds),
       eq(bundlePurchases.memberId, charge.invoice.memberId),
       lte(bundlePurchases.created, charge.invoice.created),
-      lte(bundlePurchases.created, charge.transaction.chargeDate ?? charge.transaction.created),
       // A renewal after a plain cancel is the subscription's own, refunded the normal way.
       or(isNull(bundlePurchases.endedAt), gte(bundlePurchases.endedAt, charge.invoice.created)),
     )).limit(1);

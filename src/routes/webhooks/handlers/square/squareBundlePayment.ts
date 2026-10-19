@@ -57,23 +57,15 @@ export async function handleSquareBundleSuccess(input: SquarePaymentFields & { r
     return recordSquareOutcome(input, { status: "succeeded", paymentIntentId: input.squarePaymentId, amount: input.amount, currency: input.currency, receiptUrl: input.receiptUrl, gatewayMetadata: { squarePaymentId: input.squarePaymentId }, brand: input.brand, last4: input.last4, paymentType: "card" });
 }
 
-export async function handleSquareBundleFail(input: SquarePaymentFields & {
-    squarePaymentStatus: string | undefined;
-    failedReason: string;
-    failedCode: string;
-}) {
-    return recordSquareOutcome(input, { status: "failed", paymentIntentId: input.squarePaymentId, reason: input.failedReason, code: input.failedCode, retryable: true, workflowDecline: isPaymentDecline("square", input.failedCode, input.squarePaymentStatus) });
-}
+/** Every Square payment status for a bundle or add-on invoice. Ordinary invoices
+ * go through processSquareEvent instead. */
+export async function processSquareBundleEvent(event: { type?: string; data?: { object?: { payment?: SquareWebhookPayment } } }) {
+    const payment = event.data?.object?.payment;
+    if (!event.type || !ALLOWED_EVENTS.includes(event.type) || !payment?.reference_id) return;
 
-export async function handleSquareBundleProcessing(input: SquarePaymentFields) {
-    return recordSquareOutcome(input, { status: "processing", paymentIntentId: input.squarePaymentId });
-}
-
-/** The payment fields every bundle outcome checks against the invoice.
- * Only squarePaymentId is saved. */
-function mapSquarePaymentFields(payment: SquareWebhookPayment, invoiceId: string): SquarePaymentFields {
-    return {
-        invoiceId,
+    // The payment fields every outcome checks against the invoice. Only squarePaymentId is saved.
+    const fields: SquarePaymentFields = {
+        invoiceId: payment.reference_id,
         squarePaymentId: payment.id,
         billingAttemptId: parseNote(payment.note ?? "").billingAttemptId,
         locationId: payment.location_id,
@@ -81,15 +73,6 @@ function mapSquarePaymentFields(payment: SquareWebhookPayment, invoiceId: string
         amount: payment.total_money?.amount ?? 0,
         currency: payment.total_money?.currency,
     };
-}
-
-/** Every Square payment status for a bundle invoice. Ordinary invoices go
- * through processSquareEvent instead. */
-export async function processSquareBundleEvent(event: { type?: string; data?: { object?: { payment?: SquareWebhookPayment } } }) {
-    const payment = event.data?.object?.payment;
-    if (!event.type || !ALLOWED_EVENTS.includes(event.type) || !payment?.reference_id) return;
-
-    const fields = mapSquarePaymentFields(payment, payment.reference_id);
     const status = (payment.status || "").toUpperCase();
 
     switch (status) {
@@ -102,14 +85,14 @@ export async function processSquareBundleEvent(event: { type?: string; data?: { 
             });
         case "PENDING":
         case "APPROVED":
-            return handleSquareBundleProcessing(fields);
+            return recordSquareOutcome(fields, { status: "processing", paymentIntentId: payment.id });
         case "FAILED":
-        case "CANCELED":
-            return handleSquareBundleFail({
-                ...fields,
-                squarePaymentStatus: payment.status,
-                failedReason: getSquareFailureReason(payment, status),
-                failedCode: getSquareFailureCode(payment, status),
+        case "CANCELED": {
+            const code = getSquareFailureCode(payment, status);
+            return recordSquareOutcome(fields, {
+                status: "failed", paymentIntentId: payment.id, reason: getSquareFailureReason(payment, status), code,
+                retryable: true, workflowDecline: isPaymentDecline("square", code, payment.status),
             });
+        }
     }
 }

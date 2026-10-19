@@ -203,7 +203,6 @@ export const membersRelations = relations(members, ({ many, one }) => ({
 	memberRanks: many(memberRanks),
 	memberRankRequirements: many(memberRankRequirements),
 	eventRegistrations: many(eventRegistrations),
-	bundlePurchases: many(bundlePurchases),
 }));
 
 export const memberPassesRelations = relations(memberPasses, ({ one }) => ({
@@ -297,10 +296,6 @@ export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
 	transaction: one(transactions, {
 		fields: [memberInvoices.transactionId],
 		references: [transactions.id],
-	}),
-	memberSubscriptionAddon: one(memberSubscriptionAddons, {
-		fields: [memberInvoices.memberSubscriptionAddonId],
-		references: [memberSubscriptionAddons.id],
 	}),
 }));
 
@@ -405,8 +400,6 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	ranks: many(ranks),
 	locationEvents: many(locationEvents),
 	courses: many(courses),
-	addons: many(addons),
-	bundles: many(bundles),
 }));
 
 export const locationClosuresRelations = relations(locationClosures, ({ one }) => ({
@@ -717,9 +710,6 @@ export const memberPlanPricingRelations = relations(memberPlanPricing, ({ one, m
 	}),
 	subscriptions: many(memberSubscriptions),
 	packages: many(memberPackages),
-	addonSourcePriceOverrides: many(addonPlanPriceOverrides, { relationName: "addonSourcePricing" }),
-	addonReplacementPriceOverrides: many(addonPlanPriceOverrides, { relationName: "addonReplacementPricing" }),
-	bundleComponents: many(bundleComponents),
 }));
 
 export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one, many }) => ({
@@ -751,7 +741,6 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 	}),
 	invoices: many(memberInvoices),
 	reservations: many(reservations),
-	addons: many(memberSubscriptionAddons),
 	bundlePurchase: one(bundlePurchases, {
 		fields: [memberSubscriptions.bundlePurchaseId],
 		references: [bundlePurchases.id],
@@ -766,14 +755,8 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 // ADD-ON AND BUNDLE RELATIONS
 // ============================================================================
 
-export const addonsRelations = relations(addons, ({ many, one }) => ({
-	location: one(locations, {
-		fields: [addons.locationId],
-		references: [locations.id],
-	}),
+export const addonsRelations = relations(addons, ({ many }) => ({
 	planPriceOverrides: many(addonPlanPriceOverrides),
-	purchases: many(memberSubscriptionAddons),
-	bundleComponents: many(bundleComponents),
 }));
 
 export const addonPlanPriceOverridesRelations = relations(addonPlanPriceOverrides, ({ one }) => ({
@@ -781,50 +764,17 @@ export const addonPlanPriceOverridesRelations = relations(addonPlanPriceOverride
 		fields: [addonPlanPriceOverrides.addonId],
 		references: [addons.id],
 	}),
-	sourcePricing: one(memberPlanPricing, {
-		fields: [addonPlanPriceOverrides.sourcePlanPricingId],
-		references: [memberPlanPricing.id],
-		relationName: "addonSourcePricing",
-	}),
-	replacementPricing: one(memberPlanPricing, {
-		fields: [addonPlanPriceOverrides.replacementPlanPricingId],
-		references: [memberPlanPricing.id],
-		relationName: "addonReplacementPricing",
-	}),
 }));
 
-export const bundlesRelations = relations(bundles, ({ many, one }) => ({
-	location: one(locations, {
-		fields: [bundles.locationId],
-		references: [locations.id],
-	}),
+export const bundlesRelations = relations(bundles, ({ many }) => ({
 	components: many(bundleComponents),
-	purchases: many(bundlePurchases),
 }));
 
-export const bundleComponentsRelations = relations(bundleComponents, ({ many, one }) => ({
+export const bundleComponentsRelations = relations(bundleComponents, ({ one }) => ({
 	bundle: one(bundles, {
 		fields: [bundleComponents.bundleId],
 		references: [bundles.id],
 	}),
-	memberPlanPricing: one(memberPlanPricing, {
-		fields: [bundleComponents.memberPlanPricingId],
-		references: [memberPlanPricing.id],
-	}),
-	addon: one(addons, {
-		fields: [bundleComponents.addonId],
-		references: [addons.id],
-	}),
-	targetSubscriptionComponent: one(bundleComponents, {
-		fields: [bundleComponents.targetSubscriptionComponentId],
-		references: [bundleComponents.id],
-		relationName: "bundleAddonTargetSubscription",
-	}),
-	targetedAddonComponents: many(bundleComponents, {
-		relationName: "bundleAddonTargetSubscription",
-	}),
-	subscriptions: many(memberSubscriptions),
-	addonPurchases: many(memberSubscriptionAddons),
 }));
 
 export const bundlePurchasesRelations = relations(bundlePurchases, ({ many, one }) => ({
@@ -832,15 +782,11 @@ export const bundlePurchasesRelations = relations(bundlePurchases, ({ many, one 
 		fields: [bundlePurchases.bundleId],
 		references: [bundles.id],
 	}),
-	member: one(members, {
-		fields: [bundlePurchases.memberId],
-		references: [members.id],
-	}),
 	subscriptions: many(memberSubscriptions),
 	addonPurchases: many(memberSubscriptionAddons),
 }));
 
-export const memberSubscriptionAddonsRelations = relations(memberSubscriptionAddons, ({ many, one }) => ({
+export const memberSubscriptionAddonsRelations = relations(memberSubscriptionAddons, ({ one }) => ({
 	subscription: one(memberSubscriptions, {
 		fields: [memberSubscriptionAddons.memberSubscriptionId],
 		references: [memberSubscriptions.id],
@@ -857,7 +803,6 @@ export const memberSubscriptionAddonsRelations = relations(memberSubscriptionAdd
 		fields: [memberSubscriptionAddons.bundleComponentId],
 		references: [bundleComponents.id],
 	}),
-	invoices: many(memberInvoices),
 }));
 
 

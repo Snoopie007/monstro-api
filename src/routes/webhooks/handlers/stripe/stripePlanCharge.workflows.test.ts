@@ -22,7 +22,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Stripe invoice decline
         mock.module("@/queues", () => ({
             enqueueAddonJob: async () => {},
             enqueueAddonRetry: async () => {},
-            scheduleBundledRenewal: async () => {},
+            scheduleRenewalRepair: async () => {},
             removeRenewalJobs: async () => {},
             removeAddonJobs: async () => {},
         }));

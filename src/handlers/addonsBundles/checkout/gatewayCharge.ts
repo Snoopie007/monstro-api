@@ -1,10 +1,38 @@
 import { SquarePaymentGateway } from "@/libs/PaymentGateway";
 import { Currency } from "square";
 import { z } from "zod";
-import type { InvoicePaymentOutcome, InvoicePaymentRequest } from "@/subtrees/utils/server/bundlePayments";
+import { squareOutcome, type InvoicePaymentOutcome, type InvoicePaymentRequest } from "@/subtrees/utils/server/bundlePayments";
 import { isPaymentDecline, paymentFailureFromError } from "@/subtrees/utils/workflow/payments";
 import { chargeWithGateway, stripePaymentIntentFromError } from "@/utils/checkoutUtil";
-import type { CheckoutContext } from "@/utils/getCheckoutContext";
+import type { PaymentType } from "@/subtrees/types";
+import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
+
+/** Why the location's gateway cannot charge this saved payment, if it cannot.
+ * Checked before the attempt is claimed, so the charge only fails on provider I/O. */
+function chargeUnavailable(gateway: CheckoutContext["gateway"], paymentType: PaymentType, total: number): string | null {
+  if (gateway.service === "stripe") return null;
+
+  if (paymentType !== "card") return "This location's payment gateway only accepts saved cards";
+
+  if (gateway.service === "square" && total > 0 && !gateway.metadata.squareLocationId) {
+    return "This location's Square gateway has no Square location configured";
+  }
+
+  return null;
+}
+
+/** The location's gateway for this member, or why it can't charge this payment type and total. */
+export async function checkoutGateway(locationId: string, memberId: string, paymentType: PaymentType, total: number) {
+  try {
+    const context = await getCheckoutContext({ lid: locationId, mid: memberId });
+    const error = chargeUnavailable(context.gateway, paymentType, total);
+    return error ? { error } : { context };
+  } catch (error) {
+    if (error instanceof CheckoutError) return { error: error.message };
+
+    throw error;
+  }
+}
 
 export async function chargeBundleInvoice(
   request: InvoicePaymentRequest,
@@ -62,19 +90,5 @@ async function chargeSquareBundle(
     total: request.total, feesAmount: request.feesAmount, currency: z.enum(Currency).parse(request.currency),
     referenceId: request.referenceId, note: request.note, idempotencyKey: request.attemptId, squareLocationId,
   });
-  const paymentIntentId = payment?.id;
-  switch (payment?.status) {
-    case "COMPLETED":
-      if (!paymentIntentId) return { status: "unknown" };
-      return { status: "succeeded", paymentIntentId, amount: request.total, currency: request.currency, receiptUrl: payment.receiptUrl,
-        gatewayMetadata: { squarePaymentId: paymentIntentId }, brand: payment.cardDetails?.card?.cardBrand, last4: payment.cardDetails?.card?.last4, paymentType: "card" };
-    case "APPROVED":
-    case "PENDING":
-      return { status: "processing", paymentIntentId };
-    case "FAILED":
-    case "CANCELED":
-      return { status: "failed", paymentIntentId, reason: "Square payment failed", code: payment.status, retryable: true, workflowDecline: payment.status === "FAILED" };
-    default:
-      return { status: "unknown", paymentIntentId };
-  }
+  return squareOutcome(payment, request);
 }

@@ -29,14 +29,6 @@ export function promoCheckoutDiscount(promo: StoredPromo | undefined): CheckoutD
     };
 }
 
-/** A bundle price replaces the plan price, downpayment included. */
-function initialDownpayment(
-    pricingSource: { type: string },
-    pricing: { downpayment: number | null },
-): number | null {
-    return pricingSource.type === "bundle" ? null : pricing.downpayment || null;
-}
-
 type ChargeableSubscription = {
     id: string;
     pricing: { downpayment: number | null; plan: { name: string } | null };
@@ -59,7 +51,8 @@ export async function quoteInitialSubscriptionCharge(database: DbReader, input: 
     const planName = subscription.pricing.plan?.name
         ? `${subscription.pricing.plan.name}/${pricing.name}`
         : pricing.name;
-    const downpayment = initialDownpayment(pricingSource, subscription.pricing);
+    // A bundle price replaces the plan price, downpayment included.
+    const downpayment = pricingSource.type === "bundle" ? null : subscription.pricing.downpayment || null;
     const isDownpayment = downpayment !== null;
     const additionalFees = await getAdditionalFeesForCheckout(locationId, "subscription", "initial", database);
     const chargeDetails = calculateChargeDetails({
@@ -122,10 +115,7 @@ export async function markSubscriptionActivated(tx: DbTransaction, input: {
         metadata: {
             ...subscription.metadata,
             hasPaidDownpayment: input.paidDownpayment,
-            paymentMethodId: payment.paymentMethodId,
-            gatewayService: payment.gatewayService,
-            gatewayIntegrationId: payment.gatewayIntegrationId,
-            gatewayCustomerId: payment.gatewayCustomerId,
+            ...payment,
             promo: promo ? { ...promo, applied: true } : subscription.metadata.promo,
         },
     }).where(eq(memberSubscriptions.id, subscription.id));

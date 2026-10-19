@@ -23,36 +23,18 @@ interface HandleStripeBundleChargeProps {
 /** Settles or declines a bundle or add-on invoice from a Stripe charge or PaymentIntent event. */
 export async function recordStripeOutcome(props: HandleStripeBundleChargeProps) {
     const { invoiceId, paymentIntentId, failedCode } = props;
-    const attemptId = props.billingAttemptId ?? undefined;
 
     if (!paymentIntentId) throw new Error(`Stripe payment for bundle invoice ${invoiceId} has no PaymentIntent`);
 
-    if (props.success) {
-        await recordBundlePayment({
-            status: "succeeded",
-            invoiceId,
-            attemptId,
-            paymentIntentId,
-            amount: props.amount,
-            currency: props.currency,
-            gateway: { service: "stripe", stripeAccountId: props.stripeAccountId, customerId: props.customerId, paymentMethodId: props.paymentMethodId },
-            receiptUrl: props.receiptUrl,
-        });
-        return;
-    }
+    // The fields a success and a decline both record.
+    const common = {
+        invoiceId, attemptId: props.billingAttemptId ?? undefined, paymentIntentId, amount: props.amount, currency: props.currency,
+        gateway: { service: "stripe" as const, stripeAccountId: props.stripeAccountId, customerId: props.customerId, paymentMethodId: props.paymentMethodId },
+    };
 
-    await recordBundlePayment({
-        status: "failed",
-        invoiceId,
-        attemptId,
-        paymentIntentId,
-        reason: props.failedReason ?? "Payment failed",
-        code: failedCode ?? "payment_failed",
-        retryable: true,
-        workflowDecline: isPaymentDecline("stripe", failedCode),
-        amount: props.amount, currency: props.currency,
-        gateway: { service: "stripe", stripeAccountId: props.stripeAccountId, customerId: props.customerId, paymentMethodId: props.paymentMethodId },
-    });
+    await recordBundlePayment(props.success
+        ? { ...common, status: "succeeded", receiptUrl: props.receiptUrl }
+        : { ...common, status: "failed", reason: props.failedReason ?? "Payment failed", code: failedCode ?? "payment_failed", retryable: true, workflowDecline: isPaymentDecline("stripe", failedCode) });
 }
 
 type BundleMetadata = { invoiceId?: string; memberPlanId?: string; billingAttemptId?: string };

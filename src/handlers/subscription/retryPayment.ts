@@ -1,17 +1,17 @@
 import { lockBundleRefundReplay, keepRefundProgress } from "@/handlers/addonsBundles/refund/state";
 import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
+import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { db } from "@/db/db";
 import { BillingContextError, assertImportedSubscriptionRetrySafe, resolveSubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";
 import {
-    chargeInvoiceAttempt,
     claimInvoiceAttempt,
     saveInvoiceAttemptResult,
 } from "@/routes/x/loc/subscriptions/invoiceAttempts";
 import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
 import { scheduleRenewalRepair } from "@/queues/subscriptions";
 import type { SubscriptionBillingContext } from "@/routes/x/loc/subscriptions/billingContext";
-import type { chargeWithGateway } from "@/utils/checkoutUtil";
+import { chargeWithGateway, stripePaymentIntentFromError, type ChargeWithGatewayResult } from "@/utils/checkoutUtil";
 import type { TransactionActivity } from "@/subtrees/types";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { and, eq, or, sql } from "drizzle-orm";
@@ -53,6 +53,12 @@ function readBillingAttempt(metadata: unknown): BillingAttemptSnapshot | null {
             ...(typeof value.paymentIntentId === "string" ? { paymentIntentId: value.paymentIntentId } : {}),
         }
         : null;
+}
+function classifyPaymentIntentStatus(status: string | undefined): "failed" | "processing" | "requires_action" | "unknown" {
+    if (status === "requires_payment_method" || status === "canceled") return "failed";
+    if (status === "processing") return "processing";
+    if (status === "requires_action") return "requires_action";
+    return "unknown";
 }
 
 async function recordMigrationGateFailure(input: {
@@ -269,10 +275,9 @@ export async function retrySubscriptionPayment(props: {
         );
     }
 
-    const attempt = await chargeInvoiceAttempt({
-        invoiceId: invoice.id,
-        attemptId,
-        charge: {
+    let charge: ChargeWithGatewayResult;
+    try {
+        charge = await chargeWithGateway({
             gateway: billingContext.gateway as Parameters<typeof chargeWithGateway>[0]["gateway"],
             gatewayCustomerId: billingContext.gatewayCustomerId,
             paymentMethodId,
@@ -292,16 +297,25 @@ export async function retrySubscriptionPayment(props: {
                 billingAttemptId: attemptId,
             },
             paymentType,
-        },
-    });
-
-    if (!attempt.charge) {
+        });
+    } catch (error) {
+        // A decline thrown as an error can be retried. Otherwise the PaymentIntent's status decides, and an unknown result waits for a webhook.
+        const decline = paymentFailureFromError(error);
+        const paymentIntent = stripePaymentIntentFromError(error);
+        const attemptStatus = decline ? "failed" : classifyPaymentIntentStatus(paymentIntent?.status);
+        await saveInvoiceAttemptResult({
+            invoiceId: invoice.id,
+            attemptId,
+            status: attemptStatus,
+            paymentIntentId: decline?.paymentIntentId ?? paymentIntent?.id,
+            retryable: attemptStatus === "failed",
+            workflowDecline: !!decline,
+        });
         return fail(
-            attempt.status === "failed" ? "CHARGE_FAILED" : "PAYMENT_UNKNOWN",
-            attempt.error instanceof Error ? attempt.error.message : "Payment outcome is unknown",
+            attemptStatus === "failed" ? "CHARGE_FAILED" : "PAYMENT_UNKNOWN",
+            error instanceof Error ? error.message : "Payment outcome is unknown",
         );
     }
-    const { charge, status: attemptStatus } = attempt;
     const now = new Date();
     const activity: TransactionActivity = charge.status === "approved"
         ? {
@@ -318,6 +332,19 @@ export async function retrySubscriptionPayment(props: {
             brand: charge.brand,
             last4: charge.last4,
         };
+    const attemptStatus = charge.status === "approved"
+        ? "succeeded"
+        : charge.status === "failed"
+            ? "failed"
+            : classifyPaymentIntentStatus(charge.paymentIntentStatus);
+    await saveInvoiceAttemptResult({
+        invoiceId: invoice.id,
+        attemptId,
+        status: attemptStatus,
+        paymentIntentId: "paymentIntentId" in charge ? charge.paymentIntentId : undefined,
+        retryable: attemptStatus === "failed",
+        workflowDecline: charge.status === "failed" && isPaymentDecline(billingContext.gateway.service, charge.failureCode, charge.gatewayMetadata.squarePaymentStatus, charge.gatewayMetadata.authorizeResponseCode),
+    });
     const migration = sub.metadata?.stripeMigration;
     const importedMigrationArmed = migration
         && typeof migration === "object"

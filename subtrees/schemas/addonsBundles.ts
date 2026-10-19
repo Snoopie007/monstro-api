@@ -17,11 +17,6 @@ import { memberSubscriptions } from "./MemberEnrollment";
 import { memberPlanPricing } from "./MemberPlan";
 import { members } from "./members";
 
-export const addonBillingTypes = ["one_time", "recurring"] as const;
-export const addonClassAccessOverrides = ["unlimited"] as const;
-export const memberSubscriptionAddonStatuses = ["pending", "active", "past_due", "canceled", "expired"] as const;
-export const bundlePurchaseStatuses = ["pending", "active", "canceled", "expired"] as const;
-
 export const addons = pgTable("addons", {
   id: text("id").primaryKey().notNull().default(sql`uuid_base62('adn_')`),
   locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
@@ -29,10 +24,10 @@ export const addons = pgTable("addons", {
   description: text("description"),
   amount: integer("amount").notNull().default(0),
   currency: text("currency").notNull().default("USD"),
-  billingType: text("billing_type", { enum: addonBillingTypes }).notNull(),
+  billingType: text("billing_type", { enum: ["one_time", "recurring"] }).notNull(),
   interval: IntervalType("interval"),
   intervalThreshold: integer("interval_threshold"),
-  classAccessOverride: text("class_access_override", { enum: addonClassAccessOverrides }),
+  classAccessOverride: text("class_access_override", { enum: ["unlimited"] }),
   archived: boolean("archived").notNull().default(false),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
@@ -116,7 +111,7 @@ export const bundlePurchases = pgTable("bundle_purchases", {
   id: text("id").primaryKey().notNull().default(sql`uuid_base62('bpur_')`),
   bundleId: text("bundle_id").notNull().references(() => bundles.id, { onDelete: "restrict" }),
   memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  status: text("status", { enum: bundlePurchaseStatuses }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "active", "canceled", "expired"] }).notNull().default("pending"),
   startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   cancelReason: text("cancel_reason"),
@@ -135,7 +130,7 @@ export const memberSubscriptionAddons = pgTable("member_subscription_addons", {
   id: text("id").primaryKey().notNull().default(sql`uuid_base62('msa_')`),
   memberSubscriptionId: text("member_subscription_id").notNull().references(() => memberSubscriptions.id, { onDelete: "cascade" }),
   addonId: text("addon_id").notNull().references(() => addons.id, { onDelete: "restrict" }),
-  status: text("status", { enum: memberSubscriptionAddonStatuses }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "active", "past_due", "canceled", "expired"] }).notNull().default("pending"),
   startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
   paidPeriodStartsAt: timestamp("paid_period_starts_at", { withTimezone: true }),
   paidPeriodEndsAt: timestamp("paid_period_ends_at", { withTimezone: true }),

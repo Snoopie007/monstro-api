@@ -1,9 +1,15 @@
+import type { Interval } from "../types";
+import { nextBillingBoundary } from "./subscriptionBilling";
+
 /** A canceled or expired add-on or bundle purchase is finished. */
 export function hasEnded(status: string) {
   return status === "canceled" || status === "expired";
 }
 
 export const COLLECTING_SUBSCRIPTION_STATUSES = ["active", "trialing", "past_due"];
+
+/** An add-on purchase in one of these statuses is still open on its subscription. */
+export const OPEN_ADDON_PURCHASE_STATUSES = ["pending", "active", "past_due"] as const;
 
 /** Why an add-on period can't be collected now, or null when it can. The collector,
  * settlement and the worker's bundled renewal all ask this, so they agree on when billing stops. */
@@ -23,4 +29,16 @@ export function addonNotCollectible(
   if (subscription.cancelAt && subscription.cancelAt <= now) return "Subscription cancellation is due";
   if (addon.cancelAt && addon.cancelAt <= now) return "Add-on cancellation is due";
   return null;
+}
+
+/** The end of an add-on period that starts at `start`. One-time add-ons have none. */
+export function addonPeriodEnd(
+  addon: { id: string; billingType: string; interval: Interval | null; intervalThreshold: number | null },
+  start: Date,
+): Date | null {
+  if (addon.billingType !== "recurring") return null;
+
+  if (!addon.interval || !addon.intervalThreshold) throw new Error(`Recurring add-on ${addon.id} has no billing interval`);
+
+  return nextBillingBoundary(start, start, addon.interval, addon.intervalThreshold);
 }

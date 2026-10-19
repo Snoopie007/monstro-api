@@ -1,11 +1,10 @@
-import { eq } from "drizzle-orm";
-import { bundlePurchases, memberSubscriptionAddons, memberSubscriptions } from "../../schemas";
-import { addonNotCollectible } from "../addonsBundles";
+import { and, asc, eq, inArray } from "drizzle-orm";
+import { bundlePurchases, memberInvoices, memberSubscriptionAddons, memberSubscriptions } from "../../schemas";
+import { addonNotCollectible, OPEN_ADDON_PURCHASE_STATUSES } from "../addonsBundles";
 import type { InvoicePaymentOutcome, InvoicePaymentTransaction, PaymentInvoice } from "./bundlePayments";
 
 export type AddonSettlement = {
   purchaseId: string;
-  subscriptionId: string;
   bundlePurchaseId: string | null;
   runAt: Date | null;
 };
@@ -33,7 +32,7 @@ export async function settleAddonInvoice(
   });
   if (addonNotCollectible(purchase, bundle, subscription)) return null;
   const jobs: AddonSettlement = {
-    purchaseId: purchase.id, subscriptionId: purchase.memberSubscriptionId,
+    purchaseId: purchase.id,
     bundlePurchaseId: purchase.bundlePurchaseId, runAt: null,
   };
   if (outcome.status === "failed") {
@@ -52,4 +51,27 @@ export async function settleAddonInvoice(
     paidPeriodEndsAt: invoice.forPeriodEnd, nextBillAt: invoice.forPeriodEnd, updated: new Date(),
   }).where(eq(memberSubscriptionAddons.id, purchase.id));
   return { ...jobs, runAt: invoice.forPeriodEnd };
+}
+
+/** Cancels open add-ons now and voids their unpaid invoices. Ended add-ons keep their dates. */
+export async function cancelAddonsNow(tx: InvoicePaymentTransaction, ids: string[], now = new Date()) {
+  if (ids.length === 0) return;
+
+  await tx.update(memberSubscriptionAddons).set({ status: "canceled", cancelAt: now, canceledAt: now, endedAt: now, nextBillAt: null, updated: now })
+    .where(and(inArray(memberSubscriptionAddons.id, ids), inArray(memberSubscriptionAddons.status, [...OPEN_ADDON_PURCHASE_STATUSES])));
+  await tx.update(memberInvoices).set({ status: "void", updated: now })
+    .where(and(inArray(memberInvoices.memberSubscriptionAddonId, ids), inArray(memberInvoices.status, ["draft", "sent", "unpaid"])));
+}
+
+/** Ends a bundle without refunding it: the bundle and its add-ons are canceled and
+ * their unpaid invoices voided, while its subscriptions keep running. The caller
+ * holds the bundle's lock. */
+export async function endBundle(tx: InvoicePaymentTransaction, purchaseId: string, reason: string | null) {
+  const now = new Date();
+  const rows = await tx.select({ id: memberSubscriptionAddons.id }).from(memberSubscriptionAddons)
+    .where(eq(memberSubscriptionAddons.bundlePurchaseId, purchaseId)).orderBy(asc(memberSubscriptionAddons.id)).for("update");
+
+  await tx.update(bundlePurchases).set({ status: "canceled", endedAt: now, cancelReason: reason, updated: now })
+    .where(eq(bundlePurchases.id, purchaseId));
+  await cancelAddonsNow(tx, rows.map((row) => row.id), now);
 }

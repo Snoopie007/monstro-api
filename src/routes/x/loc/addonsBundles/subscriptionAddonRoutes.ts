@@ -1,13 +1,11 @@
 import { enqueueAddonJob } from "@/queues/subscriptionAddons";
 import { Elysia, t } from "elysia";
 import { cancelBundle } from "@/handlers/addonsBundles/cancellation";
-import { reconcileBundle } from "@/handlers/addonsBundles/checkout/settlement";
 import { getLocationAccess, getBillingAccess } from "./routeAccess";
 import {
 	cancelAddon,
 	getAddonOverview,
 	getAddonPurchase,
-	getAddonRenewal,
 	purchaseAddon,
 } from "./subscriptionAddons";
 
@@ -63,22 +61,4 @@ export const subscriptionAddonRoutes = new Elysia({ prefix: "/subscriptions/:sid
 		if (result.runAt) await enqueueAddonJob("cancel", params.purchaseId, result.runAt);
 
 		return status(200, { canceled: true, cancelAt: result.runAt?.toISOString() ?? null });
-	})
-	.post("/:purchaseId/renewal", async ({ locationId, params, status }) => {
-		const renewal = await getAddonRenewal(locationId, params.purchaseId, params.sid);
-
-		if (!renewal) return status(404, { error: "Subscription add-on not found" });
-
-		// A paid cash add-on can complete its pending bundle.
-		if (renewal.bundlePurchaseId) {
-			const bundleActivation = await reconcileBundle(locationId, renewal.bundlePurchaseId);
-
-			if (bundleActivation.status === "pricing-conflict") {
-				return status(409, { error: "Bundled add-ons would apply conflicting subscription prices" });
-			}
-		}
-
-		if (renewal.runAt) await enqueueAddonJob("renew", params.purchaseId, renewal.runAt);
-
-		return status(200, { scheduled: Boolean(renewal.runAt), runAt: renewal.runAt?.toISOString() ?? null });
 	}));

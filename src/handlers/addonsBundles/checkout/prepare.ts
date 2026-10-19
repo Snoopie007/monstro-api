@@ -1,7 +1,6 @@
 import { bundleCheckoutSchema } from "./checkoutFacts";
 import { db, type DbTransaction } from "@/db/db";
 import { calculateThresholdDate } from "@/utils/enrollUtils";
-import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
 import { getCurrency } from "@/utils/getCurrency";
 import {
   addons,
@@ -23,8 +22,9 @@ import { commissionBillingSnapshot } from "@/subtrees/utils/invoiceItems";
 import { generateUUID } from "@/subtrees/utils";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { createBundleInvoice, type BundleCardPayment } from "./invoice";
+import { checkoutGateway } from "./gatewayCharge";
 import { getBundleSummary } from "../bundleSummary";
-import { hasAddonConflict } from "../addonPricing";
+import { hasAddonConflict } from "@/subtrees/utils/server/addonPricing";
 
 
 type PrepareBundlePurchaseInput = PurchaseBundleInput & {
@@ -79,25 +79,16 @@ async function getCardPayment(
     return { status: "payment-unavailable", error: "Choose a payment method for this bundle" };
   }
 
-  let context: CheckoutContext;
+  // The total isn't known yet; pay checks Square's location before it charges.
+  const checkout = await checkoutGateway(input.locationId, input.memberId, input.paymentType, 0);
 
-  try {
-    context = await getCheckoutContext({ lid: input.locationId, mid: input.memberId });
-  } catch (error) {
-    if (error instanceof CheckoutError) return { status: "payment-unavailable", error: error.message };
-
-    throw error;
-  }
-
-  if (context.gateway.service !== "stripe" && input.paymentType !== "card") {
-    return { status: "payment-unavailable", error: "This location's payment gateway only accepts saved cards" };
-  }
+  if (checkout.error !== undefined) return { status: "payment-unavailable", error: checkout.error };
 
   return {
     status: "ready",
     card: {
-      gateway: context.gateway,
-      gatewayCustomerId: context.gatewayCustomerId,
+      gateway: checkout.context.gateway,
+      gatewayCustomerId: checkout.context.gatewayCustomerId,
       paymentMethodId: input.paymentMethodId,
       paymentType: input.paymentType,
     },
@@ -221,12 +212,6 @@ async function validateSelection(
   return { status: "valid", bundleName: bundle.name, startsAt, subscriptions };
 }
 
-function subscriptionCancelAt(pricing: BundlePricing, startsAt: Date) {
-  if (!pricing.expireInterval || !pricing.expireThreshold) return null;
-
-  return calculateThresholdDate({ startDate: startsAt, threshold: pricing.expireThreshold, interval: pricing.expireInterval });
-}
-
 async function createPendingRecords(tx: DbTransaction, input: BundlePurchaseDraft, selection: BundleSelection) {
   const { locationId, memberId, paymentType } = input;
   const { startsAt } = selection;
@@ -256,14 +241,17 @@ async function createPendingRecords(tx: DbTransaction, input: BundlePurchaseDraf
         threshold: pricing.intervalThreshold,
         interval: pricing.interval,
       }),
-      cancelAt: subscriptionCancelAt(pricing, startsAt),
+      // A price that expires ends the subscription after that many intervals.
+      cancelAt: pricing.expireInterval && pricing.expireThreshold
+        ? calculateThresholdDate({ startDate: startsAt, threshold: pricing.expireThreshold, interval: pricing.expireInterval })
+        : null,
       status: "incomplete",
       paymentType,
       bundlePurchaseId: purchase.id,
       bundleComponentId: componentId,
       classCredits: pricing.classLimitInterval === "term" ? pricing.totalClassLimit ?? 0 : 0,
       metadata: {
-        bundlePurchaseId: purchase.id, commissionBilling: commissionBillingSnapshot(pricing, pricing),
+        commissionBilling: commissionBillingSnapshot(pricing, pricing),
         bundleCheckout: { checkout: { selectedOptionalComponentIds: [...new Set(input.selectedOptionalComponentIds)].sort(), startDate: input.startDate ? new Date(input.startDate).toISOString() : null } },
       },
     }).returning({ id: memberSubscriptions.id });
@@ -292,16 +280,14 @@ async function getPreparedPurchase(database: Pick<typeof db, "query">, input: Bu
   const purchase = await database.query.bundlePurchases.findFirst({
     where: eq(bundlePurchases.id, input.purchaseId),
     with: {
-      bundle: { columns: { locationId: true }, with: { components: { columns: { id: true, required: true } } } },
-      subscriptions: { columns: { id: true, bundleComponentId: true, paymentType: true, metadata: true } },
-      addonPurchases: { columns: { id: true, bundleComponentId: true } },
+      bundle: { columns: { locationId: true } },
+      subscriptions: { columns: { id: true, paymentType: true, metadata: true } },
+      addonPurchases: { columns: { id: true } },
     },
   });
   if (!purchase) return null;
   if (input.startDate && !Number.isFinite(new Date(input.startDate).getTime())) return invalidSelection("Start date is invalid");
-  // Drafts prepared before the rename keep their checkout under billingAttempt.
-  const facts = purchase.subscriptions[0]?.metadata;
-  const checkout = bundleCheckoutSchema.parse(facts?.bundleCheckout ?? facts?.billingAttempt ?? {}).checkout;
+  const checkout = bundleCheckoutSchema.parse(purchase.subscriptions[0]?.metadata?.bundleCheckout ?? {}).checkout;
   const requested = [...new Set(input.selectedOptionalComponentIds)].sort();
   const selected = checkout?.selectedOptionalComponentIds;
   const startMatches = checkout && (input.startDate ? new Date(input.startDate).toISOString() : null) === checkout.startDate;

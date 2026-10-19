@@ -1,5 +1,5 @@
 import {
-    getInvoiceAddon, lockInvoiceAddon, lockOpenBundle, markPaidBlocker, runAddonFollowUp, settleMarkedAddon, settlePaidAddon,
+    getInvoiceAddon, lockInvoiceAddon, lockOpenBundle, markPaidBlocker, runAddonFollowUp, settleMarkedAddon,
 } from "@/handlers/addonsBundles/markPaid";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
@@ -134,7 +134,8 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 .where(and(eq(memberInvoices.id, iid), eq(memberInvoices.locationId, lid))).for("update");
             if (!locked) return "missing";
             if (locked.paid || locked.status === "paid") {
-                addonFollowUp.value = await settlePaidAddon(tx, locked, addon);
+                // A paid bundled add-on invoice settles again, so a lost activation or renewal recovers.
+                addonFollowUp.value = addon?.bundlePurchaseId ? await settleMarkedAddon(tx, locked, addon) : null;
                 return "paid";
             }
             if (!["sent", "unpaid"].includes(locked.status) || locked.paymentType !== "cash" || locked.total !== quotedTotal) return "changed";

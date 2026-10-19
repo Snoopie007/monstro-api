@@ -9,40 +9,16 @@ import {
 import type { MemberPlanPricing } from "./member";
 
 export type Addon = typeof addons.$inferSelect;
-export type NewAddon = typeof addons.$inferInsert;
 export type AddonPlanPriceOverride = typeof addonPlanPriceOverrides.$inferSelect;
-export type NewAddonPlanPriceOverride = typeof addonPlanPriceOverrides.$inferInsert;
 export type MemberSubscriptionAddon = typeof memberSubscriptionAddons.$inferSelect;
-export type NewMemberSubscriptionAddon = typeof memberSubscriptionAddons.$inferInsert;
 export type Bundle = typeof bundles.$inferSelect;
-export type NewBundle = typeof bundles.$inferInsert;
 export type BundleComponent = typeof bundleComponents.$inferSelect;
-export type NewBundleComponent = typeof bundleComponents.$inferInsert;
 export type BundlePurchase = typeof bundlePurchases.$inferSelect;
-export type NewBundlePurchase = typeof bundlePurchases.$inferInsert;
 
-export type AddonPlanPriceOverrideDetail = AddonPlanPriceOverride & {
-  sourcePricing?: MemberPlanPricing;
-  replacementPricing?: MemberPlanPricing;
-};
-
-export type AddonDetail = Addon & {
-  planPriceOverrides: AddonPlanPriceOverrideDetail[];
-};
-
-export type BundleComponentDetail = BundleComponent & {
-  addon?: Addon;
-  memberPlanPricing?: MemberPlanPricing;
-};
-
-export type BundleDetail = Bundle & {
-  components: BundleComponentDetail[];
-};
-
-export type AddonCatalogItem = Omit<AddonDetail, "created" | "updated" | "planPriceOverrides"> & {
+export type AddonCatalogItem = Omit<Addon, "created" | "updated"> & {
   created: string;
   updated: string | null;
-  planPriceOverrides: Array<Omit<AddonPlanPriceOverrideDetail, "created" | "updated" | "startsAt" | "endsAt"> & {
+  planPriceOverrides: Array<Omit<AddonPlanPriceOverride, "created" | "updated" | "startsAt" | "endsAt"> & {
     created: string;
     updated: string | null;
     startsAt: string | null;
@@ -50,10 +26,10 @@ export type AddonCatalogItem = Omit<AddonDetail, "created" | "updated" | "planPr
   }>;
 };
 
-export type BundleCatalogItem = Omit<BundleDetail, "created" | "updated" | "components"> & {
+export type BundleCatalogItem = Omit<Bundle, "created" | "updated"> & {
   created: string;
   updated: string | null;
-  components: Array<Omit<BundleComponentDetail, "created" | "updated"> & {
+  components: Array<Omit<BundleComponent, "created" | "updated"> & {
     created: string;
     updated: string | null;
     displayName: string;

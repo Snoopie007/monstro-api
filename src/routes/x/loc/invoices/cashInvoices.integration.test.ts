@@ -35,7 +35,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         mock.module("@/utils/additionalFees", () => ({ getAdditionalFeesForCheckout: async () => [] }));
         mock.module("@/libs/wallet", () => ({ Wallet: class { charge = async () => true; } }));
         mock.module("@/libs/PaymentGateway", () => ({ SquarePaymentGateway: class {}, StripePaymentGateway: class {} }));
-        mock.module("@/queues", () => ({ invoiceQueue: {}, enqueueAddonJob: async () => {}, enqueueAddonRetry: async () => {}, scheduleBundledRenewal: async () => {} }));
+        mock.module("@/queues", () => ({ invoiceQueue: {}, enqueueAddonJob: async () => {}, enqueueAddonRetry: async () => {}, scheduleRenewalRepair: async () => {} }));
         mock.module("@/queues/email", () => ({ emailQueue: { add: enqueue } }));
         const { createInvoiceRoutes } = await import("./create");
         const { sendInvoiceRoutes } = await import("./send");

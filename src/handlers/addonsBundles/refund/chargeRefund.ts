@@ -1,7 +1,9 @@
-import type { BundleRefundChargeResult } from "@/subtrees/types";
+import type { BundleRefundChargeResult, BundleRefundResponse } from "@/subtrees/types";
 import { z } from "zod";
+import { cancelForRefund, finishCancellation, type BundleRefundInput } from "../cancellation";
+import { getBundleSummary } from "../bundleSummary";
 import { refundAuthorizeCharge } from "./authorize";
-import type { BundleRefundCharge } from "./charges";
+import { getRefundCharges, type BundleRefundCharge } from "./charges";
 import { refundFailure, getRefundGateway, type BundleRefundGateway } from "./gateway";
 import {
   bundleRefundAmounts,
@@ -152,4 +154,30 @@ export async function refundCharge(charge: BundleRefundCharge): Promise<BundleRe
       return chargeResult(charge, gateway, { status: "pending", message: "The refund could not be checked or saved. Try again to confirm its status." });
     }
   }
+}
+
+/** Full refund-and-cancel only. Each retry discovers charges afresh, including
+ * payments that completed after an earlier cancellation/refund request. */
+export async function refundBundle(input: BundleRefundInput): Promise<{ status: "not-found" } | { status: "ok"; value: BundleRefundResponse }> {
+  const bundle = await cancelForRefund(input);
+
+  if (!bundle) return { status: "not-found" };
+
+  const cancellationWarnings = await finishCancellation(bundle);
+  const charges = await getRefundCharges(input.locationId, bundle);
+  const results = await Promise.all(charges.map(refundCharge));
+
+  const purchase = await getBundleSummary(input.locationId, input.purchaseId);
+
+  if (!purchase) throw new Error("Bundle purchase disappeared after cancellation");
+
+  return {
+    status: "ok",
+    value: {
+      purchase,
+      charges: results,
+      cancellationWarnings,
+      unfinished: cancellationWarnings.length > 0 || results.some((charge) => charge.status === "failed" || charge.status === "pending"),
+    },
+  };
 }
