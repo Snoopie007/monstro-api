@@ -12,7 +12,7 @@ import {
 import type { SubscriptionBundleSummary } from "@/subtrees/types";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
-export async function getBundlePurchaseSummary(
+export async function getBundleSummary(
   locationId: string,
   bundlePurchaseId: string,
 ): Promise<SubscriptionBundleSummary | null> {
@@ -86,12 +86,12 @@ export async function getBundlePurchaseSummary(
   };
 }
 
-export async function getSubscriptionBundleSummary(locationId: string, subscriptionId: string) {
+export async function getSubscriptionBundle(locationId: string, subscriptionId: string) {
   const subscription = await db.query.memberSubscriptions.findFirst({
     where: and(eq(memberSubscriptions.id, subscriptionId), eq(memberSubscriptions.locationId, locationId)),
     columns: { bundlePurchaseId: true },
   });
   return subscription?.bundlePurchaseId
-    ? getBundlePurchaseSummary(locationId, subscription.bundlePurchaseId)
+    ? getBundleSummary(locationId, subscription.bundlePurchaseId)
     : null;
 }

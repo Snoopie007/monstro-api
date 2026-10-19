@@ -1,17 +1,14 @@
-import { settleSubscriptionAddonInvoice } from "@/subtrees/utils/server/subscriptionAddonInvoices";
-import { addInterval } from "./shared";
-import { enqueueSubscriptionAddonJob } from "@/queues";
-import { hasConflictingSubscriptionAddonPricing } from "@/handlers/addonsBundles/addonPricing";
-import { lockBundleComponents } from "@/handlers/addonsBundles/bundleLocks";
-import { reconcileBundlePurchase } from "@/handlers/addonsBundles/checkout/settlement";
+import {
+    getInvoiceAddon, lockInvoiceAddon, lockOpenBundle, markPaidBlocker, runAddonFollowUp, settleMarkedAddon, settlePaidAddon,
+} from "@/handlers/addonsBundles/markPaid";
 import { strict as assert } from "node:assert";
 import { db } from "@/db/db";
 import { Wallet } from "@/libs/wallet";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, eq, inArray, lte } from "drizzle-orm";
-import { bundlePurchases, memberInvoices, memberSubscriptionAddons, memberSubscriptions, transactions } from "@/subtrees/schemas";
-import { hasEnded } from "@/subtrees/utils/addonsBundles";
+import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
+import type { AddonSettlement } from "@/subtrees/utils/server/addonInvoices";
 import type { Currency } from "@/subtrees/types/currency";
 import { canEditLocationMember } from "@/utils/locationAccess";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
@@ -34,22 +31,16 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         }
 
         if (invoice.paymentType !== "cash") return status(400, { error: "Only cash invoices can be marked as paid" });
-        const discoveredAddon = invoice.memberSubscriptionAddonId ? await db.query.memberSubscriptionAddons.findFirst({ where: eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId) }) : undefined;
-        if ((invoice.paid || invoice.status === "paid") && !discoveredAddon?.bundlePurchaseId) return paidResponse();
+        const addon = await getInvoiceAddon(invoice);
+        // A paid bundled add-on continues below, so a lost activation or renewal is settled again.
+        if ((invoice.paid || invoice.status === "paid") && !addon?.bundlePurchaseId) return paidResponse();
         if (expectedTotal !== undefined && expectedTotal !== invoice.total) return status(409, { error: "The invoice amount changed. Please review it again." });
         if (!invoice.paid && !["sent", "unpaid"].includes(invoice.status)) {
             return status(400, { error: "Invoice must be issued before marking as paid" });
         }
 
-        if (invoice.memberSubscriptionAddonId) {
-            const purchase = discoveredAddon;
-            if (!purchase || hasEnded(purchase.status)) {
-                return status(409, { error: "Canceled or expired add-on invoices cannot be marked paid" });
-            }
-            if (await hasConflictingSubscriptionAddonPricing(db, purchase.memberSubscriptionId, [], invoice.forPeriodStart ?? new Date())) {
-                return status(409, { error: "This add-on would apply a conflicting subscription price" });
-            }
-        }
+        const addonBlocker = await markPaidBlocker(invoice, addon);
+        if (addonBlocker) return status(409, { error: addonBlocker });
 
         let walletChargeMetadata: Record<string, unknown> | null = null;
         const location = await db.query.locations.findFirst({
@@ -131,36 +122,25 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
             };
         }
 
-        const addonRenewal: { value: { purchaseId: string; runAt: Date } | null } = { value: null };
-        const bundlePurchase: { value: string | null } = { value: null };
+        const addonFollowUp: { value: AddonSettlement | null } = { value: null };
         const quotedTotal = invoice.total;
         const outcome = await db.transaction(async (tx) => {
             // Wallet debits have their own invoice-specific deduplication. Keep
             // them outside this transaction so the two-connection pool cannot
             // deadlock while another confirmation waits for the invoice lock.
-            if (discoveredAddon?.bundlePurchaseId) {
-                await lockBundleComponents(tx, discoveredAddon.bundlePurchaseId);
-                const owner = await tx.query.bundlePurchases.findFirst({ where: eq(bundlePurchases.id, discoveredAddon.bundlePurchaseId), columns: { status: true } });
-                if (!owner || hasEnded(owner.status)) return "addon-ended";
-            }
+            // A bundled add-on locks its bundle first, in the same order as cancellation.
+            if (!await lockOpenBundle(tx, addon)) return "addon-ended";
             const [locked] = await tx.select().from(memberInvoices)
                 .where(and(eq(memberInvoices.id, iid), eq(memberInvoices.locationId, lid))).for("update");
             if (!locked) return "missing";
             if (locked.paid || locked.status === "paid") {
-                if (discoveredAddon?.bundlePurchaseId) {
-                    const settled = await settleSubscriptionAddonInvoice(tx, locked, { status: "succeeded" });
-                    bundlePurchase.value = settled?.bundlePurchaseId ?? null;
-                    if (settled?.runAt) addonRenewal.value = { purchaseId: settled.purchaseId, runAt: settled.runAt };
-                }
+                addonFollowUp.value = await settlePaidAddon(tx, locked, addon);
                 return "paid";
             }
             if (!["sent", "unpaid"].includes(locked.status) || locked.paymentType !== "cash" || locked.total !== quotedTotal) return "changed";
             const invoice = locked;
-            const addonPurchase = invoice.memberSubscriptionAddonId
-                ? (await tx.select().from(memberSubscriptionAddons)
-                    .where(eq(memberSubscriptionAddons.id, invoice.memberSubscriptionAddonId)).for("update"))[0]
-                : null;
-            if (invoice.memberSubscriptionAddonId && (!addonPurchase || hasEnded(addonPurchase.status) || addonPurchase.bundlePurchaseId !== (discoveredAddon?.bundlePurchaseId ?? null))) return "addon-ended";
+            const lockedAddon = await lockInvoiceAddon(tx, invoice, addon);
+            if (lockedAddon === "ended") return "addon-ended";
             const existingTransaction = invoice.transactionId
                 ? await tx.query.transactions.findFirst({
                     where: eq(transactions.id, invoice.transactionId),
@@ -219,24 +199,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
                 transactionId,
                 updated: new Date(),
             }).where(eq(memberInvoices.id, iid));
-            if (addonPurchase?.bundlePurchaseId) {
-                const settled = await settleSubscriptionAddonInvoice(tx, { ...invoice, paid: true, status: "paid" }, { status: "succeeded" });
-                bundlePurchase.value = settled?.bundlePurchaseId ?? null;
-                if (settled?.runAt) addonRenewal.value = { purchaseId: settled.purchaseId, runAt: settled.runAt };
-            } else if (addonPurchase) {
-                const addon = await tx.query.addons.findFirst({ where: (row, { eq }) => eq(row.id, addonPurchase.addonId) });
-                assert(addon, "Add-on not found");
-                const periodStart = invoice.forPeriodStart ?? new Date();
-                const periodEnd = addon.billingType === "recurring"
-                    ? invoice.forPeriodEnd ?? addInterval(periodStart, addon.interval || "month", addon.intervalThreshold || 1)
-                    : null;
-                await tx.update(memberSubscriptionAddons).set({
-                    status: "active", paidPeriodStartsAt: periodStart, paidPeriodEndsAt: periodEnd,
-                    nextBillAt: periodEnd, updated: new Date(),
-                }).where(eq(memberSubscriptionAddons.id, addonPurchase.id));
-                bundlePurchase.value = addonPurchase.bundlePurchaseId;
-                if (periodEnd) addonRenewal.value = { purchaseId: addonPurchase.id, runAt: periodEnd };
-            }
+            addonFollowUp.value = await settleMarkedAddon(tx, { ...invoice, paid: true, status: "paid" }, lockedAddon);
             if (invoice.memberPlanId) {
                 const [sub] = await tx.select().from(memberSubscriptions)
                     .where(and(eq(memberSubscriptions.id, invoice.memberPlanId), eq(memberSubscriptions.locationId, lid))).for("update");
@@ -258,20 +221,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         if (outcome === "missing") return status(404, { error: "Invoice not found" });
         if (outcome === "changed") return status(409, { error: "The invoice changed. Please review it again." });
         if (outcome === "addon-ended") return status(409, { error: "Canceled or expired add-on invoices cannot be marked paid" });
-        if (addonRenewal.value) {
-            try {
-                await enqueueSubscriptionAddonJob("renew", addonRenewal.value.purchaseId, addonRenewal.value.runAt);
-            } catch (error) {
-                console.error("Add-on was paid but its renewal job could not be scheduled", error);
-            }
-        }
-        if (bundlePurchase.value) {
-            try {
-                await reconcileBundlePurchase(lid, bundlePurchase.value);
-            } catch (error) {
-                console.error("Add-on was paid but its bundle could not be reconciled", error);
-            }
-        }
+        await runAddonFollowUp(lid, addonFollowUp.value);
         return paidResponse();
     }, {
         body: t.Object({

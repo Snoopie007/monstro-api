@@ -1,4 +1,4 @@
-import { bundlePreparationSchema } from "./preparationFacts";
+import { bundleCheckoutSchema } from "./checkoutFacts";
 import type { DbTransaction } from "@/db/db";
 import {
   bundlePurchases,
@@ -71,7 +71,7 @@ async function sessionCommissionValue(tx: DbTransaction, pricingId: string) {
 async function quoteBundledSubscription(
   tx: DbTransaction,
   location: BundleLocation,
-  subscription: Awaited<ReturnType<typeof loadBundledSubscriptions>>[number],
+  subscription: Awaited<ReturnType<typeof getBundledSubscriptions>>[number],
 ) {
   const { pricing } = subscription;
 
@@ -85,7 +85,7 @@ async function quoteBundledSubscription(
     forPeriodStart: subscription.currentPeriodStart.toISOString(),
     forPeriodEnd: subscription.currentPeriodEnd.toISOString(),
   };
-  await tx.update(memberSubscriptions).set({ metadata: { ...subscription.metadata, billingAttempt: { ...bundlePreparationSchema.parse(subscription.metadata.billingAttempt ?? {}), initialDownpayment: quote.isDownpayment } } }).where(eq(memberSubscriptions.id, subscription.id));
+  await tx.update(memberSubscriptions).set({ metadata: { ...subscription.metadata, bundleCheckout: { ...bundleCheckoutSchema.parse(subscription.metadata.bundleCheckout ?? {}), initialDownpayment: quote.isDownpayment } } }).where(eq(memberSubscriptions.id, subscription.id));
   const feeLines = quote.feeLines.map((line) => {
     const subTotal = line.price * line.quantity - (line.discount ?? 0);
     const tax = line.tax ?? 0;
@@ -127,7 +127,7 @@ function addonPeriodEnd(
 function quoteBundledAddon(
   location: BundleLocation,
   purchaseId: string,
-  addonPurchase: Awaited<ReturnType<typeof loadBundledAddons>>[number],
+  addonPurchase: Awaited<ReturnType<typeof getBundledAddons>>[number],
 ) {
   const { addon, bundleComponent } = addonPurchase;
   const bundlePrice = bundleComponent?.priceOverride ?? null;
@@ -164,7 +164,7 @@ function quoteBundledAddon(
   return { item, platformFee: chargeDetails.feesAmount };
 }
 
-function loadBundledSubscriptions(tx: DbTransaction, purchaseId: string) {
+function getBundledSubscriptions(tx: DbTransaction, purchaseId: string) {
   return tx.query.memberSubscriptions.findMany({
     where: eq(memberSubscriptions.bundlePurchaseId, purchaseId),
     columns: { id: true, currentPeriodStart: true, currentPeriodEnd: true, metadata: true },
@@ -172,7 +172,7 @@ function loadBundledSubscriptions(tx: DbTransaction, purchaseId: string) {
   });
 }
 
-function loadBundledAddons(tx: DbTransaction, purchaseId: string) {
+function getBundledAddons(tx: DbTransaction, purchaseId: string) {
   return tx.query.memberSubscriptionAddons.findMany({
     where: eq(memberSubscriptionAddons.bundlePurchaseId, purchaseId),
     columns: { id: true, startsAt: true },
@@ -217,8 +217,8 @@ export async function createBundleInvoice(tx: DbTransaction, input: {
 
   if (!location) throw new Error(`Location ${locationId} was not found`);
 
-  const subscriptions = await loadBundledSubscriptions(tx, purchaseId);
-  const addonPurchases = await loadBundledAddons(tx, purchaseId);
+  const subscriptions = await getBundledSubscriptions(tx, purchaseId);
+  const addonPurchases = await getBundledAddons(tx, purchaseId);
   const subscriptionQuotes = [];
 
   for (const subscription of subscriptions) {
@@ -254,7 +254,8 @@ export async function createBundleInvoice(tx: DbTransaction, input: {
     metadata: {
       checkoutKind: "bundle",
       gatewayService: payment.gateway.service,
-      billingAttempt: {
+      // The collector charges through exactly this gateway and customer.
+      chargeBinding: {
         gatewayIntegrationId: payment.gateway.integrationId,
         gatewayCustomerId: payment.gatewayCustomerId,
         stripeAccountId: payment.gateway.service === "stripe" ? payment.gateway.accountId : undefined,

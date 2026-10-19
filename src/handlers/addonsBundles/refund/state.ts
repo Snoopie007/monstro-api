@@ -52,13 +52,13 @@ export type BundleRefundOutcome = {
   refundedAmount?: number;
 };
 
-export function readBundleRefundAttempt(metadata: TransactionMetadata) {
+export function getRefundAttempt(metadata: TransactionMetadata) {
   if (metadata.refund?.attempt === undefined) return null;
 
   return refundAttemptSchema.parse(metadata.refund);
 }
 
-export function bundleRefundKey(transactionId: string, attempt: BundleRefundAttempt) {
+export function refundKey(transactionId: string, attempt: BundleRefundAttempt) {
   // Square accepts at most 45 characters. The same reference is used for
   // provider submission and interrupted-request reconciliation.
   return createHash("sha256").update(`${transactionId}:bundle-refund:${attempt.attempt}`).digest("base64url");
@@ -66,7 +66,7 @@ export function bundleRefundKey(transactionId: string, attempt: BundleRefundAtte
 
 /** Legacy gateway refunds wrote these counters before a pending refund could
  * settle. Cash records are staff-confirmed and keep their existing meaning. */
-export function hasLegacyBundleRefund(transaction: typeof transactions.$inferSelect) {
+export function hasLegacyRefund(transaction: typeof transactions.$inferSelect) {
   if (transaction.paymentType === "cash" || transaction.metadata.refund?.attempt !== undefined) return false;
 
   return transaction.refunded || transaction.refundedAmount > 0
@@ -76,7 +76,7 @@ export function hasLegacyBundleRefund(transaction: typeof transactions.$inferSel
 
 export function bundleRefundAmounts(charge: BundleRefundCharge) {
   const amounts = getRefundAmounts(charge.total, charge.items);
-  const refundedAmount = hasLegacyBundleRefund(charge.transaction) ? 0
+  const refundedAmount = hasLegacyRefund(charge.transaction) ? 0
     : Math.max(0, Math.min(charge.transaction.total, charge.transaction.refundedAmount));
 
   return { ...amounts, refundedAmount, remainingAmount: Math.max(0, amounts.refundableAmount - refundedAmount) };
@@ -84,7 +84,7 @@ export function bundleRefundAmounts(charge: BundleRefundCharge) {
 
 /** Only a failed or completed attempt can be replaced. Provider calls happen
  * after this transaction commits, and other requests can only reconcile it. */
-export async function claimBundleRefund(charge: BundleRefundCharge, binding: BundleRefundBinding) {
+export async function claimRefund(charge: BundleRefundCharge, binding: BundleRefundBinding) {
   return db.transaction(async (tx) => {
     const [transaction] = await tx.select().from(transactions)
       .where(eq(transactions.id, charge.transaction.id)).for("update");
@@ -94,7 +94,7 @@ export async function claimBundleRefund(charge: BundleRefundCharge, binding: Bun
     }
 
     const current = { ...charge, transaction };
-    const existing = readBundleRefundAttempt(transaction.metadata);
+    const existing = getRefundAttempt(transaction.metadata);
 
     if (existing && existing.paymentId !== binding.paymentId) {
       throw new Error("The payment changed after this refund began. Staff must check the charge.");
@@ -106,7 +106,7 @@ export async function claimBundleRefund(charge: BundleRefundCharge, binding: Bun
 
     const amounts = bundleRefundAmounts(current);
 
-    if (!existing && hasLegacyBundleRefund(transaction)) {
+    if (!existing && hasLegacyRefund(transaction)) {
       const legacy = legacyRefundMetadataSchema.parse(transaction.metadata);
       const id = legacy.refund?.id ?? legacy.squareRefundId ?? legacy.authorizeRefundTransactionId ?? legacy.authorizeVoidTransactionId ?? undefined;
       const operation = legacy.authorizeRefundOperation ?? (legacy.authorizeVoidTransactionId ? "void" : "refund");
@@ -165,7 +165,7 @@ export async function claimBundleRefund(charge: BundleRefundCharge, binding: Bun
   });
 }
 
-async function saveRefundOutcome(
+async function writeRefundOutcome(
   tx: DbTransaction,
   transactionId: string,
   attempt: BundleRefundAttempt,
@@ -180,7 +180,7 @@ async function saveRefundOutcome(
 
   if (!transaction) throw new Error("The charge disappeared while its refund was being saved");
 
-  const current = readBundleRefundAttempt(transaction.metadata);
+  const current = getRefundAttempt(transaction.metadata);
 
   // A webhook or another reconciliation may have completed this same attempt.
   if (!current || current.attempt !== attempt.attempt || current.status === "completed") return transaction;
@@ -219,13 +219,13 @@ async function saveRefundOutcome(
   return saved;
 }
 
-export async function saveBundleRefundOutcome(charge: BundleRefundCharge, attempt: BundleRefundAttempt, outcome: BundleRefundOutcome) {
-  return db.transaction((tx) => saveRefundOutcome(tx, charge.transaction.id, attempt, outcome));
+export async function saveRefundOutcome(charge: BundleRefundCharge, attempt: BundleRefundAttempt, outcome: BundleRefundOutcome) {
+  return db.transaction((tx) => writeRefundOutcome(tx, charge.transaction.id, attempt, outcome));
 }
 
 /** Authorize follow-on webhooks use the same locked refund write. They must not
  * add the same refund twice or treat a pending credit as returned money. */
-export async function recordBundleAuthorizeRefund(tx: DbTransaction, input: {
+export async function recordAuthorizeRefund(tx: DbTransaction, input: {
   transactionId: string;
   refundId: string;
   paymentId: string | undefined;
@@ -241,7 +241,7 @@ export async function recordBundleAuthorizeRefund(tx: DbTransaction, input: {
 
   if (!transaction) return false;
 
-  const attempt = readBundleRefundAttempt(transaction.metadata);
+  const attempt = getRefundAttempt(transaction.metadata);
 
   if (!attempt || attempt.gatewayService !== "authorize") return false;
 
@@ -254,7 +254,7 @@ export async function recordBundleAuthorizeRefund(tx: DbTransaction, input: {
   const completed = input.operation === "void" && input.providerStatus === "voided"
     || input.operation === "refund" && input.providerStatus === "refundSettledSuccessfully";
 
-  await saveRefundOutcome(tx, transaction.id, attempt, {
+  await writeRefundOutcome(tx, transaction.id, attempt, {
     status: completed ? "completed" : "pending",
     amount: attempt.amount,
     operation: input.operation,
@@ -267,15 +267,15 @@ export async function recordBundleAuthorizeRefund(tx: DbTransaction, input: {
 
 /** Configuration and ownership failures also persist, but cannot release an
  * existing pending provider operation while another request is handling it. */
-export async function rememberBundleRefundFailure(charge: BundleRefundCharge, message: string) {
+export async function saveRefundFailure(charge: BundleRefundCharge, message: string) {
   return db.transaction(async (tx) => {
     const [transaction] = await tx.select().from(transactions)
       .where(eq(transactions.id, charge.transaction.id)).for("update");
 
     if (!transaction) throw new Error("The charge disappeared while its refund was being saved");
 
-    const current = readBundleRefundAttempt(transaction.metadata);
-    const legacy = hasLegacyBundleRefund(transaction);
+    const current = getRefundAttempt(transaction.metadata);
+    const legacy = hasLegacyRefund(transaction);
     const unresolved = current?.status === "pending" || current?.status === "unknown" || legacy;
     const refund: TransactionRefund = {
       ...transaction.metadata.refund,
@@ -296,7 +296,7 @@ export async function rememberBundleRefundFailure(charge: BundleRefundCharge, me
 
 /** A late payment callback can have read metadata before the refund claim.
  * Preserve the current attempt atomically when it writes payment metadata. */
-export function preserveBundleRefundProgress(paymentMetadata: TransactionMetadata) {
+export function keepRefundProgress(paymentMetadata: TransactionMetadata) {
   const serialized = JSON.stringify(paymentMetadata);
 
   return sql<TransactionMetadata>`case
@@ -308,15 +308,15 @@ export function preserveBundleRefundProgress(paymentMetadata: TransactionMetadat
 
 /** Completed refunds keep their invoice void when the original success
  * callback is replayed. A first late success has no completed attempt. */
-export function isBundleRefundPaymentReplay(metadata: TransactionMetadata, paymentId: string | null) {
-  const refund = readBundleRefundAttempt(metadata);
+export function isBundleRefundReplay(metadata: TransactionMetadata, paymentId: string | null) {
+  const refund = getRefundAttempt(metadata);
 
   return refund?.status === "completed" && refund.paymentId === paymentId;
 }
 
 /** Bundle retry responses can arrive after a refund committed. Lock in the
  * same order as refund finalization before deciding whether to save payment. */
-export async function lockBundleRefundPaymentReplay(tx: DbTransaction, transactionId: string, paymentId: string | null) {
+export async function lockBundleRefundReplay(tx: DbTransaction, transactionId: string, paymentId: string | null) {
   await tx.select({ id: memberInvoices.id }).from(memberInvoices)
     .where(eq(memberInvoices.transactionId, transactionId)).for("update");
 
@@ -325,5 +325,5 @@ export async function lockBundleRefundPaymentReplay(tx: DbTransaction, transacti
     columns: { metadata: true },
   });
 
-  return transaction ? isBundleRefundPaymentReplay(transaction.metadata, paymentId) : false;
+  return transaction ? isBundleRefundReplay(transaction.metadata, paymentId) : false;
 }

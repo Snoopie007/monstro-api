@@ -30,7 +30,7 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
     let app: Awaited<ReturnType<typeof loadApp>>;
 
     async function loadApp() {
-        const [database, schema, purchases, payment, stripe, square, invoices, subscriptionQueue, addonQueue] = await Promise.all([
+        const [database, schema, purchases, payment, stripe, square, invoices, subscriptionQueue, addonQueue, cancellation, refundCharges, addonInvoices, settlement] = await Promise.all([
             import("@/db/db"),
             import("@/subtrees/schemas"),
             import("./prepare"),
@@ -40,19 +40,30 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
             import("@/subtrees/utils/server/subscriptionInvoices"),
             import("@/queues/subscriptions"),
             import("@/queues/subscriptionAddons"),
+            import("../cancellation"),
+            import("../refund/charges"),
+            import("@/subtrees/utils/server/addonInvoices"),
+            import("./settlement"),
         ]);
 
         return {
             ...database,
             schema,
             sql: database.db.$client,
-            prepareBundlePurchase: purchases.prepareBundlePurchase,
-            payBundlePurchase: payment.payBundlePurchase,
-            handleStripeBundleCharge: stripe.handleStripeBundleCharge,
+            prepareBundle: purchases.prepareBundle,
+            payBundle: payment.payBundle,
+            recordStripeOutcome: stripe.recordStripeOutcome,
             handleSquareBundleSuccess: square.handleSquareBundleSuccess,
             readSubscriptionInvoice: invoices.readSubscriptionInvoice,
             subQueue: subscriptionQueue.subQueue,
             subscriptionAddonQueue: addonQueue.subscriptionAddonQueue,
+            cancelBundle: cancellation.cancelBundle,
+            cancelForRefund: cancellation.cancelForRefund,
+            getRefundCharges: refundCharges.getRefundCharges,
+            findBundleChargeOwner: refundCharges.findBundleChargeOwner,
+            settleAddonInvoice: addonInvoices.settleAddonInvoice,
+            isCollectorInvoice: settlement.isCollectorInvoice,
+            collectBundlePayment: settlement.collectBundlePayment,
         };
     }
 
@@ -123,13 +134,13 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
 
     beforeEach(() => seed("stripe"));
 
-    async function prepare(paymentType: "card" | "cash" = "card") {
-        const result = await app.prepareBundlePurchase({
+    async function prepare(paymentType: "card" | "us_bank_account" | "cash" = "card") {
+        const result = await app.prepareBundle({
             locationId: "loc",
             memberId: "member",
             bundleId: "bundle",
             paymentType,
-            paymentMethodId: paymentType === "card" ? "pm_test" : undefined,
+            paymentMethodId: paymentType === "cash" ? undefined : "pm_test",
             selectedOptionalComponentIds: [],
         });
 
@@ -139,7 +150,7 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
     }
 
     async function pay(purchaseId: string, charge: Charge) {
-        const result = await app.payBundlePurchase({ locationId: "loc", bundleId: "bundle", purchaseId }, charge);
+        const result = await app.payBundle({ locationId: "loc", bundleId: "bundle", purchaseId }, charge);
 
         if (result.status !== "ok") throw new Error(`Bundle purchase is ${result.status}`);
 
@@ -186,7 +197,7 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
     }
 
     function stripeWebhook(input: { attemptId: string; paymentIntentId: string; amount?: number }) {
-        return app.handleStripeBundleCharge({
+        return app.recordStripeOutcome({
             invoiceId: invoiceIdOf(input.attemptId),
             billingAttemptId: input.attemptId,
             success: true,
@@ -389,7 +400,7 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         const { charge, calls } = approve();
         await app.sql`update member_locations set gateway_customer_id = null`;
 
-        expect(await app.payBundlePurchase({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge))
+        expect(await app.payBundle({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge))
             .toEqual({ status: "payment-unavailable", error: "Gateway customer not found" });
         expect(calls).toHaveLength(0);
         expect(await state()).toEqual(before);
@@ -402,7 +413,7 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         const before = await state();
         const { charge, calls } = approve();
 
-        expect(await app.payBundlePurchase({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge))
+        expect(await app.payBundle({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge))
             .toEqual({ status: "payment-unavailable", error: "This location's Square gateway has no Square location configured" });
         expect(calls).toHaveLength(0);
 
@@ -415,14 +426,14 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
     test("a cancellation that commits while pay waits to claim reports an inactive purchase", async () => {
         const prepared = await prepare();
         const { charge, calls } = approve();
-        let paying: ReturnType<typeof app.payBundlePurchase> | undefined;
+        let paying: ReturnType<typeof app.payBundle> | undefined;
 
         // Pay reads the purchase as pending, then waits on this row lock to claim the attempt.
         await admin.begin(async (tx) => {
             await tx`update ${tx(namespace)}.bundle_purchases
                 set status = 'canceled', ended_at = greatest(now(), starts_at), updated_at = now()
                 where id = ${prepared.purchase.id}`;
-            paying = app.payBundlePurchase({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge);
+            paying = app.payBundle({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id }, charge);
 
             for (let tries = 0; ; tries++) {
                 const waiting = await tx`select 1 from pg_locks where not granted`;
@@ -447,13 +458,13 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         const { sql } = app;
         const future = new Date(Date.now() + 86_400_000).toISOString();
 
-        expect(await app.prepareBundlePurchase({
+        expect(await app.prepareBundle({
             locationId: "loc", memberId: "member", bundleId: "bundle", paymentType: "card", paymentMethodId: "pm_test",
             startDate: future, selectedOptionalComponentIds: [],
         })).toMatchObject({ status: "invalid-components", error: "Future bundle start dates are not supported yet" });
 
         await sql`update addons set currency = 'CAD'`;
-        expect(await app.prepareBundlePurchase({
+        expect(await app.prepareBundle({
             locationId: "loc", memberId: "member", bundleId: "bundle", paymentType: "card", paymentMethodId: "pm_test",
             selectedOptionalComponentIds: [],
         })).toMatchObject({ status: "invalid-components", error: "Every bundled add-on must be priced in USD" });
@@ -497,5 +508,105 @@ describe.skipIf(!databaseUrl || !redisUrl)("bundle checkout", () => {
         // Today's cash flow: add-ons bill through their worker, and the bundle waits for its required add-on.
         expect(current.purchases[0]?.status).toBe("pending");
         expect(await app.subscriptionAddonQueue.getJob(`subscription-addon:activate:${prepared.addonPurchaseIds[0]}`)).toBeTruthy();
+    });
+
+    test("the gateway's reported method is recorded, not the one the draft asked for", async () => {
+        const prepared = await prepare("us_bank_account");
+        const card = fakeCharge(async () => ({ status: "approved", paymentIntentId: "pi_card", gatewayMetadata: {}, paymentType: "card" }));
+
+        expect((await pay(prepared.purchase.id, card.charge)).payment).toBe("active");
+
+        const current = await state();
+        expect(current.transactions[0]?.paymentType).toBe("card");
+        expect(current.invoices[0]?.paymentType).toBe("card");
+    });
+
+    test("a full-price renewal after a plain cancel is refunded the normal way, not with the bundle", async () => {
+        const prepared = await prepare();
+        await pay(prepared.purchase.id, approve().charge);
+        expect((await app.cancelBundle("loc", prepared.purchase.id)).status).toBe("canceled");
+
+        // The subscriptions keep running at full price; one renews a day after the cancel.
+        const { db, schema } = app;
+        const [transaction] = await db.select().from(schema.transactions);
+        const [invoice] = await db.select().from(schema.memberInvoices);
+        if (!transaction || !invoice) throw new Error("The bundle charge was not saved");
+        const later = new Date(Date.now() + 86_400_000);
+        await db.insert(schema.transactions).values({ ...transaction, id: "txn_renewal", paymentIntentId: "pi_renewal", total: 10000, chargeDate: later, created: later });
+        await db.insert(schema.memberInvoices).values({
+            ...invoice, id: "inv_renewal", transactionId: "txn_renewal", memberPlanId: prepared.subscriptionIds[0],
+            total: 10000, items: [], metadata: {}, renewalKey: null, created: later,
+        });
+
+        // The normal refund takes the renewal; the bundle charge still belongs to the bundle.
+        expect(await app.findBundleChargeOwner("loc", "txn_renewal")).toBeNull();
+        expect(await app.findBundleChargeOwner("loc", transaction.id)).toMatchObject({ id: prepared.purchase.id });
+
+        const canceled = await app.cancelForRefund({ locationId: "loc", bundleId: "bundle", purchaseId: prepared.purchase.id });
+        if (!canceled) throw new Error("The bundle was not found");
+        const charges = await app.getRefundCharges("loc", canceled);
+
+        expect(charges.map((charge) => charge.invoice.id)).toEqual([invoice.id]);
+    });
+
+    test("replaying a paid period never reopens a past-due add-on", async () => {
+        const prepared = await prepare();
+        await pay(prepared.purchase.id, approve().charge);
+        const { db, schema, sql } = app;
+        const [invoice] = await db.select().from(schema.memberInvoices);
+        const [addon] = await db.select().from(schema.memberSubscriptionAddons);
+        if (!invoice || !addon) throw new Error("The bundle was not activated");
+
+        // The next period was declined, so the add-on is past due; then the first period's payment replays.
+        await sql`update member_subscription_addons set status = 'past_due', next_bill_at = null`;
+        const replay = { ...invoice, memberSubscriptionAddonId: addon.id, forPeriodStart: addon.paidPeriodStartsAt, forPeriodEnd: addon.paidPeriodEndsAt };
+        const settled = await db.transaction((tx) => app.settleAddonInvoice(tx, replay, { status: "succeeded" }));
+
+        const [after] = await db.select().from(schema.memberSubscriptionAddons);
+        expect(after).toMatchObject({ status: "past_due", nextBillAt: null });
+        expect(settled?.runAt).toBeNull();
+    });
+
+    test("a standalone add-on's pending charge is settled by its Stripe webhook", async () => {
+        const { db, schema, sql } = app;
+        const periodStart = new Date();
+        const periodEnd = new Date(periodStart.getTime() + 30 * 86_400_000);
+        await sql`insert into member_subscriptions (id, member_id, location_id, member_plan_pricing_id, payment_type, status, gateway_payment_id, start_date, current_period_start, current_period_end, metadata)
+            values ('sub-solo', 'member', 'loc', 'price-a', 'card', 'active', 'pm_test', ${periodStart.toISOString()}, ${periodStart.toISOString()}, ${periodEnd.toISOString()}, '{}')`;
+        await sql`insert into member_subscription_addons (id, member_subscription_id, addon_id, status, starts_at)
+            values ('msa-solo', 'sub-solo', 'addon', 'pending', ${periodStart.toISOString()})`;
+
+        // The pending transaction and invoice the worker writes before it charges.
+        await db.insert(schema.transactions).values({
+            id: "txn-solo", total: 2500, subTotal: 2500, tax: 0, memberId: "member", locationId: "loc", description: "Gear add-on",
+            type: "inbound", status: "pending", paymentType: "card", paymentMethodId: "pm_test", currency: "USD", feeAmount: 0, items: [],
+            metadata: { chargeBinding: { gatewayIntegrationId: "gateway", gatewayCustomerId: "cus_test", stripeAccountId: "acct_test" } },
+        });
+        await db.insert(schema.memberInvoices).values({
+            id: "inv-solo", total: 2500, subTotal: 2500, tax: 0, memberId: "member", locationId: "loc", memberSubscriptionAddonId: "msa-solo",
+            description: "Gear add-on", items: [], transactionId: "txn-solo", paymentType: "card", currency: "USD", invoiceType: "recurring",
+            forPeriodStart: periodStart, forPeriodEnd: periodEnd, dueDate: periodStart, status: "unpaid", paid: false,
+            metadata: { gatewayService: "stripe", gatewayIntegrationId: "gateway", gatewayCustomerId: "cus_test" },
+        });
+
+        // An ACH debit: accepted, not paid yet. The add-on waits for the webhook.
+        const gateway = { service: "stripe" as const, integrationId: "gateway", customerId: "cus_test", stripeAccountId: "acct_test" };
+        const collected = await app.collectBundlePayment({ invoiceId: "inv-solo", gateway }, async () => ({ status: "processing", paymentIntentId: "pi_solo" }));
+        expect(collected).toBe("processing");
+        expect((await state()).addonPurchases).toMatchObject([{ id: "msa-solo", status: "pending" }]);
+
+        // The webhook routes the invoice to the collector, which settles the period.
+        expect(await app.isCollectorInvoice("inv-solo")).toBe(true);
+        await app.recordStripeOutcome({
+            invoiceId: "inv-solo", billingAttemptId: "billing-inv-solo-0", success: true, amount: 2500, currency: "usd",
+            paymentIntentId: "pi_solo", stripeAccountId: "acct_test", customerId: "cus_test", paymentMethodId: "pm_test",
+            receiptUrl: null, failedReason: null, failedCode: null,
+        });
+
+        const current = await state();
+        expect(current.invoices).toMatchObject([{ id: "inv-solo", paid: true, status: "paid" }]);
+        expect(current.addonPurchases).toMatchObject([{ id: "msa-solo", status: "active", paidPeriodStartsAt: periodStart, nextBillAt: periodEnd }]);
+        const jobs = await app.subscriptionAddonQueue.getJobs(["delayed", "waiting"]);
+        expect(jobs.some((job) => job.name === "renew" && job.data.memberSubscriptionAddonId === "msa-solo")).toBe(true);
     });
 });

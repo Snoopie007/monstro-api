@@ -14,13 +14,13 @@ type ActiveAddonPriceOverride = {
 
 export const OPEN_ADDON_PURCHASE_STATUSES = ["pending", "active", "past_due"] as const;
 
-export function hasConflictingReplacementPricing(
+export function hasMixedReplacements(
   mappings: Iterable<ActiveAddonPriceOverride>,
 ) {
   return new Set(Array.from(mappings, (mapping) => mapping.replacementPlanPricingId)).size > 1;
 }
 
-export async function loadActiveAddonPriceOverrides(
+export async function getActiveOverrides(
   database: DbReader,
   sourcePlanPricingId: string,
   addonIds: Iterable<string>,
@@ -41,18 +41,18 @@ export async function loadActiveAddonPriceOverrides(
   ));
 }
 
-export async function hasConflictingAddonPriceOverrides(
+export async function hasAddonConflict(
   database: DbReader,
   sourcePlanPricingId: string,
   addonIds: Iterable<string>,
   at = new Date(),
 ) {
-  return hasConflictingReplacementPricing(
-    await loadActiveAddonPriceOverrides(database, sourcePlanPricingId, addonIds, at),
+  return hasMixedReplacements(
+    await getActiveOverrides(database, sourcePlanPricingId, addonIds, at),
   );
 }
 
-export async function hasConflictingSubscriptionAddonPricing(
+export async function hasSubscriptionConflict(
   database: DbReader,
   memberSubscriptionId: string,
   additionalAddonIds: Iterable<string> = [],
@@ -72,7 +72,7 @@ export async function hasConflictingSubscriptionAddonPricing(
     columns: { addonId: true },
   });
 
-  return hasConflictingAddonPriceOverrides(
+  return hasAddonConflict(
     database,
     subscription.memberPlanPricingId,
     [...purchases.map((purchase) => purchase.addonId), ...additionalAddonIds],

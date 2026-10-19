@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import { memberInvoices } from "@/subtrees/schemas";
-import type { PaymentInvoice } from "@/subtrees/utils/server/invoicePayments";
+import type { PaymentInvoice } from "@/subtrees/utils/server/bundlePayments";
 import type { AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
 import { authorizeAttemptReference } from "@/utils/checkoutUtil";
-import { isBundleInvoice, readBundleInvoice, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
+import { isCollectorInvoice, getBundleBinding, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
 
 type AuthorizeBundlePayment = {
     transaction: { id: string; currency: string };
@@ -17,7 +17,7 @@ type AuthorizeBundlePayment = {
 
 /** The invoice's billing attempt, once the provider transaction is proven to belong to it. */
 function matchedAttempt(invoice: PaymentInvoice, { integration, details, providerTransactionId }: AuthorizeBundlePayment) {
-    const binding = readBundleInvoice(invoice.metadata);
+    const binding = getBundleBinding(invoice.metadata);
     const attempt = binding.billingAttempt;
     if (!attempt || binding.gatewayIntegrationId !== integration.id || invoice.locationId !== integration.locationId) {
         throw new Error("Authorize.net invoice binding does not match");
@@ -32,12 +32,12 @@ function matchedAttempt(invoice: PaymentInvoice, { integration, details, provide
     return attempt;
 }
 
-/** Records an Authorize.net payment for a bundle invoice. False when the
- * transaction pays for something else. */
-export async function recordAuthorizeBundlePayment(input: AuthorizeBundlePayment) {
+/** Records an Authorize.net payment for a bundle or add-on invoice. False when
+ * the transaction pays for something else. */
+export async function handleAuthorizeBundle(input: AuthorizeBundlePayment) {
     const { transaction, integration, details, state, providerTransactionId, providerAmount } = input;
     const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.transactionId, transaction.id) });
-    if (!invoice || !await isBundleInvoice(invoice.id)) return false;
+    if (!invoice || !await isCollectorInvoice(invoice.id)) return false;
 
     const attempt = matchedAttempt(invoice, input);
     const common = {

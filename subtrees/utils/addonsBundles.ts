@@ -3,7 +3,7 @@ export function hasEnded(status: string) {
   return status === "canceled" || status === "expired";
 }
 
-const COLLECTING_SUBSCRIPTION_STATUSES = ["active", "trialing", "past_due"];
+export const COLLECTING_SUBSCRIPTION_STATUSES = ["active", "trialing", "past_due"];
 
 /** Why an add-on period can't be collected now, or null when it can. The collector,
  * settlement and the worker's bundled renewal all ask this, so they agree on when billing stops. */

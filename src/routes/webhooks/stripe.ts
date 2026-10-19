@@ -8,9 +8,9 @@ import { and, eq } from "drizzle-orm";
 import {
     handleStripeOrderCharge,
     handleStripePlanCharge,
-    recordStripeBundleCharge,
-    recordStripeBundleIntentFailure,
-    recordStripeBundlePaymentIntent,
+    handleStripeBundleCharge,
+    handleStripeBundleFailure,
+    handleStripeBundleIntent,
 } from "@/routes/webhooks/handlers/stripe";
 
 /**
@@ -129,7 +129,7 @@ async function processEvent(event: Stripe.Event) {
             case "payment_intent.succeeded":
             case "payment_intent.processing":
             case "payment_intent.requires_action":
-                await recordStripeBundlePaymentIntent(event);
+                await handleStripeBundleIntent(event);
                 break;
             case "payment_intent.payment_failed":
             case "payment_intent.canceled":
@@ -225,7 +225,7 @@ async function handleCharge(event: Stripe.Event) {
         return;
     }
 
-    if (await recordStripeBundleCharge(event, charge, metadata)) {
+    if (await handleStripeBundleCharge(event, charge, metadata)) {
         console.log(`[STRIPE WEBHOOK] Bundle charge ${charge.id} processed successfully`);
         return;
     }
@@ -285,7 +285,7 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
         || lastPaymentError?.decline_code
         || (event.type === "payment_intent.canceled" ? "canceled" : null);
 
-    if (await recordStripeBundleIntentFailure(event, paymentIntent, metadata, { failedReason, failedCode })) {
+    if (await handleStripeBundleFailure(event, paymentIntent, metadata, { failedReason, failedCode })) {
         console.log(`[STRIPE WEBHOOK] Bundle charge ${paymentIntent.id} failed`);
         return;
     }

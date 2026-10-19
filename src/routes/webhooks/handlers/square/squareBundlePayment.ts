@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { integrations, memberInvoices } from "@/subtrees/schemas";
-import type { InvoicePaymentOutcome } from "@/subtrees/utils/server/invoicePayments";
+import type { InvoicePaymentOutcome } from "@/subtrees/utils/server/bundlePayments";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
-import { readBundleInvoice, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
+import { getBundleBinding, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
 import { and, eq } from "drizzle-orm";
 import type { SquareWebhookPayment } from "./type";
 import { ALLOWED_EVENTS, getSquareFailureCode, getSquareFailureReason, parseNote } from "./utils";
@@ -21,13 +21,13 @@ type SquarePaymentFields = {
 
 /** Proves a Square payment belongs to this invoice, then hands it to the
  * shared recorder. Any mismatch throws, so Square redelivers the event. */
-async function recordSquareBundle(input: SquarePaymentFields, outcome: InvoicePaymentOutcome) {
+async function recordSquareOutcome(input: SquarePaymentFields, outcome: InvoicePaymentOutcome) {
     // Square echoes the invoice id we sent as the payment's reference_id.
     const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, input.invoiceId) });
     if (!invoice) throw new Error("Square invoice was not found");
 
     // The Square integration and customer this invoice was charged through.
-    const binding = readBundleInvoice(invoice.metadata);
+    const binding = getBundleBinding(invoice.metadata);
 
     // The payment must come from that integration's Square location, so a
     // payment from another merchant or location can't settle this invoice.
@@ -54,7 +54,7 @@ async function recordSquareBundle(input: SquarePaymentFields, outcome: InvoicePa
 
 export async function handleSquareBundleSuccess(input: SquarePaymentFields & { receiptUrl: string | null }) {
     if (!input.squarePaymentId || !input.currency) throw new Error("Square bundle payment has no id or currency");
-    return recordSquareBundle(input, { status: "succeeded", paymentIntentId: input.squarePaymentId, amount: input.amount, currency: input.currency, receiptUrl: input.receiptUrl, gatewayMetadata: { squarePaymentId: input.squarePaymentId }, brand: input.brand, last4: input.last4, paymentType: "card" });
+    return recordSquareOutcome(input, { status: "succeeded", paymentIntentId: input.squarePaymentId, amount: input.amount, currency: input.currency, receiptUrl: input.receiptUrl, gatewayMetadata: { squarePaymentId: input.squarePaymentId }, brand: input.brand, last4: input.last4, paymentType: "card" });
 }
 
 export async function handleSquareBundleFail(input: SquarePaymentFields & {
@@ -62,11 +62,11 @@ export async function handleSquareBundleFail(input: SquarePaymentFields & {
     failedReason: string;
     failedCode: string;
 }) {
-    return recordSquareBundle(input, { status: "failed", paymentIntentId: input.squarePaymentId, reason: input.failedReason, code: input.failedCode, retryable: true, workflowDecline: isPaymentDecline("square", input.failedCode, input.squarePaymentStatus) });
+    return recordSquareOutcome(input, { status: "failed", paymentIntentId: input.squarePaymentId, reason: input.failedReason, code: input.failedCode, retryable: true, workflowDecline: isPaymentDecline("square", input.failedCode, input.squarePaymentStatus) });
 }
 
 export async function handleSquareBundleProcessing(input: SquarePaymentFields) {
-    return recordSquareBundle(input, { status: "processing", paymentIntentId: input.squarePaymentId });
+    return recordSquareOutcome(input, { status: "processing", paymentIntentId: input.squarePaymentId });
 }
 
 /** The payment fields every bundle outcome checks against the invoice.

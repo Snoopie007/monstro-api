@@ -65,7 +65,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
                     charge = walletCharge;
                 },
             }));
-            mock.module("@/queues", () => ({ invoiceQueue: {}, enqueueSubscriptionAddonJob: enqueueAddon, enqueueSubscriptionAddonPaymentRetry: async () => {}, scheduleBundledRenewal: async () => {} }));
+            mock.module("@/queues", () => ({ invoiceQueue: {}, enqueueAddonJob: enqueueAddon, enqueueAddonRetry: async () => {}, scheduleBundledRenewal: async () => {} }));
             const { markPaidInvoiceRoutes } = await import("./markPaid");
             const routes = await markPaidInvoiceRoutes(new Elysia());
             app = new Elysia()

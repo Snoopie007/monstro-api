@@ -1,7 +1,7 @@
 import { SquarePaymentGateway } from "@/libs/PaymentGateway";
 import { Currency } from "square";
 import { z } from "zod";
-import type { InvoicePaymentOutcome, InvoicePaymentRequest } from "@/subtrees/utils/server/invoicePayments";
+import type { InvoicePaymentOutcome, InvoicePaymentRequest } from "@/subtrees/utils/server/bundlePayments";
 import { isPaymentDecline, paymentFailureFromError } from "@/subtrees/utils/workflow/payments";
 import { chargeWithGateway, stripePaymentIntentFromError } from "@/utils/checkoutUtil";
 import type { CheckoutContext } from "@/utils/getCheckoutContext";

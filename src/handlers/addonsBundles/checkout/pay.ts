@@ -17,11 +17,11 @@ import { chargeBundleInvoice } from "./gatewayCharge";
 import {
   bundlePaymentState,
   collectBundlePayment,
-  readBundleInvoice,
-  reconcileBundlePurchase,
+  getBundleBinding,
+  reconcileBundle,
   recordBundlePayment,
 } from "./settlement";
-import { getBundlePurchaseSummary } from "../bundleSummary";
+import { getBundleSummary } from "../bundleSummary";
 
 type PayBundlePurchaseInput = { locationId: string; bundleId: string; purchaseId: string; paymentMethodId?: string; paymentType?: "card" | "us_bank_account" };
 
@@ -36,7 +36,7 @@ type PayBundlePurchaseResult =
   | PaymentUnavailable
   | { status: "ok"; value: BundlePaymentResponse };
 
-async function findPayableBundle(input: PayBundlePurchaseInput): Promise<PayableBundle | { status: "not-found" | "inactive" }> {
+async function getPayableBundle(input: PayBundlePurchaseInput): Promise<PayableBundle | { status: "not-found" | "inactive" }> {
   const purchase = await db.query.bundlePurchases.findFirst({
     where: and(eq(bundlePurchases.id, input.purchaseId), eq(bundlePurchases.bundleId, input.bundleId)),
     columns: { status: true, memberId: true, invoiceId: true },
@@ -52,7 +52,7 @@ async function findPayableBundle(input: PayBundlePurchaseInput): Promise<Payable
 
 /** Why the location's gateway cannot charge this saved payment, if it cannot.
  * Checked before the attempt is claimed, so the charge only fails on provider I/O. */
-function gatewayChargeUnavailable(gateway: CheckoutContext["gateway"], paymentType: PaymentType, total: number): string | null {
+function chargeUnavailable(gateway: CheckoutContext["gateway"], paymentType: PaymentType, total: number): string | null {
   if (gateway.service === "stripe") return null;
 
   if (paymentType !== "card") return "This location's payment gateway only accepts saved cards";
@@ -70,7 +70,7 @@ async function collectBundleInvoice(
 ): Promise<CollectedPayment> {
   const invoice = await db.query.memberInvoices.findFirst({ where: eq(memberInvoices.id, input.invoiceId), with: { transaction: true } });
   if (!invoice?.transaction) throw new Error(`Bundle invoice ${input.invoiceId} has no pending charge`);
-  const binding = readBundleInvoice(invoice.metadata);
+  const binding = getBundleBinding(invoice.metadata);
   if (invoice.paid && binding.billingAttempt?.paymentIntentId) {
     if (!invoice.currency) throw new Error("Invoice currency is missing");
 
@@ -95,7 +95,7 @@ async function collectBundleInvoice(
   const method = input.paymentMethodId
     ? { paymentMethodId: input.paymentMethodId, paymentType: input.paymentType ?? invoice.transaction.paymentType }
     : undefined;
-  const unavailable = gatewayChargeUnavailable(gateway, method?.paymentType ?? invoice.transaction.paymentType, invoice.total);
+  const unavailable = chargeUnavailable(gateway, method?.paymentType ?? invoice.transaction.paymentType, invoice.total);
 
   if (unavailable) return { status: "payment-unavailable", error: unavailable };
 
@@ -163,13 +163,13 @@ async function activateCashBundle(locationId: string, purchaseId: string): Promi
   });
   if (!collecting) return { status: "inactive" };
 
-  await reconcileBundlePurchase(locationId, purchaseId);
+  await reconcileBundle(locationId, purchaseId);
 
   return { status: "ok", payment: "active" };
 }
 
-async function requireBundlePurchaseSummary(locationId: string, purchaseId: string) {
-  const purchase = await getBundlePurchaseSummary(locationId, purchaseId);
+async function requireSummary(locationId: string, purchaseId: string) {
+  const purchase = await getBundleSummary(locationId, purchaseId);
 
   if (!purchase) throw new Error(`Bundle purchase ${purchaseId} disappeared during payment`);
 
@@ -178,11 +178,11 @@ async function requireBundlePurchaseSummary(locationId: string, purchaseId: stri
 
 /** Charges a prepared card purchase, or activates a cash one. Safe to call
  * again: it reports the current payment state instead of charging twice. */
-export async function payBundlePurchase(
+export async function payBundle(
   input: PayBundlePurchaseInput,
   charge?: typeof chargeWithGateway,
 ): Promise<PayBundlePurchaseResult> {
-  const bundle = await findPayableBundle(input);
+  const bundle = await getPayableBundle(input);
 
   if (bundle.status !== "payable") return bundle;
 
@@ -194,6 +194,6 @@ export async function payBundlePurchase(
 
   return {
     status: "ok",
-    value: { purchase: await requireBundlePurchaseSummary(input.locationId, input.purchaseId), payment: collected.payment },
+    value: { purchase: await requireSummary(input.locationId, input.purchaseId), payment: collected.payment },
   };
 }

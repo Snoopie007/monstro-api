@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 import { z } from "zod";
 import type { BundleRefundCharge } from "./charges";
 import { noRemainingRefund, refundableRemainder, submitRefund, type BundleRefundGateway } from "./gateway";
-import { bundleRefundKey, type BundleRefundAttempt, type BundleRefundOutcome } from "./state";
+import { refundKey, type BundleRefundAttempt, type BundleRefundOutcome } from "./state";
 
 function stripeRefundOutcome(refund: Stripe.Refund, completed: number): BundleRefundOutcome {
   const status = refund.status === "succeeded" ? "completed"
@@ -24,7 +24,7 @@ const stripePaymentReferenceSchema = z.union([
   z.object({ id: z.string() }).transform((payment) => payment.id),
 ]).nullable();
 
-export async function refundBundleStripeCharge(
+export async function refundStripeCharge(
   gateway: Extract<BundleRefundGateway, { service: "stripe" }>,
   charge: BundleRefundCharge,
   attempt: BundleRefundAttempt,
@@ -39,7 +39,7 @@ export async function refundBundleStripeCharge(
   if (reconcile) {
     const refund = attempt.id
       ? await gateway.client.retrieveRefund(attempt.id)
-      : refunds.find((candidate) => candidate.metadata?.monstroBundleRefundKey === bundleRefundKey(charge.transaction.id, attempt));
+      : refunds.find((candidate) => candidate.metadata?.monstroBundleRefundKey === refundKey(charge.transaction.id, attempt));
 
     if (!refund) {
       return { status: "unknown", amount: attempt.amount, operation: "refund", error: "Stripe has not confirmed this refund. Staff must check it before another refund is submitted." };
@@ -61,7 +61,7 @@ export async function refundBundleStripeCharge(
   if (amount === 0) return noRemainingRefund(completed, pending);
 
   return submitRefund(charge, attempt, { amount, operation: "refund" }, async () => {
-    const refund = await gateway.client.createRefund(attempt.paymentId, amount, charge.transaction.currency, bundleRefundKey(charge.transaction.id, attempt));
+    const refund = await gateway.client.createRefund(attempt.paymentId, amount, charge.transaction.currency, refundKey(charge.transaction.id, attempt));
 
     return stripeRefundOutcome(refund, completed + (refund.status === "succeeded" ? refund.amount : 0));
   });

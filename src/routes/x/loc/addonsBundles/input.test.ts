@@ -1,6 +1,6 @@
 import type { AddonBundleCatalogOptions, AddonEditorInput, BundleEditorInput } from "@/subtrees/types";
 import { describe, expect, test } from "bun:test";
-import { validateAddonEditorInput, validateBundleEditorInput } from "./input";
+import { validateAddonInput, validateBundleInput } from "./input";
 
 const options: AddonBundleCatalogOptions = {
   planPricings: [
@@ -42,19 +42,19 @@ const bundleInput: BundleEditorInput = {
 
 describe("add-on and bundle request validation", () => {
   test("accepts valid catalog inputs", () => {
-    expect(validateAddonEditorInput(addonInput, options.planPricings)).toBeNull();
-    expect(validateBundleEditorInput(bundleInput, options)).toBeNull();
+    expect(validateAddonInput(addonInput, options.planPricings)).toBeNull();
+    expect(validateBundleInput(bundleInput, options)).toBeNull();
   });
 
   test("rejects price changes across subscription plans", () => {
-    expect(validateAddonEditorInput({
+    expect(validateAddonInput({
       ...addonInput,
       planPriceOverrides: [{ sourcePlanPricingId: "singles_regular", replacementPlanPricingId: "doubles_member" }],
     }, options.planPricings)).toBe("A price change must stay within the same subscription plan");
   });
 
   test("rejects bundles without a required subscription", () => {
-    expect(validateBundleEditorInput({
+    expect(validateBundleInput({
       ...bundleInput,
       components: [{
         type: "addon",

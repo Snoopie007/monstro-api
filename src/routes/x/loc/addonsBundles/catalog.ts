@@ -85,7 +85,7 @@ async function serializeBundles(reader: DbReader, bundleRows: BundleRow[]): Prom
   }));
 }
 
-async function loadAddonRows(reader: DbReader, locationId: string, addonId?: string) {
+async function getAddonRows(reader: DbReader, locationId: string, addonId?: string) {
   return reader.query.addons.findMany({
     where: addonId
       ? and(eq(addons.locationId, locationId), eq(addons.id, addonId))
@@ -100,7 +100,7 @@ async function loadAddonRows(reader: DbReader, locationId: string, addonId?: str
   });
 }
 
-async function loadBundleRows(reader: DbReader, locationId: string, bundleId?: string) {
+async function getBundleRows(reader: DbReader, locationId: string, bundleId?: string) {
   return reader.query.bundles.findMany({
     where: bundleId
       ? and(eq(bundles.locationId, locationId), eq(bundles.id, bundleId))
@@ -225,11 +225,11 @@ export async function getCatalogOptions(locationId: string): Promise<AddonBundle
 }
 
 export async function listAddons(locationId: string) {
-  return (await loadAddonRows(db, locationId)).map(serializeAddon);
+  return (await getAddonRows(db, locationId)).map(serializeAddon);
 }
 
 export async function getAddon(locationId: string, addonId: string, reader: DbReader = db) {
-  const [addon] = await loadAddonRows(reader, locationId, addonId);
+  const [addon] = await getAddonRows(reader, locationId, addonId);
   return addon ? serializeAddon(addon) : null;
 }
 
@@ -307,11 +307,11 @@ export async function archiveAddon(locationId: string, addonId: string) {
 }
 
 export async function listBundles(locationId: string) {
-  return serializeBundles(db, await loadBundleRows(db, locationId));
+  return serializeBundles(db, await getBundleRows(db, locationId));
 }
 
 export async function getBundle(locationId: string, bundleId: string, reader: DbReader = db) {
-  const bundleItems = await serializeBundles(reader, await loadBundleRows(reader, locationId, bundleId));
+  const bundleItems = await serializeBundles(reader, await getBundleRows(reader, locationId, bundleId));
   return bundleItems[0] ?? null;
 }
 

@@ -1,4 +1,4 @@
-import { bundlePreparationSchema } from "./preparationFacts";
+import { bundleCheckoutSchema } from "./checkoutFacts";
 import { db, type DbTransaction } from "@/db/db";
 import { calculateThresholdDate } from "@/utils/enrollUtils";
 import { CheckoutError, getCheckoutContext, type CheckoutContext } from "@/utils/getCheckoutContext";
@@ -23,8 +23,8 @@ import { commissionBillingSnapshot } from "@/subtrees/utils/invoiceItems";
 import { generateUUID } from "@/subtrees/utils";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { createBundleInvoice, type BundleCardPayment } from "./invoice";
-import { getBundlePurchaseSummary } from "../bundleSummary";
-import { hasConflictingAddonPriceOverrides } from "../addonPricing";
+import { getBundleSummary } from "../bundleSummary";
+import { hasAddonConflict } from "../addonPricing";
 
 
 type PrepareBundlePurchaseInput = PurchaseBundleInput & {
@@ -70,7 +70,7 @@ function invalidSelection(error: string): BundlePurchaseError {
 }
 
 /** Card bundles are charged through the location's gateway; cash bundles need none. */
-async function resolveCardPayment(
+async function getCardPayment(
   input: PrepareBundlePurchaseInput,
 ): Promise<{ status: "ready"; card: BundleCardPayment | null } | BundlePurchaseError> {
   if (input.paymentType === "cash") return { status: "ready", card: null };
@@ -104,7 +104,7 @@ async function resolveCardPayment(
   };
 }
 
-async function validateBundleSelection(
+async function validateSelection(
   tx: DbTransaction,
   input: PrepareBundlePurchaseInput,
 ): Promise<BundleSelection | BundlePurchaseError> {
@@ -207,7 +207,7 @@ async function validateBundleSelection(
     return invalidSelection(`Every bundled add-on must be priced in ${currency}`);
   }
 
-  const pricingConflicts = await Promise.all(subscriptions.map((subscription) => hasConflictingAddonPriceOverrides(
+  const pricingConflicts = await Promise.all(subscriptions.map((subscription) => hasAddonConflict(
     tx,
     subscription.pricing.id,
     subscription.addons.map((addon) => addon.addonId),
@@ -227,7 +227,7 @@ function subscriptionCancelAt(pricing: BundlePricing, startsAt: Date) {
   return calculateThresholdDate({ startDate: startsAt, threshold: pricing.expireThreshold, interval: pricing.expireInterval });
 }
 
-async function createPendingBundleRecords(tx: DbTransaction, input: BundlePurchaseDraft, selection: BundleSelection) {
+async function createPendingRecords(tx: DbTransaction, input: BundlePurchaseDraft, selection: BundleSelection) {
   const { locationId, memberId, paymentType } = input;
   const { startsAt } = selection;
   const [purchase] = await tx.insert(bundlePurchases).values({
@@ -264,7 +264,7 @@ async function createPendingBundleRecords(tx: DbTransaction, input: BundlePurcha
       classCredits: pricing.classLimitInterval === "term" ? pricing.totalClassLimit ?? 0 : 0,
       metadata: {
         bundlePurchaseId: purchase.id, commissionBilling: commissionBillingSnapshot(pricing, pricing),
-        billingAttempt: { checkout: { selectedOptionalComponentIds: [...new Set(input.selectedOptionalComponentIds)].sort(), startDate: input.startDate ? new Date(input.startDate).toISOString() : null } },
+        bundleCheckout: { checkout: { selectedOptionalComponentIds: [...new Set(input.selectedOptionalComponentIds)].sort(), startDate: input.startDate ? new Date(input.startDate).toISOString() : null } },
       },
     }).returning({ id: memberSubscriptions.id });
 
@@ -288,7 +288,7 @@ async function createPendingBundleRecords(tx: DbTransaction, input: BundlePurcha
   return { purchaseId: purchase.id, subscriptionIds, addonPurchaseIds };
 }
 
-async function readPreparedPurchase(database: Pick<typeof db, "query">, input: BundlePurchaseDraft) {
+async function getPreparedPurchase(database: Pick<typeof db, "query">, input: BundlePurchaseDraft) {
   const purchase = await database.query.bundlePurchases.findFirst({
     where: eq(bundlePurchases.id, input.purchaseId),
     with: {
@@ -299,7 +299,9 @@ async function readPreparedPurchase(database: Pick<typeof db, "query">, input: B
   });
   if (!purchase) return null;
   if (input.startDate && !Number.isFinite(new Date(input.startDate).getTime())) return invalidSelection("Start date is invalid");
-  const checkout = bundlePreparationSchema.parse(purchase.subscriptions[0]?.metadata.billingAttempt ?? {}).checkout;
+  // Drafts prepared before the rename keep their checkout under billingAttempt.
+  const facts = purchase.subscriptions[0]?.metadata;
+  const checkout = bundleCheckoutSchema.parse(facts?.bundleCheckout ?? facts?.billingAttempt ?? {}).checkout;
   const requested = [...new Set(input.selectedOptionalComponentIds)].sort();
   const selected = checkout?.selectedOptionalComponentIds;
   const startMatches = checkout && (input.startDate ? new Date(input.startDate).toISOString() : null) === checkout.startDate;
@@ -316,27 +318,27 @@ async function readPreparedPurchase(database: Pick<typeof db, "query">, input: B
 
 /** Create or resume the caller's durable draft before reading mutable catalog
  * or gateway settings. The purchase primary key serializes concurrent prepare. */
-export async function prepareBundlePurchase(input: PrepareBundlePurchaseInput): Promise<BundlePurchaseResult> {
+export async function prepareBundle(input: PrepareBundlePurchaseInput): Promise<BundlePurchaseResult> {
   const draft: BundlePurchaseDraft = { ...input, purchaseId: input.purchaseId ?? generateUUID("bpur_") };
-  let result: Awaited<ReturnType<typeof readPreparedPurchase>> | BundlePurchaseError = await readPreparedPurchase(db, draft);
+  let result: Awaited<ReturnType<typeof getPreparedPurchase>> | BundlePurchaseError = await getPreparedPurchase(db, draft);
 
   if (!result) {
-    const payment = await resolveCardPayment(draft);
+    const payment = await getCardPayment(draft);
 
     if (payment.status !== "ready") return { ...payment, checkoutCreated: false };
 
     result = await db.transaction(async (tx) => {
       // There may be no purchase row yet; this lock covers its primary key.
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${draft.purchaseId}))`);
-      const existing = await readPreparedPurchase(tx, draft);
+      const existing = await getPreparedPurchase(tx, draft);
 
       if (existing) return existing;
 
-      const selection = await validateBundleSelection(tx, draft);
+      const selection = await validateSelection(tx, draft);
 
       if (selection.status !== "valid") return { ...selection, checkoutCreated: false as const };
 
-      const records = await createPendingBundleRecords(tx, draft, selection);
+      const records = await createPendingRecords(tx, draft, selection);
 
       if (payment.card) await createBundleInvoice(tx, {
         locationId: draft.locationId, memberId: draft.memberId, purchaseId: records.purchaseId,
@@ -349,7 +351,7 @@ export async function prepareBundlePurchase(input: PrepareBundlePurchaseInput): 
 
   if (result.status !== "created") return result;
 
-  const purchase = await getBundlePurchaseSummary(draft.locationId, result.purchaseId);
+  const purchase = await getBundleSummary(draft.locationId, result.purchaseId);
 
   if (!purchase) throw new Error("Bundle purchase was not found after preparation");
 

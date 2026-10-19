@@ -56,7 +56,7 @@ export const bundleEditorBody = t.Object({
   ]), { minItems: 1 }),
 });
 
-export function validateAddonEditorInput(
+export function validateAddonInput(
   input: AddonEditorInput,
   planPricings: AddonBundlePlanPricingOption[],
 ) {
@@ -98,7 +98,7 @@ export function validateAddonEditorInput(
   return null;
 }
 
-export function validateBundleEditorInput(
+export function validateBundleInput(
   input: BundleEditorInput,
   options: AddonBundleCatalogOptions,
 ) {

@@ -17,7 +17,7 @@ subscriptionAddonQueue.on("error", (error) => {
   console.error("Subscription add-on queue error:", error);
 });
 
-export async function enqueueSubscriptionAddonJob(
+export async function enqueueAddonJob(
   name: "activate" | "renew" | "cancel" | "expire",
   memberSubscriptionAddonId: string,
   runAt = new Date(),
@@ -34,7 +34,7 @@ export async function enqueueSubscriptionAddonJob(
 
 /** Active jobs observe the canceled record when they settle. Remove all other
  * queued work for this purchase, including activation and renewal retries. */
-export async function removeSubscriptionAddonJobs(memberSubscriptionAddonId: string) {
+export async function removeAddonJobs(memberSubscriptionAddonId: string) {
   const jobs = await subscriptionAddonQueue.getJobs(["waiting", "delayed", "paused", "active"]);
 
   for (const job of jobs) {
@@ -44,7 +44,7 @@ export async function removeSubscriptionAddonJobs(memberSubscriptionAddonId: str
   }
 }
 
-export function enqueueSubscriptionAddonPaymentRetry(data: { invoiceId: string; memberSubscriptionAddonId: string }) {
+export function enqueueAddonRetry(data: { invoiceId: string; memberSubscriptionAddonId: string }) {
   return paymentQueue.add("retry:subscription-addon", data, {
     jobId: `retry-subscription-addon-${data.invoiceId}`, delay: 24 * 60 * 60 * 1000,
     attempts: 3, backoff: { type: "fixed", delay: 24 * 60 * 60 * 1000 }, removeOnFail: false,

@@ -2,7 +2,7 @@ import { Currency, type PaymentRefund } from "square";
 import { z } from "zod";
 import type { BundleRefundCharge } from "./charges";
 import { noRemainingRefund, refundableRemainder, submitRefund, type BundleRefundGateway } from "./gateway";
-import { bundleRefundKey, type BundleRefundAttempt, type BundleRefundOutcome } from "./state";
+import { refundKey, type BundleRefundAttempt, type BundleRefundOutcome } from "./state";
 
 const squareCurrency = z.enum(Currency);
 
@@ -29,7 +29,7 @@ function squareRefundOutcome(refund: PaymentRefund, completed: number): BundleRe
   };
 }
 
-export async function refundBundleSquareCharge(
+export async function refundSquareCharge(
   gateway: Extract<BundleRefundGateway, { service: "square" }>,
   charge: BundleRefundCharge,
   attempt: BundleRefundAttempt,
@@ -45,7 +45,7 @@ export async function refundBundleSquareCharge(
 
   if (currency !== charge.transaction.currency.toUpperCase()) throw new Error("Square's charge currency does not match the saved payment.");
 
-  const reason = `Bundle refund ${bundleRefundKey(charge.transaction.id, attempt)}`;
+  const reason = `Bundle refund ${refundKey(charge.transaction.id, attempt)}`;
 
   if (reconcile) {
     const refund = attempt.id
@@ -74,7 +74,7 @@ export async function refundBundleSquareCharge(
       attempt.paymentId,
       amount,
       reason,
-      bundleRefundKey(charge.transaction.id, attempt),
+      refundKey(charge.transaction.id, attempt),
       squareCurrency.parse(charge.transaction.currency.toUpperCase()),
     );
 

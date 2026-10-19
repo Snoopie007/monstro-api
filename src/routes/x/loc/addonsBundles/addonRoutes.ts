@@ -7,11 +7,11 @@ import {
 	listAddons,
 	updateAddon,
 } from "./catalog";
-import { addonEditorBody, validateAddonEditorInput } from "./input";
-import { resolveLocationAccess } from "./routeAccess";
+import { addonEditorBody, validateAddonInput } from "./input";
+import { getLocationAccess } from "./routeAccess";
 
 export const addonRoutes = new Elysia({ prefix: "/addons" })
-	.resolve(resolveLocationAccess)
+	.resolve(getLocationAccess)
 	.get("/options", async ({ locationId, status }) => {
 		return status(200, { options: await getCatalogOptions(locationId) });
 	})
@@ -20,7 +20,7 @@ export const addonRoutes = new Elysia({ prefix: "/addons" })
 	})
 	.post("/", async ({ locationId, body, status }) => {
 		const options = await getCatalogOptions(locationId);
-		const inputError = validateAddonEditorInput(body, options.planPricings);
+		const inputError = validateAddonInput(body, options.planPricings);
 
 		if (inputError) return status(400, { error: inputError });
 
@@ -35,7 +35,7 @@ export const addonRoutes = new Elysia({ prefix: "/addons" })
 	})
 	.patch("/:addonId", async ({ locationId, params, body, status }) => {
 		const options = await getCatalogOptions(locationId);
-		const inputError = validateAddonEditorInput(body, options.planPricings);
+		const inputError = validateAddonInput(body, options.planPricings);
 
 		if (inputError) return status(400, { error: inputError });
 

@@ -1,20 +1,20 @@
 import type { BundleRefundChargeResult } from "@/subtrees/types";
 import { z } from "zod";
-import { refundBundleAuthorizeCharge } from "./authorize";
+import { refundAuthorizeCharge } from "./authorize";
 import type { BundleRefundCharge } from "./charges";
-import { bundleRefundFailure, loadBundleRefundGateway, type BundleRefundGateway } from "./gateway";
+import { refundFailure, getRefundGateway, type BundleRefundGateway } from "./gateway";
 import {
   bundleRefundAmounts,
-  claimBundleRefund,
-  hasLegacyBundleRefund,
-  readBundleRefundAttempt,
-  rememberBundleRefundFailure,
-  saveBundleRefundOutcome,
+  claimRefund,
+  hasLegacyRefund,
+  getRefundAttempt,
+  saveRefundFailure,
+  saveRefundOutcome,
   type BundleRefundAttempt,
   type BundleRefundOutcome,
 } from "./state";
-import { refundBundleSquareCharge } from "./square";
-import { refundBundleStripeCharge } from "./stripe";
+import { refundSquareCharge } from "./square";
+import { refundStripeCharge } from "./stripe";
 
 function chargeResult(
   charge: BundleRefundCharge,
@@ -24,7 +24,7 @@ function chargeResult(
   const amounts = charge.attributionError
     ? { refundableAmount: 0, nonRefundableAmount: 0, refundedAmount: 0, remainingAmount: 0 }
     : bundleRefundAmounts(charge);
-  const progress = failure ? null : readBundleRefundAttempt(charge.transaction.metadata);
+  const progress = failure ? null : getRefundAttempt(charge.transaction.metadata);
   let status: BundleRefundChargeResult["status"];
   let message = failure?.message ?? progress?.error ?? null;
 
@@ -57,7 +57,7 @@ function chargeResult(
   };
 }
 
-async function runChargeRefund(
+async function runRefund(
   gateway: BundleRefundGateway,
   charge: BundleRefundCharge,
   attempt: BundleRefundAttempt,
@@ -76,17 +76,17 @@ async function runChargeRefund(
     case "cash":
       return { status: "completed", amount: attempt.amount, operation: "refund", id: `cash-${charge.transaction.id}-${attempt.attempt}` };
     case "stripe":
-      return refundBundleStripeCharge(gateway, charge, attempt, reconcile);
+      return refundStripeCharge(gateway, charge, attempt, reconcile);
     case "square":
-      return refundBundleSquareCharge(gateway, charge, attempt, reconcile);
+      return refundSquareCharge(gateway, charge, attempt, reconcile);
     case "authorize":
-      return refundBundleAuthorizeCharge(gateway, charge, attempt, reconcile);
+      return refundAuthorizeCharge(gateway, charge, attempt, reconcile);
   }
 }
 
 /** Every charge owns its claim and outcome. An error here is returned alongside
  * the others; it never rolls back cancellation or stops the refund loop. */
-export async function refundOneBundleCharge(charge: BundleRefundCharge): Promise<BundleRefundChargeResult> {
+export async function refundCharge(charge: BundleRefundCharge): Promise<BundleRefundChargeResult> {
   const provider = z.enum(["stripe", "square", "authorize"]).safeParse(
     charge.transaction.metadata.gatewayService ?? charge.invoice.metadata?.gatewayService,
   );
@@ -96,16 +96,16 @@ export async function refundOneBundleCharge(charge: BundleRefundCharge): Promise
   try {
     if (charge.attributionError) throw new Error(charge.attributionError);
 
-    const previous = readBundleRefundAttempt(charge.transaction.metadata);
+    const previous = getRefundAttempt(charge.transaction.metadata);
     const amounts = bundleRefundAmounts(charge);
 
-    if (amounts.remainingAmount === 0 && !hasLegacyBundleRefund(charge.transaction)
+    if (amounts.remainingAmount === 0 && !hasLegacyRefund(charge.transaction)
       && previous?.status !== "pending" && previous?.status !== "unknown") {
       return chargeResult(charge, previous?.gatewayService ?? gateway);
     }
 
-    const paymentGateway = await loadBundleRefundGateway(charge);
-    const claim = await claimBundleRefund(charge, paymentGateway.binding);
+    const paymentGateway = await getRefundGateway(charge);
+    const claim = await claimRefund(charge, paymentGateway.binding);
     gateway = paymentGateway.service;
 
     if (claim.action === "finished") return chargeResult(claim.charge, gateway);
@@ -113,9 +113,9 @@ export async function refundOneBundleCharge(charge: BundleRefundCharge): Promise
     let outcome: BundleRefundOutcome;
 
     try {
-      outcome = await runChargeRefund(paymentGateway, claim.charge, claim.attempt, claim.action === "reconcile");
+      outcome = await runRefund(paymentGateway, claim.charge, claim.attempt, claim.action === "reconcile");
     } catch (cause) {
-      const failure = bundleRefundFailure(cause);
+      const failure = refundFailure(cause);
 
       // This catch covers inspections or local preparation. Provider submission
       // catches its own errors, so an interrupted operation remains unknown.
@@ -128,7 +128,7 @@ export async function refundOneBundleCharge(charge: BundleRefundCharge): Promise
     }
 
     try {
-      const transaction = await saveBundleRefundOutcome(claim.charge, claim.attempt, outcome);
+      const transaction = await saveRefundOutcome(claim.charge, claim.attempt, outcome);
 
       return chargeResult({ ...claim.charge, transaction }, gateway);
     } catch {
@@ -137,12 +137,12 @@ export async function refundOneBundleCharge(charge: BundleRefundCharge): Promise
       return chargeResult(claim.charge, gateway, { status: "pending", message: "The refund result could not be saved. Check again before submitting another refund." });
     }
   } catch (cause) {
-    const failure = bundleRefundFailure(cause);
+    const failure = refundFailure(cause);
 
     try {
-      const transaction = await rememberBundleRefundFailure(charge, failure.message);
-      const progress = readBundleRefundAttempt(transaction.metadata);
-      const pending = progress?.status === "pending" || progress?.status === "unknown" || hasLegacyBundleRefund(transaction);
+      const transaction = await saveRefundFailure(charge, failure.message);
+      const progress = getRefundAttempt(transaction.metadata);
+      const pending = progress?.status === "pending" || progress?.status === "unknown" || hasLegacyRefund(transaction);
 
       return chargeResult({ ...charge, transaction }, progress?.gatewayService ?? gateway, {
         status: pending ? "pending" : "failed",

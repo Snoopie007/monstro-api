@@ -1,23 +1,23 @@
 import type { BundleRefundResponse } from "@/subtrees/types";
-import { listBundleRefundCharges } from "./charges";
-import { refundOneBundleCharge } from "./chargeRefund";
-import { cancelBundleForRefund, finishBundleCancellation, type BundleRefundInput } from "../cancellation";
-import { getBundlePurchaseSummary } from "../bundleSummary";
+import { getRefundCharges } from "./charges";
+import { refundCharge } from "./chargeRefund";
+import { cancelForRefund, finishCancellation, type BundleRefundInput } from "../cancellation";
+import { getBundleSummary } from "../bundleSummary";
 
 type RefundBundlePurchaseResult = { status: "not-found" } | { status: "ok"; value: BundleRefundResponse };
 
 /** Full refund-and-cancel only. Each retry discovers charges afresh, including
  * payments that completed after an earlier cancellation/refund request. */
-export async function refundBundlePurchase(input: BundleRefundInput): Promise<RefundBundlePurchaseResult> {
-  const bundle = await cancelBundleForRefund(input);
+export async function refundBundle(input: BundleRefundInput): Promise<RefundBundlePurchaseResult> {
+  const bundle = await cancelForRefund(input);
 
   if (!bundle) return { status: "not-found" };
 
-  const cancellationWarnings = await finishBundleCancellation(bundle);
-  const charges = await listBundleRefundCharges(input.locationId, bundle);
-  const results = await Promise.all(charges.map(refundOneBundleCharge));
+  const cancellationWarnings = await finishCancellation(bundle);
+  const charges = await getRefundCharges(input.locationId, bundle);
+  const results = await Promise.all(charges.map(refundCharge));
 
-  const purchase = await getBundlePurchaseSummary(input.locationId, input.purchaseId);
+  const purchase = await getBundleSummary(input.locationId, input.purchaseId);
 
   if (!purchase) throw new Error("Bundle purchase disappeared after cancellation");
 

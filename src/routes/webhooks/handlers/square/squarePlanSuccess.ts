@@ -4,7 +4,7 @@ import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
 import { and, eq, isNull, ne, notInArray, or } from "drizzle-orm";
-import { isBundleRefundPaymentReplay, preserveBundleRefundProgress } from "@/handlers/addonsBundles/refund/state";
+import { isBundleRefundReplay, keepRefundProgress } from "@/handlers/addonsBundles/refund/state";
 import type { PaymentType } from "@/subtrees/types";
 import type { Currency } from "@/subtrees/types/currency";
 
@@ -51,7 +51,7 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
                 columns: { status: true, paymentIntentId: true, metadata: true },
             });
 
-            if (previous && isBundleRefundPaymentReplay(previous.metadata, squarePaymentId ?? null)) return;
+            if (previous && isBundleRefundReplay(previous.metadata, squarePaymentId ?? null)) return;
         }
 
         const deferred = await getDeferredInvoiceBilling(tx, priorInvoice.memberPlanId);
@@ -102,7 +102,7 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
         if (invoice.transactionId) {
             await tx.update(transactions).set({
                 ...values,
-                metadata: preserveBundleRefundProgress(values.metadata),
+                metadata: keepRefundProgress(values.metadata),
             }).where(eq(transactions.id, invoice.transactionId));
         } else {
             const [transaction] = await tx.insert(transactions).values(values).returning({ id: transactions.id });

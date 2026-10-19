@@ -8,8 +8,8 @@ import { z } from "zod";
 import type { BundleRefundCharge } from "./charges";
 import {
   bundleRefundAmounts,
-  readBundleRefundAttempt,
-  saveBundleRefundOutcome,
+  getRefundAttempt,
+  saveRefundOutcome,
   type BundleRefundAttempt,
   type BundleRefundBinding,
   type BundleRefundOutcome,
@@ -35,12 +35,12 @@ export type BundleRefundGateway =
 
 /** Prefer the saved charge/invoice binding. A location's current gateway can
  * differ from the integration that collected this older payment. */
-export async function loadBundleRefundGateway(charge: BundleRefundCharge): Promise<BundleRefundGateway> {
+export async function getRefundGateway(charge: BundleRefundCharge): Promise<BundleRefundGateway> {
   if (charge.transaction.paymentType === "cash") {
     return { service: "cash", binding: { service: "cash", paymentId: charge.transaction.id } };
   }
 
-  const previous = readBundleRefundAttempt(charge.transaction.metadata);
+  const previous = getRefundAttempt(charge.transaction.metadata);
   const transaction = paymentBindingSchema.parse(charge.transaction.metadata);
   const invoice = paymentBindingSchema.parse(charge.invoice.metadata ?? {});
   const subscription = charge.invoice.memberPlanId
@@ -101,7 +101,7 @@ const rejectedAuthorizeRefundCodes = new Set([
 
 const squareErrorsSchema = z.object({ errors: z.array(z.object({ detail: z.string().optional() })).optional() });
 
-export function bundleRefundFailure(cause: unknown) {
+export function refundFailure(cause: unknown) {
   if (cause instanceof SquareError) {
     const body = squareErrorsSchema.safeParse(cause.body);
     const message = body.success ? body.data.errors?.[0]?.detail ?? cause.message : cause.message;
@@ -147,12 +147,12 @@ export async function submitRefund(
   plan: Pick<BundleRefundOutcome, "amount" | "operation">,
   send: () => Promise<BundleRefundOutcome>,
 ): Promise<BundleRefundOutcome> {
-  await saveBundleRefundOutcome(charge, attempt, { status: "pending", amount: plan.amount, operation: plan.operation });
+  await saveRefundOutcome(charge, attempt, { status: "pending", amount: plan.amount, operation: plan.operation });
 
   try {
     return await send();
   } catch (cause) {
-    const failure = bundleRefundFailure(cause);
+    const failure = refundFailure(cause);
 
     return { status: failure.definite ? "failed" : "unknown", amount: plan.amount, operation: plan.operation, error: failure.message };
   }

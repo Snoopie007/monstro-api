@@ -1,4 +1,4 @@
-import { lockBundleRefundPaymentReplay, preserveBundleRefundProgress } from "@/handlers/addonsBundles/refund/state";
+import { lockBundleRefundReplay, keepRefundProgress } from "@/handlers/addonsBundles/refund/state";
 import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { StripePaymentGateway } from "@/libs/PaymentGateway";
 import { db } from "@/db/db";
@@ -184,7 +184,7 @@ export async function retrySubscriptionPayment(props: {
                 paymentIntentId: paymentIntent.id,
             });
             await db.transaction(async (tx) => {
-                if (sub.bundlePurchaseId && await lockBundleRefundPaymentReplay(tx, transaction.id, paymentIntent.id)) return;
+                if (sub.bundlePurchaseId && await lockBundleRefundReplay(tx, transaction.id, paymentIntent.id)) return;
 
                 await tx.update(transactions).set({
                     status: "paid",
@@ -325,7 +325,7 @@ export async function retrySubscriptionPayment(props: {
         && (migration as { state?: unknown }).state === "armed";
     await db.transaction(async (tx) => {
         if (sub.bundlePurchaseId && charge.status === "approved"
-            && await lockBundleRefundPaymentReplay(tx, transaction.id, charge.paymentIntentId ?? null)) return;
+            && await lockBundleRefundReplay(tx, transaction.id, charge.paymentIntentId ?? null)) return;
 
         await tx.update(transactions).set({
             ...(charge.status === "approved" ? { status: "paid" as const } : attemptStatus === "failed" ? { status: "failed" as const } : {}),
@@ -333,7 +333,7 @@ export async function retrySubscriptionPayment(props: {
             paymentType: charge.paymentType ?? paymentType,
             ...("paymentIntentId" in charge && charge.paymentIntentId ? { paymentIntentId: charge.paymentIntentId } : {}),
             activities: [...(transaction.activities ?? []), activity],
-            metadata: preserveBundleRefundProgress({ ...transaction.metadata, ...charge.gatewayMetadata }),
+            metadata: keepRefundProgress({ ...transaction.metadata, ...charge.gatewayMetadata }),
             updated: now,
         }).where(eq(transactions.id, transaction.id));
         if (charge.status === "approved") {

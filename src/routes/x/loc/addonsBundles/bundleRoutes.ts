@@ -1,8 +1,8 @@
 import { Elysia, t } from "elysia";
-import { cancelBundlePurchase } from "@/handlers/addonsBundles/cancellation";
-import { prepareBundlePurchase, type BundlePurchaseErrorStatus } from "@/handlers/addonsBundles/checkout/prepare";
-import { payBundlePurchase } from "@/handlers/addonsBundles/checkout/pay";
-import { refundBundlePurchase } from "@/handlers/addonsBundles/refund/refundPurchase";
+import { cancelBundle } from "@/handlers/addonsBundles/cancellation";
+import { prepareBundle, type BundlePurchaseErrorStatus } from "@/handlers/addonsBundles/checkout/prepare";
+import { payBundle } from "@/handlers/addonsBundles/checkout/pay";
+import { refundBundle } from "@/handlers/addonsBundles/refund/refundPurchase";
 import {
 	archiveBundle,
 	createBundle,
@@ -11,8 +11,8 @@ import {
 	listBundles,
 	updateBundle,
 } from "./catalog";
-import { bundleEditorBody, validateBundleEditorInput } from "./input";
-import { resolveLocationAccess, resolveMemberBillingAccess } from "./routeAccess";
+import { bundleEditorBody, validateBundleInput } from "./input";
+import { getLocationAccess, getBillingAccess } from "./routeAccess";
 
 function purchaseErrorCode(status: BundlePurchaseErrorStatus) {
 	switch (status) {
@@ -29,13 +29,13 @@ function purchaseErrorCode(status: BundlePurchaseErrorStatus) {
 }
 
 export const bundleRoutes = new Elysia({ prefix: "/bundles" })
-	.resolve(resolveLocationAccess)
+	.resolve(getLocationAccess)
 	.get("/", async ({ locationId, status }) => {
 		return status(200, { bundles: await listBundles(locationId) });
 	})
 	.post("/", async ({ locationId, body, status }) => {
 		const options = await getCatalogOptions(locationId);
-		const inputError = validateBundleEditorInput(body, options);
+		const inputError = validateBundleInput(body, options);
 
 		if (inputError) return status(400, { error: inputError });
 
@@ -50,7 +50,7 @@ export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 	})
 	.patch("/:bundleId", async ({ locationId, params, body, status }) => {
 		const options = await getCatalogOptions(locationId);
-		const inputError = validateBundleEditorInput(body, options);
+		const inputError = validateBundleInput(body, options);
 
 		if (inputError) return status(400, { error: inputError });
 
@@ -74,9 +74,9 @@ export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 		return status(200, { bundle });
 	})
 	.guard({}, (mutations) => mutations
-	.onBeforeHandle(resolveMemberBillingAccess)
+	.onBeforeHandle(getBillingAccess)
 	.post("/:bundleId/purchases", async ({ locationId, params, body, status }) => {
-		const result = await prepareBundlePurchase({ ...body, locationId, bundleId: params.bundleId });
+		const result = await prepareBundle({ ...body, locationId, bundleId: params.bundleId });
 
 		if (result.status !== "created") return status(purchaseErrorCode(result.status), { error: result.error, code: result.checkoutCreated === false ? "BUNDLE_PREPARE_REJECTED" : undefined });
 
@@ -92,7 +92,7 @@ export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 		}),
 	})
 	.post("/:bundleId/purchases/:pid/pay", async ({ locationId, params, body, status }) => {
-		const result = await payBundlePurchase({ locationId, bundleId: params.bundleId, purchaseId: params.pid, ...body });
+		const result = await payBundle({ locationId, bundleId: params.bundleId, purchaseId: params.pid, ...body });
 
 		switch (result.status) {
 			case "not-found":
@@ -106,7 +106,7 @@ export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 		}
 	}, { body: t.Object({ paymentMethodId: t.Optional(t.String({ minLength: 1 })), paymentType: t.Optional(t.Union([t.Literal("card"), t.Literal("us_bank_account")])) }) })
 	.post("/:bundleId/purchases/:pid/refund", async ({ locationId, params, body, status }) => {
-		const result = await refundBundlePurchase({
+		const result = await refundBundle({
 			locationId,
 			bundleId: params.bundleId,
 			purchaseId: params.pid,
@@ -118,7 +118,7 @@ export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 		return status(200, result.value);
 	}, { body: t.Object({ reason: t.Optional(t.String()) }) })
 	.post("/:bundleId/purchases/:pid/cancel", async ({ locationId, params, body, status }) => {
-		const result = await cancelBundlePurchase(locationId, params.pid, body.reason, params.bundleId);
+		const result = await cancelBundle(locationId, params.pid, body.reason, params.bundleId);
 
 		if (result.status === "not-found") return status(404, { error: "Bundle purchase not found" });
 

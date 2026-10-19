@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { bundlePurchases, memberSubscriptionAddons, memberSubscriptions } from "../../schemas";
 import { addonNotCollectible } from "../addonsBundles";
-import type { InvoicePaymentOutcome, InvoicePaymentTransaction, PaymentInvoice } from "./invoicePayments";
+import type { InvoicePaymentOutcome, InvoicePaymentTransaction, PaymentInvoice } from "./bundlePayments";
 
-export type SubscriptionAddonSettlement = {
+export type AddonSettlement = {
   purchaseId: string;
   subscriptionId: string;
   bundlePurchaseId: string | null;
@@ -12,11 +12,11 @@ export type SubscriptionAddonSettlement = {
 
 /** Settles the period stored on the invoice. Callers hold the purchase and
  * add-on locks before recording money or access, including manual cash payment. */
-export async function settleSubscriptionAddonInvoice(
+export async function settleAddonInvoice(
   tx: InvoicePaymentTransaction,
   invoice: PaymentInvoice,
   outcome: Pick<InvoicePaymentOutcome, "status">,
-): Promise<SubscriptionAddonSettlement | null> {
+): Promise<AddonSettlement | null> {
   if (!invoice.memberSubscriptionAddonId || !invoice.forPeriodStart) {
     throw new Error(`Invoice ${invoice.id} has no stored add-on billing period`);
   }
@@ -32,7 +32,7 @@ export async function settleSubscriptionAddonInvoice(
     columns: { status: true, cancelAt: true },
   });
   if (addonNotCollectible(purchase, bundle, subscription)) return null;
-  const jobs: SubscriptionAddonSettlement = {
+  const jobs: AddonSettlement = {
     purchaseId: purchase.id, subscriptionId: purchase.memberSubscriptionId,
     bundlePurchaseId: purchase.bundlePurchaseId, runAt: null,
   };
@@ -43,8 +43,8 @@ export async function settleSubscriptionAddonInvoice(
   }
   if (outcome.status !== "succeeded") return null;
   if (!invoice.paid || invoice.status !== "paid") throw new Error(`Invoice ${invoice.id} has not been collected`);
-  // An old payment replay must never move access back to an earlier cycle.
-  if (purchase.paidPeriodStartsAt && purchase.paidPeriodStartsAt > invoice.forPeriodStart) {
+  // A replayed payment for this period or an earlier one must never reopen or rewind access.
+  if (purchase.paidPeriodStartsAt && purchase.paidPeriodStartsAt >= invoice.forPeriodStart) {
     return { ...jobs, runAt: purchase.nextBillAt };
   }
   await tx.update(memberSubscriptionAddons).set({

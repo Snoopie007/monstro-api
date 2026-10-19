@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import { memberInvoices } from "@/subtrees/schemas";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
-import { isBundleInvoice, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
+import { isCollectorInvoice, recordBundlePayment } from "@/handlers/addonsBundles/checkout/settlement";
 
 interface HandleStripeBundleChargeProps {
     invoiceId: string;
@@ -20,8 +20,8 @@ interface HandleStripeBundleChargeProps {
     failedCode: string | null;
 }
 
-/** Settles or declines a bundle invoice from a Stripe charge or PaymentIntent event. */
-export async function handleStripeBundleCharge(props: HandleStripeBundleChargeProps) {
+/** Settles or declines a bundle or add-on invoice from a Stripe charge or PaymentIntent event. */
+export async function recordStripeOutcome(props: HandleStripeBundleChargeProps) {
     const { invoiceId, paymentIntentId, failedCode } = props;
     const attemptId = props.billingAttemptId ?? undefined;
 
@@ -61,15 +61,15 @@ type BundleMetadata = { invoiceId?: string; memberPlanId?: string; billingAttemp
 async function bundleInvoiceId(metadata: BundleMetadata) {
     if (metadata.memberPlanId || !metadata.invoiceId) return null;
 
-    return await isBundleInvoice(metadata.invoiceId) ? metadata.invoiceId : null;
+    return await isCollectorInvoice(metadata.invoiceId) ? metadata.invoiceId : null;
 }
 
-/** Records a charge event for a bundle invoice. False when the charge pays for something else. */
-export async function recordStripeBundleCharge(event: Stripe.Event, charge: Stripe.Charge, metadata: BundleMetadata) {
+/** Records a charge event for a bundle or add-on invoice. False when the charge pays for something else. */
+export async function handleStripeBundleCharge(event: Stripe.Event, charge: Stripe.Charge, metadata: BundleMetadata) {
     const invoiceId = await bundleInvoiceId(metadata);
     if (!invoiceId) return false;
 
-    await handleStripeBundleCharge({
+    await recordStripeOutcome({
         invoiceId,
         billingAttemptId: metadata.billingAttemptId ?? null,
         customerId: typeof charge.customer === "string" ? charge.customer : charge.customer?.id,
@@ -86,8 +86,8 @@ export async function recordStripeBundleCharge(event: Stripe.Event, charge: Stri
     return true;
 }
 
-/** Records a failed or canceled PaymentIntent for a bundle invoice. False when it pays for something else. */
-export async function recordStripeBundleIntentFailure(
+/** Records a failed or canceled PaymentIntent for a bundle or add-on invoice. False when it pays for something else. */
+export async function handleStripeBundleFailure(
     event: Stripe.Event,
     intent: Stripe.PaymentIntent,
     metadata: BundleMetadata,
@@ -96,7 +96,7 @@ export async function recordStripeBundleIntentFailure(
     const invoiceId = await bundleInvoiceId(metadata);
     if (!invoiceId) return false;
 
-    await handleStripeBundleCharge({
+    await recordStripeOutcome({
         invoiceId,
         billingAttemptId: metadata.billingAttemptId ?? null,
         customerId: typeof intent.customer === "string" ? intent.customer : intent.customer?.id,
@@ -112,19 +112,19 @@ export async function recordStripeBundleIntentFailure(
     return true;
 }
 
-/** Records a bundle invoice's PaymentIntent progress: succeeded, processing
+/** Records a bundle or add-on invoice's PaymentIntent progress: succeeded, processing
  * (such as a bank debit), or waiting on the customer (such as 3D Secure).
  * Declines arrive as charge.failed, payment_intent.payment_failed or
  * payment_intent.canceled instead. Any mismatch throws, so Stripe redelivers the event. */
-export async function recordStripeBundlePaymentIntent(event: Extract<Stripe.Event, {
+export async function handleStripeBundleIntent(event: Extract<Stripe.Event, {
     type: "payment_intent.succeeded" | "payment_intent.processing" | "payment_intent.requires_action";
 }>) {
     const intent = event.data.object;
 
-    // Every bundle charge, at checkout or a bundled add-on renewal, puts the
+    // Every collector charge, at bundle checkout or an add-on period, puts the
     // invoice id in the PaymentIntent's metadata. Other PaymentIntents skip these events.
     const invoiceId = intent.metadata.invoiceId;
-    if (!invoiceId || !await isBundleInvoice(invoiceId)) return;
+    if (!invoiceId || !await isCollectorInvoice(invoiceId)) return;
 
     // The metadata's location and member must match the invoice, so a
     // PaymentIntent can't be pointed at someone else's invoice.

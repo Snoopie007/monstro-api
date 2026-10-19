@@ -1,5 +1,5 @@
 import { resolveInitialSubscriptionPricing } from "../subscriptions/effectivePricing";
-import { getSubscriptionAddonOverview } from "../addonsBundles/subscriptionAddons";
+import { getAddonOverview } from "../addonsBundles/subscriptionAddons";
 import type { SubscriptionAddonOverview } from "@/subtrees/types";
 import { getDeferredBilling, deferredChargeAmount } from "@/subtrees/utils/deferredBilling";
 import type { AdditionalFee, CheckoutDiscount } from "@/subtrees/types";
@@ -143,7 +143,7 @@ export async function buildSubscriptionInvoiceQuote(props: BuildSubscriptionInvo
     const additionalFees = await getAdditionalFeesForCheckout(props.locationId, "subscription", billingPhase);
     const initial = billingPhase === "initial" ? await resolveInitialSubscriptionPricing(db, props.subscriptionId) : null;
     const overview = props.periodStart && props.periodEnd
-        ? await getSubscriptionAddonOverview(props.locationId, props.subscriptionId, props.periodStart, props.periodEnd)
+        ? await getAddonOverview(props.locationId, props.subscriptionId, props.periodStart, props.periodEnd)
         : null;
     const bundle = initial?.pricingSource.type === "bundle" ? initial : null;
     return quoteSubscriptionInvoice({

@@ -1,5 +1,5 @@
 import { db, type DbTransaction } from "@/db/db";
-import { removeRenewalJobs, removeSubscriptionAddonJobs } from "@/queues";
+import { removeRenewalJobs, removeAddonJobs } from "@/queues";
 import {
   bundlePurchases,
   bundles,
@@ -55,7 +55,7 @@ async function cancelMemberWithoutAccess(tx: DbTransaction, locationId: string, 
 
 /** Ends a bundle without refunding it. Its subscriptions keep running; its
  * add-ons stop and their unpaid invoices are voided. */
-export async function cancelBundlePurchase(locationId: string, bundlePurchaseId: string, reason?: string, expectedBundleId?: string) {
+export async function cancelBundle(locationId: string, bundlePurchaseId: string, reason?: string, expectedBundleId?: string) {
   return db.transaction(async (tx) => {
     await tx.execute(sql`
       select ${bundlePurchases.id}
@@ -108,7 +108,7 @@ export async function cancelBundlePurchase(locationId: string, bundlePurchaseId:
 
 /** Cancellation commits before refunds. Replays still cancel any component
  * that a late payment callback may have touched, and return all job IDs. */
-export async function cancelBundleForRefund(input: BundleRefundInput): Promise<CanceledBundle | null> {
+export async function cancelForRefund(input: BundleRefundInput): Promise<CanceledBundle | null> {
   return db.transaction(async (tx) => {
     const [row] = await tx.select({ purchase: bundlePurchases }).from(bundlePurchases)
       .innerJoin(bundles, eq(bundles.id, bundlePurchases.bundleId))
@@ -184,7 +184,7 @@ export async function cancelBundleForRefund(input: BundleRefundInput): Promise<C
 /** Invoice writes happen after the access transaction releases its locks.
  * Ordinary renewal callbacks lock an invoice before its access records; the
  * bundle collector locks access records first, as cancellation does. */
-async function voidUnpaidBundleInvoices(bundle: CanceledBundle) {
+async function voidUnpaidInvoices(bundle: CanceledBundle) {
   const invoiceOwners = [];
 
   if (bundle.purchase.invoiceId) invoiceOwners.push(eq(memberInvoices.id, bundle.purchase.invoiceId));
@@ -205,11 +205,11 @@ async function voidUnpaidBundleInvoices(bundle: CanceledBundle) {
 /** Voids the canceled bundle's unpaid invoices and removes its scheduled jobs.
  * Both are retried with the refund request. Failed cleanup cannot stop the
  * independent refunds after cancellation has already committed. */
-export async function finishBundleCancellation(bundle: CanceledBundle) {
+export async function finishCancellation(bundle: CanceledBundle) {
   const cleanup = await Promise.allSettled([
-    voidUnpaidBundleInvoices(bundle),
+    voidUnpaidInvoices(bundle),
     ...bundle.subscriptionIds.map((id) => removeRenewalJobs(id)),
-    ...bundle.addonPurchaseIds.map((id) => removeSubscriptionAddonJobs(id)),
+    ...bundle.addonPurchaseIds.map((id) => removeAddonJobs(id)),
   ]);
   const failed = cleanup.some((result) => result.status === "rejected");
 

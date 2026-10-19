@@ -80,7 +80,7 @@ async function reconcileAuthorizeRefund(
 
 /** Authorize can void an unsettled charge or credit a settled card charge.
  * Keeping fees back rules out a full void; unsupported payments fail alone. */
-export async function refundBundleAuthorizeCharge(
+export async function refundAuthorizeCharge(
   gateway: Extract<BundleRefundGateway, { service: "authorize" }>,
   charge: BundleRefundCharge,
   attempt: BundleRefundAttempt,

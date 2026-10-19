@@ -9,7 +9,7 @@ import { handleSquareOrderSuccess } from "./handlers/square/squareOrderSuccess";
 import { handleSquareOrderFail } from "./handlers/square/squareOrderFail";
 import { processSquareBundleEvent } from "./handlers/square/squareBundlePayment";
 import { ALLOWED_EVENTS, getSquareFailureCode, getSquareFailureReason, parseNote } from "./handlers/square/utils";
-import { isBundleInvoice } from "@/handlers/addonsBundles/checkout/settlement";
+import { isCollectorInvoice } from "@/handlers/addonsBundles/checkout/settlement";
 
 const isProd = process.env.BUN_ENV === "production";
 const url = isProd
@@ -49,8 +49,8 @@ export function squareWebhookRoutes(app: Elysia) {
             const invoice = reference?.startsWith("inv_") && await db.query.memberInvoices.findFirst({
                 where: (row, { eq }) => eq(row.id, reference), columns: { memberPlanId: true },
             });
-            if (invoice && reference && invoice.memberPlanId === null && await isBundleInvoice(reference)) {
-                // Square must retry a bundle callback if saving it fails.
+            if (invoice && reference && invoice.memberPlanId === null && await isCollectorInvoice(reference)) {
+                // Square must retry a bundle or add-on callback if saving it fails.
                 await processSquareBundleEvent(event);
             } else if (invoice && await getDeferredInvoiceBilling(db, invoice.memberPlanId)) {
                 // Square must retry a deferred callback if saving or scheduling its renewal fails.

@@ -1,5 +1,5 @@
-import { reconcileBundlePurchase } from "@/handlers/addonsBundles/checkout/settlement";
-import { isBundleRefundPaymentReplay } from "@/handlers/addonsBundles/refund/state";
+import { reconcileBundle } from "@/handlers/addonsBundles/checkout/settlement";
+import { isBundleRefundReplay } from "@/handlers/addonsBundles/refund/state";
 import { strict as assert } from "node:assert";
 
 import type { PaymentType } from "@/subtrees/types";
@@ -172,7 +172,7 @@ export async function handleStripePlanCharge({
                 columns: { metadata: true },
             });
 
-            if (paidTransaction && isBundleRefundPaymentReplay(paidTransaction.metadata, paymentIntentId)) return;
+            if (paidTransaction && isBundleRefundReplay(paidTransaction.metadata, paymentIntentId)) return;
         }
 
         if (current.paid || current.status === "paid") {
@@ -291,5 +291,5 @@ export async function handleStripePlanCharge({
     });
     // A declined renewal leaves the subscription past due, as it does outside a bundle.
     if (!success || !bundlePurchaseId) return;
-    await reconcileBundlePurchase(locationId, bundlePurchaseId);
+    await reconcileBundle(locationId, bundlePurchaseId);
 }
