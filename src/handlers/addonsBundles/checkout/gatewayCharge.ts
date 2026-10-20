@@ -40,6 +40,9 @@ export async function chargeBundleInvoice(
   charge?: typeof chargeWithGateway,
 ): Promise<InvoicePaymentOutcome> {
   try {
+    // Square skips chargeWithGateway, which throws on a payment that isn't COMPLETED (dropping
+    // its ID, so a pending payment can't be recorded) and sets reference_id to the attempt ID,
+    // while the Square webhook matches collector payments by invoice ID.
     if (!charge && gateway.service === "square" && request.total > 0) {
       const payment = await new SquarePaymentGateway(gateway.accessToken).createCharge(request.gateway.customerId, request.paymentMethodId, {
         total: request.total, feesAmount: request.feesAmount, currency: z.enum(Currency).parse(request.currency),
