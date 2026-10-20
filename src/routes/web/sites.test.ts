@@ -231,7 +231,6 @@ test("projects map identity and structured address through the public resolve re
         },
       },
       currency: "USD",
-      gatewayService: null,
       vendorId: "vendor-1",
       isPrimary: true,
     }, {
@@ -249,7 +248,6 @@ test("projects map identity and structured address through the public resolve re
       metadata: { placeId: "places-only-id" },
       selectedGmb: { metadata: { placeId: " " } },
       currency: "USD",
-      gatewayService: null,
       vendorId: "vendor-1",
       isPrimary: false,
     }],

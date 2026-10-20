@@ -1052,7 +1052,6 @@ var SiteLocationSchema = z32.object({
   phone: z32.string().min(1).optional(),
   email: z32.string().min(1).optional(),
   timezone: z32.string().min(1),
-  paymentGateway: z32.enum(["square", "stripe", "authorize"]).nullable().optional(),
   currency: z32.string().length(3).optional(),
   coordinates: z32.object({
     latitude: z32.number().min(-90).max(90),

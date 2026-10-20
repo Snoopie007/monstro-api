@@ -4,7 +4,6 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import { publicSiteConfig } from "@/libs/siteDraftConfig";
 import {
-	integrations,
 	locationState,
 	locations,
 	normalizeLocationSlug,
@@ -90,10 +89,6 @@ function normalizeHostname(value: string): string | null {
 function readCapabilities(config: unknown): unknown {
 	if (!config || typeof config !== "object" || Array.isArray(config)) return null;
 	return (config as Record<string, unknown>).capabilities ?? null;
-}
-
-function readGatewayService(value: string | null): "stripe" | "square" | "authorize" | null {
-	return value === "stripe" || value === "square" || value === "authorize" ? value : null;
 }
 
 const openingDays = new Set([
@@ -233,20 +228,12 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
 					metadata: locations.metadata,
 					selectedGmb: locationState.gmb,
 					currency: locationState.currency,
-					gatewayService: integrations.service,
 					vendorId: locations.vendorId,
 					isPrimary: websiteSiteLocations.isPrimary,
 				})
 				.from(websiteSiteLocations)
 				.innerJoin(locations, eq(websiteSiteLocations.locationId, locations.id))
 				.leftJoin(locationState, eq(locationState.locationId, locations.id))
-				.leftJoin(
-					integrations,
-					and(
-						eq(integrations.id, locationState.paymentGatewayId),
-						eq(integrations.locationId, locations.id),
-					),
-				)
 				.where(eq(websiteSiteLocations.siteId, resolved.siteId))
 				.orderBy(
 					asc(websiteSiteLocations.displayOrder),
@@ -302,7 +289,6 @@ export const webSiteRoutes = new Elysia({ prefix: "/sites" }).get(
 					} : {}),
 					...locationFacts(location.metadata, location.selectedGmb),
 					timezone: location.timezone,
-					paymentGateway: readGatewayService(location.gatewayService),
 					...(location.currency ? { currency: location.currency } : {}),
 				})),
 				domain: resolved.domain,
