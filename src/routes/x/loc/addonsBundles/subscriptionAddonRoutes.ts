@@ -1,13 +1,9 @@
 import { enqueueAddonJob } from "@/queues/subscriptionAddons";
 import { Elysia, t } from "elysia";
+import { addAddon } from "./addAddon";
 import { cancelBundle } from "@/handlers/addonsBundles/cancellation";
 import { getLocationAccess, getBillingAccess } from "./routeAccess";
-import {
-	cancelAddon,
-	getAddonOverview,
-	getAddonPurchase,
-	purchaseAddon,
-} from "./subscriptionAddons";
+import { cancelAddon, getAddonOverview } from "./subscriptionAddons";
 
 export const subscriptionAddonRoutes = new Elysia({ prefix: "/subscriptions/:sid/addons" })
 	.resolve(getLocationAccess)
@@ -21,25 +17,11 @@ export const subscriptionAddonRoutes = new Elysia({ prefix: "/subscriptions/:sid
 	.guard({}, (mutations) => mutations
 	.onBeforeHandle(getBillingAccess)
 	.post("/", async ({ locationId, params, body, status }) => {
-		const result = await purchaseAddon(locationId, params.sid, body.addonId);
+		const result = await addAddon(locationId, params.sid, body.addonId);
 
-		switch (result.status) {
-			case "subscription-not-found":
-				return status(404, { error: "Subscription not found" });
-			case "subscription-inactive":
-				return status(409, { error: "Add-ons can only be added to an active subscription" });
-			case "addon-not-found":
-				return status(404, { error: "Add-on not found" });
-			case "pricing-conflict":
-				return status(409, { error: "This subscription already has a different add-on price" });
-		}
+		if (result.status === "rejected") return status(result.code, { error: result.error });
 
-		await enqueueAddonJob("activate", result.purchaseId);
-		const purchase = await getAddonPurchase(locationId, params.sid, result.purchaseId);
-
-		if (!purchase) throw new Error("Subscription add-on purchase was not found after creation");
-
-		return status(result.status === "created" ? 202 : 200, { purchase });
+		return status(result.status === "created" ? 202 : 200, { purchase: result.purchase });
 	}, { body: t.Object({ addonId: t.String({ minLength: 1 }) }) })
 	.post("/:purchaseId/cancel", async ({ locationId, params, status }) => {
 		const result = await cancelAddon(locationId, params.purchaseId, params.sid);

@@ -21,6 +21,7 @@ import type {
   BundleCatalogItem,
   BundleComponent,
   BundleEditorInput,
+  Interval,
 } from "@/subtrees/types";
 import { and, asc, eq } from "drizzle-orm";
 import { getComponentNames } from "@/handlers/addonsBundles/bundleSummary";
@@ -258,6 +259,56 @@ export async function updateAddon(locationId: string, addonId: string, input: Ad
 
 export async function listBundles(locationId: string) {
   return serializeBundles(db, await getBundleRows(db, locationId));
+}
+
+/** Unarchived bundles as members see them. Each item's price is what checkout
+ * charges for it: the Price in Bundle when set, otherwise its regular price.
+ * A null interval means the item is charged once. */
+export async function listMemberBundles(locationId: string) {
+  const rows = await db.select({
+    bundleId: bundles.id,
+    bundleName: bundles.name,
+    description: bundles.description,
+    id: bundleComponents.id,
+    required: bundleComponents.required,
+    priceOverride: bundleComponents.priceOverride,
+    planName: memberPlans.name,
+    pricingName: memberPlanPricing.name,
+    planPrice: memberPlanPricing.price,
+    planInterval: memberPlanPricing.interval,
+    planIntervalThreshold: memberPlanPricing.intervalThreshold,
+    addonName: addons.name,
+    addonAmount: addons.amount,
+    addonInterval: addons.interval,
+    addonIntervalThreshold: addons.intervalThreshold,
+  }).from(bundles)
+    .innerJoin(bundleComponents, eq(bundleComponents.bundleId, bundles.id))
+    .leftJoin(memberPlanPricing, eq(memberPlanPricing.id, bundleComponents.memberPlanPricingId))
+    .leftJoin(memberPlans, eq(memberPlans.id, memberPlanPricing.memberPlanId))
+    .leftJoin(addons, eq(addons.id, bundleComponents.addonId))
+    .where(and(eq(bundles.locationId, locationId), eq(bundles.archived, false)))
+    .orderBy(asc(bundles.name), asc(bundles.id), asc(bundleComponents.sortOrder));
+  const bundlesById = new Map<string, { id: string; name: string; description: string | null; components: Array<{
+    id: string; type: "subscription" | "addon"; name: string; required: boolean; price: number;
+    interval: Interval | null; intervalThreshold: number | null;
+  }> }>();
+
+  for (const row of rows) {
+    const bundle = bundlesById.get(row.bundleId) ?? { id: row.bundleId, name: row.bundleName, description: row.description, components: [] };
+    bundlesById.set(row.bundleId, bundle);
+    // A component is exactly one of a plan price or an add-on.
+    bundle.components.push(row.planPrice !== null
+      ? {
+        id: row.id, type: "subscription", name: `${row.planName} · ${row.pricingName}`, required: row.required,
+        price: row.priceOverride ?? row.planPrice, interval: row.planInterval, intervalThreshold: row.planIntervalThreshold,
+      }
+      : {
+        id: row.id, type: "addon", name: row.addonName!, required: row.required,
+        price: row.priceOverride ?? row.addonAmount!, interval: row.addonInterval, intervalThreshold: row.addonIntervalThreshold,
+      });
+  }
+
+  return [...bundlesById.values()];
 }
 
 export async function getBundle(locationId: string, bundleId: string, reader: DbReader = db) {

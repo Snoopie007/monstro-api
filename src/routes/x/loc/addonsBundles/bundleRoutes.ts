@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { cancelBundle } from "@/handlers/addonsBundles/cancellation";
-import { prepareBundle, type BundlePurchaseErrorStatus } from "@/handlers/addonsBundles/checkout/prepare";
+import { bundlePurchaseErrorCodes, prepareBundle } from "@/handlers/addonsBundles/checkout/prepare";
 import { payBundle } from "@/handlers/addonsBundles/checkout/pay";
 import { refundBundle } from "@/handlers/addonsBundles/refund/chargeRefund";
 import {
@@ -12,12 +12,6 @@ import {
 } from "./catalog";
 import { bundleEditorBody, validateBundleInput } from "./input";
 import { getLocationAccess, getBillingAccess } from "./routeAccess";
-
-// The HTTP status for each reason a purchase can't be prepared.
-const purchaseErrorCodes = {
-	"member-not-found": 404, "bundle-not-found": 404, "invalid-components": 400,
-	"payment-unavailable": 400, "intent-conflict": 409, "pricing-conflict": 409,
-} as const satisfies Record<BundlePurchaseErrorStatus, number>;
 
 export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 	.resolve(getLocationAccess)
@@ -62,7 +56,7 @@ export const bundleRoutes = new Elysia({ prefix: "/bundles" })
 	.post("/:bundleId/purchases", async ({ locationId, params, body, status }) => {
 		const result = await prepareBundle({ ...body, locationId, bundleId: params.bundleId });
 
-		if (result.status !== "created") return status(purchaseErrorCodes[result.status], { error: result.error, code: result.checkoutCreated === false ? "BUNDLE_PREPARE_REJECTED" : undefined });
+		if (result.status !== "created") return status(bundlePurchaseErrorCodes[result.status], { error: result.error, code: result.checkoutCreated === false ? "BUNDLE_PREPARE_REJECTED" : undefined });
 
 		return status(201, result.value);
 	}, {

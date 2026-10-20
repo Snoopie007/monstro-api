@@ -40,6 +40,7 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 		getCatalogOptions,
 		listAddons,
 		listBundles,
+		listMemberBundles,
 		updateAddon,
 		updateBundle,
 	} = await import("./catalog");
@@ -535,6 +536,20 @@ test.skipIf(!Bun.env.DATABASE_URL)("catalog persistence is location-scoped and v
 			versionedUpdate.bundle.id,
 		]));
 		expect(await listBundles(otherLocation.id)).toEqual([]);
+
+		// Members see unarchived bundles only, priced as checkout charges them, even when an add-on was since archived.
+		const memberBundles = await listMemberBundles(primaryLocation.id);
+		expect(memberBundles.map((bundle) => bundle.id)).not.toContain(createdBundle.id);
+		expect(memberBundles.find((bundle) => bundle.id === versionedUpdate.bundle.id)).toEqual({
+			id: versionedUpdate.bundle.id,
+			name: "Singles annual bundle v2",
+			description: null,
+			components: [
+				{ id: expect.any(String), type: "subscription", name: "Singles · Regular", required: true, price: 32000, interval: "month", intervalThreshold: 1 },
+				{ id: expect.any(String), type: "addon", name: "Annual membership", required: true, price: 24900, interval: "year", intervalThreshold: 1 },
+			],
+		});
+		expect(await listMemberBundles(otherLocation.id)).toEqual([]);
 	} finally {
 		if (createdInvoiceIds.length > 0) await db.delete(memberInvoices).where(inArray(memberInvoices.id, createdInvoiceIds));
 		if (runtimeSubscriptionIds.length > 0) {

@@ -40,7 +40,11 @@ type BundlePurchaseError = {
   checkoutCreated?: false;
 };
 
-export type BundlePurchaseErrorStatus = BundlePurchaseError["status"];
+/** The HTTP status for each reason a purchase can't be prepared. */
+export const bundlePurchaseErrorCodes = {
+  "member-not-found": 404, "bundle-not-found": 404, "invalid-components": 400,
+  "payment-unavailable": 400, "intent-conflict": 409, "pricing-conflict": 409,
+} as const satisfies Record<BundlePurchaseError["status"], number>;
 
 type BundlePurchaseResult = { status: "created"; value: BundlePurchaseResponse } | BundlePurchaseError;
 
