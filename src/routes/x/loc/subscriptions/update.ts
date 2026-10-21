@@ -6,9 +6,12 @@ import { addDays } from "date-fns";
 import type Elysia from "elysia";
 import { t } from "elysia";
 import { eq } from "drizzle-orm";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 export async function updateSubscriptionRoutes(app: Elysia) {
-    return app.patch("/:sid", async ({ params, body, status }) => {
+    return app.patch("/:sid", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid, sid } = params as { lid: string; sid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { cancelAt, allowProration, trialDays, paymentMethodId } = body;
 
         const sub = await db.query.memberSubscriptions.findFirst({

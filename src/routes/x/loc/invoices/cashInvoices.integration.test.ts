@@ -31,7 +31,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
         mock.module("@/db/db", () => ({ db }));
-        mock.module("@/utils/locationAccess", () => ({ canEditLocationMember: async () => allowed }));
+        mock.module("@/utils/locationAccess", () => ({ hasLocationPermissions: async () => allowed }));
         mock.module("@/utils/additionalFees", () => ({ getAdditionalFeesForCheckout: async () => [] }));
         mock.module("@/libs/wallet", () => ({ Wallet: class { charge = async () => true; } }));
         mock.module("@/libs/PaymentGateway", () => ({ SquarePaymentGateway: class {}, StripePaymentGateway: class {} }));
@@ -133,7 +133,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         expect(response.status).toBe(409);
         expect(await count("member_invoices")).toBe(0);
     });
-    test("cash creation and sending require edit-member permission", async () => {
+    test("cash creation and sending require manage billing", async () => {
         const { invoice } = await prepare();
         allowed = false;
         expect((await create()).status).toBe(403);

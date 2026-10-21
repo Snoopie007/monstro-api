@@ -52,7 +52,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)(
                 await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
             mock.module("@/db/db", () => ({ db }));
             mock.module("@/utils/locationAccess", () => ({
-                canEditLocationMember: async () => allowed,
+                hasLocationPermissions: async () => allowed,
             }));
             mock.module("@/utils/additionalFees", () => ({
                 getAdditionalFeesForCheckout: async () => [],

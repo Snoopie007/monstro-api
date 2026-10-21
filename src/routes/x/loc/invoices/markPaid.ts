@@ -6,7 +6,7 @@ import { t } from "elysia";
 import { and, eq, inArray, lte } from "drizzle-orm";
 import { memberInvoices, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import type { Currency } from "@/subtrees/types/currency";
-import { canEditLocationMember } from "@/utils/locationAccess";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 export async function markPaidInvoiceRoutes(app: Elysia) {
@@ -14,8 +14,7 @@ export async function markPaidInvoiceRoutes(app: Elysia) {
         const { params, body, status } = ctx;
         const { lid, iid } = params as { lid: string; iid: string };
         const { paidDate, notes, expectedTotal } = body;
-        const actor = ctx as typeof ctx & { vendorId?: string; staffId?: string; userId?: string };
-        if (!await canEditLocationMember(lid, actor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const paidResponse = () => status(200, { success: true, message: "Invoice marked as paid", invoice: { id: iid, status: "paid", paid: true } });
 
         const invoice = await db.query.memberInvoices.findFirst({

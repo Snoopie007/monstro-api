@@ -4,10 +4,13 @@ import { removeRenewalJobs } from "@/queues/subscriptions";
 import { memberSubscriptions } from "@/subtrees/schemas";
 import type Elysia from "elysia";
 import { eq } from "drizzle-orm";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function pauseSubscriptionRoutes(app: Elysia) {
-    return app.post("/:sid/pause", async ({ params, status }) => {
+    return app.post("/:sid/pause", async (ctx) => {
+        const { params, status } = ctx;
         const { lid, sid } = params as { lid: string; sid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid)),
         });

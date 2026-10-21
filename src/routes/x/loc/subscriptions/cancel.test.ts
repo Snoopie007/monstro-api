@@ -57,6 +57,8 @@ const db = {
 };
 
 mock.module("@/db/db", () => ({ db }));
+const locationAccess = await import("@/utils/locationAccess");
+mock.module("@/utils/locationAccess", () => ({ ...locationAccess, hasLocationPermissions: async () => true }));
 mock.module("@/libs/PaymentGateway", () => ({
     SquarePaymentGateway: class {
         refundPayment = refundPayment;

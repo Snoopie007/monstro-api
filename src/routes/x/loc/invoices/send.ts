@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { memberInvoices, transactions } from "@/subtrees/schemas";
 import { scheduleInvoiceReminderAndOverdue } from "./shared";
 import type { Currency } from "square";
-import { canEditLocationMember } from "@/utils/locationAccess";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 import { sendCashInvoice } from "./cashEmail";
 import { CashInvoiceError } from "@/subtrees/utils/server/cashInvoices";
 
@@ -47,6 +47,7 @@ export async function sendInvoiceRoutes(app: Elysia) {
     return app.post("/:iid/send", async ctx => {
         const { params, body, status } = ctx;
         const { lid, iid } = params as { lid: string; iid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { paymentMethodId } = body as { paymentMethodId?: string };
 
         const invoice = await db.query.memberInvoices.findFirst({
@@ -85,8 +86,6 @@ export async function sendInvoiceRoutes(app: Elysia) {
         }
 
         if (invoice.paymentType === "cash") {
-            const actor = ctx as typeof ctx & { vendorId?: string; staffId?: string; userId?: string };
-            if (!await canEditLocationMember(lid, actor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
             try {
                 const sent = await sendCashInvoice(lid, iid);
                 return status(200, { success: true, message: sent.emailQueued ? "Invoice email queued" : "Invoice already issued", invoice: sent });

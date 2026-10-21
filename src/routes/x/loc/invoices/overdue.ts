@@ -2,6 +2,7 @@ import { invoiceQueue } from "@/queues/tasks";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { z } from "zod";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 const ScheduleOverdueCheckProps = {
     body: z.object({
@@ -16,9 +17,11 @@ const CancelOverdueCheckProps = {
     }),
 };
 export async function overdueInvoiceRoutes(app: Elysia) {
-    return app.post('/overdue', async ({ body, params, status }) => {
+    return app.post('/overdue', async (ctx) => {
+        const { body, params, status } = ctx;
         const { invoiceId, sendAt } = body;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
         try {
             const sendAtMs = new Date(sendAt).getTime();
@@ -92,8 +95,10 @@ export async function overdueInvoiceRoutes(app: Elysia) {
             console.error('Error scheduling overdue check:', error);
             throw new Error(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-    }, ScheduleOverdueCheckProps).delete('/overdue/:invoiceId', async ({ params }) => {
-        const { invoiceId } = params;
+    }, ScheduleOverdueCheckProps).delete('/overdue/:invoiceId', async (ctx) => {
+        const { params, status } = ctx;
+        const { lid, invoiceId } = params as { lid: string; invoiceId: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
         try {
             // Remove all reminder jobs for this invoice (including numbered reminders)

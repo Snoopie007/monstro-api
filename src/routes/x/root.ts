@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { AuthXMiddleware } from '@/middlewares';
+import { hasLocationPermissions } from '@/utils/locationAccess';
 import { xInvoices } from './loc/invoices/root';
 import { xClass } from './loc/class/root';
 import { xEmail } from './loc/email/root';
@@ -36,7 +37,15 @@ export const XRoutes = new Elysia()
         app.use(xPrograms);
         app.use(xEvents);
         app.use(xCourses);
-        app.use(locationEnrollRoutes);
+        // The member app shares these enroll handlers, so the staff check lives on this mount.
+        app.guard({
+            async beforeHandle(ctx) {
+                const { lid } = ctx.params as { lid: string };
+                if (!await hasLocationPermissions(lid, ctx, ["view plans", "manage billing"])) {
+                    return ctx.status(403, { error: "Forbidden", code: "FORBIDDEN" });
+                }
+            },
+        }, (app) => app.use(locationEnrollRoutes));
         app.use(xAdditionalFees);
         app.use(xGoogleAds);
         app.group('/members', (app) => app.use(locMembers));

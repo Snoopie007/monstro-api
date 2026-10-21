@@ -2,10 +2,13 @@ import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { desc, eq, sql } from "drizzle-orm";
 import { memberInvoices } from "@/subtrees/schemas";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function listInvoiceRoutes(app: Elysia) {
-    return app.get("/", async ({ params, query, status }) => {
+    return app.get("/", async (ctx) => {
+        const { params, query, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { page, size } = query as { page?: string; size?: string };
 
         const pageSize = Math.min(100, Math.max(1, parseInt(size || "25", 10) || 25));

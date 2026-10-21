@@ -1,15 +1,18 @@
 import { invoiceQueue } from "@/queues";
 import { db } from "@/db/db";
 import type Elysia from "elysia";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function reminderInvoiceRoutes(app: Elysia) {
     return app
-        .post('/reminder', async ({ body, params, status }) => {
+        .post('/reminder', async (ctx) => {
+            const { body, params, status } = ctx;
             const { invoiceId, sendAt } = body as {
                 invoiceId: string;
                 sendAt: string;
             };
             const { lid } = params as { lid: string };
+            if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
             try {
                 const sendAtMs = new Date(sendAt).getTime();
@@ -98,8 +101,10 @@ export async function reminderInvoiceRoutes(app: Elysia) {
                 throw new Error(`Failed to schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
         })
-        .delete('/reminder/:invoiceId', async ({ params }) => {
-            const { invoiceId } = params;
+        .delete('/reminder/:invoiceId', async (ctx) => {
+            const { params, status } = ctx;
+            const { lid, invoiceId } = params as { lid: string; invoiceId: string };
+            if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
             const jobId = `invoice:reminder:${invoiceId}`;
 
             try {

@@ -6,10 +6,13 @@ import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import { getRefundAmounts } from "@/utils/refunds";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function cancelSubscriptionRoutes(app: Elysia) {
-    return app.post("/:sid/cancel", async ({ params, body, status }) => {
+    return app.post("/:sid/cancel", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid, sid } = params as { lid: string; sid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { mode, cancelAt, refund, reason } = body;
 
         const sub = await db.query.memberSubscriptions.findFirst({
