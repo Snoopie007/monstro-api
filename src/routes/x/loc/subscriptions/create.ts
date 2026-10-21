@@ -9,6 +9,7 @@ import { addDays } from "date-fns";
 import type Elysia from "elysia";
 import { t, status as httpStatus } from "elysia";
 import { getDiscountDuration, type PromoDiscount } from "./shared";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 const enrollmentBody = t.Object({
     memberId: t.String(),
@@ -35,8 +36,10 @@ const enrollmentBody = t.Object({
 type EnrollmentBody = typeof enrollmentBody.static;
 
 export async function createSubscriptionRoutes(app: Elysia) {
-    return app.post("/", async ({ params, body, status }) => {
+    return app.post("/", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view plans", "manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const {
             memberId,
             pricingId,

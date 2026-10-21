@@ -32,6 +32,8 @@ const findFirst = mock(async () => storedPromo);
 mock.module("@/db/db", () => ({
     db: { query: { promos: { findFirst } } },
 }));
+const locationAccess = await import("@/utils/locationAccess");
+mock.module("@/utils/locationAccess", () => ({ ...locationAccess, hasLocationPermissions: async () => true }));
 
 const { fetchPromoDiscount, PromoValidationError } = await import("./fetchPromo");
 const { xPromos } = await import("@/routes/x/loc/promos/root");

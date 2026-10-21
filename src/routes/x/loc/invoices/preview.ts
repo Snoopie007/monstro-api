@@ -5,10 +5,13 @@ import { t } from "elysia";
 import { calcTotals } from "./shared";
 import { getCurrency } from "@/utils/getCurrency";
 import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function previewInvoiceRoutes(app: Elysia) {
-    return app.post("/preview", async ({ body, params, status }) => {
+    return app.post("/preview", async (ctx) => {
+        const { body, params, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { memberId,
             items,
             type,

@@ -11,10 +11,13 @@ import { and, eq, sql } from "drizzle-orm";
 import { getNextBillingDate } from "./shared";
 import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
 import { ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
-    return app.post("/:sid/activate-cash", async ({ params, status }) => {
+    return app.post("/:sid/activate-cash", async (ctx) => {
+        const { params, status } = ctx;
         const { lid, sid } = params as { lid: string; sid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view plans", "manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (s, { and, eq }) => and(eq(s.id, sid), eq(s.locationId, lid)),
