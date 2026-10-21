@@ -53,7 +53,7 @@ var SiteImageTargetSchema = z.union([
   ...SectionImageTargetOptions,
   z.object({
     kind: z.literal("business"),
-    slot: z.literal("logo")
+    slot: z.enum(["logo", "headerOverlayLogo", "headerLogo", "footerLogo"])
   }).strict(),
   z.object({
     kind: z.literal("page"),
@@ -1115,13 +1115,12 @@ function formatSiteLocationAddress(location) {
   const streetAddress = address?.streetAddress ?? location.address;
   if (!address)
     return streetAddress;
-  const regionPostalCode = [address.addressRegion, address.postalCode].filter(Boolean).join(" ");
   return [
     streetAddress,
-    address.addressLocality,
-    regionPostalCode || undefined,
+    [address.addressLocality, address.addressRegion, address.postalCode].filter(Boolean).join(", "),
     address.addressCountry
-  ].filter(Boolean).join(", ") || undefined;
+  ].filter(Boolean).join(`
+`) || undefined;
 }
 function applySiteLocationOverride(location, value) {
   if (!value)
@@ -1794,6 +1793,9 @@ var PublicSiteConfigObjectSchema = z37.object({
     name: z37.string().min(1),
     tagline: z37.string().min(1),
     logo: SiteImageSchema.optional(),
+    headerOverlayLogo: SiteImageSchema.optional(),
+    headerLogo: SiteImageSchema.optional(),
+    footerLogo: SiteImageSchema.optional(),
     structuredDataType: z37.enum([
       "LocalBusiness",
       "SportsActivityLocation",
@@ -2243,6 +2245,9 @@ function resolveSitePageHeader(page, theme) {
     placement,
     reserveSpace: placement === "legacy" && mode === "stacked" && firstSection?.type !== "not_sure"
   };
+}
+function resolveSiteLogo(business, slot) {
+  return business[slot] ?? business.logo;
 }
 function parsePublicSiteConfig(input) {
   return PublicSiteConfigSchema.parse(input);
@@ -3952,6 +3957,7 @@ export {
   scheduleQueryKey,
   safeSameOriginPath,
   resolveSitePageHeader,
+  resolveSiteLogo,
   resolveSelectedLocation,
   resolveRenderedTenantContext,
   resolveProgramPage,
