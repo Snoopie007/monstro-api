@@ -394,7 +394,13 @@ async function claimBlocker(tx: InvoicePaymentTransaction, locked: LockedPayment
   if (!await isCollectible(tx, locked)) return { status: "inactive" };
 
   // An attempt in progress or with an unknown result blocks a second charge.
-  if (prior && prior.status !== "failed") return { status: prior.status };
+  if (prior && prior.status !== "failed") {
+    // Nothing scans for stuck attempts, so log each time one blocks a charge.
+    if (prior.status === "in_flight" || prior.status === "unknown") {
+      console.error("Invoice payment is blocked by an attempt with no result", { invoiceId: invoice.id, attemptId: prior.id, status: prior.status, startedAt: prior.startedAt });
+    }
+    return { status: prior.status };
+  }
   // A declined attempt is charged again only when the caller asks for a retry.
   if (prior?.status === "failed" && !retry) return { status: "failed" };
   return null;
@@ -487,13 +493,17 @@ export async function collectPayment<Jobs>(
   if (claim.status !== "claimed") return claim.status;
 
   let outcome: InvoicePaymentOutcome;
+  let chargeError: unknown;
   const { invoiceId, attemptId } = claim.request;
   try {
     outcome = await charge(claim.request);
   } catch (error) {
-    // The gateway may have charged. The attempt stays unknown until a webhook or support settles it.
-    console.error("Invoice payment result is unknown", { invoiceId, attemptId, error });
+    chargeError = error;
     outcome = { status: "unknown" };
+  }
+  // The gateway may have charged. The attempt stays unknown until a webhook or support settles it.
+  if (outcome.status === "unknown") {
+    console.error("Invoice payment result is unknown", { invoiceId, attemptId, paymentIntentId: outcome.paymentIntentId, error: chargeError });
   }
   return recordPayment(database, { ...outcome, invoiceId, attemptId, gateway: input.gateway }, owner).catch((error) => {
     console.error("Invoice payment was charged but could not be saved", { invoiceId, attemptId, outcome, error });
