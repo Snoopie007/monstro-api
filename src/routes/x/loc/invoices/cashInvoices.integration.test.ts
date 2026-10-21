@@ -12,7 +12,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
     const admin = postgres(url, { max: 1, onnotice: () => {} });
     const sql = postgres(url, { max: 2, prepare: false, connection: { search_path: `${namespace},public,extensions` }, onnotice: () => {} });
     const db = drizzle(sql, { schema });
-    const tables = ["member_invoices", "transactions", "member_subscriptions", "member_plan_pricing", "member_plans", "members", "locations", "location_state", "tax_rates"];
+    const tables = ["member_invoices", "transactions", "member_subscriptions", "member_plan_pricing", "member_plans", "members", "locations", "location_state", "tax_rates", "bundles", "bundle_components", "bundle_purchases", "member_subscription_addons", "addons", "addon_plan_price_overrides"];
     const periodStart = new Date(Date.now() - 8 * 86400000);
     const periodEnd = new Date(Date.now() - 86400000);
     const nextEnd = new Date(periodEnd.getTime() + 7 * 86400000);
@@ -35,7 +35,7 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
         mock.module("@/utils/additionalFees", () => ({ getAdditionalFeesForCheckout: async () => [] }));
         mock.module("@/libs/wallet", () => ({ Wallet: class { charge = async () => true; } }));
         mock.module("@/libs/PaymentGateway", () => ({ SquarePaymentGateway: class {}, StripePaymentGateway: class {} }));
-        mock.module("@/queues", () => ({ invoiceQueue: {} }));
+        mock.module("@/queues", () => ({ invoiceQueue: {}, enqueueAddonJob: async () => {}, enqueueAddonRetry: async () => {}, scheduleRenewalRepair: async () => {} }));
         mock.module("@/queues/email", () => ({ emailQueue: { add: enqueue } }));
         const { createInvoiceRoutes } = await import("./create");
         const { sendInvoiceRoutes } = await import("./send");
@@ -74,6 +74,32 @@ describe.skipIf(!process.env.BILLING_TEST_DATABASE_URL)("cash invoice creation a
     }));
     const count = async (table: string) => (await sql`select count(*)::int as total from ${sql(table)}`)[0]!.total;
     const advancedPeriod = async () => expect(new Date((await sql`select current_period_end from member_subscriptions where id='sub'`)[0]!.current_period_end)).toEqual(nextEnd);
+
+    test("cash preview and invoice use the bundle price within main's cycle", async () => {
+        await sql`insert into bundles (id,location_id,name) values ('bundle','loc','Discount bundle')`;
+        await sql`insert into bundle_purchases (id,bundle_id,member_id,status) values ('purchase','bundle','member','active')`;
+        await sql`insert into bundle_components (id,bundle_id,member_plan_pricing_id,price_override) values ('component','bundle','price',7000)`;
+        await sql`update member_subscriptions set bundle_purchase_id='purchase',bundle_component_id='component'`;
+        const preview = await request("/preview", { memberId: "member", type: "from-subscription", subscriptionId: "sub" });
+        expect(preview.status).toBe(200);
+        expect(await preview.json()).toMatchObject({ preview: { amount_due: 7000 } });
+        const { invoice } = await created(await create());
+        expect(invoice.total).toBe(7000);
+        const row = await db.query.memberInvoices.findFirst();
+        expect(row?.items?.[0]).toMatchObject({ price: 7000, pricingSource: { type: "bundle", bundlePurchaseId: "purchase" }, basePlanPricingId: "price" });
+        await advancedPeriod();
+    });
+    test("a prepaid add-on discount must cover the whole invoice period", async () => {
+        await sql`insert into member_plan_pricing (id,member_plan_id,name,price,interval,interval_threshold) values ('member-price','plan','Member price',6000,'week',1)`;
+        await sql`insert into addons (id,location_id,name,amount,billing_type) values ('addon','loc','Prepaid membership',1000,'one_time')`;
+        await sql`insert into addon_plan_price_overrides (id,addon_id,source_plan_pricing_id,replacement_plan_pricing_id) values ('override','addon','price','member-price')`;
+        await sql`insert into member_subscription_addons (id,member_subscription_id,addon_id,status,starts_at,paid_period_starts_at,paid_period_ends_at) values ('addon-purchase','sub','addon','active',${periodStart.toISOString()},${periodStart.toISOString()},${new Date(nextEnd.getTime()-1).toISOString()})`;
+        const preview = () => request("/preview", { memberId: "member", type: "from-subscription", subscriptionId: "sub" });
+        expect(await (await preview()).json()).toMatchObject({ preview: { amount_due: 10000 } });
+        await sql`update member_subscription_addons set paid_period_ends_at=${nextEnd.toISOString()}`;
+        expect(await (await preview()).json()).toMatchObject({ preview: { amount_due: 6000 } });
+        expect((await created(await create())).invoice.total).toBe(6000);
+    });
 
     test("concurrent UI and worker writers reuse one invoice and transaction", async () => {
         const [response, worker] = await Promise.all([create(), prepare()]);

@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia";
+import { memberPlansAddonRoutes } from "./addons";
 import { memberPlansPkgRoutes } from "./pkg";
 import { memberPlansSubRoutes } from "./sub";
 
@@ -25,6 +26,7 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
             return status(500, { error: "Internal Server Error" });
         }
     }, MemberPlansRootProps)
+    .use(memberPlansAddonRoutes)
     .group('/family', (app) => {
         app.get('/', async ({ status, params }) => {
             const { pid } = params;

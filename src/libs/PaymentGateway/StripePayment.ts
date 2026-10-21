@@ -244,13 +244,35 @@ export class StripePaymentGateway {
     }
 
 
-    async createRefund(paymentIntentId: string, amount: number, currency: string) {
-        return this._client.refunds.create({
+    async retrieveRefund(refundId: string) {
+        return this._client.refunds.retrieve(refundId);
+    }
+
+    async inspectPaymentRefunds(paymentIntentId: string) {
+        const payment = await this._client.paymentIntents.retrieve(paymentIntentId);
+        // Pages through every refund on the payment.
+        const refunds = await Array.fromAsync(this._client.refunds.list({ payment_intent: paymentIntentId, limit: 100 }));
+
+        return { payment, refunds };
+    }
+
+    async createRefund(paymentIntentId: string, amount: number, currency: string, idempotencyKey?: string) {
+        const parameters: Stripe.RefundCreateParams = {
             payment_intent: paymentIntentId,
             amount: amount > 0 ? amount : undefined,
             refund_application_fee: false,
             reverse_transfer: false,
             reason: "requested_by_customer",
-        });
+        };
+
+        if (idempotencyKey) {
+            // The reference lets an interrupted bundle request find its refund
+            // without resubmitting after Stripe's idempotency retention expires.
+            parameters.metadata = { monstroBundleRefundKey: idempotencyKey };
+
+            return this._client.refunds.create(parameters, { idempotencyKey });
+        }
+
+        return this._client.refunds.create(parameters);
     }
 }

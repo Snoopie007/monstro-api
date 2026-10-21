@@ -41,6 +41,14 @@ export const workflowLogsRelations = relations(workflowLogs, ({ one }) => ({
 import { accounts } from "./accounts";
 import { additionalFees } from "./additionalFees";
 import { achievements, memberAchievements, memberPointsHistory } from "./achievements";
+import {
+	addonPlanPriceOverrides,
+	addons,
+	bundleComponents,
+	bundlePurchases,
+	bundles,
+	memberSubscriptionAddons,
+} from "./addonsBundles";
 import { attendances } from "./attendances";
 import { contractTemplates } from "./contracts";
 import { adsSettings } from "./ads";
@@ -733,6 +741,68 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 	}),
 	invoices: many(memberInvoices),
 	reservations: many(reservations),
+	bundlePurchase: one(bundlePurchases, {
+		fields: [memberSubscriptions.bundlePurchaseId],
+		references: [bundlePurchases.id],
+	}),
+	bundleComponent: one(bundleComponents, {
+		fields: [memberSubscriptions.bundleComponentId],
+		references: [bundleComponents.id],
+	}),
+}));
+
+// ============================================================================
+// ADD-ON AND BUNDLE RELATIONS
+// ============================================================================
+
+export const addonsRelations = relations(addons, ({ many }) => ({
+	planPriceOverrides: many(addonPlanPriceOverrides),
+}));
+
+export const addonPlanPriceOverridesRelations = relations(addonPlanPriceOverrides, ({ one }) => ({
+	addon: one(addons, {
+		fields: [addonPlanPriceOverrides.addonId],
+		references: [addons.id],
+	}),
+}));
+
+export const bundlesRelations = relations(bundles, ({ many }) => ({
+	components: many(bundleComponents),
+}));
+
+export const bundleComponentsRelations = relations(bundleComponents, ({ one }) => ({
+	bundle: one(bundles, {
+		fields: [bundleComponents.bundleId],
+		references: [bundles.id],
+	}),
+}));
+
+export const bundlePurchasesRelations = relations(bundlePurchases, ({ many, one }) => ({
+	bundle: one(bundles, {
+		fields: [bundlePurchases.bundleId],
+		references: [bundles.id],
+	}),
+	subscriptions: many(memberSubscriptions),
+	addonPurchases: many(memberSubscriptionAddons),
+}));
+
+export const memberSubscriptionAddonsRelations = relations(memberSubscriptionAddons, ({ one }) => ({
+	subscription: one(memberSubscriptions, {
+		fields: [memberSubscriptionAddons.memberSubscriptionId],
+		references: [memberSubscriptions.id],
+	}),
+	addon: one(addons, {
+		fields: [memberSubscriptionAddons.addonId],
+		references: [addons.id],
+	}),
+	bundlePurchase: one(bundlePurchases, {
+		fields: [memberSubscriptionAddons.bundlePurchaseId],
+		references: [bundlePurchases.id],
+	}),
+	bundleComponent: one(bundleComponents, {
+		fields: [memberSubscriptionAddons.bundleComponentId],
+		references: [bundleComponents.id],
+	}),
 }));
 
 

@@ -109,6 +109,7 @@ mock.module("@/queues/subscriptions", () => ({
     scheduleCronBasedRenewal: mock(async () => undefined),
     scheduleRecursiveRenewal: mock(async () => undefined),
 }));
+mock.module("@/queues/subscriptionAddons", () => ({ enqueueAddonJob: mock(async () => undefined) }));
 const { authorizeWebhookRoutes, verifyAuthorizeWebhookSignature } = await import("./authorize");
 
 const event = {

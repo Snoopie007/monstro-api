@@ -1,3 +1,4 @@
+import { commissionBillingSnapshot } from "@/subtrees/utils/invoiceItems";
 import { fromZonedTime } from "date-fns-tz";
 import { quoteSubscriptionInvoice } from "../invoices/subscriptionQuote";
 import { getAdditionalFeesForCheckout } from "@/utils/additionalFees";
@@ -193,12 +194,7 @@ export async function createSubscriptionRoutes(app: Elysia) {
             paymentType,
             classCredits,
             metadata: {
-                commissionBilling: {
-                    allowanceInterval: pricing.plan.classLimitInterval,
-                    billingInterval: pricing.interval,
-                    billingThreshold: pricing.intervalThreshold,
-                    visitAllowance: pricing.plan.totalClassLimit,
-                },
+                commissionBilling: commissionBillingSnapshot(pricing.plan, pricing),
                 ...billing.metadata,
                 ...(promoData && {
                     promo: {

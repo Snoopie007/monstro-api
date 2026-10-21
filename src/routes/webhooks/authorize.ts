@@ -1,3 +1,4 @@
+import { handleAuthorizeBundle } from "./handlers/authorize/authorizeBundlePayment";
 import { getDeferredInvoiceBilling, prepareAuthorizeInvoiceAttempt } from "@/utils/invoiceAttempts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
@@ -27,6 +28,7 @@ import {
     transactions,
 } from "@/subtrees/schemas";
 import type { SubscriptionJobData } from "@/subtrees/bullmq";
+import { isBundleRefundReplay, keepRefundProgress, recordAuthorizeRefund } from "@/handlers/addonsBundles/refund/state";
 
 const PAYMENT_EVENTS = new Set([
     "net.authorize.payment.authorization.created",
@@ -477,6 +479,12 @@ export function authorizeWebhookRoutes(app: Elysia) {
             return status(400, { error: "Authorize.net currency does not match" });
         }
 
+        if (!isFollowOn && await handleAuthorizeBundle({
+            transaction, integration, details, state: authorizePaymentState(details), providerTransactionId, providerAmount,
+        })) {
+            return status(200, { message: "Authorize.net bundle payment recorded" });
+        }
+
         let renewal: Renewal | undefined;
         let repair: { sid: string; lid: string; dueAt: Date | null } | undefined;
         await db.transaction(async (tx) => {
@@ -488,13 +496,23 @@ export function authorizeWebhookRoutes(app: Elysia) {
             const currentMetadata = metadataOf(current.metadata);
 
             if (isFollowOn) {
+                const operation = details.transactionType === "voidTransaction" || event.eventType === "net.authorize.payment.void.created"
+                    ? "void" : "refund";
+                const bundleRefund = await recordAuthorizeRefund(tx, {
+                    transactionId: current.id,
+                    refundId: providerTransactionId,
+                    paymentId: details.refTransId ?? (operation === "void" && details.transId === current.paymentIntentId ? current.paymentIntentId : undefined),
+                    amount: providerAmount,
+                    operation,
+                    providerStatus: details.transactionStatus,
+                });
+
+                if (bundleRefund) return;
+
                 const ids = Array.isArray(currentMetadata.authorizeRefundTransactionIds)
                     ? currentMetadata.authorizeRefundTransactionIds.filter((id): id is string => typeof id === "string")
                     : [];
                 if (ids.includes(providerTransactionId)) return;
-                const operation = details.transactionType === "voidTransaction" || event.eventType === "net.authorize.payment.void.created"
-                    ? "void"
-                    : "refund";
                 await tx.update(transactions).set({
                     refunded: true,
                     refundedAmount: operation === "void" ? current.refundedAmount : Math.min(current.total, current.refundedAmount + providerAmount),
@@ -514,6 +532,8 @@ export function authorizeWebhookRoutes(app: Elysia) {
                 }
                 return;
             }
+
+            if (isBundleRefundReplay(current.metadata, providerTransactionId)) return;
 
             const paymentStatus = authorizePaymentState(details);
             if (!paymentStatus) throw new Error("Unknown Authorize.net transaction status");
@@ -543,7 +563,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
                 paymentIntentId: providerTransactionId,
                 failedCode: paymentStatus === "failed" ? String(details.responseReasonCode ?? details.responseCode ?? "AUTHORIZE_FAILED") : null,
                 failedReason: paymentStatus === "failed" ? details.responseReasonDescription ?? "Authorize.net payment failed" : null,
-                metadata,
+                metadata: keepRefundProgress(metadata),
                 updated: new Date(),
             }).where(eq(transactions.id, current.id));
 

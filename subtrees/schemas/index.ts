@@ -1,6 +1,7 @@
 export * from "./accounts";
 export * from "./additionalFees";
 export * from "./achievements";
+export * from "./addonsBundles";
 export * from "./ads";
 export * from "./attendances";
 export * from "./bots";

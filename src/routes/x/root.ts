@@ -15,6 +15,7 @@ import { xMerchandise } from './loc/merchandise/root';
 import { xPrograms } from './loc/programs/root';
 import { xEvents } from './loc/events/root';
 import { xCourses } from './loc/courses/root';
+import { xAddonsBundles } from './loc/addonsBundles/root';
 import { locationEnrollRoutes } from "../protected/locations/enroll";
 import { xAdditionalFees } from "./loc/additionalFees";
 import { xGoogleAds } from "./loc/ads/google/root";
@@ -36,6 +37,7 @@ export const XRoutes = new Elysia()
         app.use(xPrograms);
         app.use(xEvents);
         app.use(xCourses);
+        app.use(xAddonsBundles);
         app.use(locationEnrollRoutes);
         app.use(xAdditionalFees);
         app.use(xGoogleAds);

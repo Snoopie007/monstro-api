@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
+	type AnyPgColumn,
 	boolean,
 	foreignKey,
+	index,
 	integer,
 	jsonb,
 	pgTable,
@@ -10,6 +12,7 @@ import {
 	uuid,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { bundleComponents, bundlePurchases } from "./addonsBundles";
 import { promos } from "./promos";
 import {
 	LocationStatusEnum,
@@ -25,6 +28,8 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	parentId: text("parent_id"),
 	memberPlanPricingId: text("member_plan_pricing_id").references(() => memberPlanPricing.id, { onDelete: "set null" }),
+	bundlePurchaseId: text("bundle_purchase_id").references((): AnyPgColumn => bundlePurchases.id, { onDelete: "set null" }),
+	bundleComponentId: text("bundle_component_id").references((): AnyPgColumn => bundleComponents.id, { onDelete: "restrict" }),
 	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
@@ -52,6 +57,8 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 			foreignColumns: [table.id],
 			name: "parent_child_fk",
 		}),
+		index("member_subscriptions_bundle_purchase_idx").on(table.bundlePurchaseId),
+		index("member_subscriptions_bundle_component_idx").on(table.bundleComponentId),
 		uniqueIndex("member_subscriptions_stripe_source_item_uq")
 			.on(table.locationId, sql`${table.metadata}->'stripeMigration'->>'connectedAccountId'`, sql`${table.metadata}->'stripeMigration'->>'sourceSubscriptionId'`, sql`${table.metadata}->'stripeMigration'->>'sourceSubscriptionItemId'`)
 			.where(sql`${table.metadata}->'stripeMigration' is not null`),

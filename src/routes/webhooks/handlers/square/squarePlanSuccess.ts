@@ -3,7 +3,8 @@ import { getDeferredInvoiceBilling, prepareSquareInvoiceAttempt } from "@/utils/
 import { strict as assert } from "node:assert";
 import { memberInvoices, memberSubscriptions, memberPackages, transactions } from "@/subtrees/schemas";
 import { db } from "@/db/db";
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, isNull, ne, notInArray, or } from "drizzle-orm";
+import { isBundleRefundReplay, keepRefundProgress } from "@/handlers/addonsBundles/refund/state";
 import type { PaymentType } from "@/subtrees/types";
 import type { Currency } from "@/subtrees/types/currency";
 
@@ -36,6 +37,23 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
     await db.transaction(async (tx) => {
         const [priorInvoice] = await tx.select().from(memberInvoices).where(eq(memberInvoices.id, invoiceId)).for("update");
         assert(priorInvoice, "Invoice not found");
+        const subscription = priorInvoice.memberPlanId ? await tx.query.memberSubscriptions.findFirst({
+            where: eq(memberSubscriptions.id, priorInvoice.memberPlanId),
+            columns: { bundlePurchaseId: true },
+        }) : undefined;
+        const bundled = Boolean(subscription?.bundlePurchaseId);
+
+        if (bundled && amount !== priorInvoice.total) throw new Error("Square bundle subscription charge amount does not match its invoice");
+
+        if (bundled && priorInvoice.transactionId) {
+            const previous = await tx.query.transactions.findFirst({
+                where: eq(transactions.id, priorInvoice.transactionId),
+                columns: { status: true, paymentIntentId: true, metadata: true },
+            });
+
+            if (previous && isBundleRefundReplay(previous.metadata, squarePaymentId ?? null)) return;
+        }
+
         const deferred = await getDeferredInvoiceBilling(tx, priorInvoice.memberPlanId);
         // TODO(billing): review stale callbacks and subscription status guards for ordinary payments separately.
         // Only deferred subscriptions use the new attempt checks and status guards in this PR.
@@ -68,11 +86,12 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
             status: "paid" as const,
             paymentMethodId: paymentMethodId ?? attemptedMethodId ?? null,
             paymentType,
+            paymentIntentId: bundled ? squarePaymentId : undefined,
             chargeDate: now,
             feeAmount,
             metadata: {
                 ...attemptUpdate.metadata,
-                gatewayService: "square" as const,
+                gatewayService: "square",
                 squarePaymentId,
                 squarePaymentStatus,
                 memberPlanId: invoice.memberPlanId,
@@ -81,7 +100,10 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
         };
 
         if (invoice.transactionId) {
-            await tx.update(transactions).set(values).where(eq(transactions.id, invoice.transactionId));
+            await tx.update(transactions).set({
+                ...values,
+                metadata: keepRefundProgress(values.metadata),
+            }).where(eq(transactions.id, invoice.transactionId));
         } else {
             const [transaction] = await tx.insert(transactions).values(values).returning({ id: transactions.id });
             assert(transaction);
@@ -96,7 +118,11 @@ export async function handleSquarePlanSuccess(props: HandleSquarePlanSuccessProp
             await tx.update(memberSubscriptions).set({
                 gatewayPaymentId: paymentMethodId,
                 status: "active",
-            }).where(and(eq(memberSubscriptions.id, invoice.memberPlanId), deferred ? notInArray(memberSubscriptions.status, ["canceled", "paused", "incomplete_expired"]) : undefined));
+            }).where(and(
+                eq(memberSubscriptions.id, invoice.memberPlanId),
+                deferred ? notInArray(memberSubscriptions.status, ["canceled", "paused", "incomplete_expired"]) : undefined,
+                or(isNull(memberSubscriptions.bundlePurchaseId), ne(memberSubscriptions.status, "canceled")),
+            ));
         }
     });
 

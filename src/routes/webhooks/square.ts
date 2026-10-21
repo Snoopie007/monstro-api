@@ -2,13 +2,14 @@ import { db } from "@/db/db";
 import { getDeferredInvoiceBilling } from "@/utils/invoiceAttempts";
 import { Elysia, t } from "elysia";
 import { WebhooksHelper } from "square";
-import type { NoteData, SquareWebhookPayment } from "./handlers/square/type";
+import type { SquareWebhookPayment } from "./handlers/square/type";
 import { handleSquarePlanSuccess } from "./handlers/square/squarePlanSuccess";
 import { handleSquarePlanFail } from "./handlers/square/squarePlanFail";
 import { handleSquareOrderSuccess } from "./handlers/square/squareOrderSuccess";
 import { handleSquareOrderFail } from "./handlers/square/squareOrderFail";
-
-const ALLOWED_EVENTS = ["payment.created", "payment.updated"];
+import { processSquareBundleEvent } from "./handlers/square/squareBundlePayment";
+import { ALLOWED_EVENTS, getSquareFailureCode, getSquareFailureReason, parseNote } from "./handlers/square/utils";
+import { isCollectorInvoice } from "@/handlers/addonsBundles/checkout/settlement";
 
 const isProd = process.env.BUN_ENV === "production";
 const url = isProd
@@ -48,7 +49,10 @@ export function squareWebhookRoutes(app: Elysia) {
             const invoice = reference?.startsWith("inv_") && await db.query.memberInvoices.findFirst({
                 where: (row, { eq }) => eq(row.id, reference), columns: { memberPlanId: true },
             });
-            if (invoice && await getDeferredInvoiceBilling(db, invoice.memberPlanId)) {
+            if (invoice && reference && invoice.memberPlanId === null && await isCollectorInvoice(reference)) {
+                // Square must retry a bundle or add-on callback if saving it fails.
+                await processSquareBundleEvent(event);
+            } else if (invoice && await getDeferredInvoiceBilling(db, invoice.memberPlanId)) {
                 // Square must retry a deferred callback if saving or scheduling its renewal fails.
                 await processSquareEvent(event);
             } else {
@@ -235,36 +239,4 @@ function getSquareProcessingFee(payment: SquareWebhookPayment) {
     const feeAmount = payment.app_fee_money?.amount ?? 0;
     const processingFee = payment.processing_fee?.reduce((acc, curr) => acc + (curr.amount_money?.amount ?? 0), 0);
     return feeAmount + (processingFee ?? 0);
-}
-
-
-function parseNote(note: string): Partial<NoteData> {
-    const parts = note.split("|");
-    const data: Partial<NoteData> = {
-        description: "",
-        invId: "",
-        mid: "",
-        lid: "",
-        subId: "",
-        pmid: "",
-    };
-
-    for (const part of parts) {
-        const keyVal = part.match(/^(\w+):(.*)$/);
-        if (keyVal) {
-            data[keyVal[1] as keyof NoteData] = keyVal[2];
-        }
-    }
-
-    return data;
-}
-
-
-
-function getSquareFailureReason(payment: SquareWebhookPayment, statusUpper: string) {
-    return payment.card_details?.errors?.[0]?.detail || statusUpper;
-}
-
-function getSquareFailureCode(payment: SquareWebhookPayment, statusUpper: string) {
-    return payment.card_details?.errors?.[0]?.code || payment.status || statusUpper;
 }

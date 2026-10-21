@@ -171,7 +171,7 @@ test("surfaces a singleton follow-on provider error", async () => {
 });
 
 
-test.each([true, false])("held Authorize charges preserve legacy behavior unless deferred billing is enabled: %s", async deferredBilling => {
+test.each([true, false])("held Authorize charges preserve legacy behavior unless bound to an invoice attempt: %s", async boundToAttempt => {
     process.env.AUTHORIZE_API_URL = "https://authorize.test/request";
     let order: unknown;
     globalThis.fetch = Object.assign(async (_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
@@ -187,9 +187,10 @@ test.each([true, false])("held Authorize charges preserve legacy behavior unless
         gateway: { service: "authorize", integrationId: "gateway", apiKey: "login", secretKey: "key", accountId: "merchant", metadata: {} },
         gatewayCustomerId: "customer", paymentMethodId: "method", transactionId: "txn",
         total: 100, feesAmount: 0, currency: "USD", description: "Subscription", note: "",
-        metadata: { billingAttemptId: "attempt", invoiceId: "invoice" }, paymentType: "card", deferredBilling,
+        metadata: { billingAttemptId: "attempt", invoiceId: "invoice" }, paymentType: "card",
+        attempt: boundToAttempt ? { id: "attempt", invoiceId: "invoice" } : undefined,
     });
-    if (deferredBilling) {
+    if (boundToAttempt) {
         expect(result).toMatchObject({ status: "uncertain", paymentIntentId: "held-id", paymentIntentStatus: "processing" });
         expect(order).toEqual({ invoiceNumber: createHash("sha256").update("attempt").digest("hex").slice(0, 20), description: "monstro-invoice:invoice" });
     } else {
