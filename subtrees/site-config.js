@@ -1488,6 +1488,100 @@ function normalizeEditablePagePath(raw) {
   }
   return { ok: true, path };
 }
+var MAX_SITE_REDIRECTS = 200;
+function normalizeRedirectPath(path) {
+  const lower = path.toLowerCase();
+  return lower.length > 1 && lower.endsWith("/") ? lower.slice(0, -1) : lower;
+}
+var RedirectSourcePathSchema = z35.string().max(512).regex(/^\/[a-z0-9\-._~%/]*$/).refine((path) => path === normalizeRedirectPath(path), "Redirect URL is not normalized");
+var REDIRECT_TARGET_ORIGIN = "https://redirect.invalid";
+function isRedirectTarget(value) {
+  if (/[\s\\\u0000-\u001f\u007f]/.test(value))
+    return false;
+  if (value.startsWith("/"))
+    return !value.startsWith("//");
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+var RedirectTargetSchema = z35.string().max(2048).refine(isRedirectTarget, "Redirect target must be a site path or an https:// URL");
+function redirectTargetPath(target) {
+  if (!target.startsWith("/"))
+    return null;
+  return normalizeRedirectPath(new URL(target, REDIRECT_TARGET_ORIGIN).pathname);
+}
+function normalizeEditableRedirectTarget(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed)
+    return { ok: false, message: "Enter where the old URL should go, such as /contact." };
+  if (/^http:\/\//i.test(trimmed))
+    return { ok: false, message: "Use an https:// link." };
+  if (/^https:\/\//i.test(trimmed)) {
+    let url2;
+    try {
+      url2 = new URL(trimmed);
+    } catch {
+      return { ok: false, message: "Enter a valid https:// link." };
+    }
+    if (url2.username || url2.password) {
+      return { ok: false, message: "Remove the user name or password from the link." };
+    }
+    return url2.href.length > 2048 ? { ok: false, message: "That link is too long." } : { ok: true, target: url2.href };
+  }
+  if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith("//")) {
+    return { ok: false, message: "Enter a path on this site, such as /contact, or an https:// link." };
+  }
+  let url;
+  try {
+    url = new URL(trimmed.startsWith("/") ? trimmed : `/${trimmed}`, REDIRECT_TARGET_ORIGIN);
+  } catch {
+    return { ok: false, message: "Enter a path on this site, such as /contact, or an https:// link." };
+  }
+  if (url.pathname.includes("//"))
+    return { ok: false, message: "Separate folders with a single slash." };
+  const pathname = url.pathname.length > 1 && url.pathname.endsWith("/") ? url.pathname.slice(0, -1) : url.pathname;
+  const target = `${pathname}${url.search}${url.hash}`;
+  return target.length > 2048 ? { ok: false, message: "That path is too long." } : { ok: true, target };
+}
+var RUNTIME_OWNED_REDIRECT_SOURCES = ["/robots.txt", "/sitemap.xml", "/icon.svg", "/lp/ads"];
+function isRuntimeOwnedRedirectSource(path) {
+  return isRuntimeOwnedPath(path) || RUNTIME_OWNED_REDIRECT_SOURCES.some((owned) => path === owned || path.startsWith(`${owned}/`));
+}
+function normalizeEditableRedirectSource(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed)
+    return { ok: false, message: "Enter the old URL, such as /about-us." };
+  const absolute = /^https?:\/\//i.test(trimmed);
+  if (!absolute && (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) || trimmed.startsWith("//"))) {
+    return { ok: false, message: "Enter a web address or a path, such as /about-us." };
+  }
+  let url;
+  try {
+    url = new URL(absolute ? trimmed : trimmed.startsWith("/") ? trimmed : `/${trimmed}`, "https://redirect.invalid");
+  } catch {
+    return { ok: false, message: "Enter a web address or a path, such as /about-us." };
+  }
+  if (url.search) {
+    return { ok: false, message: "Remove the ? part. Redirects match the path only." };
+  }
+  const path = normalizeRedirectPath(url.pathname);
+  if (path === "/")
+    return { ok: false, message: "The home page can't be redirected." };
+  if (path.includes("//"))
+    return { ok: false, message: "Separate folders with a single slash." };
+  if (path.length > 512)
+    return { ok: false, message: "That URL is too long." };
+  if (!RedirectSourcePathSchema.safeParse(path).success) {
+    return { ok: false, message: "Use letters, numbers, hyphens, dots, and underscores in the URL." };
+  }
+  if (isRuntimeOwnedRedirectSource(path)) {
+    return { ok: false, message: "This URL belongs to a built-in site feature and can't be redirected." };
+  }
+  return { ok: true, path };
+}
 function normalizeProgramPagePath(raw) {
   const result = normalizeEditablePagePath(raw);
   if (result.ok && result.path === "/") {
@@ -1721,6 +1815,10 @@ var SitePageBaseSchema = z37.object({
   }).strict(),
   header: SitePageHeaderSchema.optional()
 });
+var SiteRedirectSchema = z37.object({
+  from: RedirectSourcePathSchema,
+  to: RedirectTargetSchema
+}).strict();
 var SiteSectionsPageSchema = SitePageBaseSchema.extend({
   kind: z37.literal("sections").default("sections"),
   displayLocationId: z37.string().min(1).max(128).optional(),
@@ -1835,7 +1933,8 @@ var PublicSiteConfigObjectSchema = z37.object({
     enabled: true,
     entries: []
   }),
-  blogListing: BlogListingSchema.optional()
+  blogListing: BlogListingSchema.optional(),
+  redirects: z37.array(SiteRedirectSchema).max(MAX_SITE_REDIRECTS, `A site can have at most ${MAX_SITE_REDIRECTS} redirects`).optional()
 }).strict();
 var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, issue) => {
   const pageIds = new Set;
@@ -1991,6 +2090,27 @@ var PublicSiteConfigSchema = PublicSiteConfigObjectSchema.superRefine((config, i
           path: ["pages"]
         });
       }
+    }
+  }
+  const redirectSources = new Set;
+  for (const [index, redirect] of (config.redirects ?? []).entries()) {
+    if (redirectSources.has(redirect.from)) {
+      issue.addIssue({
+        code: "custom",
+        message: `Duplicate redirect URL: ${redirect.from}`,
+        path: ["redirects", index, "from"]
+      });
+    }
+    redirectSources.add(redirect.from);
+  }
+  for (const [index, redirect] of (config.redirects ?? []).entries()) {
+    const target = redirectTargetPath(redirect.to);
+    if (target !== null && redirectSources.has(target)) {
+      issue.addIssue({
+        code: "custom",
+        message: target === redirect.from ? `Redirect points to itself: ${redirect.from}` : `Redirect leads to another redirect: ${redirect.from} -> ${redirect.to}`,
+        path: ["redirects", index, "to"]
+      });
     }
   }
   for (const [pageIndex, page] of config.pages.entries()) {
@@ -3963,6 +4083,7 @@ export {
   resolveProgramPage,
   resolveFormRedirect,
   requireProgramPagePath,
+  redirectTargetPath,
   publicSiteConfigFromStored,
   programDetailPages,
   plansQueryKey,
@@ -3974,7 +4095,10 @@ export {
   normalizeStoredLocationConnections,
   normalizeSitePageTemplateV2,
   normalizeSiteConfigV2,
+  normalizeRedirectPath,
   normalizeProgramPagePath,
+  normalizeEditableRedirectTarget,
+  normalizeEditableRedirectSource,
   normalizeEditablePagePath,
   materializeSitePageTemplate,
   manualLocationForDisplay,
@@ -4016,6 +4140,7 @@ export {
   SiteScriptPlacementSchema,
   SiteScriptEntrySchema,
   SiteSandboxedEmbedEntrySchema,
+  SiteRedirectSchema,
   SiteProgramSchema,
   SiteProductSchema,
   SitePostalAddressSchema,
@@ -4072,6 +4197,8 @@ export {
   RichTextSectionSchema,
   RenderedTenantContextSchema,
   RenderedSiteLocationSchema,
+  RedirectTargetSchema,
+  RedirectSourcePathSchema,
   RedirectRuleSchema,
   RUNTIME_OWNED_PATH_SEGMENTS,
   PublishableStoredSiteConfigSchema,
@@ -4097,6 +4224,7 @@ export {
   NativeSiteFormSchema,
   MediaSectionBaseSchema,
   MAX_SITE_SANDBOXED_EMBED_BYTES,
+  MAX_SITE_REDIRECTS,
   MAX_SITE_CUSTOM_EMBED_BYTES,
   LocationFailureSchema,
   IframeFormPlacementSchema,
