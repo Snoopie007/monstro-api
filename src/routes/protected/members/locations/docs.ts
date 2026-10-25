@@ -100,6 +100,7 @@ export function mlDocsRoutes(app: Elysia) {
 							id: true,
 							title: true,
 							content: true,
+							requireSignature: true,
 						},
 					},
 					location: true,
