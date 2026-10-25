@@ -7,7 +7,7 @@ import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature
 
 export const webDocRoutes = new Elysia({ prefix: "/docs" })
     .use(WebAuthMiddleware)
-    .get('/unsigned', async ({ lid, status, session, params }) => {
+    .get('/', async ({ lid, status, session, params }) => {
         if (!lid) {
             return status(401, { message: "No Location ID provided" });
         }
@@ -22,11 +22,10 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
         }
 
         try {
-            const unsignedDocs = await db.query.memberContracts.findMany({
+            const docs = await db.query.memberContracts.findMany({
                 where: (m, { eq, and, isNull }) => and(
                     eq(m.memberId, mid),
                     eq(m.locationId, lid),
-                    isNull(m.signedOn),
                 ),
                 with: {
                     contractTemplate: {
@@ -50,7 +49,7 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                 },
             });
 
-            const scopedUnsignedDocs = unsignedDocs.flatMap((doc) => {
+            const scopedDocs = docs.flatMap((doc) => {
                 if (
                     doc.contractTemplate?.location?.id !== lid ||
                     (doc.pricing && doc.pricing.plan?.locationId !== lid)
@@ -64,15 +63,13 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                 return [{ ...rest, contractTemplate: publicContractTemplate }];
             });
 
-            return status(200, scopedUnsignedDocs);
-
+            return status(200, scopedDocs);
         } catch (error) {
             console.error(error);
-            return status(500, { error: "Failed to fetch contract" });
+            return status(500, { error: "Failed to fetch contracts" });
         }
-
-
     })
+
     .get('/:docId/content', async ({ lid, status, session, params }) => {
         const { docId } = params;
         if (!lid) {
