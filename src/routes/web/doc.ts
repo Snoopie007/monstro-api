@@ -5,70 +5,85 @@ import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
 import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
 
-export const webDocRoutes = new Elysia({ prefix: "/docs" })
-    .use(WebAuthMiddleware)
-    .get('/', async ({ lid, status, session, params }) => {
-        if (!lid) {
-            return status(401, { message: "No Location ID provided" });
-        }
-        if (!session) {
-            return status(401, { message: "No session provided" });
-        }
+type DocListContext = {
+    lid?: string | null;
+    session?: { user?: { memberId?: string | null } | null } | null;
+    status: (code: number, body: unknown) => unknown;
+};
 
-        const { user } = session;
-        const mid = user?.memberId;
-        if (!mid) {
-            return status(401, { message: "No member provided" });
-        }
+/**
+ * Lists the member's documents at the selected location. `/unsigned` keeps
+ * the old unsigned-only response for sites that still call it (the sites app
+ * on main and the legacy template sites); `/` also includes signed ones.
+ * The stored signature image is left out: the list only needs `signedOn`.
+ */
+async function listDocs({ lid, session, status }: DocListContext, includeSigned: boolean) {
+    if (!lid) {
+        return status(401, { message: "No Location ID provided" });
+    }
+    if (!session) {
+        return status(401, { message: "No session provided" });
+    }
 
-        try {
-            const docs = await db.query.memberContracts.findMany({
-                where: (m, { eq, and, isNull }) => and(
-                    eq(m.memberId, mid),
-                    eq(m.locationId, lid),
-                ),
-                with: {
-                    contractTemplate: {
-                        with: {
-                            location: {
-                                columns: {
-                                    id: true,
-                                },
-                            },
-                        },
-                    },
-                    pricing: {
-                        with: {
-                            plan: {
-                                columns: {
-                                    locationId: true,
-                                },
+    const mid = session.user?.memberId;
+    if (!mid) {
+        return status(401, { message: "No member provided" });
+    }
+
+    try {
+        const docs = await db.query.memberContracts.findMany({
+            where: (m, { eq, and }) => and(
+                eq(m.memberId, mid),
+                eq(m.locationId, lid),
+            ),
+            with: {
+                contractTemplate: {
+                    with: {
+                        location: {
+                            columns: {
+                                id: true,
                             },
                         },
                     },
                 },
-            });
+                pricing: {
+                    with: {
+                        plan: {
+                            columns: {
+                                locationId: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
 
-            const scopedDocs = docs.flatMap((doc) => {
-                if (
-                    doc.contractTemplate?.location?.id !== lid ||
-                    (doc.pricing && doc.pricing.plan?.locationId !== lid)
-                ) {
-                    return [];
-                }
+        const scopedDocs = docs.flatMap((doc) => {
+            if (!includeSigned && doc.signedOn) return [];
+            if (
+                doc.contractTemplate?.location?.id !== lid ||
+                (doc.pricing && doc.pricing.plan?.locationId !== lid)
+            ) {
+                return [];
+            }
 
-                const { contractTemplate, pricing: _pricing, ...rest } = doc;
-                if (!contractTemplate) return [];
-                const { location: _location, ...publicContractTemplate } = contractTemplate;
-                return [{ ...rest, contractTemplate: publicContractTemplate }];
-            });
+            const { contractTemplate, pricing: _pricing, signature: _signature, ...rest } = doc;
+            if (!contractTemplate) return [];
+            const { location: _location, ...publicContractTemplate } = contractTemplate;
+            return [{ ...rest, contractTemplate: publicContractTemplate }];
+        });
 
-            return status(200, scopedDocs);
-        } catch (error) {
-            console.error(error);
-            return status(500, { error: "Failed to fetch contracts" });
-        }
-    })
+        return status(200, scopedDocs);
+    } catch (error) {
+        console.error(error);
+        return status(500, { error: "Failed to fetch contracts" });
+    }
+}
+
+export const webDocRoutes = new Elysia({ prefix: "/docs" })
+    .use(WebAuthMiddleware)
+    .get('/', (context) => listDocs(context, true))
+    .get('/unsigned', (context) => listDocs(context, false))
 
     .get('/:docId/content', async ({ lid, status, session, params }) => {
         const { docId } = params;
@@ -143,7 +158,7 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
             return status(401, { message: "No member provided" });
         }
         try {
-            const { doc, newlySigned } = await signMemberDocument({ mid, lid, did: docId, signature: body.signature });
+            const { doc, newlySigned } = await signMemberDocument({ mid, lid, did: docId, signature: body.signature ?? undefined });
             if (newlySigned) {
                 setTimeout(() => {
                     const content = renderContractContent(doc.contractTemplate.content, {
@@ -164,7 +179,9 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
         params: t.Object({
             docId: t.String(),
         }),
+        // Documents that don't require a signature are accepted without one;
+        // signMemberDocument still rejects a missing one when it's required.
         body: t.Object({
-            signature: t.String(),
+            signature: t.Optional(t.Nullable(t.String())),
         }),
     })
