@@ -15,6 +15,7 @@ import {
 import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
 import type { Member, Location } from '../types';
+
 interface PaymentSuccessEmailProps {
   member: Pick<Member, 'firstName' | 'lastName'>;
   invoice: {

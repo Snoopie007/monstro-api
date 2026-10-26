@@ -23,9 +23,15 @@ import OrderReceiptEmail from "./OrderReceiptEmail";
 import NewOrderAlertEmail from "./NewOrderAlertEmail";
 import OrderStatusUpdateEmail from "./OrderStatusUpdateEmail";
 import InternalSupportCaseMessageEmail from "./InternalSupportCaseMessageEmail";
+import DocRequestEmail from "./DocRequestEmail";
+import DocSignedEmail from "./DocSignedEmail";
+import EnrollEmail from "./EnrollEmail";
 
 export const EmailTemplates = {
     ClassReminderEmail,
+    DocRequestEmail,
+    DocSignedEmail,
+    EnrollEmail,
     HolidayCancellationEmail,
     InvoiceReminderEmail,
     LoginTokenEmail,
