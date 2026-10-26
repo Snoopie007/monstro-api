@@ -21,6 +21,7 @@ import {
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
 import { generateUUID } from "subtrees/utils";
 import { and, eq, sql } from "drizzle-orm";
+import { enrollPlanName, sendDocRequestEmails, sendEnrollEmail } from "@/utils/memberEmails";
 
 export type EnrollPkgInput = {
     lid: string;
@@ -178,6 +179,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         case "approved": {
             const now = new Date();
             let unsignedDocs: string[] = [];
+            let invoiceId = "";
             await db.transaction(async (tx) => {
                 const [transaction] = await tx.insert(transactions).values({
                     id: transactionId,
@@ -240,6 +242,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     paid: true,
                 }).returning({ id: memberInvoices.id });
                 if (!invoice) throw new Error("Failed to create invoice");
+                invoiceId = invoice.id;
 
                 if (promoId) {
                     await tx.update(promos).set({
@@ -261,6 +264,17 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     eq(memberLocations.locationId, lid),
                 ));
             });
+
+            void sendEnrollEmail({
+                member: ml.member,
+                location: ml.location,
+                planType: "package",
+                planName: enrollPlanName(pricing.plan.name, pricing.name),
+                invoiceId,
+                paidDate: now,
+                charge: chargeDetails,
+            });
+            void sendDocRequestEmails(unsignedDocs);
 
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);

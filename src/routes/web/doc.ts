@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
 import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
+import { sendDocSignedEmail } from "@/utils/memberEmails";
 
 type DocListContext = {
     lid?: string | null;
@@ -168,6 +169,7 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                     });
                     generatePDF({ did: docId, mid, lid, title: doc.contractTemplate.title, content });
                 }, 1000);
+                void sendDocSignedEmail(doc);
             }
             return status(200, { message: "Contract signed successfully" });
         } catch (error) {

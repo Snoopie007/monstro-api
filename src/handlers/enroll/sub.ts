@@ -27,6 +27,7 @@ import { memberInvoices, memberLocations, memberSubscriptions, transactions } fr
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { generateUUID } from "subtrees/utils";
+import { enrollPlanName, sendDocRequestEmails, sendEnrollEmail } from "@/utils/memberEmails";
 
 export type EnrollSubProps = {
     lid: string;
@@ -210,6 +211,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
         case "approved": {
             const now = new Date();
             let unsignedDocs: string[] = [];
+            let invoiceId = "";
             const subscription = await db.transaction(async (tx) => {
                 const [transaction] = await tx.insert(transactions).values({
                     id: transactionId,
@@ -291,6 +293,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     transactionId,
                 }).returning({ id: memberInvoices.id });
                 if (!invoice) throw new Error("Failed to create invoice");
+                invoiceId = invoice.id;
 
                 unsignedDocs = await createEnrollUnsignedDocs(tx, {
                     mid,
@@ -307,6 +310,18 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                 ));
                 return result;
             });
+
+            // The payment is saved, so send these even if trial setup fails below.
+            void sendEnrollEmail({
+                member: ml.member,
+                location: ml.location,
+                planType: "subscription",
+                planName: enrollPlanName(pricing.plan.name, pricing.name),
+                invoiceId,
+                paidDate: now,
+                charge: chargeDetails,
+            });
+            void sendDocRequestEmails(unsignedDocs);
 
             const member = ml.member;
             const isTrialCheckout = !!(subscription.trialEnd && isFuture(subscription.trialEnd) && subscription.trialEnd > subscription.startDate);

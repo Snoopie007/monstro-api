@@ -6,6 +6,7 @@ import type { ChargeWithGatewayResult } from "@/utils/checkoutUtil";
 
 const inserted: Record<string, unknown>[] = [];
 const updated: Record<string, unknown>[] = [];
+const sentEmails: Array<{ template: string; data: Record<string, any> }> = [];
 const updateTargets: { table: unknown; condition: SQL }[] = [];
 
 const tx = {
@@ -145,6 +146,13 @@ mock.module("@/queues/subscriptions", () => ({
     scheduleCronBasedRenewal: mock(async () => undefined),
     scheduleRecursiveRenewal: mock(async () => undefined),
 }));
+mock.module("@/libs/email", () => ({
+    EmailSender: class {
+        async sendWithTemplate(props: { template: string; data: Record<string, any> }) {
+            sentEmails.push(props);
+        }
+    },
+}));
 
 const { handleEnrollPackage } = await import("./pkg");
 const { handleEnrollSubscription } = await import("./sub");
@@ -153,6 +161,7 @@ beforeEach(() => {
     inserted.length = 0;
     updated.length = 0;
     updateTargets.length = 0;
+    sentEmails.length = 0;
     db.transaction.mockClear();
     chargeWithGateway.mockClear();
     getCheckoutContext.mockClear();
@@ -226,7 +235,17 @@ test("paid package checkout still charges through the configured gateway", async
         paymentType: "card",
     }));
     expectMemberActivated();
+    expectReceipt("package");
 });
+
+function expectReceipt(planType: "package" | "subscription") {
+    expect(sentEmails).toEqual([expect.objectContaining({ template: "EnrollEmail" })]);
+    expect(sentEmails[0]!.data).toEqual(expect.objectContaining({
+        planType,
+        planName: "Starter package - Eight classes",
+        receipt: expect.objectContaining({ id: "invoice-1", subtotal: 1000, fees: 200, discount: 0, tax: 120, total: 1320 }),
+    }));
+}
 
 function expectMemberActivated() {
     const index = updateTargets.findIndex(({ table }) => table === memberLocations);
@@ -251,6 +270,7 @@ const enrollmentInput = {
 test("successful subscription checkout activates the member at the matching location", async () => {
     expect(await handleEnrollSubscription(enrollmentInput)).toEqual({ ok: true, unsignedDocs: [] });
     expectMemberActivated();
+    expectReceipt("subscription");
 });
 
 for (const [name, enroll] of [
@@ -268,6 +288,7 @@ for (const [name, enroll] of [
         expect(updateTargets).toHaveLength(0);
         expect(inserted).toHaveLength(1);
         expect(inserted[0]).toEqual(expect.objectContaining({ status: "failed" }));
+        expect(sentEmails).toHaveLength(0);
     });
 
     test(`${name} uncertain payment does not activate the member`, async () => {
