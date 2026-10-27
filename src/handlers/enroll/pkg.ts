@@ -9,6 +9,7 @@ import {
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
+    sendEnrollDocRequests,
     triggerPurchase,
     fetchPromoDiscount,
     calculateThresholdDate,
@@ -19,9 +20,9 @@ import {
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { EmailSender } from "@/libs/email";
 import { generateUUID } from "subtrees/utils";
 import { and, eq, sql } from "drizzle-orm";
-import { enrollPlanName, sendDocRequestEmails, sendEnrollEmail } from "@/utils/memberEmails";
 
 export type EnrollPkgInput = {
     lid: string;
@@ -265,16 +266,28 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 ));
             });
 
-            void sendEnrollEmail({
-                member: ml.member,
-                location: ml.location,
-                planType: "package",
-                planName: enrollPlanName(pricing.plan.name, pricing.name),
-                invoiceId,
-                paidDate: now,
-                charge: chargeDetails,
-            });
-            void sendDocRequestEmails(unsignedDocs);
+            // The payment is saved, so failed emails only get logged.
+            new EmailSender().sendWithTemplate({
+                template: "EnrollEmail",
+                options: { to: ml.member.email, subject: `Your enrollment at ${ml.location.name} is confirmed` },
+                data: {
+                    member: ml.member,
+                    location: ml.location,
+                    planType: "package",
+                    planName: pricing.plan.name,
+                    receipt: {
+                        id: invoiceId,
+                        paidDate: now.toISOString(),
+                        // Price and fees before the discount, so the lines add up to the total.
+                        subtotal: chargeDetails.unitCost,
+                        fees: chargeDetails.additionalFeeLines.reduce((sum, fee) => sum + fee.price, 0),
+                        discount: chargeDetails.discount,
+                        tax: chargeDetails.tax,
+                        total: chargeDetails.total,
+                    },
+                },
+            }).catch((error) => console.error("Error sending enrollment receipt:", error));
+            sendEnrollDocRequests(unsignedDocs).catch((error) => console.error("Error sending document requests:", error));
 
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);

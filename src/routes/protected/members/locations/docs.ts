@@ -3,7 +3,6 @@ import { Elysia, t } from "elysia"
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
 import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
-import { sendDocSignedEmail } from "@/utils/memberEmails";
 
 
 export function mlDocsRoutes(app: Elysia) {
@@ -161,7 +160,6 @@ export function mlDocsRoutes(app: Elysia) {
 					});
 					generatePDF({ did, mid, lid, title: doc.contractTemplate.title, content });
 				}, 1000);
-				void sendDocSignedEmail(doc);
 			}
 
 			return status(200, { success: true });

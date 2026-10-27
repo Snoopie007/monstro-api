@@ -40,6 +40,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
             fetchPromoDiscount: async () => undefined,
             createEnrollUnsignedDocs: async () => [],
             recoverEnrollUnsignedDocs: async () => [],
+            sendEnrollDocRequests: async () => undefined,
             triggerPurchase: async () => undefined,
             getCheckoutContext: async () => ({
                 ml: { member: { userId: "user", firstName: "Test", lastName: null, email: "test@example.invalid" },

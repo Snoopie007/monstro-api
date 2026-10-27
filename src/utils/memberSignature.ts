@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/db";
+import { EmailSender } from "@/libs/email";
 import { locationState, memberContracts, memberLocations } from "@/subtrees/schemas";
 
 export class MemberDocumentError extends Error {
@@ -10,7 +11,7 @@ export class MemberDocumentError extends Error {
 
 export async function signMemberDocument(input: { mid: string; lid: string; did: string; signature?: string }) {
     const { mid, lid, did, signature } = input;
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
         const [state] = await tx.select({ waiverId: locationState.waiverId }).from(locationState)
             .where(eq(locationState.locationId, lid)).for("share");
         if (!state) throw new MemberDocumentError(404, "Location not found");
@@ -49,4 +50,15 @@ export async function signMemberDocument(input: { mid: string; lid: string; did:
         }
         return { doc, newlySigned };
     });
+    if (result.newlySigned) {
+        const { doc } = result;
+        const docType = doc.contractTemplate.type === "waiver" ? "Waiver" : "Agreement";
+        // The signature is saved, so a failed email only gets logged.
+        new EmailSender().sendWithTemplate({
+            template: "DocSignedEmail",
+            options: { to: doc.member.email, subject: `Your ${docType.toLowerCase()} for ${doc.location.name} is signed` },
+            data: { member: doc.member, location: doc.location, docType },
+        }).catch((error) => console.error("Error sending document signed email:", error));
+    }
+    return result;
 }

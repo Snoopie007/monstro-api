@@ -105,6 +105,7 @@ const getMemberCheckoutContext = mock(async () => ({
     locationState: { planId: 1, currency: "USD", waiverId: null },
     taxRates: [{ percentage: 10, isDefault: true }],
 }));
+const sendEnrollDocRequests = mock(async (_docIds: string[]) => undefined);
 const additionalFeeLine = {
     feeId: "fee-1",
     refundable: false,
@@ -133,6 +134,7 @@ mock.module("@/utils", () => ({
     CheckoutError,
     createEnrollUnsignedDocs: mock(async () => []),
     recoverEnrollUnsignedDocs: mock(async () => []),
+    sendEnrollDocRequests,
     fetchPromoDiscount: mock(async () => ({ type: "fixed_amount", value: 0 })),
     getAdditionalFeesForCheckout: mock(async () => [{ id: "fee-1" }]),
     getCheckoutContext,
@@ -162,6 +164,7 @@ beforeEach(() => {
     updated.length = 0;
     updateTargets.length = 0;
     sentEmails.length = 0;
+    sendEnrollDocRequests.mockClear();
     db.transaction.mockClear();
     chargeWithGateway.mockClear();
     getCheckoutContext.mockClear();
@@ -242,9 +245,10 @@ function expectReceipt(planType: "package" | "subscription") {
     expect(sentEmails).toEqual([expect.objectContaining({ template: "EnrollEmail" })]);
     expect(sentEmails[0]!.data).toEqual(expect.objectContaining({
         planType,
-        planName: "Starter package - Eight classes",
+        planName: "Starter package",
         receipt: expect.objectContaining({ id: "invoice-1", subtotal: 1000, fees: 200, discount: 0, tax: 120, total: 1320 }),
     }));
+    expect(sendEnrollDocRequests).toHaveBeenCalledWith([]);
 }
 
 function expectMemberActivated() {
@@ -289,6 +293,7 @@ for (const [name, enroll] of [
         expect(inserted).toHaveLength(1);
         expect(inserted[0]).toEqual(expect.objectContaining({ status: "failed" }));
         expect(sentEmails).toHaveLength(0);
+        expect(sendEnrollDocRequests).not.toHaveBeenCalled();
     });
 
     test(`${name} uncertain payment does not activate the member`, async () => {

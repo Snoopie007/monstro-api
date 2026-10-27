@@ -19,8 +19,7 @@ const postRows: unknown[] = [];
 const productRows: unknown[] = [];
 const contractRows: unknown[] = [];
 const submitGhlFormContact = mock(async () => undefined);
-const signMemberDocument = mock(async (_input: unknown): Promise<{ doc: unknown; newlySigned: boolean }> => ({ doc: {}, newlySigned: false }));
-const sentEmails: Array<{ template: string; options: { to: string } }> = [];
+const signMemberDocument = mock(async (_input: unknown) => ({ doc: {}, newlySigned: false }));
 
 function routingConfig(connections: Array<{
   locationId: string;
@@ -130,13 +129,6 @@ mock.module("@/utils/contractUtils", () => ({
   renderContractContent: mock(() => ""),
 }));
 mock.module("@/handlers/formSubmissions", () => ({ submitGhlFormContact }));
-mock.module("@/libs/email", () => ({
-  EmailSender: class {
-    async sendWithTemplate(props: { template: string; options: { to: string } }) {
-      sentEmails.push(props);
-    }
-  },
-}));
 mock.module("@/utils/memberSignature", () => ({
   MemberDocumentError: class MemberDocumentError extends Error {
     constructor(public status: 400 | 404 | 409, message: string) {
@@ -164,7 +156,6 @@ beforeEach(() => {
   productRows.length = 0;
   contractRows.length = 0;
   signMemberDocument.mockClear();
-  sentEmails.length = 0;
   db.query.websiteContents.findMany.mockClear();
   db.query.products.findMany.mockClear();
   submitGhlFormContact.mockClear();
@@ -750,29 +741,4 @@ test("accepts a document without a signature and leaves the check to the signing
     did: "doc-open",
     signature: undefined,
   });
-  // Already signed, so there's nothing new to confirm.
-  expect(sentEmails).toHaveLength(0);
-});
-
-test("emails the member when a document is newly signed", async () => {
-  signMemberDocument.mockResolvedValueOnce({
-    doc: {
-      id: "doc-open",
-      contractTemplate: { type: "waiver", requireSignature: true, title: "Waiver", content: "" },
-      member: { id: "member-1", firstName: "Alex", email: "alex@example.com" },
-      location: { id: "location-1", name: "Demo Gym" },
-    },
-    newlySigned: true,
-  });
-  const response = await docsApp.handle(new Request("http://localhost/docs/doc-open", {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ signature: "data:image/png;base64,abc" }),
-  }));
-
-  expect(response.status).toBe(200);
-  expect(sentEmails).toEqual([expect.objectContaining({
-    template: "DocSignedEmail",
-    options: expect.objectContaining({ to: "alex@example.com" }),
-  })]);
 });

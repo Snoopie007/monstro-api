@@ -9,6 +9,7 @@ import {
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
+    sendEnrollDocRequests,
     triggerPurchase,
     fetchPromoDiscount,
     getAdditionalFeesForCheckout,
@@ -21,13 +22,13 @@ import {
 } from "@/queues/subscriptions";
 import type { SubscriptionJobData } from "@/subtrees/bullmq";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { EmailSender } from "@/libs/email";
 import { db } from "@/db/db";
 import { WorkflowEvents } from "@/subtrees/constants/workflow";
 import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { generateUUID } from "subtrees/utils";
-import { enrollPlanName, sendDocRequestEmails, sendEnrollEmail } from "@/utils/memberEmails";
 
 export type EnrollSubProps = {
     lid: string;
@@ -311,17 +312,28 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                 return result;
             });
 
-            // The payment is saved, so send these even if trial setup fails below.
-            void sendEnrollEmail({
-                member: ml.member,
-                location: ml.location,
-                planType: "subscription",
-                planName: enrollPlanName(pricing.plan.name, pricing.name),
-                invoiceId,
-                paidDate: now,
-                charge: chargeDetails,
-            });
-            void sendDocRequestEmails(unsignedDocs);
+            // The payment is saved: send these even if trial setup fails below, and only log failures.
+            new EmailSender().sendWithTemplate({
+                template: "EnrollEmail",
+                options: { to: ml.member.email, subject: `Your enrollment at ${ml.location.name} is confirmed` },
+                data: {
+                    member: ml.member,
+                    location: ml.location,
+                    planType: "subscription",
+                    planName: pricing.plan.name,
+                    receipt: {
+                        id: invoiceId,
+                        paidDate: now.toISOString(),
+                        // Price and fees before the discount, so the lines add up to the total.
+                        subtotal: chargeDetails.unitCost,
+                        fees: chargeDetails.additionalFeeLines.reduce((sum, fee) => sum + fee.price, 0),
+                        discount: chargeDetails.discount,
+                        tax: chargeDetails.tax,
+                        total: chargeDetails.total,
+                    },
+                },
+            }).catch((error) => console.error("Error sending enrollment receipt:", error));
+            sendEnrollDocRequests(unsignedDocs).catch((error) => console.error("Error sending document requests:", error));
 
             const member = ml.member;
             const isTrialCheckout = !!(subscription.trialEnd && isFuture(subscription.trialEnd) && subscription.trialEnd > subscription.startDate);
