@@ -42,8 +42,8 @@ export default function ResetPasswordEmailMobile({
 							Dear {member.firstName} {member.lastName},
 						</Text>
 						<Text style={styles.paragraph}>
-							A request to reset your password was made for your Monstro account,{' '}
-							<strong>{member.email}</strong>. Enter the code below in the Monstro
+							A request to reset your password was made for your Monstro X account,{' '}
+							<strong>{member.email}</strong>. Enter the code below in the Monstro X
 							app to reset your password. This code expires in 30 minutes.
 						</Text>
 						<OTPBox token={code} />

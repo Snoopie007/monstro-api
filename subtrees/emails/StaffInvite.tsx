@@ -44,7 +44,7 @@ export default function StaffInviteEmail({
                     <Section style={styles.content}>
                         <Text style={styles.paragraph}>Hi {staff.firstName}</Text>
                         <Text style={styles.paragraph}>
-                            You have been invited to join <strong>{location.name}</strong> as a staff member on Monstro.
+                            You have been invited to join <strong>{location.name}</strong> as a staff member on Monstro X.
                             Click the button below to set up your account and get started.
                         </Text>
                         <Section style={styles.buttonSection}>

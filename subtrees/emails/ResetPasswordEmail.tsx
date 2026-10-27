@@ -52,7 +52,7 @@ export default function ResetPasswordEmail({
 							Dear {member.firstName} {member.lastName},
 						</Text>
 						<Text style={styles.paragraph}>
-							A request to reset your password was made for your Monstro Account,{' '}
+							A request to reset your password was made for your Monstro X Account,{' '}
 							<strong>{member.email}</strong>. To continue with this request, click
 							the button below to reset your password. Your reset link will expire
 							in 30 minutes:

@@ -12,6 +12,7 @@ import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
 import type { Member, Location } from '../types';
+import { AppDownloadSection } from './_shared/AppDownloadSection';
 
 interface MemberWelcomeNewAccountEmailProps {
     member: Pick<Member, 'firstName' | 'email'>;
@@ -90,16 +91,9 @@ export default function MemberWelcomeNewAccountEmail({
                         </Text>
 
                         <Text style={styles.paragraph}>
-                            Download the Monstro X App:
+                            Download the Monstro X App below to get started.
                         </Text>
-                        <Section style={styles.buttonSection}>
-                            <Link style={styles.appButton} href={iosAppUrl}>
-                                Download for iOS
-                            </Link>
-                            <Link style={styles.appButton} href={androidAppUrl}>
-                                Download for Android
-                            </Link>
-                        </Section>
+                        <AppDownloadSection />
                     </Section>
                     <EmailFooter social={true} />
                 </Container>

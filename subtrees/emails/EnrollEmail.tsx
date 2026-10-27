@@ -16,6 +16,7 @@ import {
     EmailInvoiceReceiptMeta,
     EmailInvoiceBoxDivider,
     LocationInfoBox,
+    AppDownloadSection,
 } from './_shared';
 import { DummyData } from './_shared/data';
 import { format } from 'date-fns';
@@ -101,9 +102,9 @@ export default function EnrollEmail({
                         </EmailInvoiceBox>
 
                         <Text style={styles.paragraph}>
-                            Looking forward to seeing you at your first class!
+                            Looking forward to seeing you at your first class! Next step is to download our app and start your membership.
                         </Text>
-
+                        <AppDownloadSection />
                         <LocationInfoBox
                             name={location.name}
                             address={location.address}

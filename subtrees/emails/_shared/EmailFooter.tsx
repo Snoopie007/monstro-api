@@ -1,6 +1,7 @@
 import { Img, Link, Row, Column, Section, Hr, Text } from '@react-email/components';
 import * as React from 'react';
 import { MonstroData } from '../../constants/data';
+import { APP_STORE_BADGES } from './data';
 
 const SOCIAL_ICONS = [
     {
@@ -34,8 +35,17 @@ const SOCIAL_ICONS = [
 export function EmailFooter({ social }: { social?: boolean }) {
     return (
         <>
-            <Hr style={styles.divider} />
             <Section style={{ textAlign: 'center' }}>
+
+                <Hr style={styles.divider} />
+
+                <Section style={styles.badges}>
+                    {APP_STORE_BADGES.map(({ href, src, alt }, index) => (
+                        <Link key={index} href={href} style={styles.badgeLink}>
+                            <Img src={src} height={40} alt={alt} style={styles.badge} />
+                        </Link>
+                    ))}
+                </Section>
                 {social && (
                     <Section style={styles.socialSection}>
                         <Row>
@@ -73,7 +83,7 @@ export function EmailFooter({ social }: { social?: boolean }) {
 
 const styles: Record<string, React.CSSProperties> = {
     socialSection: {
-        padding: '10px 0',
+        padding: ' 0',
     },
     socialColumn: {
         width: '100%',
@@ -82,6 +92,19 @@ const styles: Record<string, React.CSSProperties> = {
         display: 'inline-block',
         marginRight: '10px',
         textDecoration: 'none',
+    },
+    badges: {
+        textAlign: 'center',
+        marginBottom: '20px',
+    },
+    badgeLink: {
+        display: 'inline-block',
+        marginRight: '10px',
+        textDecoration: 'none',
+    },
+    badge: {
+        display: 'inline-block',
+        border: 'none',
     },
     socialIcon: {
         display: 'inline-block',

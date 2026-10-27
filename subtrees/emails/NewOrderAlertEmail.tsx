@@ -136,7 +136,7 @@ export default function NewOrderAlertEmail({ member, location, order }: NewOrder
                             <EmailInvoiceReceiptMeta MetaData={meta} />
                         </EmailInvoiceBox>
 
-                        <Text style={styles.paragraph}>Review the order in Monstro before fulfillment.</Text>
+                        <Text style={styles.paragraph}>Review the order in Monstro X before fulfillment.</Text>
                     </Section>
                     <EmailFooter />
                 </Container>

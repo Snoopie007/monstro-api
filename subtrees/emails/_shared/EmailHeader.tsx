@@ -11,7 +11,7 @@ export function EmailHeader({ logoAlign = 'center' }: { logoAlign?: 'center' | '
                 src={MonstroLogoURL}
                 width={120}
                 height={98}
-                alt="Monstro"
+                alt="Monstro X"
                 style={styles.logo}
             />
         </Section>

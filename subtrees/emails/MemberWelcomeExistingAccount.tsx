@@ -12,6 +12,7 @@ import { EmailHeader, EmailFooter } from './_shared';
 import { EmailStyles } from './_shared/SharedStyle';
 import { DummyData } from './_shared/data';
 import type { Member, Location } from '../types';
+import { AppDownloadSection } from './_shared/AppDownloadSection';
 
 interface MemberWelcomeExistingAccountEmailProps {
     member: Pick<Member, 'firstName'>;
@@ -57,20 +58,13 @@ export default function MemberWelcomeExistingAccountEmail({
                             You've been added to a new location: <strong>{location.name}</strong>
                         </Text>
                         <Text style={styles.paragraph}>
-                            Sign in with your existing Monstro account to get started.
+                            Sign in with your existing Monstro X account to get started.
                         </Text>
 
                         <Text style={styles.paragraph}>
-                            Download the Monstro X App:
+                            Download the Monstro X App below to get started.
                         </Text>
-                        <Section style={styles.buttonSection}>
-                            <Link style={styles.appButton} href={iosAppUrl}>
-                                Download for iOS
-                            </Link>
-                            <Link style={styles.appButton} href={androidAppUrl}>
-                                Download for Android
-                            </Link>
-                        </Section>
+                        <AppDownloadSection />
                     </Section>
                     <EmailFooter social={true} />
                 </Container>

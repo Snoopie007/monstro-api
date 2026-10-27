@@ -15,7 +15,7 @@ import type { Member, Location } from '../types';
 
 interface DocRequestEmailProps {
     member: Pick<Member, 'id' | 'firstName'>;
-    docSignUrl: string;
+    docId: string;
     docType: 'Agreement' | 'Waiver';
     requireSignature: boolean;
     location: Pick<Location, 'id' | 'name' | 'address' | 'email' | 'phone'>;
@@ -31,7 +31,7 @@ const styles: Record<string, React.CSSProperties> = {
 
 export default function DocRequestEmail({
     member,
-    docSignUrl,
+    docId,
     docType,
     requireSignature,
     location,
@@ -51,7 +51,7 @@ export default function DocRequestEmail({
                         </Text>
 
                         <Section style={styles.buttonContainer}>
-                            <Button href={docSignUrl} style={styles.button}>
+                            <Button href={`https://m.monstro-x.com/public/docs/${docId}`} style={styles.button}>
                                 {requireSignature ? 'Review & Sign' : 'Review & Confirm'}
                             </Button>
                         </Section>
@@ -73,7 +73,7 @@ export default function DocRequestEmail({
 
 DocRequestEmail.PreviewProps = {
     ...DummyData,
-    docSignUrl: 'https://example.com/docs/sign',
+    docId: '123',
     docType: 'Agreement',
     requireSignature: true,
 } as DocRequestEmailProps;

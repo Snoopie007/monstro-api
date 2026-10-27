@@ -59,7 +59,7 @@ export default function InternalSupportCaseMessageEmail({ case: supportCase, ven
                         <Text style={EmailStyles.sectionTitle}>Message</Text>
                         <Text style={EmailStyles.paragraph}>{message.content}</Text>
                         <Hr style={EmailStyles.divider} />
-                        <Text style={EmailStyles.paragraph}>Internal Monstro support notification.</Text>
+                        <Text style={EmailStyles.paragraph}>Internal Monstro X support notification.</Text>
                     </Section>
                     <EmailFooter />
                 </Container>
