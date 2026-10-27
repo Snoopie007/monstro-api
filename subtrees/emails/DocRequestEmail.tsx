@@ -51,7 +51,7 @@ export default function DocRequestEmail({
                         </Text>
 
                         <Section style={styles.buttonContainer}>
-                            <Button href={`https://m.monstro-x.com/public/docs/${docId}`} style={styles.button}>
+                            <Button href={`https://m.monstro-x.com/public/doc/${docId}`} style={styles.button}>
                                 {requireSignature ? 'Review & Sign' : 'Review & Confirm'}
                             </Button>
                         </Section>
