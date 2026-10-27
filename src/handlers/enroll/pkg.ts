@@ -287,6 +287,28 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 },
             }).catch((error) => console.error("Error sending enrollment receipt:", error));
 
+            // One email per document the member still has to sign. Failures only get logged.
+            if (unsignedDocs.length > 0) {
+                db.query.memberContracts.findMany({
+                    where: (doc, { inArray }) => inArray(doc.id, unsignedDocs),
+                    with: { contractTemplate: { columns: { type: true, requireSignature: true } } },
+                }).then((docs) => Promise.all(docs.map((doc) => {
+                    const docType = doc.contractTemplate.type === "waiver" ? "Waiver" : "Agreement";
+                    const action = doc.contractTemplate.requireSignature ? "sign" : "review";
+                    return new EmailSender().sendWithTemplate({
+                        template: "DocRequestEmail",
+                        options: { to: ml.member.email, subject: `Please ${action} your ${docType.toLowerCase()} for ${ml.location.name}` },
+                        data: {
+                            member: ml.member,
+                            location: ml.location,
+                            docId: doc.id,
+                            docType,
+                            requireSignature: doc.contractTemplate.requireSignature,
+                        },
+                    });
+                }))).catch((error) => console.error("Error sending document requests:", error));
+            }
+
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);
             }).catch((error) => console.error("Error triggering purchase:", error));
