@@ -1,3 +1,4 @@
+import { getDeferredBilling, nextDeferredBillingBoundary } from "./deferredBilling";
 import type { CashBilling, CashBillingCycle } from "../types/subscriptionBilling";
 import { nextBillingBoundary } from "./subscriptionBilling";
 import type { Interval } from "../types/DatabaseEnums";
@@ -19,13 +20,15 @@ type CashSubscription = {
   pricing?: { interval: Interval | null; intervalThreshold: number | null } | null;
 };
 
-export function getNextCashCycle(sub: Pick<CashSubscription, "currentPeriodEnd" | "metadata" | "pricing">): CashBillingCycle | null {
+export function getNextCashCycle(sub: Pick<CashSubscription, "currentPeriodEnd" | "metadata" | "pricing">, timezone: string): CashBillingCycle | null {
   if (!sub.currentPeriodEnd || !sub.pricing?.interval || !sub.pricing.intervalThreshold) return null;
   const start = new Date(sub.currentPeriodEnd);
   const stored = typeof sub.metadata?.cashBillingAnchor === "string" ? new Date(sub.metadata.cashBillingAnchor) : start;
   const anchor = Number.isFinite(stored.getTime()) ? stored : start;
   try {
-    const end = nextBillingBoundary(anchor, start, sub.pricing.interval, sub.pricing.intervalThreshold);
+    const deferred = getDeferredBilling(sub.metadata);
+    const end = deferred ? nextDeferredBillingBoundary(deferred, start, sub.pricing.interval, sub.pricing.intervalThreshold, timezone)
+      : nextBillingBoundary(anchor, start, sub.pricing.interval, sub.pricing.intervalThreshold);
     return { periodStart: start.toISOString(), periodEnd: end.toISOString() };
   } catch {
     return null;
@@ -65,8 +68,11 @@ export function resolveCashBilling(
 ): CashBilling | null {
   if (sub.parentId || sub.paymentType !== "cash") return null;
   if (!sub.currentPeriodStart || !sub.currentPeriodEnd) return null;
-  const periodStart = new Date(selected?.periodStart ?? sub.currentPeriodStart);
-  const periodEnd = new Date(selected?.periodEnd ?? sub.currentPeriodEnd);
+  const deferred = getDeferredBilling(sub.metadata);
+  const awaitingFirst = deferred && timestamp(sub.currentPeriodStart) < timestamp(deferred.firstPaymentAt);
+  const firstCycle = awaitingFirst ? getNextCashCycle(sub, timezone) : null;
+  const periodStart = new Date(selected?.periodStart ?? firstCycle?.periodStart ?? sub.currentPeriodStart);
+  const periodEnd = new Date(selected?.periodEnd ?? firstCycle?.periodEnd ?? sub.currentPeriodEnd);
   if (!Number.isFinite(periodStart.getTime()) || !Number.isFinite(periodEnd.getTime()) || periodEnd <= periodStart) return null;
   let cycle = { periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString() };
   const subscriptionInvoices = invoices.filter(invoice => invoice.memberPlanId === sub.id);
@@ -93,7 +99,7 @@ export function resolveCashBilling(
     && timestamp(sub.startDate) <= now.getTime()
     && (!sub.trialEnd || timestamp(sub.trialEnd) <= now.getTime())
     && (!sub.cancelAt || timestamp(sub.cancelAt) > now.getTime());
-  const nextCycle = getNextCashCycle(sub);
+  const nextCycle = getNextCashCycle(sub, timezone);
   const renewal = eligible && !sub.cancelAtPeriodEnd && nextCycle && timestamp(nextCycle.periodStart) <= now.getTime()
     ? nextCycle : null;
   const invalidInvoice = invoice && !["draft", "sent", "unpaid", "paid"].includes(invoice.status);
