@@ -1,6 +1,9 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia"
-import { MemberDocumentError, signDoc } from "@/routes/shared/docs";
+import { generatePDF } from "@/utils/generatePDF";
+import { renderContractContent } from "@/utils/contractUtils";
+import { MemberDocumentError } from "@/routes/shared/docs";
+import { signDoc } from "src/routes/shared/docs";
 
 
 export function mlDocsRoutes(app: Elysia) {
@@ -150,10 +153,12 @@ export function mlDocsRoutes(app: Elysia) {
 		try {
 			await signDoc({
 				docId: did,
-				mid,
-				lid,
 				signature,
+				userAgent: body.userAgent,
+				ipAddress: body.ipAddress,
 			});
+
+
 			return status(200, { success: true });
 		} catch (err) {
 			if (err instanceof MemberDocumentError) return status(err.status, { error: err.message });
@@ -168,6 +173,8 @@ export function mlDocsRoutes(app: Elysia) {
 		}),
 		body: t.Object({
 			signature: t.Optional(t.String()),
+			userAgent: t.Optional(t.String()),
+			ipAddress: t.Optional(t.String()),
 		}),
 	})
 	return app;

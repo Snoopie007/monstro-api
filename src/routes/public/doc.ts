@@ -20,12 +20,15 @@ export const publicDocRoutes = new Elysia({ prefix: "/docs" })
         }),
     })
     .patch("/:docId", async ({ body, status, params }) => {
+        const { signature, userAgent, ipAddress } = body;
+
+
         try {
             await signDoc({
                 docId: params.docId,
-                signature: body.signature,
-                userAgent: body.userAgent,
-                ipAddress: body.ipAddress,
+                signature,
+                userAgent,
+                ipAddress,
             });
             return status(200, { message: "Contract signed successfully" });
         } catch (error) {
