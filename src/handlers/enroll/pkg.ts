@@ -9,7 +9,6 @@ import {
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
-    sendEnrollDocRequests,
     triggerPurchase,
     fetchPromoDiscount,
     calculateThresholdDate,
@@ -266,7 +265,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                 ));
             });
 
-            // The payment is saved, so failed emails only get logged.
+            // The payment is saved, so a failed email only gets logged.
             new EmailSender().sendWithTemplate({
                 template: "EnrollEmail",
                 options: { to: ml.member.email, subject: `Your enrollment at ${ml.location.name} is confirmed` },
@@ -287,7 +286,6 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     },
                 },
             }).catch((error) => console.error("Error sending enrollment receipt:", error));
-            sendEnrollDocRequests(unsignedDocs).catch((error) => console.error("Error sending document requests:", error));
 
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);

@@ -2,39 +2,11 @@ import type { AdditionalFee, ChargeDetails, CheckoutDiscount, InvoiceItem } from
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
 import { db } from "@/db/db";
 import { memberContracts } from "@/subtrees/schemas";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { ensureCurrentLocationWaiver } from "./locationWaiver";
 import { getMonstroPlatformFeePercent } from "@/subtrees/utils";
-import { EmailSender } from "@/libs/email";
 
 type EnrollTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-/**
- * DocRequestEmail links to the member portal signing page, which doesn't exist yet.
- * Turn this on once that page ships and the template builds its link from `docId`.
- */
-export const DOC_REQUEST_EMAILS_ENABLED = false;
-
-/** Emails the member a signing request for each unsigned enrollment document. */
-export async function sendEnrollDocRequests(docIds: string[]) {
-    if (!DOC_REQUEST_EMAILS_ENABLED || docIds.length === 0) return;
-    const docs = await db.query.memberContracts.findMany({
-        where: inArray(memberContracts.id, docIds),
-        with: { contractTemplate: true, member: true, location: true },
-    });
-    for (const doc of docs) {
-        const { requireSignature } = doc.contractTemplate;
-        const docType = doc.contractTemplate.type === "waiver" ? "Waiver" : "Agreement";
-        await new EmailSender().sendWithTemplate({
-            template: "DocRequestEmail",
-            options: {
-                to: doc.member.email,
-                subject: `Please ${requireSignature ? "sign" : "review"} your ${docType.toLowerCase()} for ${doc.location.name}`,
-            },
-            data: { member: doc.member, location: doc.location, docId: doc.id, docType, requireSignature },
-        });
-    }
-}
 
 /** Resolves the current waiver before creating the enrollment's plan contract. */
 export async function createEnrollUnsignedDocs(

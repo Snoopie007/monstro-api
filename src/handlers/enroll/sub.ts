@@ -9,7 +9,6 @@ import {
     chargeWithGateway,
     CheckoutError,
     createEnrollUnsignedDocs,
-    sendEnrollDocRequests,
     triggerPurchase,
     fetchPromoDiscount,
     getAdditionalFeesForCheckout,
@@ -312,7 +311,7 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                 return result;
             });
 
-            // The payment is saved: send these even if trial setup fails below, and only log failures.
+            // The payment is saved: send this even if trial setup fails below, and only log failures.
             new EmailSender().sendWithTemplate({
                 template: "EnrollEmail",
                 options: { to: ml.member.email, subject: `Your enrollment at ${ml.location.name} is confirmed` },
@@ -333,7 +332,6 @@ export async function handleEnrollSubscription(props: EnrollSubProps) {
                     },
                 },
             }).catch((error) => console.error("Error sending enrollment receipt:", error));
-            sendEnrollDocRequests(unsignedDocs).catch((error) => console.error("Error sending document requests:", error));
 
             const member = ml.member;
             const isTrialCheckout = !!(subscription.trialEnd && isFuture(subscription.trialEnd) && subscription.trialEnd > subscription.startDate);

@@ -2,13 +2,7 @@ import { expect, mock, test } from "bun:test";
 
 mock.module("@/db/db", () => ({ db: {} }));
 
-const { calculateChargeDetails, DOC_REQUEST_EMAILS_ENABLED, sendEnrollDocRequests } = await import("./enrollUtils");
-
-test("signing request emails stay off until the portal signing page exists", async () => {
-	expect(DOC_REQUEST_EMAILS_ENABLED).toBe(false);
-	// db is an empty object here, so any query would throw.
-	await expect(sendEnrollDocRequests(["mc_1"])).resolves.toBeUndefined();
-});
+const { calculateChargeDetails } = await import("./enrollUtils");
 
 test("applies a percentage discount after adding fees", () => {
 	const result = calculateChargeDetails({
