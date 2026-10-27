@@ -1,187 +1,106 @@
 import { Elysia, t } from "elysia";
 import { WebAuthMiddleware } from "@/middlewares/WebAuthMW";
 import { db } from "@/db/db";
-import { generatePDF } from "@/utils/generatePDF";
-import { renderContractContent } from "@/utils/contractUtils";
-import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
+import { MemberDocumentError, getDoc, signDoc } from "@/routes/shared/docs";
 
-type DocListContext = {
+function requireMemberSession(input: {
     lid?: string | null;
     session?: { user?: { memberId?: string | null } | null } | null;
     status: (code: number, body: unknown) => unknown;
-};
-
-/**
- * Lists the member's documents at the selected location. `/unsigned` keeps
- * the old unsigned-only response for sites that still call it (the sites app
- * on main and the legacy template sites); `/` also includes signed ones.
- * The stored signature image is left out: the list only needs `signedOn`.
- */
-async function listDocs({ lid, session, status }: DocListContext, includeSigned: boolean) {
+}) {
+    const { lid, session, status } = input;
     if (!lid) {
-        return status(401, { message: "No Location ID provided" });
+        return { error: status(401, { message: "No Location ID provided" }) as unknown };
     }
     if (!session) {
-        return status(401, { message: "No session provided" });
+        return { error: status(401, { message: "No session provided" }) as unknown };
     }
-
     const mid = session.user?.memberId;
     if (!mid) {
-        return status(401, { message: "No member provided" });
+        return { error: status(401, { message: "No member provided" }) as unknown };
     }
-
-    try {
-        const docs = await db.query.memberContracts.findMany({
-            where: (m, { eq, and }) => and(
-                eq(m.memberId, mid),
-                eq(m.locationId, lid),
-            ),
-            with: {
-                contractTemplate: {
-                    with: {
-                        location: {
-                            columns: {
-                                id: true,
-                            },
-                        },
-                    },
-                },
-                pricing: {
-                    with: {
-                        plan: {
-                            columns: {
-                                locationId: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
-
-        const scopedDocs = docs.flatMap((doc) => {
-            if (!includeSigned && doc.signedOn) return [];
-            if (
-                doc.contractTemplate?.location?.id !== lid ||
-                (doc.pricing && doc.pricing.plan?.locationId !== lid)
-            ) {
-                return [];
-            }
-
-            const { contractTemplate, pricing: _pricing, signature: _signature, ...rest } = doc;
-            if (!contractTemplate) return [];
-            const { location: _location, ...publicContractTemplate } = contractTemplate;
-            return [{ ...rest, contractTemplate: publicContractTemplate }];
-        });
-
-        return status(200, scopedDocs);
-    } catch (error) {
-        console.error(error);
-        return status(500, { error: "Failed to fetch contracts" });
-    }
+    return { mid, lid };
 }
 
 export const webDocRoutes = new Elysia({ prefix: "/docs" })
     .use(WebAuthMiddleware)
-    .get('/', (context) => listDocs(context, true))
-    .get('/unsigned', (context) => listDocs(context, false))
+    .get("/", async ({ lid, session, status }) => {
+        const auth = requireMemberSession({ lid, session, status });
+        if ("error" in auth) return auth.error;
 
-    .get('/:docId/content', async ({ lid, status, session, params }) => {
-        const { docId } = params;
-        if (!lid) {
-            return status(401, { message: "No Location ID provided" });
-        }
-        if (!session) {
-            return status(401, { message: "No session provided" });
-        }
-        const mid = session.user?.memberId;
-        if (!mid) {
-            return status(401, { message: "No member provided" });
-        }
         try {
-            const doc = await db.query.memberContracts.findFirst({
+            const docs = await db.query.memberContracts.findMany({
                 where: (m, { eq, and }) => and(
-                    eq(m.id, docId),
-                    eq(m.memberId, mid),
-                    eq(m.locationId, lid),
+                    eq(m.memberId, auth.mid),
+                    eq(m.locationId, auth.lid),
                 ),
                 with: {
                     contractTemplate: {
-                        with: {
-                            location: true,
+                        columns: {
+                            id: true,
+                            locationId: true,
+                            title: true,
+                            description: true,
+                            requireSignature: true,
+                            type: true,
+                            created: true,
+                            updated: true,
                         },
-                    },
-                    member: true,
-                    location: true,
-                    pricing: {
-                        with: {
-                            plan: true,
-                        },
-                    },
+                    }
                 },
             });
 
-            if (
-                !doc ||
-                doc.contractTemplate?.location?.id !== lid ||
-                (doc.pricing && doc.pricing.plan?.locationId !== lid)
-            ) {
-                return status(404, { error: "Contract not found" });
-            }
 
-            const mdx = renderContractContent(doc.contractTemplate.content, {
-                location: doc.location,
-                member: doc.member,
-                pricing: doc.pricing,
-            });
-            return status(200, { mdx });
+
+
+            return status(200, docs);
         } catch (error) {
+            console.error(error);
+            return status(500, { error: "Failed to fetch contracts" });
+        }
+    })
+    .get("/:docId", async ({ lid, status, session, params }) => {
+        const auth = requireMemberSession({ lid, session, status });
+        if ("error" in auth) return auth.error;
+        try {
+            return status(200, await getDoc(params.docId));
+        } catch (error) {
+            if (error instanceof MemberDocumentError) {
+                return status(error.status, { error: error.message });
+            }
             console.error(error);
             return status(500, { error: "Failed to fetch contract" });
         }
-
     }, {
         params: t.Object({
             docId: t.String(),
         }),
     })
-    .patch('/:docId', async ({ body, status, params, session, lid }) => {
-        const { docId } = params;
-        if (!lid) {
-            return status(401, { message: "No Location ID provided" });
-        }
-        if (!session) {
-            return status(401, { message: "No session provided" });
-        }
-        const { user } = session;
-        const mid = user?.memberId;
-        if (!mid) {
-            return status(401, { message: "No member provided" });
-        }
+    .patch("/:docId", async ({ body, status, params, session, lid }) => {
+        const auth = requireMemberSession({ lid, session, status });
+        if ("error" in auth) return auth.error;
         try {
-            const { doc, newlySigned } = await signMemberDocument({ mid, lid, did: docId, signature: body.signature ?? undefined });
-            if (newlySigned) {
-                setTimeout(() => {
-                    const content = renderContractContent(doc.contractTemplate.content, {
-                        location: doc.location,
-                        member: doc.member,
-                        pricing: doc.pricing,
-                    });
-                    generatePDF({ did: docId, mid, lid, title: doc.contractTemplate.title, content });
-                }, 1000);
-            }
+            await signDoc({
+                docId: params.docId,
+                signature: body.signature,
+                userAgent: body.userAgent,
+                ipAddress: body.ipAddress,
+            });
             return status(200, { message: "Contract signed successfully" });
         } catch (error) {
-            if (error instanceof MemberDocumentError) return status(error.status, { message: error.message });
+            if (error instanceof MemberDocumentError) {
+                return status(error.status, { message: error.message });
+            }
             console.error(error);
-            return status(500, { error: "Failed to fetch contract" });
+            return status(500, { error: "Failed to sign contract" });
         }
     }, {
         params: t.Object({
             docId: t.String(),
         }),
-        // Documents that don't require a signature are accepted without one;
-        // signMemberDocument still rejects a missing one when it's required.
         body: t.Object({
+            userAgent: t.Optional(t.Nullable(t.String())),
+            ipAddress: t.Optional(t.Nullable(t.String())),
             signature: t.Optional(t.Nullable(t.String())),
         }),
-    })
+    });

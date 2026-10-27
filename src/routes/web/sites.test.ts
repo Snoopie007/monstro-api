@@ -19,7 +19,7 @@ const postRows: unknown[] = [];
 const productRows: unknown[] = [];
 const contractRows: unknown[] = [];
 const submitGhlFormContact = mock(async () => undefined);
-const signMemberDocument = mock(async (_input: unknown) => ({ doc: {}, newlySigned: false }));
+const signDoc = mock(async (_input: unknown) => undefined);
 
 function routingConfig(connections: Array<{
   locationId: string;
@@ -129,13 +129,14 @@ mock.module("@/utils/contractUtils", () => ({
   renderContractContent: mock(() => ""),
 }));
 mock.module("@/handlers/formSubmissions", () => ({ submitGhlFormContact }));
-mock.module("@/utils/memberSignature", () => ({
+mock.module("@/routes/shared/docs", () => ({
   MemberDocumentError: class MemberDocumentError extends Error {
     constructor(public status: 400 | 404 | 409, message: string) {
       super(message);
     }
   },
-  signMemberDocument,
+  getDoc: mock(async () => ({ mdx: "" })),
+  signDoc,
 }));
 
 const { webSiteRoutes } = await import("./sites");
@@ -155,7 +156,7 @@ beforeEach(() => {
   postRows.length = 0;
   productRows.length = 0;
   contractRows.length = 0;
-  signMemberDocument.mockClear();
+  signDoc.mockClear();
   db.query.websiteContents.findMany.mockClear();
   db.query.products.findMany.mockClear();
   submitGhlFormContact.mockClear();
@@ -714,19 +715,6 @@ test("lists signed and unsigned documents without the stored signature", async (
   expect(docs[0]?.contractTemplate).not.toHaveProperty("location");
 });
 
-test("keeps the unsigned-only list for sites that still call it", async () => {
-  contractRows.push(
-    contractRow("doc-signed", new Date("2026-10-01T00:00:00Z")),
-    contractRow("doc-open", null),
-  );
-
-  const response = await docsApp.handle(new Request("http://localhost/docs/unsigned"));
-  const docs = await response.json() as Array<Record<string, unknown>>;
-
-  expect(response.status).toBe(200);
-  expect(docs.map((doc) => doc.id)).toEqual(["doc-open"]);
-});
-
 test("accepts a document without a signature and leaves the check to the signing helper", async () => {
   const response = await docsApp.handle(new Request("http://localhost/docs/doc-open", {
     method: "PATCH",
@@ -735,10 +723,10 @@ test("accepts a document without a signature and leaves the check to the signing
   }));
 
   expect(response.status).toBe(200);
-  expect(signMemberDocument).toHaveBeenCalledWith({
+  expect(signDoc).toHaveBeenCalledWith({
+    docId: "doc-open",
     mid: "member-1",
     lid: "location-1",
-    did: "doc-open",
-    signature: undefined,
+    signature: null,
   });
 });

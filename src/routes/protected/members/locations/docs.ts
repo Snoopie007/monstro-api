@@ -1,8 +1,6 @@
 import { db } from "@/db/db";
 import { Elysia, t } from "elysia"
-import { generatePDF } from "@/utils/generatePDF";
-import { renderContractContent } from "@/utils/contractUtils";
-import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
+import { MemberDocumentError, signDoc } from "@/routes/shared/docs";
 
 
 export function mlDocsRoutes(app: Elysia) {
@@ -150,18 +148,12 @@ export function mlDocsRoutes(app: Elysia) {
 		const { signature } = body;
 
 		try {
-			const { doc, newlySigned } = await signMemberDocument({ mid, lid, did, signature });
-			if (newlySigned) {
-				setTimeout(() => {
-					const content = renderContractContent(doc.contractTemplate.content, {
-						location: doc.location,
-						member: doc.member,
-						pricing: doc.pricing,
-					});
-					generatePDF({ did, mid, lid, title: doc.contractTemplate.title, content });
-				}, 1000);
-			}
-
+			await signDoc({
+				docId: did,
+				mid,
+				lid,
+				signature,
+			});
 			return status(200, { success: true });
 		} catch (err) {
 			if (err instanceof MemberDocumentError) return status(err.status, { error: err.message });
