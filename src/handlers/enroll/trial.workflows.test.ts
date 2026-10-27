@@ -63,6 +63,7 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Trial Checkout with lo
             removeRenewalJobs: async () => {}, scheduleCronBasedRenewal: schedule, scheduleRecursiveRenewal: schedule,
         }));
         mock.module("@/libs/broadcast/achievements", () => ({ broadcastAchievement: () => {} }));
+        mock.module("@/libs/email", () => ({ EmailSender: class { async sendWithTemplate() {} } }));
         const { activateSubscriptionRoutes } = await import("../../routes/x/loc/subscriptions/activate");
         const { activateCashSubscriptionRoutes } = await import("../../routes/x/loc/subscriptions/activateCash");
         const { createSubscriptionRoutes } = await import("../../routes/x/loc/subscriptions/create");

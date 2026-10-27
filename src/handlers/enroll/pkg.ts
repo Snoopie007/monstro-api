@@ -19,6 +19,7 @@ import {
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { broadcastAchievement } from "@/libs/broadcast/achievements";
+import { EmailSender } from "@/libs/email";
 import { generateUUID } from "subtrees/utils";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -178,6 +179,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
         case "approved": {
             const now = new Date();
             let unsignedDocs: string[] = [];
+            let invoiceId = "";
             await db.transaction(async (tx) => {
                 const [transaction] = await tx.insert(transactions).values({
                     id: transactionId,
@@ -240,6 +242,7 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     paid: true,
                 }).returning({ id: memberInvoices.id });
                 if (!invoice) throw new Error("Failed to create invoice");
+                invoiceId = invoice.id;
 
                 if (promoId) {
                     await tx.update(promos).set({
@@ -261,6 +264,28 @@ export async function handleEnrollPackage(props: EnrollPkgInput) {
                     eq(memberLocations.locationId, lid),
                 ));
             });
+
+            // The payment is saved, so a failed email only gets logged.
+            new EmailSender().sendWithTemplate({
+                template: "EnrollEmail",
+                options: { to: ml.member.email, subject: `Your enrollment at ${ml.location.name} is confirmed` },
+                data: {
+                    member: ml.member,
+                    location: ml.location,
+                    planType: "package",
+                    planName: pricing.plan.name,
+                    receipt: {
+                        id: invoiceId,
+                        paidDate: now.toISOString(),
+                        // Price and fees before the discount, so the lines add up to the total.
+                        subtotal: chargeDetails.unitCost,
+                        fees: chargeDetails.additionalFeeLines.reduce((sum, fee) => sum + fee.price, 0),
+                        discount: chargeDetails.discount,
+                        tax: chargeDetails.tax,
+                        total: chargeDetails.total,
+                    },
+                },
+            }).catch((error) => console.error("Error sending enrollment receipt:", error));
 
             triggerPurchase({ mid, lid, pid: pricing.plan.id }).then((achievement) => {
                 if (achievement) broadcastAchievement(ml.member.userId, achievement);

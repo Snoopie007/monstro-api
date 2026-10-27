@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
 import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
+import { EmailSender } from "@/libs/email";
 
 type DocListContext = {
     lid?: string | null;
@@ -168,6 +169,13 @@ export const webDocRoutes = new Elysia({ prefix: "/docs" })
                     });
                     generatePDF({ did: docId, mid, lid, title: doc.contractTemplate.title, content });
                 }, 1000);
+                const docType = doc.contractTemplate.type === "waiver" ? "Waiver" : "Agreement";
+                // The signature is saved, so a failed email only gets logged.
+                new EmailSender().sendWithTemplate({
+                    template: "DocSignedEmail",
+                    options: { to: doc.member.email, subject: `Your ${docType.toLowerCase()} for ${doc.location.name} is signed` },
+                    data: { member: doc.member, location: doc.location, docType },
+                }).catch((error) => console.error("Error sending document signed email:", error));
             }
             return status(200, { message: "Contract signed successfully" });
         } catch (error) {

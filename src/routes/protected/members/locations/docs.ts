@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia"
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
 import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
+import { EmailSender } from "@/libs/email";
 
 
 export function mlDocsRoutes(app: Elysia) {
@@ -160,6 +161,13 @@ export function mlDocsRoutes(app: Elysia) {
 					});
 					generatePDF({ did, mid, lid, title: doc.contractTemplate.title, content });
 				}, 1000);
+				const docType = doc.contractTemplate.type === "waiver" ? "Waiver" : "Agreement";
+				// The signature is saved, so a failed email only gets logged.
+				new EmailSender().sendWithTemplate({
+					template: "DocSignedEmail",
+					options: { to: doc.member.email, subject: `Your ${docType.toLowerCase()} for ${doc.location.name} is signed` },
+					data: { member: doc.member, location: doc.location, docType },
+				}).catch((error) => console.error("Error sending document signed email:", error));
 			}
 
 			return status(200, { success: true });
