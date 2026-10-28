@@ -4,14 +4,25 @@ import {
 	Page,
 	Text,
 	View,
+	Image,
 	StyleSheet,
 	pdf,
 } from "@react-pdf/renderer";
 import { parseMarkdownToPdf } from "./PDFParser";
 
+export interface PDFSignature {
+	/** Base64 PNG as saved by the signing pad. */
+	image?: string | null;
+	/** "Parent Name" or "Parent Name for Child Name". */
+	name: string;
+	/** Already formatted, e.g. "October 28, 2026". */
+	signedOn: string;
+}
+
 interface PDFTemplateProps {
 	title: string;
 	content: string;
+	signature?: PDFSignature;
 }
 
 const styles = StyleSheet.create({
@@ -78,9 +89,31 @@ const styles = StyleSheet.create({
 	bulletPoint: {
 		marginRight: 8,
 	},
+	signatureBlock: {
+		marginTop: 24,
+		paddingTop: 12,
+		borderTopWidth: 1,
+		borderTopColor: "#e5e7eb",
+	},
+	signatureImage: {
+		width: 200,
+		height: 70,
+		objectFit: "contain",
+		marginBottom: 6,
+	},
+	signatureName: {
+		fontSize: 12,
+		fontWeight: "bold",
+		color: "#111827",
+		marginBottom: 2,
+	},
+	signatureDate: {
+		fontSize: 11,
+		color: "#374151",
+	},
 });
 
-const ContractDocument: React.FC<PDFTemplateProps> = ({ title, content }) => {
+const ContractDocument: React.FC<PDFTemplateProps> = ({ title, content, signature }) => {
 	const parsedContent = parseMarkdownToPdf(content, styles);
 
 	return (
@@ -90,6 +123,15 @@ const ContractDocument: React.FC<PDFTemplateProps> = ({ title, content }) => {
 					<Text style={styles.title}>{title}</Text>
 				</View>
 				<View style={styles.content}>{parsedContent}</View>
+				{signature && (
+					<View style={styles.signatureBlock} wrap={false}>
+						{signature.image && (
+							<Image style={styles.signatureImage} src={`data:image/png;base64,${signature.image}`} />
+						)}
+						<Text style={styles.signatureName}>{signature.name}</Text>
+						<Text style={styles.signatureDate}>Signed on {signature.signedOn}</Text>
+					</View>
+				)}
 			</Page>
 		</Document>
 	);
@@ -98,9 +140,10 @@ const ContractDocument: React.FC<PDFTemplateProps> = ({ title, content }) => {
 export async function generatePDFBuffer(
 	title: string,
 	content: string,
+	signature?: PDFSignature,
 ): Promise<Buffer> {
 	try {
-		const doc = <ContractDocument title={title} content={content} />;
+		const doc = <ContractDocument title={title} content={content} signature={signature} />;
 
 		const blob = await pdf(doc).toBlob();
 		const arrayBuffer = await blob.arrayBuffer();
