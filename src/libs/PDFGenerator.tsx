@@ -9,6 +9,7 @@ import {
 	pdf,
 } from "@react-pdf/renderer";
 import { parseMarkdownToPdf } from "./PDFParser";
+import { blackenSignaturePng } from "./signatureImage";
 
 export interface PDFSignature {
 	/** Base64 PNG as saved by the signing pad. */
@@ -126,7 +127,7 @@ const ContractDocument: React.FC<PDFTemplateProps> = ({ title, content, signatur
 				{signature && (
 					<View style={styles.signatureBlock} wrap={false}>
 						{signature.image && (
-							<Image style={styles.signatureImage} src={`data:image/png;base64,${signature.image}`} />
+							<Image style={styles.signatureImage} src={`data:image/png;base64,${blackenSignaturePng(signature.image)}`} />
 						)}
 						<Text style={styles.signatureName}>{signature.name}</Text>
 						<Text style={styles.signatureDate}>Signed on {signature.signedOn}</Text>

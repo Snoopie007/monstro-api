@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db/db";
 import S3Bucket from "@/libs/s3";
+import { blackenSignaturePng } from "@/libs/signatureImage";
 import { getSignerName } from "@/routes/shared/docs";
 import { renderContractContent } from "@/utils/contractUtils";
 
@@ -18,7 +19,7 @@ export const xDocs = new Elysia({ prefix: "/docs" })
         }
 
         const signature = doc.signedOn ? {
-            image: doc.signature?.trim() ? doc.signature : null,
+            image: doc.signature?.trim() ? blackenSignaturePng(doc.signature) : null,
             name: await db.transaction((tx) => getSignerName(tx, doc)),
             signedOn: formatInTimeZone(doc.signedOn, doc.location.timezone, "MMMM d, yyyy"),
         } : null;
