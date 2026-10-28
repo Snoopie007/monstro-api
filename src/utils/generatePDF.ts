@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { memberContracts } from "@/subtrees/schemas";
 import { and, eq } from "drizzle-orm";
-import { generatePDFBuffer } from "@/libs/PDFGenerator";
+import { generatePDFBuffer, type PDFSignature } from "@/libs/PDFGenerator";
 import S3Bucket from "@/libs/s3";
 
 const s3 = new S3Bucket();
@@ -12,6 +12,7 @@ interface GeneratePDFProps {
     lid: string;
     title: string;
     content: string;
+    signature?: PDFSignature;
 }
 
 export async function generatePDF({
@@ -20,9 +21,10 @@ export async function generatePDF({
     lid,
     title,
     content,
+    signature,
 }: GeneratePDFProps) {
     try {
-        const pdfBuffer = await generatePDFBuffer(title, content);
+        const pdfBuffer = await generatePDFBuffer(title, content, signature);
         const filename = `${title.toLowerCase().replace(/ /g, "-")}-${Date.now()}.pdf`;
 
         await s3.uploadBuffer(
