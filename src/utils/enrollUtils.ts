@@ -8,7 +8,8 @@ import { getMonstroPlatformFeePercent } from "@/subtrees/utils";
 
 type EnrollTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-/** Resolves the current waiver before creating the enrollment's plan contract. */
+/** Resolves the current waiver before creating the enrollment's plan contract. A member holds one document per template
+ * (`member_contracts_unique`), so a copy from another membership is reused rather than duplicated. */
 export async function createEnrollUnsignedDocs(
     tx: EnrollTx,
     input: { mid: string; lid: string; memberPlanId: string; contractId?: string | null },
@@ -17,11 +18,10 @@ export async function createEnrollUnsignedDocs(
     const waiver = await ensureCurrentLocationWaiver(tx, input);
     const unsignedDocs: string[] = waiver.pendingDocId ? [waiver.pendingDocId] : [];
     if (contractId && contractId !== waiver.waiverId) {
-        const documents = await tx.select().from(memberContracts).where(and(
+        const documents = await tx.select({ id: memberContracts.id, signedOn: memberContracts.signedOn }).from(memberContracts).where(and(
             eq(memberContracts.memberId, mid),
             eq(memberContracts.locationId, lid),
             eq(memberContracts.templateId, contractId),
-            eq(memberContracts.memberPlanId, memberPlanId),
         )).orderBy(asc(memberContracts.created), asc(memberContracts.id)).for("update");
         if (!documents.some((doc) => doc.signedOn)) {
             const pending = documents.find((doc) => !doc.signedOn);
