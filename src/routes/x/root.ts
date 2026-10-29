@@ -53,8 +53,8 @@ export const XRoutes = new Elysia()
                 }
             },
         }, (app) => app.use(locationEnrollRoutes));
-        // Fees are configured on the owner-only Payment Processing settings page.
-        app.guard(ownerGuard, (app) => app.use(xAdditionalFees));
+        // Fees are configured on the Payment Processing settings page.
+        app.guard(areaGuard("location settings"), (app) => app.use(xAdditionalFees));
         app.use(xGoogleAds);
         app.guard(areaGuard("members"), (app) => app.group('/members', (app) => app.use(locMembers)));
         return app;
