@@ -28,6 +28,7 @@ import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
 import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
 import { hasLocationPermissions } from "@/utils/locationAccess";
+import { createActivationDocs } from "./activationDocs";
 type GatewayService = "stripe" | "square";
 type SquarePaymentResult = { id?: string; status?: string; receiptUrl?: string };
 
@@ -157,6 +158,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
                 await scheduleRecursiveRenewal({ startDate: nextBillingAt, data: { ...payload, recurrenceCount: 1 } });
             });
+            await createActivationDocs(sub);
             return status(200, { status: "active", nextBillingAt, scheduledJobKey: `renewal:${sid}` });
         }
 
@@ -210,6 +212,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 }));
             }
 
+            await createActivationDocs(sub);
             return status(200, {
                 status: "trialing",
                 nextBillingAt,
@@ -260,6 +263,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 });
             }
 
+            await createActivationDocs(sub);
             return status(200, {
                 status: "incomplete",
                 nextBillingAt: firstBillingAt,
@@ -528,6 +532,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 details: { message, paymentIntentId },
             });
         }
+        await createActivationDocs(sub);
 
         const payload = buildRenewalPayload({
             sub,
