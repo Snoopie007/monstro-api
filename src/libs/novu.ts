@@ -37,6 +37,18 @@ type NotifyVendorUsersNewOrderParams = {
     total: string
 }
 
+type NotifyVendorUsersDocumentSignedParams = {
+    users: {
+        id: string,
+        email: string,
+    }[]
+    memberName: string
+    documentTitle: string
+    locationName: string
+    locationId: string
+    memberId: string
+}
+
 /**
  * Trigger a Novu workflow notification
  */
@@ -151,6 +163,51 @@ export async function notifyVendorUsersNewEcommerceOrder({
                     memberName,
                     total,
                     url: `/dashboard/location/${locationId}/merchandise/orders/${orderId}`,
+                    timestamp: new Date().toISOString(),
+                },
+            })
+        )
+    })
+
+    const results = await Promise.allSettled(notifications)
+    const success = results.filter(
+        (r) => r.status === 'fulfilled' && r.value.success
+    ).length
+    const failed = results.length - success
+    const errors = results
+        .filter((r) => r.status === 'rejected' || !r.value.success)
+        .map((r) => (r.status === 'rejected' ? r.reason : r.value.error))
+
+    return { success, failed, errors }
+}
+
+export async function notifyVendorUsersDocumentSigned({
+    users,
+    memberName,
+    documentTitle,
+    locationName,
+    locationId,
+    memberId,
+}: NotifyVendorUsersDocumentSignedParams) {
+    const WORKFLOW_ID = 'vendor-member-signed-document'
+    const notifications: Promise<{ success: boolean; error?: any }>[] = []
+
+    if (users.length === 0) {
+        return { success: true, error: 'No users to notify' }
+    }
+
+    users.forEach((user) => {
+        notifications.push(
+            triggerNovuWorkflow(WORKFLOW_ID, {
+                to: {
+                    subscriberId: user.id,
+                    email: user.email,
+                },
+                payload: {
+                    memberName,
+                    documentTitle,
+                    locationName,
+                    url: `/dashboard/location/${locationId}/contracts?memberId=${memberId}`,
                     timestamp: new Date().toISOString(),
                 },
             })
