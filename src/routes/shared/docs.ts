@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { locationState, memberContracts, memberLocations } from "@/subtrees/schemas";
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
+import { notifyDocumentSigned } from "@/utils/documentSignedNotification";
 
 export class MemberDocumentError extends Error {
     constructor(public status: 400 | 404 | 409, message: string) {
@@ -48,7 +49,7 @@ export async function signDoc(input: {
 }) {
     const { docId, signature, userAgent, ipAddress } = input;
 
-    await db.transaction(async (tx) => {
+    const signed = await db.transaction(async (tx) => {
         const doc = await tx.query.memberContracts.findFirst({
             where: (m, { eq, and }) => and(
                 eq(m.id, docId),
@@ -57,7 +58,7 @@ export async function signDoc(input: {
             ),
             with: {
                 contractTemplate: true,
-                location: true,
+                location: { with: { vendor: { with: { user: true } } } },
                 member: true,
                 pricing: { with: { plan: true } },
             },
@@ -136,6 +137,23 @@ export async function signDoc(input: {
                     },
                 });
             }, 1000);
+
+            return { doc, template };
         }
+        return null;
     });
+
+    // After the commit, so a rolled-back signing never notifies; not awaited, so a slow or failed notification doesn't hold up the signing.
+    if (signed) {
+        const { doc, template } = signed;
+        void notifyDocumentSigned({
+            docId,
+            memberId: doc.memberId,
+            memberName: getSignerName(doc.member),
+            documentTitle: template.title,
+            locationId: doc.locationId,
+            locationName: doc.location.name,
+            vendorUser: doc.location.vendor?.user,
+        });
+    }
 }
