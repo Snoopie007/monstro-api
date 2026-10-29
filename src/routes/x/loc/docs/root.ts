@@ -33,7 +33,7 @@ export const xDocs = new Elysia({ prefix: "/docs" })
         if (!pdf) {
             const signature = doc.signedOn ? {
                 image: doc.signature?.trim() ? doc.signature : null,
-                name: await db.transaction((tx) => getSignerName(tx, doc)),
+                name: getSignerName(doc.member),
                 signedOn: formatInTimeZone(doc.signedOn, doc.location.timezone, "MMMM d, yyyy"),
             } : undefined;
             const content = renderContractContent(doc.contractTemplate.content, {

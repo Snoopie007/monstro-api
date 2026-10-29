@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db/db";
 import { locationState, memberContracts, memberLocations } from "@/subtrees/schemas";
@@ -11,26 +11,8 @@ export class MemberDocumentError extends Error {
     }
 }
 
-type DocTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type PersonName = { firstName: string; lastName: string | null };
-
-const fullName = (person: PersonName) => `${person.firstName} ${person.lastName ?? ""}`.trim();
-
-/** The member's name, or "Parent for Child" when the document belongs to a family plan child's membership. */
-export async function getSignerName(tx: DocTx, doc: { memberId: string; memberPlanId: string | null; member: PersonName }) {
-    const memberName = fullName(doc.member);
-    if (!doc.memberPlanId) return memberName;
-    const [parent] = await tx.execute(sql`
-        select p.first_name, p.last_name from (
-            select r.member_id from member_subscriptions k join member_subscriptions r on r.id = k.parent_id
-            where k.id = ${doc.memberPlanId} and k.member_id = ${doc.memberId}
-            union all
-            select r.member_id from member_packages k join member_packages r on r.id = k.parent_id
-            where k.id = ${doc.memberPlanId} and k.member_id = ${doc.memberId}
-        ) family join members p on p.id = family.member_id
-        limit 1`) as unknown as { first_name: string; last_name: string | null }[];
-    return parent ? `${fullName({ firstName: parent.first_name, lastName: parent.last_name })} for ${memberName}` : memberName;
-}
+/** The name printed under a signature: the document's member. Who actually signed for a child is not recorded. */
+export const getSignerName = (member: { firstName: string; lastName: string | null }) => `${member.firstName} ${member.lastName ?? ""}`.trim();
 
 export async function getDoc(docId: string) {
     const doc = await db.query.memberContracts.findFirst({
@@ -136,7 +118,6 @@ export async function signDoc(input: {
                 }).where(memberScope);
             }
 
-            const signerName = await getSignerName(tx, doc);
             setTimeout(() => {
                 generatePDF({
                     did: docId,
@@ -150,7 +131,7 @@ export async function signDoc(input: {
                     }),
                     signature: {
                         image: signature?.trim() ? signature : null,
-                        name: signerName,
+                        name: getSignerName(doc.member),
                         signedOn: formatInTimeZone(today, doc.location.timezone, "MMMM d, yyyy"),
                     },
                 });
