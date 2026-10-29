@@ -3,13 +3,16 @@
  * Using REST API for server-side notification triggering
  */
 
+type NovuSubscriber = {
+    subscriberId: string
+    email?: string
+    firstName?: string
+    lastName?: string
+}
+
 type NovuTriggerPayload = {
-    to: {
-        subscriberId: string
-        email?: string
-        firstName?: string
-        lastName?: string
-    }
+    /** One trigger notifies up to NOVU_MAX_RECIPIENTS subscribers; each gets their own notification. */
+    to: NovuSubscriber | NovuSubscriber[]
     payload: Record<string, any>
     overrides?: Record<string, any>
 }
@@ -48,6 +51,8 @@ type NotifyVendorUsersDocumentSignedParams = {
     locationId: string
     memberId: string
 }
+
+const NOVU_MAX_RECIPIENTS = 100
 
 /**
  * Trigger a Novu workflow notification
@@ -190,40 +195,36 @@ export async function notifyVendorUsersDocumentSigned({
     memberId,
 }: NotifyVendorUsersDocumentSignedParams) {
     const WORKFLOW_ID = 'vendor-member-signed-document'
-    const notifications: Promise<{ success: boolean; error?: any }>[] = []
 
     if (users.length === 0) {
         return { success: true, error: 'No users to notify' }
     }
 
-    users.forEach((user) => {
-        notifications.push(
+    const payload = {
+        memberName,
+        documentTitle,
+        locationName,
+        url: `/dashboard/location/${locationId}/contracts?memberId=${memberId}`,
+        timestamp: new Date().toISOString(),
+    }
+    const batches: (typeof users)[] = []
+    for (let i = 0; i < users.length; i += NOVU_MAX_RECIPIENTS) {
+        batches.push(users.slice(i, i + NOVU_MAX_RECIPIENTS))
+    }
+
+    // triggerNovuWorkflow never rejects, so a failed batch counts its recipients as failed.
+    const results = await Promise.all(
+        batches.map((batch) =>
             triggerNovuWorkflow(WORKFLOW_ID, {
-                to: {
-                    subscriberId: user.id,
-                    email: user.email,
-                },
-                payload: {
-                    memberName,
-                    documentTitle,
-                    locationName,
-                    url: `/dashboard/location/${locationId}/contracts?memberId=${memberId}`,
-                    timestamp: new Date().toISOString(),
-                },
+                to: batch.map((user) => ({ subscriberId: user.id, email: user.email })),
+                payload,
             })
         )
-    })
+    )
+    const failed = results.reduce((sum, result, i) => (result.success ? sum : sum + batches[i]!.length), 0)
+    const errors = results.filter((result) => !result.success).map((result) => result.error)
 
-    const results = await Promise.allSettled(notifications)
-    const success = results.filter(
-        (r) => r.status === 'fulfilled' && r.value.success
-    ).length
-    const failed = results.length - success
-    const errors = results
-        .filter((r) => r.status === 'rejected' || !r.value.success)
-        .map((r) => (r.status === 'rejected' ? r.reason : r.value.error))
-
-    return { success, failed, errors }
+    return { success: users.length - failed, failed, errors }
 }
 
 export async function notifyUsersNewGroupPost({

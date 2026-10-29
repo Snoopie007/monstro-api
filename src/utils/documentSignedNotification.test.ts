@@ -39,21 +39,30 @@ afterAll(() => {
     process.env.NOVU_API_KEY = originalKey;
 });
 
-test("notifies the location's owner and active staff once each, linking to the member's documents", async () => {
+test("notifies the location's owner and active staff once each in one trigger, linking to the member's documents", async () => {
     await notifyDocumentSigned(signed);
 
-    const calls = novuCalls();
-    expect(calls.map((call) => call.body.to.subscriberId).sort()).toEqual(["usr-owner", "usr-staff"]);
-    for (const call of calls) {
-        expect(call.url).toBe("https://api.novu.co/v1/events/trigger");
-        expect(call.body.name).toBe("vendor-member-signed-document");
-        expect(call.body.payload).toMatchObject({
-            memberName: "Jane Doe",
-            documentTitle: "Liability Waiver",
-            locationName: "Demo Dojo",
-            url: "/dashboard/location/loc-1/contracts?memberId=mbr-1",
-        });
-    }
+    const [call, ...rest] = novuCalls();
+    expect(rest).toEqual([]);
+    expect(call!.url).toBe("https://api.novu.co/v1/events/trigger");
+    expect(call!.body.name).toBe("vendor-member-signed-document");
+    expect(call!.body.to).toEqual([
+        { subscriberId: "usr-owner", email: "owner@example.com" },
+        { subscriberId: "usr-staff", email: "staff@example.com" },
+    ]);
+    expect(call!.body.payload).toMatchObject({
+        memberName: "Jane Doe",
+        documentTitle: "Liability Waiver",
+        locationName: "Demo Dojo",
+        url: "/dashboard/location/loc-1/contracts?memberId=mbr-1",
+    });
+});
+
+test("splits recipients into triggers of at most 100, Novu's limit", async () => {
+    staffRows = Array.from({ length: 150 }, (_, i) => ({ staff: { user: { id: `usr-${i}`, email: `staff${i}@example.com` } } }));
+    await notifyDocumentSigned(signed);
+
+    expect(novuCalls().map((call) => call.body.to.length)).toEqual([100, 51]);
 });
 
 test("sends nothing when the location has no one to notify", async () => {

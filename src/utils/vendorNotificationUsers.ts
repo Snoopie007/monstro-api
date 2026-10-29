@@ -34,10 +34,12 @@ export async function fetchVendorNotificationUsers(
             eq(staffsLocations.locationId, locationId),
             eq(staffsLocations.status, "active")
         ),
+        columns: {},
         with: {
             staff: {
+                columns: {},
                 with: {
-                    user: true,
+                    user: { columns: { id: true, email: true } },
                 },
             },
         },
