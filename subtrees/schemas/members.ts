@@ -66,6 +66,8 @@ export const memberContracts = pgTable("member_contracts", {
     pdfFilename: text("pdf_filename"),
     signedOn: timestamp("signed_on", { withTimezone: true }),
     memberPlanId: text("member_plan_id"),
+    userAgent: text('user_agent'),
+    ipAddress: text('ip_address'),
     pricingId: text("pricing_id").references(() => memberPlanPricing.id, { onDelete: "set null" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),

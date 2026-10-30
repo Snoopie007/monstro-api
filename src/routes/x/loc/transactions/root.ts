@@ -14,6 +14,7 @@ import {
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { getRefundAmounts } from "@/utils/refunds";
 import { findBundleChargeOwner } from "@/handlers/addonsBundles/refund/charges";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 
 function getRefundPlanIds(txMeta: Record<string, unknown>, invoiceMemberPlanId: string | null) {
@@ -31,8 +32,10 @@ function getRefundPlanIds(txMeta: Record<string, unknown>, invoiceMemberPlanId: 
 }
 
 export const xTransactions = new Elysia({ prefix: "/transactions" })
-    .post("/:tid/refund", async ({ params, body, status }) => {
+    .post("/:tid/refund", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid, tid } = params as { lid: string; tid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { amountType, amount, reason, note } = body;
 
         const transaction = await db.query.transactions.findFirst({
@@ -542,8 +545,10 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             note: t.Optional(t.String()),
         }),
     })
-    .post("/:tid/refund/cash", async ({ params, body, status }) => {
+    .post("/:tid/refund/cash", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid, tid } = params as { lid: string; tid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { amountType, amount, reason, note } = body;
 
         const transaction = await db.query.transactions.findFirst({

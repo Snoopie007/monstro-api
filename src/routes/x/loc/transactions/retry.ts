@@ -12,10 +12,13 @@ import {
     resolveGatewayPaymentId,
     resolveGatewayService,
 } from "../subscriptions/shared";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function retryTransactionRoutes(app: Elysia) {
-    return app.post("/:tid/retry", async ({ params, status }) => {
+    return app.post("/:tid/retry", async (ctx) => {
+        const { params, status } = ctx;
         const { lid, tid } = params as { lid: string; tid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
         const tx = await db.query.transactions.findFirst({
             where: (t, { and, eq }) => and(eq(t.id, tid), eq(t.locationId, lid)),

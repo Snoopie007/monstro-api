@@ -27,6 +27,8 @@ import { BillingContextError, resolveSubscriptionBillingContext } from "./billin
 import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate, type PromoDiscount, withTimeout } from "./shared";
 import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
+import { hasLocationPermissions } from "@/utils/locationAccess";
+import { createActivationDocs } from "./activationDocs";
 type GatewayService = "stripe" | "square";
 type SquarePaymentResult = { id?: string; status?: string; receiptUrl?: string };
 
@@ -37,8 +39,10 @@ function squareLocationIdFromMetadata(metadata: unknown) {
 }
 
 export async function activateSubscriptionRoutes(app: Elysia) {
-    return app.post("/:sid/activate", async ({ params, body, status }) => {
+    return app.post("/:sid/activate", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid, sid } = params as { lid: string; sid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view plans", "manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { paymentMethodId, paymentType } = body;
 
         const sub = await db.query.memberSubscriptions.findFirst({
@@ -150,6 +154,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                     eq(memberLocations.memberId, sub.memberId), eq(memberLocations.locationId, lid)));
                 await scheduleRecursiveRenewal({ startDate: nextBillingAt, data: { ...payload, recurrenceCount: 1 } });
             });
+            await createActivationDocs(sub);
             return status(200, { status: "active", nextBillingAt, scheduledJobKey: `renewal:${sid}` });
         }
 
@@ -203,6 +208,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 }));
             }
 
+            await createActivationDocs(sub);
             return status(200, {
                 status: "trialing",
                 nextBillingAt,
@@ -253,6 +259,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 });
             }
 
+            await createActivationDocs(sub);
             return status(200, {
                 status: "incomplete",
                 nextBillingAt: firstBillingAt,
@@ -483,6 +490,7 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                 details: { message, paymentIntentId },
             });
         }
+        await createActivationDocs(sub);
 
         const payload = buildRenewalPayload({
             sub,

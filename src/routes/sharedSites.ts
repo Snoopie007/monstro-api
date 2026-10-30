@@ -26,6 +26,7 @@ import {
   normalizeSitePageTemplateV2,
   SitePageTemplateSchema,
   storedSiteConfigFromStored,
+  validateChangedEditablePagePaths,
 } from "@/subtrees/site-config.js";
 import { SiteEditorError } from "@/services/siteEditorError";
 import {
@@ -1069,6 +1070,19 @@ async function saveDraft(
       : site.publishedRevisionId ?? draftToken(siteId, draft.version);
     if (currentRevisionId !== body.expectedRevisionId) {
       throw new SiteEditorError(409, "STALE_REVISION", "The site changed since it was loaded");
+    }
+    // New or changed paths must pass the authoring rules; unchanged historical paths stay valid.
+    const previousPages = await tx
+      .select({ id: websitePages.pageKey, path: websitePages.path })
+      .from(websitePages)
+      .where(eq(websitePages.siteId, siteId));
+    const [pathIssue] = validateChangedEditablePagePaths(previousPages, parsed.config.pages);
+    if (pathIssue) {
+      throw new SiteEditorError(
+        400,
+        "SITE_PAGE_PATH_INVALID",
+        `Invalid page URL ${pathIssue.path}: ${pathIssue.message}`,
+      );
     }
     await validateStoredLocationConnections(tx, site.vendorId, parsed.config);
 

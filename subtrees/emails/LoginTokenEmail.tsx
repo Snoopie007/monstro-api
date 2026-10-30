@@ -34,7 +34,7 @@ export default function LoginTokenEmail({
 						<Text style={styles.paragraph}>Hi {user.name},</Text>
 
 						<Text style={styles.paragraph}>
-							A request has been received to login to your Monstro Account,{' '}
+							A request has been received to login to your Monstro X Account,{' '}
 							<strong>{user.email}</strong>. To continue with this request, use
 							the verification code below in the next 30 minutes:
 						</Text>

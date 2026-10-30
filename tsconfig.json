@@ -2,12 +2,15 @@
   "compilerOptions": {
     // Environment setup & latest features
     "lib": ["ESNext"],
+    "baseUrl": ".",
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react",
     "allowJs": true,
+    "types": ["bun", "node"],
     "paths": {
+      "bun-types": ["./node_modules/bun-types/index.d.ts"],
       "*": ["./*"],
       "@/*": ["./src/*"],
       "@routes/*": ["./src/routes/*"],

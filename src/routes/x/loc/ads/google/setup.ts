@@ -3,6 +3,7 @@ import {
     AdsSetupError, adsErrorMessage,
     ensureMxAssets, ensureMxConversionActions, findAdsLocationAsset
 } from "@/libs/google";
+import { publishedAdsDestinations } from "@/libs/adsSiteDestinations";
 import { adsSettings } from "@/subtrees/schemas";
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
@@ -51,26 +52,33 @@ export const xGoogleAdsSetup = new Elysia({ prefix: "/:settingsId/setup" })
             });
             if (!location) return status(404, { error: "Location not found" });
 
-            // Prefer published site revision config (paths + program names) over editor draft tables.
-            let pages: { pageKey: string; path: string }[] = [];
-            let programs: { name: string; slug: string }[] = [];
+            // Use the site's currently published revision, never an unpublished or older one.
+            let destinations: ReturnType<typeof publishedAdsDestinations> = { pages: [], programs: [] };
             const siteLocation = await db.query.websiteSiteLocations.findFirst({
                 where: (wsl, { eq }) => eq(wsl.locationId, lid),
             });
-            if (siteLocation) {
+            const site = siteLocation
+                ? await db.query.websiteSites.findFirst({
+                    where: (ws, { eq }) => eq(ws.id, siteLocation.siteId),
+                    columns: { plan: true, publishedRevisionId: true },
+                })
+                : undefined;
+            if (site?.publishedRevisionId) {
                 const siteRevision = await db.query.websiteSiteRevisions.findFirst({
-                    where: (wsr, { eq }) => eq(wsr.siteId, siteLocation.siteId),
+                    where: (wsr, { and, eq }) => and(
+                        eq(wsr.id, site.publishedRevisionId!),
+                        eq(wsr.siteId, siteLocation!.siteId),
+                        eq(wsr.status, "published"),
+                    ),
                     columns: { config: true },
-                    orderBy: (wsr, { desc }) => desc(wsr.revisionNumber),
                 });
-                const config = siteRevision?.config;
-                pages = (config?.pages ?? [])
-                    .filter((page) => page.path && page.id)
-                    .map((page) => ({ pageKey: page.id, path: page.path }));
-                // Only programs with learn-more pages get individual sitelinks.
-                programs = (config?.content?.programs ?? [])
-                    .filter((program) => program.visible !== false && program.showLearnMore !== false && program.slug && program.name)
-                    .map((program) => ({ name: program.name, slug: program.slug }));
+                if (siteRevision) {
+                    destinations = publishedAdsDestinations(
+                        siteRevision.config,
+                        site.plan === "growth" ? "growth" : "scale",
+                        lid,
+                    );
+                }
             }
 
             const assets = await ensureMxAssets(
@@ -80,8 +88,8 @@ export const xGoogleAdsSetup = new Elysia({ prefix: "/:settingsId/setup" })
                     website: location.website ?? undefined,
                     phone: location.phone ?? undefined,
                     country: location.country ?? undefined,
-                    pages,
-                    programs,
+                    pages: destinations.pages,
+                    programs: destinations.programs,
                 },
                 integration.metadata?.loginCustomerId,
             );

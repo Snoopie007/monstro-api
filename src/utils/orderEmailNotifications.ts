@@ -1,9 +1,7 @@
-import { db } from "@/db/db";
 import { notifyVendorUsersNewEcommerceOrder } from "@/libs/novu";
 import { emailQueue } from "@/queues";
-import { staffsLocations } from "@/subtrees/schemas";
 import type { OrderLineItem } from "@/subtrees/types";
-import { and, eq } from "drizzle-orm";
+import { fetchVendorNotificationUsers } from "@/utils/vendorNotificationUsers";
 
 const CUSTOMER_VISIBLE_ORDER_STATUSES: Record<string, true> = {
     shipped: true,
@@ -28,11 +26,6 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
 });
-
-type VendorOrderNotificationUser = {
-    id: string;
-    email: string;
-};
 
 export type OrderNotificationContext = {
     order: {
@@ -66,49 +59,6 @@ export type OrderNotificationContext = {
         } | null;
     };
 };
-
-function addVendorOrderNotificationUser(
-    users: Map<string, VendorOrderNotificationUser>,
-    user?: { id?: string | null; email?: string | null } | null
-) {
-    if (!user?.id || !user.email) {
-        return;
-    }
-
-    users.set(user.id, {
-        id: user.id,
-        email: user.email,
-    });
-}
-
-async function fetchVendorOrderNotificationUsers(
-    locationId: string,
-    vendorUser?: { id?: string | null; email?: string | null } | null
-) {
-    const users = new Map<string, VendorOrderNotificationUser>();
-    addVendorOrderNotificationUser(users, vendorUser);
-
-    const staffMembers = await db.query.staffsLocations.findMany({
-        where: and(
-            eq(staffsLocations.locationId, locationId),
-            eq(staffsLocations.status, "active")
-        ),
-        with: {
-            staff: {
-                with: {
-                    user: true,
-                },
-            },
-        },
-    });
-
-    staffMembers.forEach((staffMember) => {
-        addVendorOrderNotificationUser(users, staffMember.staff.user);
-    });
-
-    return Array.from(users.values());
-}
-
 
 export async function queueOrderPaidNotifications(context: OrderNotificationContext) {
     const { order, member, location } = context;
@@ -159,7 +109,7 @@ export async function queueOrderPaidNotifications(context: OrderNotificationCont
 
         await Promise.all(jobs);
 
-        const vendorNotificationUsers = await fetchVendorOrderNotificationUsers(
+        const vendorNotificationUsers = await fetchVendorNotificationUsers(
             order.locationId,
             location.vendor?.user
         );

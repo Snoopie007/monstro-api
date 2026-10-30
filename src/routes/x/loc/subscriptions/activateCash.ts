@@ -12,10 +12,14 @@ import {
     hasCashBillingDefinition,
     planCashActivation,
 } from "./cashActivation";
+import { hasLocationPermissions } from "@/utils/locationAccess";
+import { createActivationDocs } from "./activationDocs";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
-    return app.post("/:sid/activate-cash", async ({ params, status }) => {
+    return app.post("/:sid/activate-cash", async (ctx) => {
+        const { params, status } = ctx;
         const { lid, sid } = params as { lid: string; sid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view plans", "manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
         const [sub] = await findCashSubscriptions(db, and(
             eq(memberSubscriptions.id, sid),
@@ -45,12 +49,14 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     taxRate: sub.location.taxRates.find(rate => rate.isDefault)?.percentage ?? 0,
                 });
             });
+            await createActivationDocs(sub);
             return status(200, { status: "active", nextBillingAt: due, scheduledJobKey: `cashInvoiceDue_${sid}_${due.getTime()}` });
         }
 
         const activation = await planCashActivation(sub, lid);
         await db.transaction(tx => activateCashSubscription(tx, sub, lid, activation));
 
+        await createActivationDocs(sub);
         return status(200, {
             status: activation.status,
             nextBillingAt: getNextBillingDate(sub),

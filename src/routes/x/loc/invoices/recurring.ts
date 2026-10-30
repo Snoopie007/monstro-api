@@ -3,6 +3,7 @@ import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { z } from "zod";
 import { and, desc, eq } from "drizzle-orm";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 type RecurringInvoiceMetadata = {
     type?: string;
@@ -101,8 +102,10 @@ async function scheduleRecurringInvoice(invoice: any) {
 
 export async function recurringInvoiceRoutes(app: Elysia) {
     return app
-        .post('/:iid/recurring', async ({ body, params, status }) => {
+        .post('/:iid/recurring', async (ctx) => {
+            const { body, params, status } = ctx;
             const { lid, iid } = params as { lid: string; iid: string };
+            if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
             const { memberId } = body;
 
             const invoice = await db.query.memberInvoices.findFirst({
@@ -136,9 +139,11 @@ export async function recurringInvoiceRoutes(app: Elysia) {
         }, {
             body: z.object({ memberId: z.string() }),
         })
-        .post('/recurring', async ({ body, params, status }) => {
+        .post('/recurring', async (ctx) => {
+            const { body, params, status } = ctx;
             const { subscriptionId, memberId, locationId } = body;
             const { lid } = params as { lid: string };
+            if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
             if (locationId !== lid) {
                 return status(400, {
@@ -183,8 +188,10 @@ export async function recurringInvoiceRoutes(app: Elysia) {
                 locationId: z.string(),
             }),
         })
-        .delete('/recurring/:subscriptionId', async ({ params }) => {
-            const { subscriptionId } = params;
+        .delete('/recurring/:subscriptionId', async (ctx) => {
+            const { params, status } = ctx;
+            const { lid, subscriptionId } = params as { lid: string; subscriptionId: string };
+            if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
             try {
                 let removedCount = 0;

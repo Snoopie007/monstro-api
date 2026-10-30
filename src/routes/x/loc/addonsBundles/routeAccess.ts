@@ -1,32 +1,29 @@
-import { canAccessLocation, canEditLocationMember } from "@/utils/locationAccess";
+import { hasLocationPermissions, type LocationPermission } from "@/utils/locationAccess";
 import type { Context } from "elysia";
 
-// AuthXMiddleware resolves the caller before these routes run.
 type LocationRouteContext = {
 	params: Record<string, string | undefined>;
 	status: Context["status"];
-	vendorId?: string;
-	staffId?: string;
-	userId?: string;
 };
 
-/** Add-on and bundle routes are mounted under /loc/:lid. Resolves that location
- * once and rejects callers who cannot manage it. */
-export async function getLocationAccess({ params, status, vendorId, staffId, userId }: LocationRouteContext) {
+/** Add-on and bundle routes are mounted under /loc/:lid. */
+export function getLocationAccess({ params }: Pick<LocationRouteContext, "params">) {
 	if (!params.lid) throw new Error("Add-on and bundle routes must be mounted under /loc/:lid");
 
-	const access = await canAccessLocation(params.lid, vendorId, staffId);
-
-	if (!access.allowed) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
-
-	return { locationId: params.lid, billingActor: { vendorId, staffId, userId } };
+	return { locationId: params.lid };
 }
 
-/** Only member billing mutations require the portal's edit-member permission. */
-export async function getBillingAccess({ locationId, billingActor, status }: {
-  locationId: string;
-  billingActor: { vendorId?: string; staffId?: string; userId?: string };
-  status: Context["status"];
-}) {
-  if (!await canEditLocationMember(locationId, billingActor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
+/** A beforeHandle hook that needs every permission at the route's location.
+ * AuthXMiddleware resolves the caller before these routes run. */
+function requirePermissions(...required: LocationPermission[]) {
+	return async (ctx: LocationRouteContext) => {
+		if (!await hasLocationPermissions(ctx.params.lid!, ctx, required)) return ctx.status(403, { error: "Forbidden", code: "FORBIDDEN" });
+	};
 }
+
+// The catalog follows promos. Member billing follows the subscription routes.
+export const viewPlans = requirePermissions("view plans");
+export const managePlans = requirePermissions("manage plans");
+export const viewBilling = requirePermissions("view billing");
+export const sell = requirePermissions("view plans", "manage billing");
+export const manageBilling = requirePermissions("manage billing");

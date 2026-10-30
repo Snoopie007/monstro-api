@@ -71,6 +71,9 @@ function splitParsedSiteConfig(
         ...(page.kind === "sections" && page.displayLocationId
           ? { displayLocationId: page.displayLocationId }
           : {}),
+        ...(page.kind === "sections" && page.serviceLocationId
+          ? { serviceLocationId: page.serviceLocationId }
+          : {}),
         ...(Object.keys(sectionPresentations).length > 0
           ? { sectionPresentations }
           : {}),
@@ -108,6 +111,7 @@ export function assembleSiteConfig(input: {
     .map((page) => {
       const header = page.settings.header;
       const displayLocationId = page.settings.displayLocationId;
+      const serviceLocationId = page.settings.serviceLocationId;
       const sectionPresentations = page.settings.sectionPresentations;
       const presentations = sectionPresentations &&
         typeof sectionPresentations === "object" &&
@@ -126,6 +130,9 @@ export function assembleSiteConfig(input: {
       return {
         ...base,
         ...(typeof displayLocationId === "string" ? { displayLocationId } : {}),
+        // Pass any stored value through so strict validation rejects a malformed
+        // binding instead of silently widening the page to the whole site.
+        ...(serviceLocationId === undefined ? {} : { serviceLocationId }),
         sections: (blocksByPage.get(page.id) ?? [])
           .sort((a, b) => a.position - b.position)
           .map((block) => {

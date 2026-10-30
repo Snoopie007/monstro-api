@@ -33,13 +33,13 @@ export default function ResetSuccessEmail({
             </Text>
 
             <Text style={styles.paragraph}>
-              The password for your Monstro account ({member.email}) has been
+              The password for your Monstro X account ({member.email}) has been
               successfully reset.
             </Text>
 
             <Text style={styles.paragraph}>
               If you didn't make this change or if you believe an unauthorized
-              person has accessed your account, go to your Monstro App to reset
+              person has accessed your account, go to your Monstro X App to reset
               your password immediately.
             </Text>
 

@@ -56,7 +56,6 @@ function validateFee(input: {
 	return null;
 }
 
-// TODO(permissions): Restrict fee mutations to vendor admins or staff with billing-settings permission.
 export const xAdditionalFees = new Elysia({ prefix: "/additional-fees" })
 	.resolve(async (ctx) => {
 		const { lid } = ctx.params as { lid: string };

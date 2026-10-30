@@ -17,7 +17,9 @@ const planRows: unknown[] = [];
 const scheduleRows: unknown[] = [];
 const postRows: unknown[] = [];
 const productRows: unknown[] = [];
+const contractRows: unknown[] = [];
 const submitGhlFormContact = mock(async () => undefined);
+const signDoc = mock(async (_input: unknown) => undefined);
 
 function routingConfig(connections: Array<{
   locationId: string;
@@ -85,7 +87,7 @@ const db = {
     },
     memberContracts: {
       findFirst: mock(async () => null),
-      findMany: mock(async () => []),
+      findMany: mock(async () => contractRows),
     },
     members: {
       findFirst: mock(async () => null),
@@ -127,6 +129,15 @@ mock.module("@/utils/contractUtils", () => ({
   renderContractContent: mock(() => ""),
 }));
 mock.module("@/handlers/formSubmissions", () => ({ submitGhlFormContact }));
+mock.module("@/routes/shared/docs", () => ({
+  MemberDocumentError: class MemberDocumentError extends Error {
+    constructor(public status: 400 | 404 | 409, message: string) {
+      super(message);
+    }
+  },
+  getDoc: mock(async () => ({ mdx: "" })),
+  signDoc,
+}));
 
 const { webSiteRoutes } = await import("./sites");
 const { webPlansRoutes } = await import("./plans");
@@ -144,6 +155,8 @@ beforeEach(() => {
   db.query.programs.findMany.mockClear();
   postRows.length = 0;
   productRows.length = 0;
+  contractRows.length = 0;
+  signDoc.mockClear();
   db.query.websiteContents.findMany.mockClear();
   db.query.products.findMany.mockClear();
   submitGhlFormContact.mockClear();
@@ -231,7 +244,6 @@ test("projects map identity and structured address through the public resolve re
         },
       },
       currency: "USD",
-      gatewayService: null,
       vendorId: "vendor-1",
       isPrimary: true,
     }, {
@@ -249,7 +261,6 @@ test("projects map identity and structured address through the public resolve re
       metadata: { placeId: "places-only-id" },
       selectedGmb: { metadata: { placeId: " " } },
       currency: "USD",
-      gatewayService: null,
       vendorId: "vendor-1",
       isPrimary: false,
     }],
@@ -669,4 +680,53 @@ test("does not render a contract from another member or location", async () => {
 
   expect(response.status).toBe(404);
   expect(db.query.memberContracts.findFirst).toHaveBeenCalled();
+});
+
+function contractRow(id: string, signedOn: Date | null) {
+  return {
+    id,
+    memberId: "member-1",
+    locationId: "location-1",
+    templateId: "template-1",
+    signature: signedOn ? "c2lnbmF0dXJl" : null,
+    signedOn,
+    pricing: null,
+    contractTemplate: {
+      id: "template-1",
+      title: "Waiver",
+      requireSignature: true,
+      location: { id: "location-1" },
+    },
+  };
+}
+
+test("lists signed and unsigned documents without the stored signature", async () => {
+  contractRows.push(
+    contractRow("doc-signed", new Date("2026-10-01T00:00:00Z")),
+    contractRow("doc-open", null),
+  );
+
+  const response = await docsApp.handle(new Request("http://localhost/docs/"));
+  const docs = await response.json() as Array<Record<string, unknown>>;
+
+  expect(response.status).toBe(200);
+  expect(docs.map((doc) => doc.id)).toEqual(["doc-signed", "doc-open"]);
+  expect(docs.some((doc) => "signature" in doc)).toBe(false);
+  expect(docs[0]?.contractTemplate).not.toHaveProperty("location");
+});
+
+test("accepts a document without a signature and leaves the check to the signing helper", async () => {
+  const response = await docsApp.handle(new Request("http://localhost/docs/doc-open", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ signature: null }),
+  }));
+
+  expect(response.status).toBe(200);
+  expect(signDoc).toHaveBeenCalledWith({
+    docId: "doc-open",
+    mid: "member-1",
+    lid: "location-1",
+    signature: null,
+  });
 });

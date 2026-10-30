@@ -21,9 +21,14 @@ export const webLocationStateRoutes = new Elysia({ prefix: "/state" })
                 return status(404, { error: 'Location state not found' });
             }
 
-            const taxRates = await db.query.taxRates.findMany({
-                where: (t, { eq }) => eq(t.locationId, lid),
-            });
+            const [taxRates, additionalFees] = await Promise.all([
+                db.query.taxRates.findMany({
+                    where: (t, { eq }) => eq(t.locationId, lid),
+                }),
+                db.query.additionalFees.findMany({
+                    where: (a, { eq, and }) => and(eq(a.locationId, lid), eq(a.active, true)),
+                }),
+            ]);
 
             let defaultTaxRate = taxRates.find((taxRate) => taxRate.isDefault);
             if (!defaultTaxRate) {
@@ -31,8 +36,10 @@ export const webLocationStateRoutes = new Elysia({ prefix: "/state" })
             }
 
             return status(200, {
-                ...locationState,
+                locationState,
                 taxRate: defaultTaxRate,
+                taxRates,
+                additionalFees,
             });
         } catch (error) {
             console.error(error);

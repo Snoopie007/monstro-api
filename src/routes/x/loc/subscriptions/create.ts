@@ -10,6 +10,9 @@ import { addDays } from "date-fns";
 import type Elysia from "elysia";
 import { t, status as httpStatus } from "elysia";
 import { getDiscountDuration, type PromoDiscount } from "./shared";
+import { hasLocationPermissions } from "@/utils/locationAccess";
+import { getLocationWaiverTemplate } from "@/utils/locationWaiver";
+import { CheckoutError } from "@/utils/getCheckoutContext";
 
 const enrollmentBody = t.Object({
     memberId: t.String(),
@@ -36,8 +39,10 @@ const enrollmentBody = t.Object({
 type EnrollmentBody = typeof enrollmentBody.static;
 
 export async function createSubscriptionRoutes(app: Elysia) {
-    return app.post("/", async ({ params, body, status }) => {
+    return app.post("/", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view plans", "manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const {
             memberId,
             pricingId,
@@ -84,6 +89,7 @@ export async function createSubscriptionRoutes(app: Elysia) {
                 location: {
                     with: {
                         taxRates: true,
+                        locationState: true,
                     },
                 },
             },
@@ -92,6 +98,10 @@ export async function createSubscriptionRoutes(app: Elysia) {
         if (!memberLocation?.member) {
             return status(404, { error: "Member not found in location" });
         }
+        // Activation gives the member the default waiver, so reject a broken one now, as self-enrollment does before charging.
+        const waiverError = await getLocationWaiverTemplate(db, lid, memberLocation.location.locationState?.waiverId)
+            .then(() => null, (error) => error instanceof CheckoutError ? error : Promise.reject(error));
+        if (waiverError) return status(waiverError.status, { error: waiverError.message });
 
         const baseStartDate = parseAccessStartDate(startDate, delayFirstPayment, memberLocation.location.timezone);
         if (!Number.isFinite(baseStartDate.getTime())) return status(400, { error: "Invalid access start date" });

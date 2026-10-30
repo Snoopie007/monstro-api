@@ -7,16 +7,16 @@ import {
 	updateAddon,
 } from "./catalog";
 import { addonEditorBody, validateAddonInput } from "./input";
-import { getLocationAccess } from "./routeAccess";
+import { getLocationAccess, managePlans, viewPlans } from "./routeAccess";
 
 export const addonRoutes = new Elysia({ prefix: "/addons" })
 	.resolve(getLocationAccess)
 	.get("/options", async ({ locationId, status }) => {
 		return status(200, { options: await getCatalogOptions(locationId) });
-	})
+	}, { beforeHandle: viewPlans })
 	.get("/", async ({ locationId, status }) => {
 		return status(200, { addons: await listAddons(locationId) });
-	})
+	}, { beforeHandle: viewPlans })
 	.post("/", async ({ locationId, body, status }) => {
 		const options = await getCatalogOptions(locationId);
 		const inputError = validateAddonInput(body, options.planPricings);
@@ -24,14 +24,14 @@ export const addonRoutes = new Elysia({ prefix: "/addons" })
 		if (inputError) return status(400, { error: inputError });
 
 		return status(201, { addon: await createAddon(locationId, body) });
-	}, { body: addonEditorBody })
+	}, { beforeHandle: managePlans, body: addonEditorBody })
 	.get("/:addonId", async ({ locationId, params, status }) => {
 		const addon = await getAddon(locationId, params.addonId);
 
 		if (!addon) return status(404, { error: "Add-on not found" });
 
 		return status(200, { addon });
-	})
+	}, { beforeHandle: viewPlans })
 	.patch("/:addonId", async ({ locationId, params, body, status }) => {
 		const options = await getCatalogOptions(locationId);
 		const inputError = validateAddonInput(body, options.planPricings);
@@ -51,4 +51,4 @@ export const addonRoutes = new Elysia({ prefix: "/addons" })
 			case "versioned":
 				return status(200, { addon: result.addon });
 		}
-	}, { body: addonEditorBody });
+	}, { beforeHandle: managePlans, body: addonEditorBody });

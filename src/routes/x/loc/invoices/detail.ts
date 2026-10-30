@@ -1,10 +1,13 @@
 import { db } from "@/db/db";
 import type Elysia from "elysia";
 import { and, eq } from "drizzle-orm";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function detailInvoiceRoutes(app: Elysia) {
-    return app.get("/:iid", async ({ params, status }) => {
+    return app.get("/:iid", async (ctx) => {
+        const { params, status } = ctx;
         const { lid, iid } = params as { lid: string; iid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
         try {
             const invoice = await db.query.memberInvoices.findFirst({

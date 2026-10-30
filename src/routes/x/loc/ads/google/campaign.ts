@@ -11,6 +11,7 @@ import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { enums, services } from "google-ads-api";
 import { z } from "zod";
+import { KEYWORD_SEED_PROMPT, SEARCH_AD_PROMPT } from "./utils/prompts";
 
 function hasLocalIntent(keyword: string, city: string, kidsProgram: boolean) {
     if (keyword.includes("near me") || keyword.includes("class")) return true;
@@ -31,7 +32,6 @@ function rankKeywordIdeas(
     const ranked = [];
 
     for (const idea of ideas) {
-        console.log("idea", idea.text, idea.keyword_idea_metrics?.avg_monthly_searches);
         const text = idea.text?.trim();
         const searches = Number(idea.keyword_idea_metrics?.avg_monthly_searches || 0);
         if (!text || searches <= 0) continue;
@@ -65,6 +65,7 @@ export const xGoogleAdsCampaign = new Elysia()
         const integration = await db.query.integrations.findFirst({
             where: and(eq(integrations.locationId, lid), eq(integrations.service, "adwords")),
         });
+
         if (!integration?.accountId || !integration.refreshToken) {
             return status(400, { error: "Google Ads is not connected for this location" });
         }
@@ -127,11 +128,10 @@ export const xGoogleAdsCampaign = new Elysia()
                 seeds: z.array(z.string().min(1)).min(5).max(10),
             }), { name: "search_seeds" }
         ).invoke([
-            new SystemMessage("Translate an activity program into how people search Google. Return 5-10 generic search seeds, not brand or program nicknames. Match the age range and activity (HIIT, gym, martial arts, kids class, etc). Prefer class-style terms when relevant. No quotes, no city names."),
+            new SystemMessage(KEYWORD_SEED_PROMPT),
             new HumanMessage(`Program: ${program.name}\nDescription: ${program.description || "none"}\nAges: ${program.minAge}-${program.maxAge}\nCity/state: ${city}${region ? `, ${region}` : ""}`),
         ]);
 
-        console.log("seeds", seeds);
 
         const ideas = await customer.keywordPlanIdeas.generateKeywordIdeas({
             customer_id: customerId,
@@ -145,7 +145,7 @@ export const xGoogleAdsCampaign = new Elysia()
 
         const keywordIdeas = Array.isArray(ideas) ? ideas : ideas.results || [];
         const keywords = rankKeywordIdeas(keywordIdeas, program.name, city, program.maxAge);
-        console.log("keywords", keywords);
+
         return status(200, keywords);
     }, {
         params: t.Object({
@@ -155,7 +155,68 @@ export const xGoogleAdsCampaign = new Elysia()
             programId: t.String(),
         }),
     })
-    .post("/write-ads", async (ctx) => {
-        const { status } = ctx;
-        return status(200, { success: true });
+    .post("/creatives", async ({ params, body, status }) => {
+        const { lid } = params;
+        const { programId, offer, keywords } = body;
+
+        const location = await db.query.locations.findFirst({
+            where: eq(locations.id, lid),
+            columns: { id: true, name: true, city: true, state: true },
+        });
+        if (!location) return status(404, { error: "Location not found" });
+
+        const program = await db.query.programs.findFirst({
+            where: (p, { eq, and }) => eq(p.id, programId),
+            columns: {
+                id: true,
+                name: true,
+                description: true,
+                minAge: true,
+                maxAge: true,
+            },
+        });
+        if (!program) return status(404, { error: "Program not found" });
+
+        const creative = await new ChatOpenAI({
+            model: "gpt-4o-mini",
+            apiKey: process.env.OPENAI_API_KEY,
+            maxRetries: 2,
+        }).withStructuredOutput(
+            z.object({
+                ads: z.array(z.object({
+                    headlines: z.array(z.string().min(1).max(30)).length(3),
+                    descriptions: z.array(z.string().min(1).max(90)).length(2),
+                })).length(2),
+            }),
+            { name: "search_ads" },
+        ).invoke([
+            new SystemMessage(SEARCH_AD_PROMPT),
+            new HumanMessage([
+                `Offer: ${offer}`,
+                `School: ${location.name}`,
+                `City: ${location.city || "unknown"}${location.state ? `, ${location.state}` : ""}`,
+                `Program: ${program.name}`,
+                `Description: ${program.description || "none"}`,
+                `Ages: ${program.minAge}-${program.maxAge}`,
+                `Keywords:\n${keywords.map((keyword) => `- ${keyword}`).join("\n")}`,
+            ].join("\n")),
+        ]);
+
+        const primaryHeadline = offer.trim();
+        if (primaryHeadline.length > 0 && primaryHeadline.length <= 30) {
+            for (const ad of creative.ads) {
+                ad.headlines[0] = primaryHeadline;
+            }
+        }
+
+        return status(200, creative);
+    }, {
+        params: t.Object({
+            lid: t.String(),
+        }),
+        body: t.Object({
+            programId: t.String(),
+            offer: t.String(),
+            keywords: t.Array(t.String({ minLength: 1 }), { minItems: 1, maxItems: 30 }),
+        }),
     });

@@ -3,10 +3,7 @@ import { subQueue } from "@/queues/subscriptions";
 import { memberInvoices, memberSubscriptions } from "@/subtrees/schemas";
 import type { Currency } from "@/subtrees/types/currency";
 import { getCurrency } from "@/utils/getCurrency";
-import {
-    canAccessLocation,
-    canEditLocationMember,
-} from "@/utils/locationAccess";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 import { defaultRepeatStrategy } from "bullmq";
 import { and, count, eq, gte, isNotNull, isNull, lt, or } from "drizzle-orm";
 import type Elysia from "elysia";
@@ -84,15 +81,7 @@ export async function upcomingRoutes(app: Elysia) {
         async (ctx) => {
             const { params, query, status } = ctx;
             const { lid } = params as { lid: string };
-            const actor = ctx as typeof ctx & {
-                vendorId?: string;
-                staffId?: string;
-                userId?: string;
-            };
-            if (
-                !(await canAccessLocation(lid, actor.vendorId, actor.staffId))
-                    .allowed
-            ) {
+            if (!(await hasLocationPermissions(lid, ctx, ["view billing"]))) {
                 return status(403, { error: "Forbidden", code: "FORBIDDEN" });
             }
             const location = await db.query.locations.findFirst({
@@ -169,7 +158,7 @@ export async function upcomingRoutes(app: Elysia) {
                             asc(row.id),
                         ],
                     }),
-                    canEditLocationMember(lid, actor),
+                    hasLocationPermissions(lid, ctx, ["manage billing"]),
                 ]);
             const schedules = await loadSchedules(subscriptions, lid);
             const result = calculateUpcomingPayments({

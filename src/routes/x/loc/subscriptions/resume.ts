@@ -17,9 +17,12 @@ import type { PromoDiscount } from "./shared";
 import type { SubscriptionBillingContext } from "./billingContext";
 import { getNextBillingDate } from "./shared";
 import { getStripeMigration, getSubscriptionBillingQuote } from "@/subtrees/utils/subscriptionBilling";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 export async function resumeSubscriptionRoutes(app: Elysia) {
-    return app.post("/:sid/resume", async ({ params, body, status }) => {
+    return app.post("/:sid/resume", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid, sid } = params as { lid: string; sid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { resumeAt } = body;
 
         const sub = await db.query.memberSubscriptions.findFirst({

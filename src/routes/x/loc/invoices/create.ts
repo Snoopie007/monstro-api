@@ -14,12 +14,13 @@ import {
 } from "./shared";
 import { buildSubscriptionInvoiceQuote } from "./subscriptionQuote";
 import { CashInvoiceError, ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
-import { canEditLocationMember } from "@/utils/locationAccess";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function createInvoiceRoutes(app: Elysia) {
     return app.post("/", async ctx => {
         const { body, params, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage billing"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const payload = Array.isArray(body) ? body[0] : body;
         if (!payload) {
             console.error("[x/invoices:create] Invalid payload", { locationId: lid, body });
@@ -103,8 +104,6 @@ export async function createInvoiceRoutes(app: Elysia) {
             }
 
             if (sub.paymentType === "cash") {
-                const actor = ctx as typeof ctx & { vendorId?: string; staffId?: string; userId?: string };
-                if (!await canEditLocationMember(lid, actor)) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
                 const now = new Date();
                 if (!["active", "past_due", "unpaid", "trialing"].includes(sub.status) || sub.startDate > now
                     || (sub.trialEnd && sub.trialEnd > now) || (sub.cancelAt && sub.cancelAt <= now)) {

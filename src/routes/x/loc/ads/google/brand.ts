@@ -14,6 +14,7 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { z } from "zod";
 import { loadAdsSettings } from "./settings";
+import { BRAND_CAMPAIGN_PROMPT } from "./utils/prompts";
 
 const Params = t.Object({
     lid: t.String(),
@@ -60,7 +61,7 @@ export const xGoogleAdsBrand = new Elysia({ prefix: "/:settingsId" })
                 }),
                 { name: "brand_campaign" },
             ).invoke([
-                new SystemMessage("You write Google Search brand campaigns for a local school. Return only brand keywords people type for THIS school (name, legal name, city + name). No generic class terms, no competitor names, no quotes, no match-type punctuation. Headlines max 30 characters, descriptions max 90. Ads send people to the homepage. Do not invent discounts or claims not in the brief."),
+                new SystemMessage(BRAND_CAMPAIGN_PROMPT),
                 new HumanMessage([
                     `Name: ${location.name}`,
                     `Legal name: ${location.legalName || "none"}`,

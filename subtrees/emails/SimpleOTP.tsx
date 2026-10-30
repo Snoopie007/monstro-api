@@ -34,7 +34,7 @@ export default function SimpleOTPEmail({
 						<Text style={style.paragraph}>Hi {member.firstName},</Text>
 
 						<Text style={style.paragraph}>
-							An invite to set up a Monstro account was made by{' '}
+							An invite to set up a Monstro X account was made by{' '}
 							<strong>{location.name}</strong>. To continue, enter the code below
 							on the verification page:
 						</Text>

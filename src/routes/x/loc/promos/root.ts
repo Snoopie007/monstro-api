@@ -2,18 +2,23 @@ import { Elysia, t } from "elysia";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/db";
 import { promos } from "@/subtrees/schemas";
+import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export const xPromos = new Elysia({ prefix: "/promos" })
-    .get("/", async ({ params, status }) => {
+    .get("/", async (ctx) => {
+        const { params, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view plans"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const promoList = await db.query.promos.findMany({
             where: (p, { eq }) => eq(p.locationId, lid),
             orderBy: [desc(promos.created)],
         });
         return status(200, { promos: promoList });
     })
-    .post("/", async ({ params, body, status }) => {
+    .post("/", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage plans"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const {
             code,
             type,
@@ -59,8 +64,10 @@ export const xPromos = new Elysia({ prefix: "/promos" })
             allowedPlans: t.Optional(t.Array(t.String())),
         }),
     })
-    .patch("/:pid", async ({ params, body, status }) => {
+    .patch("/:pid", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid, pid } = params as { lid: string; pid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage plans"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
 
         const [updated] = await db.update(promos).set({
             ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
@@ -81,8 +88,10 @@ export const xPromos = new Elysia({ prefix: "/promos" })
             expiresAt: t.Optional(t.Nullable(t.String())),
         }),
     })
-    .post("/:pid/archive", async ({ params, status }) => {
+    .post("/:pid/archive", async (ctx) => {
+        const { params, status } = ctx;
         const { lid, pid } = params as { lid: string; pid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["manage plans"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const [updated] = await db.update(promos)
             .set({ isActive: false, updated: new Date() })
             .where(and(eq(promos.id, pid), eq(promos.locationId, lid)))
@@ -94,8 +103,10 @@ export const xPromos = new Elysia({ prefix: "/promos" })
 
         return status(200, { success: true, promo: updated });
     })
-    .post("/validate", async ({ params, body, status }) => {
+    .post("/validate", async (ctx) => {
+        const { params, body, status } = ctx;
         const { lid } = params as { lid: string };
+        if (!await hasLocationPermissions(lid, ctx, ["view plans"])) return status(403, { error: "Forbidden", code: "FORBIDDEN" });
         const { pricingId, promoCode } = body;
 
         const normalizedPromoCode = promoCode.trim().toUpperCase();
