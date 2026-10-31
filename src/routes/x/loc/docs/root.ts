@@ -1,22 +1,13 @@
 import { Elysia } from "elysia";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db/db";
-import S3Bucket from "@/libs/s3";
 import { generatePDFBuffer } from "@/libs/PDFGenerator";
-import { getSignerName } from "@/routes/shared/docs";
+import { getDocPdf, getSignerName } from "@/routes/shared/docs";
 import { renderContractContent } from "@/utils/contractUtils";
 
-/** The PDF saved when the member signed: the record of what they signed. */
-async function getStoredPdf(memberId: string, lid: string, filename: string) {
-    const url = await new S3Bucket().getSignedUrl(`members/${memberId}/locations/${lid}/docs/${filename}`, 60);
-    if (!url) return null;
-    const response = await fetch(url);
-    return response.ok ? Buffer.from(await response.arrayBuffer()) : null;
-}
-
 /**
- * A member document as a PDF for staff. A signed document returns the PDF stored at signing; anything else
- * (unsigned, or signed without a stored file) is generated now with the same generator and signature block.
+ * A member document as a PDF for staff: the sealed PDF once signed, otherwise the frozen unsigned copy the member
+ * sees. Only an older signed document whose file was never stored is generated now with the previous renderer.
  */
 export const xDocs = new Elysia({ prefix: "/docs" })
     .get("/:did/pdf", async ({ params, status }) => {
@@ -29,7 +20,7 @@ export const xDocs = new Elysia({ prefix: "/docs" })
             return status(404, { error: "Document not found" });
         }
 
-        let pdf: Buffer | null = doc.signedOn && doc.pdfFilename ? await getStoredPdf(doc.memberId, lid, doc.pdfFilename) : null;
+        let pdf: Uint8Array | null = await getDocPdf(doc.id);
         if (!pdf) {
             const signature = doc.signedOn ? {
                 image: doc.signature?.trim() ? doc.signature : null,
