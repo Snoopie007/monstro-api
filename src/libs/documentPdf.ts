@@ -6,7 +6,7 @@ import { PDF, P12Signer, rgb, type EmbeddedFont, type PDFPage } from "@libpdf/co
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
-import type { FieldSource, TemplateField } from "@/subtrees/schemas";
+import type { FieldSource, TemplateField } from "@/subtrees/types";
 
 /**
  * Member document PDFs, all built with libpdf. It detects fields on uploaded templates, builds the unsigned copy a

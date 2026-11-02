@@ -5,7 +5,8 @@ import { db } from "@/db/db";
 import S3Bucket from "@/libs/s3";
 import { detectTemplateFields } from "@/libs/documentPdf";
 import { readStoredFile, templateSourceKey } from "@/routes/shared/docs";
-import { FIELD_SOURCES, contractTemplates, memberContracts } from "@/subtrees/schemas";
+import { contractTemplates, memberContracts } from "@/subtrees/schemas";
+import { FIELD_SOURCES } from "@/subtrees/types/templateFields";
 
 const isPdf = (bytes: Uint8Array) => new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-";
 const NOT_A_PDF = "That file is not a PDF we can read";
