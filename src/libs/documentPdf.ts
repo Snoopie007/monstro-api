@@ -306,9 +306,10 @@ export async function readSigningBoxes(unsigned: Uint8Array): Promise<SigningBox
 
 let sealSigner: Promise<P12Signer> | null = null;
 function getSealSigner() {
-    const { DOC_SEAL_P12_PATH: path, DOC_SEAL_P12_PASSWORD: password } = process.env;
-    assert(path && password !== undefined, "DOC_SEAL_P12_PATH and DOC_SEAL_P12_PASSWORD must be set to seal documents");
-    sealSigner ??= P12Signer.create(new Uint8Array(readFileSync(path)), password);
+    // A .p12 is binary, so it is stored base64-encoded in the env, like the other keys.
+    const { DOC_SEAL_P12_BASE64: p12, DOC_SEAL_P12_PASSWORD: password } = process.env;
+    assert(p12 && password !== undefined, "DOC_SEAL_P12_BASE64 and DOC_SEAL_P12_PASSWORD must be set to seal documents");
+    sealSigner ??= P12Signer.create(new Uint8Array(Buffer.from(p12, "base64")), password);
     return sealSigner;
 }
 
