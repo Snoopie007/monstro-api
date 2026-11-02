@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { and, eq, isNotNull } from "drizzle-orm";
-import { PDF } from "@libpdf/core";
+import { PDF, type PDFPage } from "@libpdf/core";
 import { db } from "@/db/db";
 import S3Bucket from "@/libs/s3";
 import { detectTemplateFields } from "@/libs/documentPdf";
@@ -9,6 +9,13 @@ import { FIELD_SOURCES, contractTemplates, memberContracts } from "@/subtrees/sc
 
 const isPdf = (bytes: Uint8Array) => new TextDecoder().decode(bytes.subarray(0, 5)) === "%PDF-";
 const NOT_A_PDF = "That file is not a PDF we can read";
+const NOT_FLAT = "This PDF has rotated or cropped pages. Print it to a new PDF, then upload that.";
+// Boxes are placed on pages as they are shown. On a rotated page, or one whose visible area doesn't start at 0,0, they
+// would be stamped somewhere else.
+const isFlatPage = (page: PDFPage) => {
+    const box = page.getCropBox();
+    return page.rotation === 0 && box.x === 0 && box.y === 0;
+};
 
 const findTemplate = (lid: string, cid: string) => db.query.contractTemplates.findFirst({
     where: (c, { and, eq }) => and(eq(c.id, cid), eq(c.locationId, lid)),
@@ -21,7 +28,10 @@ const findTemplate = (lid: string, cid: string) => db.query.contractTemplates.fi
 export const xTemplatePdf = new Elysia({ prefix: "/contracts" })
     .post("/detect", async ({ body, status }) => {
         const bytes = new Uint8Array(await body.file.arrayBuffer());
-        const detected = isPdf(bytes) ? await detectTemplateFields(bytes).catch(() => null) : null;
+        const pdf = isPdf(bytes) ? await PDF.load(bytes).catch(() => null) : null;
+        if (!pdf) return status(400, { error: NOT_A_PDF });
+        if (!pdf.getPages().every(isFlatPage)) return status(400, { error: NOT_FLAT });
+        const detected = await detectTemplateFields(bytes).catch(() => null);
         if (!detected) return status(400, { error: NOT_A_PDF });
         return status(200, detected);
     }, {
@@ -49,6 +59,7 @@ export const xTemplatePdf = new Elysia({ prefix: "/contracts" })
         const pdf = isPdf(bytes) ? await PDF.load(bytes).catch(() => null) : null;
         if (!pdf) return status(400, { error: NOT_A_PDF });
         const pages = pdf.getPages();
+        if (!pages.every(isFlatPage)) return status(400, { error: NOT_FLAT });
         const offPage = body.fields.some((f) => !pages[f.page] || f.x < 0 || f.y < 0 ||
             f.x + f.width > pages[f.page]!.width + 1 || f.y + f.height > pages[f.page]!.height + 1);
         if (offPage) return status(400, { error: "A box is outside its page" });
