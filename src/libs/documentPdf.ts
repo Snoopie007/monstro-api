@@ -64,7 +64,7 @@ function drawFitted(page: PDFPage, font: EmbeddedFont, text: string, box: { x: n
 
 type Run = { text: string; bold?: boolean; italic?: boolean };
 
-function layoutWritten(pdf: PDF, fonts: Fonts, title: string, markdown: string) {
+function layoutWritten(pdf: PDF, fonts: Fonts, title: string, markdown: string, signatureBlock: boolean) {
     const width = LETTER.width - 2 * MARGIN;
     const top = LETTER.height - MARGIN;
     let page = pdf.addPage({ size: "letter" });
@@ -158,6 +158,7 @@ function layoutWritten(pdf: PDF, fonts: Fonts, title: string, markdown: string) 
     y -= 10;
     const tree = unified().use(remarkParse).use(remarkGfm).parse(markdown) as any;
     tree.children.forEach((n: any) => block(n));
+    if (!signatureBlock) return [];
 
     // Signature block, kept together on one page.
     ensure(110);
@@ -170,6 +171,14 @@ function layoutWritten(pdf: PDF, fonts: Fonts, title: string, markdown: string) 
     ];
     for (const box of boxes) page.drawText(box.label!, { x: box.x, y: box.y - 10, font: fonts.regular, size: 7.5, color: MUTED });
     return boxes;
+}
+
+/** A written template as a plain PDF, for turning it into an uploaded template. Its boxes come back without being
+ * drawn, and the signature block is only laid out when the template asks for a signature. */
+export async function writtenTemplatePdf(title: string, markdown: string, signatureBlock: boolean) {
+    const pdf = PDF.create();
+    const boxes = layoutWritten(pdf, embedFonts(pdf), title, markdown, signatureBlock);
+    return { bytes: await pdf.save({ subsetFonts: true }), boxes };
 }
 
 // ─── Uploaded templates: box detection ────────────────────────────────────────────────────────────────────────────
@@ -261,7 +270,7 @@ export async function buildUnsignedPdf(layout: TemplateLayout): Promise<{ bytes:
     let boxes: SigningBox[];
     switch (layout.kind) {
         case "written":
-            boxes = layoutWritten(pdf, fonts, layout.title, layout.markdown);
+            boxes = layoutWritten(pdf, fonts, layout.title, layout.markdown, true);
             break;
         case "uploaded": {
             // Bake in the PDF's own form so its empty fields can't be typed into or confused with ours.
