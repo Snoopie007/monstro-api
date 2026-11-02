@@ -9,8 +9,8 @@ import remarkGfm from "remark-gfm";
 import type { FieldSource, TemplateField } from "@/subtrees/schemas";
 
 /**
- * Member document PDFs, all built with libpdf: field detection on uploaded templates, the unsigned copy a member is
- * shown (built once, then frozen), and the signed copy (stamped, given a certificate page, and sealed).
+ * Member document PDFs, all built with libpdf. It detects fields on uploaded templates, builds the unsigned copy a
+ * member is shown (built once, then frozen), and builds the signed copy (stamped, given a certificate page, and sealed).
  *
  * The unsigned PDF carries its own signing boxes as a `monstro-fields.json` attachment, so signing never depends on
  * the template, which the vendor may have edited since.
@@ -23,7 +23,7 @@ export type DetectedField = Omit<TemplateField, "source"> & { source: FieldSourc
 export type UnsignedPdf = { bytes: Uint8Array; sha256: string; boxes: SigningBox[] };
 /** The source of a member's document. A written template gives its Markdown, an uploaded one its PDF and boxes. */
 export type TemplateLayout =
-    | { kind: "written"; title: string; markdown: string }
+    | { kind: "written"; title: string; markdown: string; signatureBlock: boolean }
     | { kind: "uploaded"; source: Uint8Array; fields: TemplateField[]; variables: Record<string, unknown> };
 
 const FIELDS_ATTACHMENT = "monstro-fields.json";
@@ -79,7 +79,7 @@ function layoutWritten(pdf: PDF, fonts: Fonts, title: string, markdown: string, 
         if (n.type === "strong") return inline(n.children, { ...style, bold: true });
         if (n.type === "emphasis") return inline(n.children, { ...style, italic: true });
         if (n.type === "link") {
-            // Keep the address visible: a printed or flattened copy loses the link itself.
+            // Keep the address visible. A printed or flattened copy loses the link itself.
             const runs = inline(n.children, style);
             const label = runs.map((r) => r.text).join("");
             return label === n.url || `mailto:${label}` === n.url ? runs : [...runs, { text: ` (${n.url})`, ...style }];
@@ -234,7 +234,7 @@ export async function detectTemplateFields(bytes: Uint8Array) {
     const lineLabels = pdf.findText(/[a-z][a-z ,/'()-]{0,48}:/gi);
     const sameRow = (a: { pageIndex: number; bbox: { y: number } }, b: typeof a) => a.pageIndex === b.pageIndex && Math.abs(a.bbox.y - b.bbox.y) < 8;
     for (const line of lines) {
-        // The nearest label to the left, unless another underline sits between them: that label is the other blank's.
+        // The nearest label to the left, unless another underline sits between them. That label belongs to the other blank.
         const label = lineLabels.filter((l) => sameRow(l, line) && l.bbox.x < line.bbox.x
             && !lines.some((o) => o !== line && sameRow(o, line) && o.bbox.x > l.bbox.x && o.bbox.x < line.bbox.x))
             .sort((a, b) => b.bbox.x - a.bbox.x)[0];
@@ -263,14 +263,14 @@ export async function detectTemplateFields(bytes: Uint8Array) {
 
 // ─── Unsigned PDF ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Builds the PDF a member is shown: values filled in, empty boxes for what the signer adds. */
+/** Builds the PDF a member is shown, with values filled in and empty boxes for what the signer adds. */
 export async function buildUnsignedPdf(layout: TemplateLayout): Promise<{ bytes: Uint8Array; boxes: SigningBox[] }> {
     const pdf = layout.kind === "uploaded" ? await PDF.load(layout.source) : PDF.create();
     const fonts = embedFonts(pdf);
     let boxes: SigningBox[];
     switch (layout.kind) {
         case "written":
-            boxes = layoutWritten(pdf, fonts, layout.title, layout.markdown, true);
+            boxes = layoutWritten(pdf, fonts, layout.title, layout.markdown, layout.signatureBlock);
             break;
         case "uploaded": {
             // Bake in the PDF's own form so its empty fields can't be typed into or confused with ours.

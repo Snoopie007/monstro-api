@@ -20,11 +20,13 @@ export const getSignerName = (member: { firstName: string; lastName: string | nu
 const docKey = (memberId: string, lid: string, filename: string) => `members/${memberId}/locations/${lid}/docs/${filename}`;
 export const templateSourceKey = (lid: string, cid: string) => `locations/${lid}/contracts/${cid}/source.pdf`;
 
-export async function readStoredFile(key: string): Promise<Uint8Array | null> {
+/** A file we stored earlier. Callers only ask for files that should exist, so any failure is an error. */
+export async function readStoredFile(key: string): Promise<Uint8Array> {
     const url = await new S3Bucket().getSignedUrl(key, 60);
-    if (!url) return null;
+    assert(url, `No signed URL for ${key}`);
     const response = await fetch(url);
-    return response.ok ? new Uint8Array(await response.arrayBuffer()) : null;
+    assert(response.ok, `Reading ${key} from storage failed with ${response.status}`);
+    return new Uint8Array(await response.arrayBuffer());
 }
 
 const loadDocForPdf = (docId: string) => db.query.memberContracts.findFirst({
@@ -33,7 +35,7 @@ const loadDocForPdf = (docId: string) => db.query.memberContracts.findFirst({
 });
 
 /**
- * The unsigned PDF a member is shown. Built the first time the document is opened and then frozen: later template
+ * The unsigned PDF a member is shown. Built the first time the document is opened and then frozen, so later template
  * edits don't change it. The file name carries its hash, so a concurrent first open can't overwrite the winner.
  */
 export async function ensureUnsignedPdf(docId: string): Promise<UnsignedPdf> {
@@ -43,7 +45,7 @@ export async function ensureUnsignedPdf(docId: string): Promise<UnsignedPdf> {
 
     if (doc.unsignedSha256) {
         const bytes = await readStoredFile(unsignedKey(doc.unsignedSha256));
-        assert(bytes && sha256Hex(bytes) === doc.unsignedSha256, `Frozen PDF for ${doc.id} is missing or altered`);
+        assert(sha256Hex(bytes) === doc.unsignedSha256, `Frozen PDF for ${doc.id} was altered`);
         return { bytes, sha256: doc.unsignedSha256, boxes: await readSigningBoxes(bytes) };
     }
 
@@ -51,10 +53,12 @@ export async function ensureUnsignedPdf(docId: string): Promise<UnsignedPdf> {
     let layout: TemplateLayout;
     if (template.fields) {
         const source = await readStoredFile(templateSourceKey(template.locationId, template.id));
-        assert(source, `Template ${template.id} has boxes but no uploaded PDF`);
         layout = { kind: "uploaded", source, fields: template.fields, variables: buildContractVariables(doc) };
     } else {
-        layout = { kind: "written", title: template.title, markdown: renderContractContent(template.content, doc) };
+        layout = {
+            kind: "written", title: template.title, markdown: renderContractContent(template.content, doc),
+            signatureBlock: template.requireSignature,
+        };
     }
     const { bytes, boxes } = await buildUnsignedPdf(layout);
     const sha256 = sha256Hex(bytes);
@@ -66,8 +70,8 @@ export async function ensureUnsignedPdf(docId: string): Promise<UnsignedPdf> {
     return claimed ? { bytes, sha256, boxes } : ensureUnsignedPdf(docId);
 }
 
-/** The PDF for a document: the sealed file once signed, otherwise the frozen unsigned copy. Null for an old signed
- * document whose file was never stored. */
+/** The sealed file once a document is signed, otherwise its frozen unsigned copy. Null for an old signed document
+ * whose file was never stored. */
 export async function getDocPdf(docId: string): Promise<Uint8Array | null> {
     const doc = await db.query.memberContracts.findFirst({ where: (m, { eq }) => eq(m.id, docId) });
     if (!doc) throw new MemberDocumentError(404, "Contract not found");
@@ -86,7 +90,7 @@ export async function getDoc(docId: string) {
         contractTemplate: { title: contractTemplate.title, type: contractTemplate.type, requireSignature: contractTemplate.requireSignature },
         // What the signer fills and where, so the signing screen can ask for it and preview it on the PDF.
         signingBoxes: doc.signedOn ? [] : (await ensureUnsignedPdf(docId)).boxes,
-        // The date stamped if they sign now: the location's day, not the signer's.
+        // The date stamped if they sign now, in the location's time zone rather than the signer's.
         signingDate: formatInTimeZone(new Date(), location.timezone, "MMMM d, yyyy"),
         mdx: renderContractContent(contractTemplate.content, {
             location,
@@ -113,7 +117,7 @@ export async function signDoc(input: {
     const { docId, signature, userAgent, ipAddress } = input;
     const signedAt = new Date();
 
-    // Stamp and seal before saving anything: if this fails, nothing is recorded and the signer can retry.
+    // Stamp and seal before saving anything. If this fails, nothing is recorded and the signer can retry.
     const pending = await loadDocForPdf(docId);
     if (!pending?.contractTemplate || (input.mid && pending.memberId !== input.mid) || (input.lid && pending.locationId !== input.lid)) {
         throw new MemberDocumentError(404, "Contract not found");

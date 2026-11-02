@@ -6,8 +6,8 @@ import { getDocPdf, getSignerName } from "@/routes/shared/docs";
 import { renderContractContent } from "@/utils/contractUtils";
 
 /**
- * A member document as a PDF for staff: the sealed PDF once signed, otherwise the frozen unsigned copy the member
- * sees. Only an older signed document whose file was never stored is generated now with the previous renderer.
+ * A member document as a PDF for staff. Staff get the sealed PDF once it is signed, otherwise the frozen unsigned copy
+ * the member sees. Only an older signed document whose file was never stored is generated now with the previous renderer.
  */
 export const xDocs = new Elysia({ prefix: "/docs" })
     .get("/:did/pdf", async ({ params, status }) => {

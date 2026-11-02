@@ -29,9 +29,10 @@ export const xTemplatePdf = new Elysia({ prefix: "/contracts" })
     })
     .get("/:cid/source", async ({ params, status }) => {
         const { lid, cid } = params as { lid: string; cid: string };
-        if (!await findTemplate(lid, cid)) return status(404, { error: "Template not found" });
+        const template = await findTemplate(lid, cid);
+        if (!template) return status(404, { error: "Template not found" });
+        if (!template.fields) return status(404, { error: "No PDF uploaded for this template" });
         const bytes = await readStoredFile(templateSourceKey(lid, cid));
-        if (!bytes) return status(404, { error: "No PDF uploaded for this template" });
         return new Response(bytes, { headers: { "Content-Type": "application/pdf", "Cache-Control": "no-store" } });
     })
     .put("/:cid/source", async ({ params, body, status }) => {
@@ -39,7 +40,7 @@ export const xTemplatePdf = new Elysia({ prefix: "/contracts" })
         const template = await findTemplate(lid, cid);
         if (!template) return status(404, { error: "Template not found" });
         if (!template.editable) return status(409, { error: "This template is not editable. Create a replacement template." });
-        // Same rule as editing a written template: once a member has accepted it, its terms stay as they were.
+        // Same rule as editing a written template. Once a member has accepted it, its terms stay as they were.
         const [accepted] = await db.select({ id: memberContracts.id }).from(memberContracts)
             .where(and(eq(memberContracts.templateId, cid), isNotNull(memberContracts.signedOn))).limit(1);
         if (accepted) return status(409, { error: "Members have accepted this template. Create and publish a replacement to change its terms." });
@@ -52,7 +53,7 @@ export const xTemplatePdf = new Elysia({ prefix: "/contracts" })
             f.x + f.width > pages[f.page]!.width + 1 || f.y + f.height > pages[f.page]!.height + 1);
         if (offPage) return status(400, { error: "A box is outside its page" });
         if (template.requireSignature && !body.fields.some((f) => f.source === "signing.signature")) {
-            return status(400, { error: "This template requires a signature: add a signature box" });
+            return status(400, { error: "This template requires a signature. Add a signature box, then save." });
         }
 
         const fields = body.fields.map((f) => ({ ...f, label: f.label?.trim() || undefined }));
