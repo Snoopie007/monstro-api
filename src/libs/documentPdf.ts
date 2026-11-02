@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -5,8 +6,7 @@ import { PDF, P12Signer, rgb, type EmbeddedFont, type PDFPage } from "@libpdf/co
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
-import type { TemplateField } from "@/subtrees/schemas";
-import { interpolateContract } from "@/utils/contractUtils";
+import type { FieldSource, TemplateField } from "@/subtrees/schemas";
 
 /**
  * Member document PDFs, all built with libpdf: field detection on uploaded templates, the unsigned copy a member is
@@ -16,15 +16,15 @@ import { interpolateContract } from "@/utils/contractUtils";
  * the template, which the vendor may have edited since.
  */
 
-/** Values an uploaded template's boxes can be filled with when the document is created. */
-export const DATA_SOURCES = [
-    "member.name", "member.firstName", "member.lastName", "member.email", "member.phone", "member.dob",
-    "location.name", "location.legalName", "location.address", "location.city", "location.state", "location.postalCode",
-    "location.phone", "location.email", "plan.name", "plan.pricingName", "plan.price", "plan.interval",
-] as const;
-export const SIGNING_SOURCES = ["signing.signature", "signing.signerName", "signing.date", "signing.text"] as const;
-export type SigningSource = typeof SIGNING_SOURCES[number];
-export type SigningBox = TemplateField & { source: SigningSource };
+export type SigningBox = TemplateField & { source: Extract<FieldSource, `signing.${string}`> };
+/** A suggested box on an uploaded PDF. `source` is null when nothing near it says what it holds. */
+export type DetectedField = Omit<TemplateField, "source"> & { source: FieldSource | null };
+/** The PDF a member is shown, frozen the first time they open it, with the boxes they fill. */
+export type UnsignedPdf = { bytes: Uint8Array; sha256: string; boxes: SigningBox[] };
+/** The source of a member's document. A written template gives its Markdown, an uploaded one its PDF and boxes. */
+export type TemplateLayout =
+    | { kind: "written"; title: string; markdown: string }
+    | { kind: "uploaded"; source: Uint8Array; fields: TemplateField[]; variables: Record<string, unknown> };
 
 const FIELDS_ATTACHMENT = "monstro-fields.json";
 const LETTER = { width: 612, height: 792 };
@@ -35,7 +35,7 @@ const BOX_BORDER = rgb(0.62, 0.64, 0.7);
 const BOX_FILL = rgb(0.965, 0.97, 0.985);
 
 export const sha256Hex = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
-export const isSigningSource = (source: string): source is SigningSource => (SIGNING_SOURCES as readonly string[]).includes(source);
+const isSigningBox = (field: TemplateField): field is SigningBox => field.source.startsWith("signing.");
 
 const fontDir = join(dirname(require.resolve("dejavu-fonts-ttf/package.json")), "ttf");
 const fontFiles = { regular: "DejaVuSans.ttf", bold: "DejaVuSans-Bold.ttf", italic: "DejaVuSans-Oblique.ttf", boldItalic: "DejaVuSans-BoldOblique.ttf" };
@@ -50,10 +50,6 @@ export function resolveVariable(variables: Record<string, unknown>, path: string
         obj && typeof obj === "object" ? (obj as Record<string, unknown>)[key] : undefined, variables);
     if (value instanceof Date) return value.toISOString().slice(0, 10);
     return value === undefined || value === null ? "" : String(value);
-}
-
-function drawBox(page: PDFPage, box: { x: number; y: number; width: number; height: number }) {
-    page.drawRectangle({ ...box, color: BOX_FILL, borderColor: BOX_BORDER, borderWidth: 0.75 });
 }
 
 /** Writes text inside a box on one line, shrinking it to fit the width. */
@@ -172,12 +168,13 @@ function layoutWritten(pdf: PDF, fonts: Fonts, title: string, markdown: string) 
         { id: "signer-name", page: pageIndex, x: MARGIN + 260, y: y - 22, width: width - 260, height: 22, source: "signing.signerName", label: "Printed name" },
         { id: "date-signed", page: pageIndex, x: MARGIN + 260, y: y - 56, width: width - 260, height: 22, source: "signing.date", label: "Date signed" },
     ];
+    for (const box of boxes) page.drawText(box.label!, { x: box.x, y: box.y - 10, font: fonts.regular, size: 7.5, color: MUTED });
     return boxes;
 }
 
 // ─── Uploaded templates: box detection ────────────────────────────────────────────────────────────────────────────
 
-function guessSource(label: string): string {
+function guessSource(label: string): FieldSource | null {
     const l = label.toLowerCase();
     if (/sign/.test(l)) return "signing.signature";
     if (/date/.test(l) && !/birth/.test(l)) return "signing.date";
@@ -189,10 +186,10 @@ function guessSource(label: string): string {
     if (/first name/.test(l)) return "member.firstName";
     if (/last name/.test(l)) return "member.lastName";
     if (/name/.test(l)) return "member.name";
-    return "";
+    return null;
 }
 
-const overlaps = (a: TemplateField, b: TemplateField) => a.page === b.page &&
+const overlaps = (a: DetectedField, b: DetectedField) => a.page === b.page &&
     a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
 /**
@@ -202,8 +199,8 @@ const overlaps = (a: TemplateField, b: TemplateField) => a.page === b.page &&
 export async function detectTemplateFields(bytes: Uint8Array) {
     const pdf = await PDF.load(bytes);
     const pages = pdf.getPages();
-    const found: TemplateField[] = [];
-    const add = (f: Omit<TemplateField, "id">) => {
+    const found: DetectedField[] = [];
+    const add = (f: Omit<DetectedField, "id">) => {
         const field = { ...f, id: `f${found.length + 1}` };
         if (field.width > 4 && field.height > 4 && !found.some((g) => overlaps(g, field))) found.push(field);
     };
@@ -232,12 +229,12 @@ export async function detectTemplateFields(bytes: Uint8Array) {
         const label = lineLabels.filter((l) => sameRow(l, line) && l.bbox.x < line.bbox.x
             && !lines.some((o) => o !== line && sameRow(o, line) && o.bbox.x > l.bbox.x && o.bbox.x < line.bbox.x))
             .sort((a, b) => b.bbox.x - a.bbox.x)[0];
-        const source = label ? guessSource(label.text) : "";
+        const source = label ? guessSource(label.text) : null;
         // A signature sits on the line and rises above it, so its box is taller than a text box.
         add({
             page: line.pageIndex, x: line.bbox.x, y: line.bbox.y - 2, width: line.bbox.width,
             height: source === "signing.signature" ? 36 : Math.max(16, line.bbox.height + 4),
-            source, label: label?.text.replace(/:$/, "") ?? undefined,
+            source, label: label?.text.replace(/:$/, ""),
         });
     }
     for (const label of labels) {
@@ -258,49 +255,41 @@ export async function detectTemplateFields(bytes: Uint8Array) {
 // ─── Unsigned PDF ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** Builds the PDF a member is shown: values filled in, empty boxes for what the signer adds. */
-export async function buildUnsignedPdf(input: {
-    title: string;
-    content: string | null;
-    fields: TemplateField[] | null;
-    source: Uint8Array | null;
-    variables: Record<string, unknown>;
-}): Promise<Uint8Array> {
-    const uploaded = Boolean(input.fields && input.source);
-    const pdf = uploaded ? await PDF.load(input.source!) : PDF.create();
-    // Bake in an uploaded PDF's own form so its empty fields can't be typed into or confused with ours.
-    if (uploaded) pdf.getForm()?.flatten();
+export async function buildUnsignedPdf(layout: TemplateLayout): Promise<{ bytes: Uint8Array; boxes: SigningBox[] }> {
+    const pdf = layout.kind === "uploaded" ? await PDF.load(layout.source) : PDF.create();
     const fonts = embedFonts(pdf);
-    const pages = () => pdf.getPages();
-    const boxes: SigningBox[] = [];
-    if (uploaded) {
-        for (const field of input.fields!) {
-            const page = pages()[field.page];
-            if (!page) continue;
-            if (isSigningSource(field.source)) boxes.push(field as SigningBox);
-            else drawFitted(page, fonts.regular, resolveVariable(input.variables, field.source), field);
+    let boxes: SigningBox[];
+    switch (layout.kind) {
+        case "written":
+            boxes = layoutWritten(pdf, fonts, layout.title, layout.markdown);
+            break;
+        case "uploaded": {
+            // Bake in the PDF's own form so its empty fields can't be typed into or confused with ours.
+            pdf.getForm()?.flatten();
+            const pages = pdf.getPages();
+            boxes = layout.fields.filter(isSigningBox);
+            for (const field of layout.fields) {
+                if (!isSigningBox(field)) drawFitted(pages[field.page]!, fonts.regular, resolveVariable(layout.variables, field.source), field);
+            }
+            break;
         }
-    } else {
-        boxes.push(...layoutWritten(pdf, fonts, input.title, interpolateContract(input.content ?? "", input.variables)));
     }
 
+    const pages = pdf.getPages();
     for (const box of boxes) {
-        const page = pages()[box.page]!;
-        drawBox(page, box);
-        // An uploaded PDF already labels its own lines; only our written layout needs captions.
-        if (box.label && !uploaded) page.drawText(box.label, { x: box.x, y: box.y - 10, font: fonts.regular, size: 7.5, color: MUTED });
+        pages[box.page]!.drawRectangle({ ...box, color: BOX_FILL, borderColor: BOX_BORDER, borderWidth: 0.75 });
     }
     pdf.addAttachment(FIELDS_ATTACHMENT, new TextEncoder().encode(JSON.stringify({ version: 1, boxes })), {
         mimeType: "application/json",
         description: "Boxes the signer fills",
     });
-    return pdf.save({ subsetFonts: true });
+    return { bytes: await pdf.save({ subsetFonts: true }), boxes };
 }
 
-/** The boxes a frozen unsigned PDF expects the signer to fill. */
+/** The boxes a frozen unsigned PDF expects the signer to fill. Every unsigned PDF carries them. */
 export async function readSigningBoxes(unsigned: Uint8Array): Promise<SigningBox[]> {
-    const pdf = await PDF.load(unsigned);
-    const raw = pdf.getAttachment(FIELDS_ATTACHMENT);
-    if (!raw) return [];
+    const raw = (await PDF.load(unsigned)).getAttachment(FIELDS_ATTACHMENT);
+    assert(raw, "Unsigned PDF has no signing boxes attachment");
     return (JSON.parse(new TextDecoder().decode(raw)) as { boxes: SigningBox[] }).boxes;
 }
 
@@ -308,9 +297,9 @@ export async function readSigningBoxes(unsigned: Uint8Array): Promise<SigningBox
 
 let sealSigner: Promise<P12Signer> | null = null;
 function getSealSigner() {
-    const path = process.env.DOC_SEAL_P12_PATH;
-    if (!path) throw new Error("DOC_SEAL_P12_PATH is not set; documents cannot be sealed");
-    sealSigner ??= P12Signer.create(new Uint8Array(readFileSync(path)), process.env.DOC_SEAL_P12_PASSWORD ?? "");
+    const { DOC_SEAL_P12_PATH: path, DOC_SEAL_P12_PASSWORD: password } = process.env;
+    assert(path && password !== undefined, "DOC_SEAL_P12_PATH and DOC_SEAL_P12_PASSWORD must be set to seal documents");
+    sealSigner ??= P12Signer.create(new Uint8Array(readFileSync(path)), password);
     return sealSigner;
 }
 
@@ -329,31 +318,31 @@ export type SigningRecord = {
 
 /** Stamps the signer's values onto the frozen unsigned PDF, adds a certificate page and the audit record, and seals it. */
 export async function sealSignedPdf(input: {
-    unsigned: Uint8Array;
+    unsigned: UnsignedPdf;
     signaturePng: Uint8Array | null;
     texts: Record<string, string>;
     record: SigningRecord;
 }): Promise<Uint8Array> {
     const { record } = input;
-    const boxes = await readSigningBoxes(input.unsigned);
-    const pdf = await PDF.load(input.unsigned);
+    const pdf = await PDF.load(input.unsigned.bytes);
     const fonts = embedFonts(pdf);
     const pages = pdf.getPages();
     const signature = input.signaturePng ? pdf.embedImage(input.signaturePng) : null;
 
-    for (const box of boxes) {
-        const page = pages[box.page];
-        if (!page) continue;
-        if (box.source === "signing.signature") {
-            if (!signature) continue;
-            const scale = Math.min((box.width - 6) / signature.width, (box.height - 6) / signature.height);
-            const w = signature.width * scale, h = signature.height * scale;
-            page.drawImage(signature, { x: box.x + (box.width - w) / 2, y: box.y + (box.height - h) / 2, width: w, height: h });
-        } else {
-            const text = box.source === "signing.signerName" ? record.signerName
-                : box.source === "signing.date" ? record.signedDate
-                    : input.texts[box.id] ?? "";
-            drawFitted(page, fonts.regular, text, box);
+    for (const box of input.unsigned.boxes) {
+        const page = pages[box.page]!;
+        switch (box.source) {
+            case "signing.signature": {
+                // Only a template that doesn't require a signature can be signed without one.
+                if (!signature) break;
+                const scale = Math.min((box.width - 6) / signature.width, (box.height - 6) / signature.height);
+                const w = signature.width * scale, h = signature.height * scale;
+                page.drawImage(signature, { x: box.x + (box.width - w) / 2, y: box.y + (box.height - h) / 2, width: w, height: h });
+                break;
+            }
+            case "signing.signerName": drawFitted(page, fonts.regular, record.signerName, box); break;
+            case "signing.date": drawFitted(page, fonts.regular, record.signedDate, box); break;
+            case "signing.text": drawFitted(page, fonts.regular, input.texts[box.id]!, box); break;
         }
     }
 
@@ -374,10 +363,11 @@ export async function sealSignedPdf(input: {
     };
     const line = (label: string, value: string) => {
         cert.drawText(label, { x: MARGIN, y, font: fonts.bold, size: 9.5, color: MUTED });
-        for (const [i, text] of wrap(value).entries()) {
+        const lines = wrap(value);
+        for (const [i, text] of lines.entries()) {
             cert.drawText(text, { x: valueX, y: y - i * 13, font: fonts.regular, size: 9.5, color: INK });
         }
-        y -= wrap(value).length * 13 + 8;
+        y -= lines.length * 13 + 8;
     };
     cert.drawText("Signing certificate", { x: MARGIN, y, font: fonts.bold, size: 18, color: INK });
     y -= 34;
@@ -392,7 +382,7 @@ export async function sealSignedPdf(input: {
     line("Unsigned PDF SHA-256", record.unsignedSha256);
     if (signature) {
         const h = 50, w = Math.min(220, signature.width * (h / signature.height));
-        cert.drawText("Signature as drawn", { x: MARGIN, y, font: fonts.bold, size: 9.5, color: MUTED });
+        cert.drawText("Signature", { x: MARGIN, y, font: fonts.bold, size: 9.5, color: MUTED });
         cert.drawImage(signature, { x: MARGIN + 150, y: y - h + 10, width: w, height: h });
         y -= h + 14;
     }
@@ -403,7 +393,7 @@ export async function sealSignedPdf(input: {
         description: "Signing audit record",
     });
     if (input.signaturePng) {
-        pdf.addAttachment("signature.png", input.signaturePng, { mimeType: "image/png", description: "Signature as drawn" });
+        pdf.addAttachment("signature.png", input.signaturePng, { mimeType: "image/png", description: "Signature as adopted by the signer" });
     }
 
     const stamped = await PDF.load(await pdf.save({ subsetFonts: true }));

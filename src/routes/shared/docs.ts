@@ -1,8 +1,9 @@
+import { strict as assert } from "node:assert";
 import { and, eq, isNull } from "drizzle-orm";
 import { formatInTimeZone } from "date-fns-tz";
 import { db } from "@/db/db";
 import S3Bucket from "@/libs/s3";
-import { buildUnsignedPdf, readSigningBoxes, sealSignedPdf, sha256Hex } from "@/libs/documentPdf";
+import { buildUnsignedPdf, readSigningBoxes, sealSignedPdf, sha256Hex, type TemplateLayout, type UnsignedPdf } from "@/libs/documentPdf";
 import { locationState, memberContracts, memberLocations } from "@/subtrees/schemas";
 import { buildContractVariables, renderContractContent } from "@/utils/contractUtils";
 import { notifyDocumentSigned } from "@/utils/documentSignedNotification";
@@ -35,33 +36,34 @@ const loadDocForPdf = (docId: string) => db.query.memberContracts.findFirst({
  * The unsigned PDF a member is shown. Built the first time the document is opened and then frozen: later template
  * edits don't change it. The file name carries its hash, so a concurrent first open can't overwrite the winner.
  */
-export async function ensureUnsignedPdf(docId: string): Promise<{ bytes: Uint8Array; sha256: string }> {
+export async function ensureUnsignedPdf(docId: string): Promise<UnsignedPdf> {
     const doc = await loadDocForPdf(docId);
     if (!doc?.contractTemplate) throw new MemberDocumentError(404, "Contract not found");
     const unsignedKey = (sha: string) => docKey(doc.memberId, doc.locationId, `${doc.id}-unsigned-${sha.slice(0, 16)}.pdf`);
 
     if (doc.unsignedSha256) {
         const bytes = await readStoredFile(unsignedKey(doc.unsignedSha256));
-        if (!bytes || sha256Hex(bytes) !== doc.unsignedSha256) throw new Error(`Frozen PDF for ${doc.id} is missing or altered`);
-        return { bytes, sha256: doc.unsignedSha256 };
+        assert(bytes && sha256Hex(bytes) === doc.unsignedSha256, `Frozen PDF for ${doc.id} is missing or altered`);
+        return { bytes, sha256: doc.unsignedSha256, boxes: await readSigningBoxes(bytes) };
     }
 
     const template = doc.contractTemplate;
-    const source = template.fields ? await readStoredFile(templateSourceKey(template.locationId, template.id)) : null;
-    if (template.fields && !source) throw new Error(`Template ${template.id} has boxes but no uploaded PDF`);
-    const bytes = await buildUnsignedPdf({
-        title: template.title,
-        content: template.content,
-        fields: template.fields,
-        source,
-        variables: buildContractVariables({ location: doc.location, member: doc.member, pricing: doc.pricing }),
-    });
+    let layout: TemplateLayout;
+    if (template.fields) {
+        const source = await readStoredFile(templateSourceKey(template.locationId, template.id));
+        assert(source, `Template ${template.id} has boxes but no uploaded PDF`);
+        layout = { kind: "uploaded", source, fields: template.fields, variables: buildContractVariables(doc) };
+    } else {
+        layout = { kind: "written", title: template.title, markdown: renderContractContent(template.content, doc) };
+    }
+    const { bytes, boxes } = await buildUnsignedPdf(layout);
     const sha256 = sha256Hex(bytes);
     await new S3Bucket().uploadBuffer(bytes, unsignedKey(sha256), "application/pdf");
     const [claimed] = await db.update(memberContracts).set({ unsignedSha256: sha256 })
         .where(and(eq(memberContracts.id, doc.id), isNull(memberContracts.unsignedSha256)))
         .returning({ id: memberContracts.id });
-    return claimed ? { bytes, sha256 } : ensureUnsignedPdf(docId);
+    // Another request froze its copy first, so use that one.
+    return claimed ? { bytes, sha256, boxes } : ensureUnsignedPdf(docId);
 }
 
 /** The PDF for a document: the sealed file once signed, otherwise the frozen unsigned copy. Null for an old signed
@@ -74,26 +76,16 @@ export async function getDocPdf(docId: string): Promise<Uint8Array | null> {
 }
 
 export async function getDoc(docId: string) {
-    const doc = await db.query.memberContracts.findFirst({
-        where: (m, { eq }) => eq(m.id, docId),
-        with: {
-            contractTemplate: true,
-            member: true,
-            location: true,
-            pricing: { with: { plan: true } },
-        },
-    });
+    const doc = await loadDocForPdf(docId);
     if (!doc?.contractTemplate) {
         throw new MemberDocumentError(404, "Contract not found");
     }
     const { contractTemplate, member, location, pricing, ...rest } = doc;
-    const unsigned = doc.signedOn ? null : await ensureUnsignedPdf(docId);
     return {
         ...rest,
         contractTemplate: { title: contractTemplate.title, type: contractTemplate.type, requireSignature: contractTemplate.requireSignature },
-        unsignedSha256: unsigned?.sha256 ?? rest.unsignedSha256,
         // What the signer fills and where, so the signing screen can ask for it and preview it on the PDF.
-        signingBoxes: unsigned ? await readSigningBoxes(unsigned.bytes) : [],
+        signingBoxes: doc.signedOn ? [] : (await ensureUnsignedPdf(docId)).boxes,
         // The date stamped if they sign now: the location's day, not the signer's.
         signingDate: formatInTimeZone(new Date(), location.timezone, "MMMM d, yyyy"),
         mdx: renderContractContent(contractTemplate.content, {
@@ -132,16 +124,15 @@ export async function signDoc(input: {
         if (input.sha256 && input.sha256 !== unsigned.sha256) {
             throw new MemberDocumentError(409, "This document changed since it was opened. Reload it and sign again.");
         }
-        const boxes = await readSigningBoxes(unsigned.bytes);
         const texts = input.texts ?? {};
-        const missing = boxes.filter((b) => b.source === "signing.text" && !texts[b.id]?.trim());
+        const missing = unsigned.boxes.filter((b) => b.source === "signing.text" && !texts[b.id]?.trim());
         if (missing.length) throw new MemberDocumentError(400, `Fill in: ${missing.map((b) => b.label ?? b.id).join(", ")}`);
         const signerName = input.signerName?.trim() || getSignerName(pending.member);
         if (pending.contractTemplate.requireSignature && !signature?.trim()) {
             throw new MemberDocumentError(400, "A signature is required to accept this document");
         }
         const sealed = await sealSignedPdf({
-            unsigned: unsigned.bytes,
+            unsigned,
             signaturePng: signature?.trim() ? new Uint8Array(Buffer.from(signature, "base64")) : null,
             texts,
             record: {
