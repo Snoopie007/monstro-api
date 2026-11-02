@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { boolean, text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
+import { boolean, jsonb, text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
+import type { TemplateField } from "../types/templateFields";
 
 import { locations } from "./locations";
 import { ContractTypeEnum } from "./DatabaseEnums";
@@ -8,6 +9,8 @@ export const contractTemplates = pgTable("contracts", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade", onUpdate: "cascade" }),
 	content: text("content"),
+	/** Set for an uploaded PDF template (its boxes); null for a written template. */
+	fields: jsonb("fields").$type<TemplateField[]>(),
 	title: text("title").notNull(),
 	description: text("description").notNull(),
 	isDraft: boolean("is_draft").notNull().default(false),

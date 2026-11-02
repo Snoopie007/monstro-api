@@ -10,8 +10,8 @@ export async function getLocationWaiverTemplate(client: WaiverTx | typeof db, li
     const template = await client.query.contractTemplates.findFirst({
         where: and(eq(contractTemplates.id, waiverId), eq(contractTemplates.locationId, lid)),
     });
-    if (!template || template.type !== "waiver" || template.isDraft || !template.content?.trim() || !template.title.trim()) {
-        throw new CheckoutError(400, "The location's default waiver must be published and have a title and content. Contact the location to update it.");
+    if (!template || template.type !== "waiver" || template.isDraft || template.fields === null || !template.title.trim()) {
+        throw new CheckoutError(400, "The location's default waiver must be published and have a title and a PDF. Contact the location to update it.");
     }
     return template;
 }
