@@ -64,6 +64,8 @@ export const memberContracts = pgTable("member_contracts", {
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     signature: text("signature"),
     pdfFilename: text("pdf_filename"),
+    /** SHA-256 of the unsigned PDF the member is shown, frozen the first time the document is opened. */
+    unsignedSha256: text("unsigned_sha256"),
     signedOn: timestamp("signed_on", { withTimezone: true }),
     memberPlanId: text("member_plan_id"),
     userAgent: text('user_agent'),
