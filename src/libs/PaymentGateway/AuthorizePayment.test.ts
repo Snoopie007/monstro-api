@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { AuthorizePaymentGateway } from "./AuthorizePayment";
+import { AuthorizeApiError, AuthorizePaymentGateway } from "./AuthorizePayment";
 
 const originalFetch = globalThis.fetch;
 const originalApiUrl = process.env.AUTHORIZE_API_URL;
@@ -9,6 +9,19 @@ afterEach(() => {
 });
 
 describe("AuthorizePaymentGateway", () => {
+    test("sends only the access token and treats its rejection as an API error", async () => {
+        process.env.AUTHORIZE_API_URL = "https://apitest.authorize.net/xml/v1/request.api";
+        let requestBody: Record<string, Record<string, unknown>> = {};
+        globalThis.fetch = Object.assign(async (_input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+            requestBody = JSON.parse(String(init?.body));
+            return new Response("", { status: 401 });
+        }, { preconnect: originalFetch.preconnect });
+
+        const gateway = new AuthorizePaymentGateway({ accessToken: "expired" });
+        await expect(gateway.getTransactionDetails("1")).rejects.toBeInstanceOf(AuthorizeApiError);
+        expect(requestBody.getTransactionDetailsRequest?.merchantAuthentication).toEqual({ accessToken: "expired" });
+    });
+
     test("uses the configured endpoint and Authorize.net field order", async () => {
         process.env.AUTHORIZE_API_URL = "https://apitest.authorize.net/xml/v1/request.api";
         let requestUrl = "";
@@ -22,7 +35,7 @@ describe("AuthorizePaymentGateway", () => {
             }));
         }, { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
         await gateway.createPaymentProfile({
             customerProfileId: "12345",
             dataDescriptor: "COMMON.ACCEPT.INAPP.PAYMENT",
@@ -52,7 +65,7 @@ describe("AuthorizePaymentGateway", () => {
             }));
         }, { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
         const result = await gateway.createCharge("12345", "1001", {
             total: 100,
             currency: "USD",
@@ -101,7 +114,7 @@ describe("AuthorizePaymentGateway", () => {
             messages: { resultCode: "Ok" },
         })), { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
         const result = await gateway.createCharge("12345", "1001", {
             total: 100,
             currency: "USD",
@@ -141,7 +154,7 @@ test("inspects and follows provider transaction state", async () => {
         }));
     }, { preconnect: originalFetch.preconnect });
 
-    const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+    const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
     const details = await gateway.getTransactionDetails("provider-1");
     expect(details.transactionStatus).toBe("settledSuccessfully");
     const refund = await gateway.refundTransaction("provider-1", 100, "0015");
@@ -165,7 +178,7 @@ test("surfaces a singleton follow-on provider error", async () => {
         messages: { resultCode: "Ok" },
     })), { preconnect: originalFetch.preconnect });
 
-    const gateway = new AuthorizePaymentGateway("login", "transaction-key");
+    const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
     expect(gateway.refundTransaction("provider-1", 100, "0015"))
         .rejects.toThrow("does not meet the criteria");
 });
@@ -184,7 +197,7 @@ test.each([true, false])("held Authorize charges preserve legacy behavior unless
     const { chargeWithGateway } = await import("@/utils/checkoutUtil");
     const { createHash } = await import("node:crypto");
     const result = await chargeWithGateway({
-        gateway: { service: "authorize", integrationId: "gateway", apiKey: "login", secretKey: "key", accountId: "merchant", metadata: {} },
+        gateway: { service: "authorize", integrationId: "gateway", credentials: { name: "login", transactionKey: "key" }, accountId: "merchant", metadata: {} },
         gatewayCustomerId: "customer", paymentMethodId: "method", transactionId: "txn",
         total: 100, feesAmount: 0, currency: "USD", description: "Subscription", note: "",
         metadata: { billingAttemptId: "attempt", invoiceId: "invoice" }, paymentType: "card", deferredBilling,

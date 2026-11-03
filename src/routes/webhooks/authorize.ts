@@ -12,6 +12,7 @@ import { db } from "@/db/db";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
+import { getAuthorizeCredentials } from "@/subtrees/utils/server/authorizeOAuth";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, scheduleRenewalRepair } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
@@ -56,6 +57,8 @@ type AuthorizeIntegration = {
     accountId: string;
     apiKey: string | null;
     secretKey: string | null;
+    accessToken: string | null;
+    expires: number | null;
     webhookSignatureKey: string | null;
 };
 
@@ -132,6 +135,8 @@ async function integrationForEvent(event: AuthorizeWebhookEvent, transaction?: t
                 accountId: true,
                 apiKey: true,
                 secretKey: true,
+                accessToken: true,
+                expires: true,
                 webhookSignatureKey: true,
             },
         }) as Promise<AuthorizeIntegration | undefined>;
@@ -150,6 +155,8 @@ async function integrationForEvent(event: AuthorizeWebhookEvent, transaction?: t
             accountId: true,
             apiKey: true,
             secretKey: true,
+            accessToken: true,
+            expires: true,
             webhookSignatureKey: true,
         },
     }) as Promise<AuthorizeIntegration | undefined>;
@@ -444,7 +451,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
             ),
         });
         const integration = await integrationForEvent(event, direct);
-        if (!integration?.apiKey || !integration.secretKey) {
+        if (!integration) {
             return status(401, { error: "Authorize.net webhook merchant is unknown" });
         }
         if (!verifyAuthorizeWebhookSignature(
@@ -455,9 +462,9 @@ export function authorizeWebhookRoutes(app: Elysia) {
             return status(401, { error: "Invalid Authorize.net webhook signature" });
         }
 
-        const authorize = new AuthorizePaymentGateway(integration.apiKey, integration.secretKey);
         let details: AuthorizeTransactionDetails;
         try {
+            const authorize = new AuthorizePaymentGateway(await getAuthorizeCredentials(db, integration));
             details = await authorize.getTransactionDetails(providerTransactionId);
         } catch (error) {
             console.error("Unable to reconcile Authorize.net webhook", error);
