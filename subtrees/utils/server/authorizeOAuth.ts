@@ -3,16 +3,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { z } from "zod";
 import { integrations } from "../../schemas/integrations";
 
-/** The merchantAuthentication block of an Authorize.net API request. */
-export type AuthorizeCredentials =
-  | { name: string; transactionKey: string }
-  | { accessToken: string };
-
 type AuthorizeDatabase = Pick<PostgresJsDatabase<any>, "transaction" | "update">;
-type AuthorizeIntegration = Pick<
-  typeof integrations.$inferSelect,
-  "id" | "apiKey" | "secretKey" | "accessToken" | "expires"
->;
 
 // Lifetimes are read from each response because the docs and their samples disagree.
 const TokenResponseSchema = z.object({
@@ -84,15 +75,11 @@ async function refreshAuthorizeToken(db: AuthorizeDatabase, integrationId: strin
   }
 }
 
-/** Returns API keys or a usable access token, refreshing it first when it is about to expire. */
-export async function getAuthorizeCredentials(
+/** Returns a usable access token, refreshing it first when it is about to expire. */
+export async function getAuthorizeAccessToken(
   db: AuthorizeDatabase,
-  integration: AuthorizeIntegration,
-): Promise<AuthorizeCredentials> {
-  if (!integration.accessToken) {
-    if (!integration.apiKey || !integration.secretKey) throw new Error("Authorize.net credentials are missing");
-    return { name: integration.apiKey, transactionKey: integration.secretKey };
-  }
-  if (isTokenFresh(integration.expires)) return { accessToken: integration.accessToken };
-  return { accessToken: await refreshAuthorizeToken(db, integration.id) };
+  integration: Pick<typeof integrations.$inferSelect, "id" | "accessToken" | "expires">,
+) {
+  if (integration.accessToken && isTokenFresh(integration.expires)) return integration.accessToken;
+  return refreshAuthorizeToken(db, integration.id);
 }

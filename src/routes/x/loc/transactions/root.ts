@@ -12,7 +12,7 @@ import {
     transactions,
 } from "@/subtrees/schemas";
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { getAuthorizeCredentials } from "@/subtrees/utils/server/authorizeOAuth";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorizeOAuth";
 import { getRefundAmounts } from "@/utils/refunds";
 import { hasLocationPermissions } from "@/utils/locationAccess";
 
@@ -95,7 +95,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
                     eq(candidate.locationId, lid),
                     eq(candidate.service, "authorize"),
                 ),
-                columns: { id: true, apiKey: true, secretKey: true, accessToken: true, expires: true },
+                columns: { id: true, accessToken: true, expires: true },
             });
             if (!integration) {
                 return status(404, { error: "Authorize.net integration not found" });
@@ -103,7 +103,7 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
             const providerId = transaction.paymentIntentId
                 || (typeof txMeta.authorizeTransactionId === "string" ? txMeta.authorizeTransactionId : null);
             if (!providerId) return status(400, { error: "No Authorize.net transaction ID found" });
-            const authorize = new AuthorizePaymentGateway(await getAuthorizeCredentials(db, integration));
+            const authorize = new AuthorizePaymentGateway(await getAuthorizeAccessToken(db, integration));
 
             if (txMeta.authorizeRefundState === "pending") {
                 let details;

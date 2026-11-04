@@ -17,7 +17,7 @@ describe("AuthorizePaymentGateway", () => {
             return new Response("", { status: 401 });
         }, { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway({ accessToken: "expired" });
+        const gateway = new AuthorizePaymentGateway("expired");
         await expect(gateway.getTransactionDetails("1")).rejects.toBeInstanceOf(AuthorizeApiError);
         expect(requestBody.getTransactionDetailsRequest?.merchantAuthentication).toEqual({ accessToken: "expired" });
     });
@@ -35,7 +35,7 @@ describe("AuthorizePaymentGateway", () => {
             }));
         }, { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
+        const gateway = new AuthorizePaymentGateway("token");
         await gateway.createPaymentProfile({
             customerProfileId: "12345",
             dataDescriptor: "COMMON.ACCEPT.INAPP.PAYMENT",
@@ -65,7 +65,7 @@ describe("AuthorizePaymentGateway", () => {
             }));
         }, { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
+        const gateway = new AuthorizePaymentGateway("token");
         const result = await gateway.createCharge("12345", "1001", {
             total: 100,
             currency: "USD",
@@ -114,7 +114,7 @@ describe("AuthorizePaymentGateway", () => {
             messages: { resultCode: "Ok" },
         })), { preconnect: originalFetch.preconnect });
 
-        const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
+        const gateway = new AuthorizePaymentGateway("token");
         const result = await gateway.createCharge("12345", "1001", {
             total: 100,
             currency: "USD",
@@ -154,7 +154,7 @@ test("inspects and follows provider transaction state", async () => {
         }));
     }, { preconnect: originalFetch.preconnect });
 
-    const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
+    const gateway = new AuthorizePaymentGateway("token");
     const details = await gateway.getTransactionDetails("provider-1");
     expect(details.transactionStatus).toBe("settledSuccessfully");
     const refund = await gateway.refundTransaction("provider-1", 100, "0015");
@@ -178,7 +178,7 @@ test("surfaces a singleton follow-on provider error", async () => {
         messages: { resultCode: "Ok" },
     })), { preconnect: originalFetch.preconnect });
 
-    const gateway = new AuthorizePaymentGateway({ name: "login", transactionKey: "transaction-key" });
+    const gateway = new AuthorizePaymentGateway("token");
     expect(gateway.refundTransaction("provider-1", 100, "0015"))
         .rejects.toThrow("does not meet the criteria");
 });
@@ -197,7 +197,7 @@ test.each([true, false])("held Authorize charges preserve legacy behavior unless
     const { chargeWithGateway } = await import("@/utils/checkoutUtil");
     const { createHash } = await import("node:crypto");
     const result = await chargeWithGateway({
-        gateway: { service: "authorize", integrationId: "gateway", credentials: { name: "login", transactionKey: "key" }, accountId: "merchant", metadata: {} },
+        gateway: { service: "authorize", integrationId: "gateway", accessToken: "token", accountId: "merchant", metadata: {} },
         gatewayCustomerId: "customer", paymentMethodId: "method", transactionId: "txn",
         total: 100, feesAmount: 0, currency: "USD", description: "Subscription", note: "",
         metadata: { billingAttemptId: "attempt", invoiceId: "invoice" }, paymentType: "card", deferredBilling,

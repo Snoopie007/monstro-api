@@ -12,7 +12,7 @@ import { db } from "@/db/db";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
-import { getAuthorizeCredentials } from "@/subtrees/utils/server/authorizeOAuth";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorizeOAuth";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, scheduleRenewalRepair } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
 import {
@@ -55,8 +55,6 @@ type AuthorizeIntegration = {
     id: string;
     locationId: string;
     accountId: string;
-    apiKey: string | null;
-    secretKey: string | null;
     accessToken: string | null;
     expires: number | null;
     webhookSignatureKey: string | null;
@@ -133,8 +131,6 @@ async function integrationForEvent(event: AuthorizeWebhookEvent, transaction?: t
                 id: true,
                 locationId: true,
                 accountId: true,
-                apiKey: true,
-                secretKey: true,
                 accessToken: true,
                 expires: true,
                 webhookSignatureKey: true,
@@ -153,8 +149,6 @@ async function integrationForEvent(event: AuthorizeWebhookEvent, transaction?: t
             id: true,
             locationId: true,
             accountId: true,
-            apiKey: true,
-            secretKey: true,
             accessToken: true,
             expires: true,
             webhookSignatureKey: true,
@@ -464,7 +458,7 @@ export function authorizeWebhookRoutes(app: Elysia) {
 
         let details: AuthorizeTransactionDetails;
         try {
-            const authorize = new AuthorizePaymentGateway(await getAuthorizeCredentials(db, integration));
+            const authorize = new AuthorizePaymentGateway(await getAuthorizeAccessToken(db, integration));
             details = await authorize.getTransactionDetails(providerTransactionId);
         } catch (error) {
             console.error("Unable to reconcile Authorize.net webhook", error);

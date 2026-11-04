@@ -71,7 +71,7 @@ const db = {
                 };
             }),
         },
-        integrations: { findFirst: mock(async () => ({ apiKey: "login", secretKey: "secret", accessToken: "square-token" })) },
+        integrations: { findFirst: mock(async () => ({ accessToken: "token", expires: Number.MAX_SAFE_INTEGER })) },
         orders: { findFirst: mock(async () => undefined) },
         eventRegistrations: { findFirst: mock(async () => undefined) },
         courseEnrollments: { findFirst: mock(async () => undefined) },
