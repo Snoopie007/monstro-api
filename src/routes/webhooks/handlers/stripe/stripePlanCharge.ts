@@ -98,7 +98,7 @@ export async function handleStripePlanCharge({
             forPeriodEnd: memberInvoices.forPeriodEnd,
         }).from(memberInvoices).where(eq(memberInvoices.id, invoiceId)).limit(1).for("update");
         assert(current, "Invoice not found");
-        if (current.locationId !== locationId || current.memberId !== memberId || current.memberPlanId !== memberPlanId) {
+        if (current.locationId !== locationId || current.memberId !== memberId || (current.memberPlanId ?? "") !== memberPlanId) {
             throw new Error("Stripe webhook invoice binding mismatch");
         }
         if (success && amount !== current.total) {

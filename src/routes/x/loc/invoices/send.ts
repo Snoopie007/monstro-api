@@ -6,7 +6,7 @@ import { SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGatewa
 import { calculateChargeDetails } from "@/utils/enrollUtils";
 import type Elysia from "elysia";
 import { t } from "elysia";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { memberInvoices, transactions } from "@/subtrees/schemas";
 import { scheduleInvoiceReminderAndOverdue } from "./shared";
 import type { Currency } from "square";
@@ -323,6 +323,10 @@ export async function sendInvoiceRoutes(app: Elysia) {
                 return status(404, { error: "Stripe integration not found" });
             }
 
+            if (invoice.invoiceType === "recurring" && !invoiceMetadata?.paymentMethodId) {
+                return status(400, { error: "Recurring automatic invoices need a saved payment method. Use Send for Payment instead." });
+            }
+
             const stripe = new StripePaymentGateway(integration.accessToken);
 
             let paymentMethod: { id: string; type: string } | undefined;
@@ -382,9 +386,11 @@ export async function sendInvoiceRoutes(app: Elysia) {
                     memberId: invoice.memberId,
                     invoiceId: invoice.id,
                     memberPlanId: invoice.memberPlanId || "",
+                    source: "invoice_send",
                 },
                 productName: invoice.description || "Invoice",
                 currency: (invoice.currency?.toUpperCase() || "USD") as Currency,
+                offSession: true,
             }).catch(async (error) => {
                 const failure = paymentFailureFromError(error);
                 if (!failure) throw error;
@@ -414,7 +420,8 @@ export async function sendInvoiceRoutes(app: Elysia) {
             });
 
             await db.update(memberInvoices).set({
-                status: "sent",
+                // The webhook can mark this invoice paid first, so don't overwrite that.
+                status: sql`case when ${memberInvoices.paid} then ${memberInvoices.status} else 'sent' end`,
                 sentAt: new Date(),
                 updated: new Date(),
             }).where(eq(memberInvoices.id, iid));

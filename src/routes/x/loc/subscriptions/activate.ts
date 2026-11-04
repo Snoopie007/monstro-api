@@ -360,6 +360,8 @@ export async function activateSubscriptionRoutes(app: Elysia) {
                             gatewayService,
                         },
                         currency: currency || "usd",
+                        paymentMethodType: paymentMethod.value.type,
+                        offSession: true,
                     }),
                     30000,
                     "Stripe payment timeout while activating subscription"

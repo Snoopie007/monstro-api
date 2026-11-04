@@ -47,6 +47,7 @@ type StripeMetadata = {
     memberPlanId?: string;
     billingAttemptId?: string;
     orderId?: string;
+    source?: string;
 };
 
 function stripePaymentType(type: string | null | undefined): PaymentType {
@@ -214,11 +215,11 @@ async function handleCharge(event: Stripe.Event) {
 
 
 
-    if (metadata.memberPlanId && metadata.invoiceId) {
+    if (metadata.invoiceId && (metadata.memberPlanId || (metadata.source === "invoice_send" && charge.paid))) {
 
         await handleStripePlanCharge({
             invoiceId: metadata.invoiceId,
-            memberPlanId: metadata.memberPlanId,
+            memberPlanId: metadata.memberPlanId ?? "",
             locationId: metadata.locationId,
             memberId: metadata.memberId,
             paymentType,

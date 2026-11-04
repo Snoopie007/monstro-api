@@ -221,11 +221,12 @@ export class StripePaymentGateway {
         };
     }
 
-    async createChargeWithoutLineItems(customerId: string, paymentMethodId: string, options: ChargeOptions & { offSession?: boolean }) {
-        const { total, currency, metadata, feesAmount, description, idempotencyKey, offSession } = options || {};
+    async createChargeWithoutLineItems(customerId: string, paymentMethodId: string, options: ChargeOptions & { offSession?: boolean; paymentMethodType?: string }) {
+        const { total, currency, metadata, feesAmount, description, idempotencyKey, offSession, paymentMethodType } = options || {};
         const option: Stripe.PaymentIntentCreateParams = {
             customer: customerId,
             amount: total,
+            ...(paymentMethodType ? { payment_method_types: [paymentMethodType] } : {}),
             payment_method: paymentMethodId,
             ...(feesAmount ? { application_fee_amount: feesAmount } : {}),
             currency,
