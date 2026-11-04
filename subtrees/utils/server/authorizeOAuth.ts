@@ -8,6 +8,7 @@ export type AuthorizeCredentials =
   | { name: string; transactionKey: string }
   | { accessToken: string };
 
+type AuthorizeDatabase = Pick<PostgresJsDatabase<any>, "transaction" | "update">;
 type AuthorizeIntegration = Pick<
   typeof integrations.$inferSelect,
   "id" | "apiKey" | "secretKey" | "accessToken" | "expires"
@@ -30,7 +31,7 @@ function isTokenFresh(expires: number | null) {
   return expires !== null && expires > Date.now() + REFRESH_MARGIN_MS;
 }
 
-async function requestToken(params: Record<string, string>) {
+export async function requestAuthorizeToken(params: Record<string, string>) {
   const { AUTHORIZE_TOKEN_URL, AUTHORIZE_CLIENT_ID, AUTHORIZE_CLIENT_SECRET } = process.env;
   if (!AUTHORIZE_TOKEN_URL || !AUTHORIZE_CLIENT_ID || !AUTHORIZE_CLIENT_SECRET) {
     throw new Error("Authorize.net OAuth is not configured");
@@ -60,30 +61,32 @@ async function requestToken(params: Record<string, string>) {
   };
 }
 
-export function authorizeOAuthUrl(state: string) {
-  const { AUTHORIZE_OAUTH_URL, AUTHORIZE_CLIENT_ID, AUTHORIZE_REDIRECT_URI } = process.env;
-  if (!AUTHORIZE_OAUTH_URL || !AUTHORIZE_CLIENT_ID || !AUTHORIZE_REDIRECT_URI) {
-    throw new Error("Authorize.net OAuth is not configured");
+// API, workers and vendor all refresh. The row lock stops them from racing with a rotated refresh token.
+async function refreshAuthorizeToken(db: AuthorizeDatabase, integrationId: string) {
+  try {
+    return await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(integrations).where(eq(integrations.id, integrationId)).for("update");
+      if (current?.accessToken && isTokenFresh(current.expires)) return current.accessToken;
+      if (!current?.refreshToken) throw new AuthorizeGrantError("Authorize.net refresh token is missing");
+
+      const token = await requestAuthorizeToken({ grant_type: "refresh_token", refresh_token: current.refreshToken });
+      await tx.update(integrations).set({ ...token, updated: new Date() }).where(eq(integrations.id, current.id));
+      return token.accessToken;
+    });
+  } catch (error) {
+    if (error instanceof AuthorizeGrantError) {
+      await db.update(integrations).set({
+        metadata: sql`coalesce(${integrations.metadata}, '{}'::jsonb) || '{"status":"reconnect_required"}'::jsonb`,
+        updated: new Date(),
+      }).where(eq(integrations.id, integrationId));
+    }
+    throw error;
   }
-
-  const query = new URLSearchParams({
-    sub: "oauth",
-    client_id: AUTHORIZE_CLIENT_ID,
-    redirect_uri: AUTHORIZE_REDIRECT_URI,
-    scope: "read,write",
-    state,
-  });
-  return `${AUTHORIZE_OAUTH_URL}?${query}`;
-}
-
-export function exchangeAuthorizeCode(code: string) {
-  // platform is missing from the docs' parameter table but is in their sample request and sample app.
-  return requestToken({ grant_type: "authorization_code", code, platform: "2" });
 }
 
 /** Returns API keys or a usable access token, refreshing it first when it is about to expire. */
 export async function getAuthorizeCredentials(
-  db: Pick<PostgresJsDatabase<any>, "transaction" | "update">,
+  db: AuthorizeDatabase,
   integration: AuthorizeIntegration,
 ): Promise<AuthorizeCredentials> {
   if (!integration.accessToken) {
@@ -91,25 +94,5 @@ export async function getAuthorizeCredentials(
     return { name: integration.apiKey, transactionKey: integration.secretKey };
   }
   if (isTokenFresh(integration.expires)) return { accessToken: integration.accessToken };
-
-  try {
-    // API, workers and vendor all refresh. The row lock stops them from racing with a rotated refresh token.
-    return await db.transaction(async (tx) => {
-      const [current] = await tx.select().from(integrations).where(eq(integrations.id, integration.id)).for("update");
-      if (current?.accessToken && isTokenFresh(current.expires)) return { accessToken: current.accessToken };
-      if (!current?.refreshToken) throw new AuthorizeGrantError("Authorize.net refresh token is missing");
-
-      const token = await requestToken({ grant_type: "refresh_token", refresh_token: current.refreshToken });
-      await tx.update(integrations).set({ ...token, updated: new Date() }).where(eq(integrations.id, current.id));
-      return { accessToken: token.accessToken };
-    });
-  } catch (error) {
-    if (error instanceof AuthorizeGrantError) {
-      await db.update(integrations).set({
-        metadata: sql`coalesce(${integrations.metadata}, '{}'::jsonb) || '{"status":"reconnect_required"}'::jsonb`,
-        updated: new Date(),
-      }).where(eq(integrations.id, integration.id));
-    }
-    throw error;
-  }
+  return { accessToken: await refreshAuthorizeToken(db, integration.id) };
 }
