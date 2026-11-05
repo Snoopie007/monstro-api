@@ -683,13 +683,20 @@ var HeroSectionSchema = MediaSectionBaseSchema.extend({
 
 // src/sections/how-to-start.ts
 import { z as z15 } from "zod";
+var DEFAULT_HOW_TO_START_CTA = {
+  label: "Get Started",
+  href: "/get-started",
+  external: false,
+  variant: "primary"
+};
 var HowToStartSectionSchema = SectionBaseSchema.extend({
   type: z15.literal("how_to_start"),
   props: SectionHeadingSchema.extend({
     steps: z15.array(z15.object({
       title: z15.string().min(1),
       description: z15.string().min(1)
-    }).strict()).min(1)
+    }).strict()).min(1),
+    cta: SiteLinkSchema.optional()
   }).strict()
 }).strict();
 
@@ -1444,10 +1451,10 @@ var SiteScriptsAndEmbedsSchema = z34.object({
 import { z as z35 } from "zod";
 var PagePathSchema = z35.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
 var RUNTIME_OWNED_PATH_SEGMENTS = new Set([
+  "account",
   "api",
   "auth",
   "blog",
-  "docs",
   "download",
   "legal",
   "member",
@@ -1910,6 +1917,7 @@ var PublicSiteConfigObjectSchema = z37.object({
   }).strict(),
   theme: SiteThemeSchema,
   headerAction: SiteHeaderActionSchema.optional(),
+  headerCta: SiteHeaderActionSchema.optional(),
   navigation: z37.array(NavigationItemSchema),
   footer: z37.object({
     credit: z37.string(),
@@ -3615,6 +3623,7 @@ var SHARED_CONFIG_KEYS = [
   "navigation",
   "footer",
   "headerAction",
+  "headerCta",
   "locationConnections",
   "locationOverride",
   "content",
@@ -3701,7 +3710,7 @@ var PlansQuerySchema = z38.object({
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var DocumentSignatureRequestSchema = z38.object({ signature: z38.string().min(1) }).strict();
+var DocumentSignatureRequestSchema = z38.object({ signature: z38.string().min(1).nullable().optional() }).strict();
 var EnrollRequestSchema = z38.object({
   locationId: z38.string().min(1).optional(),
   attemptId: z38.string().min(1),
@@ -4254,6 +4263,7 @@ export {
   EnrollQuoteSchema,
   EnrollQuoteRequestSchema,
   DocumentSignatureRequestSchema,
+  DEFAULT_HOW_TO_START_CTA,
   ContactFormSectionSchema,
   CompareSectionSchema,
   CheckoutAdditionalFeeSchema,
