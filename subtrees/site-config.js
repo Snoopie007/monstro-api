@@ -275,6 +275,7 @@ import { z as z5 } from "zod";
 var FormIdSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 var FieldNameSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_]*$/);
 var FORM_LOCATION_FIELD = "$location";
+var CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
 var ConditionFieldSchema = z5.union([FieldNameSchema, z5.literal(FORM_LOCATION_FIELD)]);
 var RedirectTypeSchema = z5.enum(["page", "url"]);
 var FormFieldSchema = z5.object({
@@ -327,6 +328,7 @@ var NativeSiteFormSchema = z5.object({
   redirectToType: RedirectTypeSchema.optional(),
   redirectRules: z5.union([z5.string(), z5.array(RedirectRuleSchema), z5.null()]).default(null),
   tags: z5.array(z5.string().min(1).max(200)).max(100).default([]),
+  hiddenConsents: z5.array(z5.enum(CONSENT_FIELDS)).optional(),
   fields: z5.array(FormFieldSchema).min(1).max(100)
 }).strict().superRefine((form, issue) => {
   const fields = new Map;
@@ -392,7 +394,6 @@ var FormSubmissionResponseSchema = z5.object({
   redirectTo: z5.string().optional()
 }).strict();
 var SiteFormSchema = NativeSiteFormSchema;
-var CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
 function matchesFormCondition(condition, values, locationId) {
   if (condition.field === FORM_LOCATION_FIELD) {
     return Boolean(locationId) && locationId === condition.equals;
@@ -452,8 +453,9 @@ function validateFormValues(form, input, locationId) {
       values[field.name] = parsed.data[field.name];
     }
   }
-  for (const field of CONSENT_FIELDS)
-    values[field] = parsed.data[field] === true;
+  for (const field of CONSENT_FIELDS) {
+    values[field] = !form.hiddenConsents?.includes(field) && parsed.data[field] === true;
+  }
   return values;
 }
 function resolveFormRedirect(form, values, pages, locationId, locationName) {
