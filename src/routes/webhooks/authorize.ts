@@ -12,7 +12,7 @@ import { db } from "@/db/db";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { AuthorizePaymentGateway, type AuthorizeTransactionDetails } from "@/libs/PaymentGateway";
-import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorizeOAuth";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 import { scheduleCronBasedRenewal, scheduleRecursiveRenewal, scheduleRenewalRepair } from "@/queues/subscriptions";
 import { createEnrollUnsignedDocs } from "@/utils";
 import {

@@ -12,7 +12,7 @@ import {
     transactions,
 } from "@/subtrees/schemas";
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
-import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorizeOAuth";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 import { getRefundAmounts } from "@/utils/refunds";
 import { hasLocationPermissions } from "@/utils/locationAccess";
 

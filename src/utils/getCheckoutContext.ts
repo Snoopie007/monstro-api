@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import type { IntegrationMetadata } from "@/subtrees/types";
-import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorizeOAuth";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 
 export class CheckoutError extends Error {
 	readonly status: 202 | 400 | 404 | 500;

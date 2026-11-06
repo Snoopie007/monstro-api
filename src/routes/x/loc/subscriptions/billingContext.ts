@@ -3,7 +3,7 @@ import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { StripePaymentGateway, SquarePaymentGateway, AuthorizePaymentGateway } from "@/libs/PaymentGateway";
 import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
-import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorizeOAuth";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 
 export type SupportedStripePaymentMethod = "card" | "us_bank_account" | "link" | "cashapp";
 export type SubscriptionBillingContext = {

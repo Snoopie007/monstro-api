@@ -8,7 +8,7 @@ import {
     type AuthorizeCustomerProfile,
 } from "@/libs/PaymentGateway";
 import { integrations, locationState, memberLocations } from "@/subtrees/schemas";
-import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorizeOAuth";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 import type { Address, PaymentMethod } from "@/subtrees/types";
 
 async function getAuthorizeGateway(lid: string) {
