@@ -5,7 +5,13 @@ import { db } from "@/db/db";
 import { memberLocations } from "@/subtrees/schemas";
 import type { PaymentType } from "@/subtrees/types";
 import { and, eq } from "drizzle-orm";
-import { handleStripeOrderCharge, handleStripePlanCharge } from "@/routes/webhooks/handlers/stripe";
+import {
+    handleStripeOrderCharge,
+    handleStripePlanCharge,
+    handleStripeBundleCharge,
+    handleStripeBundleFailure,
+    handleStripeBundleIntent,
+} from "@/routes/webhooks/handlers/stripe";
 
 /**
  * Stripe Webhook Handler for Member Billing Events
@@ -19,6 +25,8 @@ const allowedEvents: Stripe.Event.Type[] = [
     "payment_intent.payment_failed",
     "payment_intent.canceled",
     "payment_intent.succeeded",
+    "payment_intent.processing",
+    "payment_intent.requires_action",
     "application_fee.created",
     "application_fee.refunded",
     "customer.created",
@@ -119,6 +127,11 @@ async function processEvent(event: Stripe.Event) {
                 await handleCharge(event);
                 break;
 
+            case "payment_intent.succeeded":
+            case "payment_intent.processing":
+            case "payment_intent.requires_action":
+                await handleStripeBundleIntent(event);
+                break;
             case "payment_intent.payment_failed":
             case "payment_intent.canceled":
                 await handlePaymentIntentFailure(event);
@@ -213,7 +226,10 @@ async function handleCharge(event: Stripe.Event) {
         return;
     }
 
-
+    if (await handleStripeBundleCharge(event, charge, metadata)) {
+        console.log(`[STRIPE WEBHOOK] Bundle charge ${charge.id} processed successfully`);
+        return;
+    }
 
     if (metadata.invoiceId && (metadata.memberPlanId || (metadata.source === "invoice_send" && charge.paid))) {
 
@@ -270,6 +286,10 @@ async function handlePaymentIntentFailure(event: Stripe.Event) {
         || lastPaymentError?.decline_code
         || (event.type === "payment_intent.canceled" ? "canceled" : null);
 
+    if (await handleStripeBundleFailure(event, paymentIntent, metadata, { failedReason, failedCode })) {
+        console.log(`[STRIPE WEBHOOK] Bundle charge ${paymentIntent.id} failed`);
+        return;
+    }
 
     if (metadata.invoiceId && metadata.memberPlanId) {
 

@@ -69,6 +69,8 @@ export async function claimInvoiceAttempt(input: {
     });
 }
 
+const UNSETTLED_STATUSES = ["processing", "requires_action", "unknown"] as const;
+
 export async function saveInvoiceAttemptResult(input: {
     invoiceId: string;
     attemptId: string;
@@ -92,6 +94,8 @@ export async function saveInvoiceAttemptResult(input: {
         if (!prior || prior.id !== input.attemptId) return;
         if ((invoice.paid || invoice.status === "paid" || prior.status === "succeeded")
             && input.status !== "succeeded") return;
+        // A late uncertain answer cannot replace a decline already recorded for this attempt.
+        if (prior.status === "failed" && UNSETTLED_STATUSES.some((status) => status === input.status)) return;
         const billingAttempt: SubscriptionBillingAttempt = {
             ...prior,
             status: input.status,

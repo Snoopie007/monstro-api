@@ -6,6 +6,7 @@ import type Elysia from "elysia";
 import { t } from "elysia";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import { getRefundAmounts } from "@/utils/refunds";
+import { findBundleChargeOwner } from "@/handlers/addonsBundles/refund/charges";
 import { hasLocationPermissions } from "@/utils/locationAccess";
 
 export async function cancelSubscriptionRoutes(app: Elysia) {
@@ -64,6 +65,15 @@ export async function cancelSubscriptionRoutes(app: Elysia) {
 
                 if (!latestPaidTransaction) {
                     return status(400, { error: "No paid transaction found for this subscription" });
+                }
+
+                // The bundle's charges are refunded together. A renewal after the bundle ended is the subscription's own.
+                if (sub.bundlePurchaseId && await findBundleChargeOwner(lid, latestPaidTransaction.id)) {
+                    return status(409, {
+                        error: "Use Refund & cancel bundle to refund every bundled subscription and add-on.",
+                        code: "BUNDLE_REFUND_BLOCKED",
+                        bundlePurchaseId: sub.bundlePurchaseId,
+                    });
                 }
 
                 const paymentIntentId = latestPaidTransaction.paymentIntentId

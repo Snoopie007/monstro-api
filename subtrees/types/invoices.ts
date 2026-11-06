@@ -1,6 +1,7 @@
 import { memberInvoices } from "../schemas/invoice";
 import type { Location } from "./location";
 import type { Member, MemberSubscription } from "./member";
+import type { InvoiceItem } from "../utils/invoiceItems";
 
 export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     member?: Member;
@@ -9,15 +10,6 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
     memberSubscription?: MemberSubscription;
 }
 
-export type InvoiceItem = {
-    name: string;
-    quantity: number;
-    price: number;
-    productId?: string;
-    discount?: number;
-    tax?: number;
-    feeId?: string;
-    refundable?: boolean;
-}
+export type { InvoiceItem } from "../utils/invoiceItems";
 
 export type NewInvoice = typeof memberInvoices.$inferInsert;
