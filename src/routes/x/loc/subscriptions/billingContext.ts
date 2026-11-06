@@ -190,13 +190,16 @@ async function resolveAuthorizePaymentMethod(
     if (!selectedMethodId) {
         throw new BillingContextError("Authorize.net payment setup is missing", "PAYMENT_METHOD_MISSING");
     }
-    const authorize = new AuthorizePaymentGateway(await getAuthorizeAccessToken(db, gateway));
-    const profile = await authorize.getCustomerProfile(gatewayCustomerId);
+    const accessToken = await getAuthorizeAccessToken(db, gateway).catch((error) => {
+        console.error("Authorize.net access token unavailable", error);
+        throw new BillingContextError("Payment gateway integration is not configured", "GATEWAY_NOT_CONFIGURED");
+    });
+    const profile = await new AuthorizePaymentGateway(accessToken).getCustomerProfile(gatewayCustomerId);
     const profiles = Array.isArray(profile.paymentProfiles) ? profile.paymentProfiles : profile.paymentProfiles ? [profile.paymentProfiles] : [];
     if (!profiles.some(method => method.customerPaymentProfileId === selectedMethodId)) {
         throw new BillingContextError("Payment method does not belong to subscription customer", "PAYMENT_METHOD_OWNER_MISMATCH");
     }
-    return { gateway: { ...gateway, integrationId: gateway.id, accessToken: gateway.accessToken ?? "" },
+    return { gateway: { ...gateway, integrationId: gateway.id, accessToken },
         gatewayCustomerId, paymentMethodId: selectedMethodId, paymentMethodType: "card" };
 }
 

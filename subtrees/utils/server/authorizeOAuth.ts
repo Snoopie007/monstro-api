@@ -52,11 +52,17 @@ export async function requestAuthorizeToken(params: Record<string, string>) {
   };
 }
 
-// API, workers and vendor all refresh. The row lock stops them from racing with a rotated refresh token.
-async function refreshAuthorizeToken(db: AuthorizeDatabase, integrationId: string) {
+/** Returns a usable access token, refreshing it first when it is about to expire. */
+export async function getAuthorizeAccessToken(
+  db: AuthorizeDatabase,
+  integration: Pick<typeof integrations.$inferSelect, "id" | "accessToken" | "expires">,
+) {
+  if (integration.accessToken && isTokenFresh(integration.expires)) return integration.accessToken;
+
+  // API, workers and vendor all refresh. The row lock stops them from racing with a rotated refresh token.
   try {
     return await db.transaction(async (tx) => {
-      const [current] = await tx.select().from(integrations).where(eq(integrations.id, integrationId)).for("update");
+      const [current] = await tx.select().from(integrations).where(eq(integrations.id, integration.id)).for("update");
       if (current?.accessToken && isTokenFresh(current.expires)) return current.accessToken;
       if (!current?.refreshToken) throw new AuthorizeGrantError("Authorize.net refresh token is missing");
 
@@ -69,17 +75,8 @@ async function refreshAuthorizeToken(db: AuthorizeDatabase, integrationId: strin
       await db.update(integrations).set({
         metadata: sql`coalesce(${integrations.metadata}, '{}'::jsonb) || '{"status":"reconnect_required"}'::jsonb`,
         updated: new Date(),
-      }).where(eq(integrations.id, integrationId));
+      }).where(eq(integrations.id, integration.id));
     }
     throw error;
   }
-}
-
-/** Returns a usable access token, refreshing it first when it is about to expire. */
-export async function getAuthorizeAccessToken(
-  db: AuthorizeDatabase,
-  integration: Pick<typeof integrations.$inferSelect, "id" | "accessToken" | "expires">,
-) {
-  if (integration.accessToken && isTokenFresh(integration.expires)) return integration.accessToken;
-  return refreshAuthorizeToken(db, integration.id);
 }
