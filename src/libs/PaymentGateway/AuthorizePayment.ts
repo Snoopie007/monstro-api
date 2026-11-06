@@ -103,10 +103,7 @@ export function authorizeMerchantCustomerId(memberId: string) {
 }
 
 export class AuthorizePaymentGateway {
-    constructor(
-        private readonly apiLoginId: string,
-        private readonly transactionKey: string,
-    ) {}
+    constructor(private readonly accessToken: string) {}
 
     private async request(operation: string, payload: Record<string, unknown>) {
         const url = process.env.AUTHORIZE_API_URL;
@@ -119,7 +116,7 @@ export class AuthorizePaymentGateway {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     [operation]: {
-                        merchantAuthentication: { name: this.apiLoginId, transactionKey: this.transactionKey },
+                        merchantAuthentication: { accessToken: this.accessToken },
                         ...payload,
                     },
                 }),
@@ -129,6 +126,10 @@ export class AuthorizePaymentGateway {
             throw new AuthorizeTransportError("Authorize.net request could not be completed", { cause });
         }
 
+        // A rejected token means nothing was processed, so this is not an unknown outcome.
+        if (response.status === 401) {
+            throw new AuthorizeApiError("ACCESS_TOKEN_EXPIRED", "The provided access token has expired");
+        }
         if (!response.ok) {
             throw new AuthorizeTransportError(`Authorize.net request failed with status ${response.status}`);
         }

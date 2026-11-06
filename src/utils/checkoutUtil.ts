@@ -144,7 +144,7 @@ export async function chargeWithGateway(input: ChargeWithGatewayInput): Promise<
 		if (paymentType !== "card") {
 			throw new PaymentChargeError("Authorize.net only supports saved card payments here");
 		}
-		const authorize = new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey);
+		const authorize = new AuthorizePaymentGateway(gateway.accessToken);
 		try {
 			const billingAttemptId = input.deferredBilling ? metadata.billingAttemptId : undefined;
 			const charge = await authorize.createCharge(gatewayCustomerId, paymentMethodId, {
