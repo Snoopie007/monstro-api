@@ -10,7 +10,7 @@ export const courseEnrollmentRoutes = new Elysia()
     .post("/:courseId/enrollments", async (ctx) => {
         const { params, body, status, vendorId, staffId } = ctx as typeof ctx & XAuthContext;
         const { lid, courseId } = params as { lid: string; courseId: string };
-        const { memberId, paymentMethodId, paymentType } = body;
+        const { memberId, paymentMethodId, paymentType, attemptId } = body;
 
         try {
             const { allowed } = await canAccessLocation(lid, vendorId, staffId);
@@ -46,6 +46,7 @@ export const courseEnrollmentRoutes = new Elysia()
                     paymentType: paymentType ?? "card",
                     courseTitle: course.title,
                     coursePrice: course.price,
+                    attemptId,
                 });
             if (!enrollment) throw new CourseEnrollError(400, "Failed to create enrollment");
 
@@ -58,5 +59,6 @@ export const courseEnrollmentRoutes = new Elysia()
             memberId: t.String(),
             paymentMethodId: t.Optional(t.String()),
             paymentType: t.Optional(t.Literal("card")),
+            attemptId: t.Optional(t.String({ minLength: 1, maxLength: 128 })),
         }),
     });
