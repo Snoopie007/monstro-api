@@ -20,6 +20,7 @@ export * from "./MemberLocation";
 export * from "./MemberPasses";
 export * from "./MemberPlan";
 export * from "./members";
+export * from "./memberBulkRuns";
 export * from "./MigrateMembers";
 export * from "./permissions";
 export * from "./programs";
