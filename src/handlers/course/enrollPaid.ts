@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { db } from "@/db/db";
@@ -22,7 +21,6 @@ type CourseEnrollParams = {
     courseTitle: string;
     coursePrice: number;
     paymentType: PaymentType;
-    attemptId?: string;
 };
 
 export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
@@ -34,14 +32,9 @@ export async function handleCourseEnrollPaid(params: CourseEnrollParams) {
         courseTitle,
         coursePrice,
         paymentType,
-        attemptId,
     } = params;
-    // With an attempt ID, the same attempt always maps to the same transaction and enrollment IDs. The
-    // transaction ID is also the gateway's idempotency key and reference (Authorize.net allows 20
-    // characters), and the enrollment ID is part of the charge note, so a retry replays the first charge exactly.
-    const attemptHash = attemptId ? createHash("sha256").update(`course:${lid}:${mid}:${attemptId}`).digest("hex") : null;
-    const transactionId = attemptHash ? `txn_${attemptHash.slice(0, 16)}` : generateUUID('txn_');
-    const enrollmentId = attemptHash ? `cen_${attemptHash.slice(16, 32)}` : generateUUID('cen_');
+    const transactionId = generateUUID('txn_');
+    const enrollmentId = generateUUID('cen_');
 
 
     const duplicate = await db.query.courseEnrollments.findFirst({

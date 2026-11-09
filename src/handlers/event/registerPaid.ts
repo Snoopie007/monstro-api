@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { paymentFailureFromError, isPaymentDecline } from "@/subtrees/utils/workflow/payments";
 import { db } from "@/db/db";
@@ -11,6 +10,7 @@ import {
     type ChargeWithGatewayResult,
 } from "@/utils";
 import { transactions } from "@/subtrees/schemas";
+import { generateUUID } from "@/subtrees/utils/generateUUID";
 import { SquareError } from "square";
 import Stripe from "stripe";
 import { handleSquareError, handleStripeError } from "@/utils/paymentErrors";
@@ -29,11 +29,7 @@ type HandlePaidEventRegistrationProps = LoadEventContextParams & {
 
 export async function handlePaidEventRegistration(props: HandlePaidEventRegistrationProps) {
     const { lid, mid, paymentMethodId, paymentType = "card", attemptId } = props;
-    // The same attempt always maps to the same transaction and registration IDs. The transaction ID is
-    // also the gateway's idempotency key and reference (Authorize.net allows 20 characters), and the
-    // registration ID is part of the charge request, so a retry replays the first charge exactly.
-    const attemptHash = createHash("sha256").update(`event:${lid}:${mid}:${attemptId}`).digest("hex");
-    const transactionId = `txn_${attemptHash.slice(0, 16)}`;
+    const transactionId = generateUUID('txn_');
 
 
     const { event, ticket } = await loadEventRegistrationContext(props);
@@ -58,7 +54,7 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
         price: chargeDetails.unitCost,
         productId: ticket.id,
     }, ...chargeDetails.additionalFeeLines];
-    const registrationId = `erg_${attemptHash.slice(16, 32)}`;
+    const registrationId = generateUUID("erg_");
     const metadata: Record<string, unknown> = {
         ...(gateway.service === "authorize" ? {
             authorizeIntegrationId: gateway.integrationId,
@@ -106,66 +102,50 @@ export async function handlePaidEventRegistration(props: HandlePaidEventRegistra
     switch (charge.status) {
         case "approved": {
             const now = new Date();
-            const paidTransaction = {
-                id: transactionId,
-                description,
-                total,
-                subTotal,
-                tax,
-                type: "inbound",
-                status: "paid",
-                locationId: lid,
-                memberId: mid,
-                paymentMethodId,
-                paymentType,
-                chargeDate: now,
-                feeAmount: feesAmount,
-                items,
-                currency,
-                paymentIntentId: charge.paymentIntentId,
-                metadata: { ...metadata, ...charge.gatewayMetadata },
-                activities: [{
-                    at: now.toISOString(),
-                    reason: "Payment succeeded",
-                    paymentType: charge.paymentType ?? paymentType,
-                    brand: charge.brand,
-                    last4: charge.last4,
-                }],
-            } satisfies typeof transactions.$inferInsert;
-            try {
-                return await db.transaction(async (tx) => {
-                    const [transaction] = await tx.insert(transactions).values(paidTransaction)
-                        .onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
-                    if (!transaction) {
-                        const existingRegistration = await tx.query.eventRegistrations.findFirst({
-                            where: (candidate, { eq }) => eq(candidate.transactionId, transactionId),
-                        });
-                        if (existingRegistration) return existingRegistration;
-                        throw new EventRegistrationError(202, "Payment is being finalized; do not retry", "FULFILLMENT_PENDING");
-                    }
-                    return createEventRegistration(tx, {
-                        lid,
-                        mid,
-                        event,
-                        ticket,
-                        transactionId,
-                        registrationId,
-                        status: "registered",
-                    }, "best-effort");
-                });
-            } catch (error) {
-                if (!(error instanceof EventRegistrationError) || error.status === 202) throw error;
-                // The card was charged but the seat could not be created (for example, the event sold out
-                // in the meantime). Keep the payment on record so staff can refund it or register the member.
-                await db.insert(transactions)
-                    .values({ ...paidTransaction, metadata: { ...paidTransaction.metadata, fulfillmentError: error.message } })
-                    .onConflictDoNothing({ target: transactions.id });
-                throw new EventRegistrationError(
-                    202,
-                    `Payment succeeded but registration failed (${error.message}). Refund the payment or register the member manually.`,
-                    "FULFILLMENT_FAILED",
-                );
-            }
+            return db.transaction(async (tx) => {
+                const [transaction] = await tx.insert(transactions).values({
+                    id: transactionId,
+                    description,
+                    total,
+                    subTotal,
+                    tax,
+                    type: "inbound",
+                    status: "paid",
+                    locationId: lid,
+                    memberId: mid,
+                    paymentMethodId,
+                    paymentType,
+                    chargeDate: now,
+                    feeAmount: feesAmount,
+                    items,
+                    currency,
+                    paymentIntentId: charge.paymentIntentId,
+                    metadata: { ...metadata, ...charge.gatewayMetadata },
+                    activities: [{
+                        at: now.toISOString(),
+                        reason: "Payment succeeded",
+                        paymentType: charge.paymentType ?? paymentType,
+                        brand: charge.brand,
+                        last4: charge.last4,
+                    }],
+                }).onConflictDoNothing({ target: transactions.id }).returning({ id: transactions.id });
+                if (!transaction) {
+                    const existingRegistration = await tx.query.eventRegistrations.findFirst({
+                        where: (candidate, { eq }) => eq(candidate.transactionId, transactionId),
+                    });
+                    if (existingRegistration) return existingRegistration;
+                    throw new EventRegistrationError(202, "Payment is being finalized; do not retry", "FULFILLMENT_PENDING");
+                }
+                return createEventRegistration(tx, {
+                    lid,
+                    mid,
+                    event,
+                    ticket,
+                    transactionId,
+                    registrationId,
+                    status: "registered",
+                }, "best-effort");
+            });
         }
         case "failed": {
             const now = new Date();
