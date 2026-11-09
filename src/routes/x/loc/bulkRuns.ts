@@ -67,9 +67,13 @@ const emailSender = new EmailSender();
  * Runs one member of a bulk run. The worker claims the member first (status `processing`)
  * and calls this route with the service key; this route writes the member's result.
  * Unexpected errors return 500 and leave the member claimed, so the worker retries it
- * after the claim expires. Paid actions use the member's row ID as their payment key,
- * so a retry cannot charge twice. The worker passes its attempt number; only that
- * attempt may run the member and write its result.
+ * after the claim expires. The worker passes its attempt number; only that attempt may
+ * run the member and write its result.
+ *
+ * A paid action is never sent to the gateway twice. A bulk charge records a pending
+ * transaction first. A paid registration or enrollment marks the member first, because
+ * its checkout handler charges with a new payment key on every call; a later attempt
+ * that finds the mark asks staff to check instead of charging again.
  */
 export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
     .post("/items/:itemId", async (ctx) => {
@@ -106,9 +110,19 @@ export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
         const input = parsedInput.success ? parsedInput.data : {};
         const mid = item.memberId;
         let outcome: ItemOutcome;
+        // Set once a paid registration or enrollment is handed to its checkout handler.
+        let startedCharge = null as Record<string, unknown> | null;
+        const unconfirmedCharge: ItemOutcome = {
+            status: "needs_review",
+            code: "PAYMENT_UNCONFIRMED",
+            message: "A charge was started but not confirmed. Check the member's transactions before charging again.",
+        };
 
         try {
-            if (run.status === "canceled") {
+            if (item.details.chargeStarted) {
+                // An earlier attempt reached the checkout handler and never reported back.
+                outcome = { ...unconfirmedCharge, details: item.details };
+            } else if (run.status === "canceled") {
                 outcome = { status: "canceled", message: "Run was canceled" };
             } else if (!parsedInput.success) {
                 outcome = { status: "failed", code: "INVALID_INPUT", message: "This run's settings are invalid" };
@@ -341,6 +355,19 @@ export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
                                 if (!paidTicket || !card) {
                                     return { status: "failed", code: "TICKET_UNAVAILABLE", message: "This ticket can't be registered" };
                                 }
+                                // The handler charges with a new payment key on every call, so mark the member
+                                // before it runs. A later attempt that finds the mark does not charge again.
+                                const chargeMark = { ...cardDetails, chargeStarted: true };
+                                const [marked] = await db.update(memberBulkRunItems)
+                                    .set({ details: chargeMark, updated: new Date() })
+                                    .where(and(
+                                        eq(memberBulkRunItems.id, item.id),
+                                        eq(memberBulkRunItems.status, "processing"),
+                                        eq(memberBulkRunItems.attempts, attempt),
+                                    ))
+                                    .returning({ id: memberBulkRunItems.id });
+                                if (!marked) return unconfirmedCharge;
+                                startedCharge = chargeMark;
                                 await handlePaidEventRegistration({
                                     lid,
                                     mid,
@@ -384,6 +411,19 @@ export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
                                     return { status: "succeeded", message: "Enrolled" };
                                 }
                                 if (!card) return { status: "skipped", code: "NO_CARD", message: "No card on file" };
+                                // The handler charges with a new payment key on every call, so mark the member
+                                // before it runs. A later attempt that finds the mark does not charge again.
+                                const chargeMark = { ...cardDetails, chargeStarted: true };
+                                const [marked] = await db.update(memberBulkRunItems)
+                                    .set({ details: chargeMark, updated: new Date() })
+                                    .where(and(
+                                        eq(memberBulkRunItems.id, item.id),
+                                        eq(memberBulkRunItems.status, "processing"),
+                                        eq(memberBulkRunItems.attempts, attempt),
+                                    ))
+                                    .returning({ id: memberBulkRunItems.id });
+                                if (!marked) return unconfirmedCharge;
+                                startedCharge = chargeMark;
                                 const enrollment = await handleCourseEnrollPaid({
                                     lid,
                                     mid,
@@ -392,7 +432,6 @@ export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
                                     paymentType: "card",
                                     courseTitle: course.title,
                                     coursePrice: course.price,
-                                    attemptId: item.id,
                                 });
                                 return {
                                     status: "succeeded",
@@ -437,9 +476,7 @@ export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
                             };
                             const items = [{ name: input.item, quantity: 1, price: input.amount }];
                             const unconfirmed: ItemOutcome = {
-                                status: "needs_review",
-                                code: "PAYMENT_UNCONFIRMED",
-                                message: "A charge was started but not confirmed. Check the member's transactions before charging again.",
+                                ...unconfirmedCharge,
                                 details: { ...cardDetails, amount: input.amount, transactionId },
                             };
 
@@ -586,7 +623,11 @@ export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
                 })();
             }
         } catch (error) {
-            if (error instanceof PaymentChargeError) {
+            if (startedCharge) {
+                // The checkout handler may have charged the card before it failed, so do not retry it.
+                console.error("[Bulk Runs] Charge outcome unknown", { itemId, action: run.action, error });
+                outcome = { ...unconfirmedCharge, details: startedCharge };
+            } else if (error instanceof PaymentChargeError) {
                 outcome = { status: "failed", code: error.code, message: error.message };
             } else {
                 console.error("[Bulk Runs] Member action failed", { itemId, action: run.action, error });
