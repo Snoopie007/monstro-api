@@ -19,7 +19,6 @@ import { xCourses } from './loc/courses/root';
 import { locationEnrollRoutes } from "../protected/locations/enroll";
 import { xAdditionalFees } from "./loc/additionalFees";
 import { xGoogleAds } from "./loc/ads/google/root";
-import { xBulkRuns } from "./loc/bulkRuns";
 
 const isChatReadRequest = (request: Request) =>
     request.method === "GET" || new URL(request.url).pathname.endsWith("/markread");
@@ -30,8 +29,6 @@ export const XRoutes = new Elysia()
     .group('/loc/:lid', (app) => {
         app.use(xInvoices);
         app.use(xClass);
-        // The worker runs bulk member actions with the service key; permissions were checked when the run was created.
-        app.use(xBulkRuns);
         // Marking a chat read only updates the caller's own unread count, so View is enough.
         app.guard(areaGuard("messaging", isChatReadRequest), (app) => app.use(xChat));
         app.use(xBots);
