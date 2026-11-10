@@ -19,6 +19,7 @@ import { xCourses } from './loc/courses/root';
 import { locationEnrollRoutes } from "../protected/locations/enroll";
 import { xAdditionalFees } from "./loc/additionalFees";
 import { xGoogleAds } from "./loc/ads/google/root";
+import { xBulkRuns } from "./loc/bulkRuns";
 
 const isChatReadRequest = (request: Request) =>
     request.method === "GET" || new URL(request.url).pathname.endsWith("/markread");
@@ -55,5 +56,7 @@ export const XRoutes = new Elysia()
         app.guard(ownerGuard, (app) => app.use(xAdditionalFees));
         app.use(xGoogleAds);
         app.guard(areaGuard("members"), (app) => app.group('/members', (app) => app.use(locMembers)));
+        // Each bulk action needs its own permission, so these routes check it themselves.
+        app.use(xBulkRuns);
         return app;
     })
