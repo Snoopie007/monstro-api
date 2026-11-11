@@ -238,3 +238,13 @@ export const RankAttendanceTriggerSchema = z.object({
 }).strict();
 
 export type RankAttendanceTriggerData = z.infer<typeof RankAttendanceTriggerSchema>;
+
+export const BULK_RUN_QUEUE = "bulk-runs";
+export const BULK_RUN_JOB = "run";
+
+// The worker reads the action, the settings and the members from the saved run, not a job snapshot.
+export const BulkRunJobSchema = z.object({
+    runId: z.string().trim().min(1),
+}).strict();
+
+export type BulkRunJobData = z.infer<typeof BulkRunJobSchema>;

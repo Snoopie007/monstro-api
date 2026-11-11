@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/db";
 import { bulkRunQueue } from "@/queues";
+import { BULK_RUN_JOB } from "@/subtrees/bullmq";
 import {
     courses,
     eventTickets,
@@ -151,7 +152,7 @@ export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateB
     });
 
     try {
-        await bulkRunQueue.add("run", { runId: run.id });
+        await bulkRunQueue.add(BULK_RUN_JOB, { runId: run.id });
     } catch (error) {
         // Without a job the run would wait forever, so remove it and let staff retry.
         await db.delete(memberBulkRuns).where(eq(memberBulkRuns.id, run.id));

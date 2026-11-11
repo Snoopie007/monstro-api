@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
 import { redisConfig, queueConfig } from "@/config";
+import { BULK_RUN_QUEUE, type BulkRunJobData } from "@/subtrees/bullmq";
 
 export const testQueue = new Queue('test', {
     connection: redisConfig,
@@ -34,7 +35,7 @@ export const classQueue = new Queue('classes', {
 
 
 
-export const bulkRunQueue = new Queue('bulkRuns', {
+export const bulkRunQueue = new Queue<BulkRunJobData>(BULK_RUN_QUEUE, {
     connection: redisConfig,
     defaultJobOptions: {
         // A run job is never retried: a retry could charge or email a member twice.
