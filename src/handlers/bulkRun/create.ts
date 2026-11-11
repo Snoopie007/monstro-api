@@ -11,6 +11,7 @@ import {
     memberLocations,
     users,
 } from "@/subtrees/schemas";
+import type { BulkRunInput } from "@/subtrees/types";
 import { hasLocationPermissions, type LocationPermission } from "@/utils/locationAccess";
 import { BulkRunError } from "./errors";
 import { getPaymentGatewayMode, type BulkRunActor } from "./shared";
@@ -65,7 +66,7 @@ export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateB
 
     // Work out whether the run charges cards, and check what it targets belongs to this location.
     let paid = body.action === "charge";
-    const input: Record<string, unknown> = {};
+    const input: Partial<BulkRunInput> = {};
     if (body.action === "register_event") {
         const [event, ticket] = await Promise.all([
             db.query.locationEvents.findFirst({

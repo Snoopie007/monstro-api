@@ -1,8 +1,5 @@
 import { db } from "@/db/db";
-import type { memberBulkRunItems, memberBulkRuns } from "@/subtrees/schemas";
-
-type BulkRun = typeof memberBulkRuns.$inferSelect;
-type BulkItemStatus = (typeof memberBulkRunItems.$inferSelect)["status"];
+import type { BulkItemStatus, MemberBulkRun } from "@/subtrees/types";
 
 /** The staff member or owner making the request, as AuthXMiddleware sets them on the context. */
 export type BulkRunActor = { vendorId?: string; staffId?: string; userId?: string; userRole?: string };
@@ -22,7 +19,7 @@ export function emptyCounts(): Record<BulkItemStatus, number> {
 }
 
 /** A run in the shape the vendor portal's run pages read. */
-export function toRunSummary(run: BulkRun, counts: Record<BulkItemStatus, number>, target: BulkRunTarget) {
+export function toRunSummary(run: MemberBulkRun, counts: Record<BulkItemStatus, number>, target: BulkRunTarget) {
     return {
         id: run.id,
         action: run.action,
