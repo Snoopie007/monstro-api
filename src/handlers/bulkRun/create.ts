@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/db";
+import { bulkRunQueue } from "@/queues";
 import {
     courses,
     eventTickets,
@@ -53,7 +54,7 @@ type CreateBulkRunParams = {
 };
 
 /**
- * Saves a bulk run and one row per member. The worker picks the run up from Postgres.
+ * Saves a bulk run and one row per member, then queues a job for the worker to run it.
  * Every check on what staff asked for happens here, before anything is saved.
  */
 export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateBulkRunParams) {
@@ -134,7 +135,7 @@ export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateB
         ? await db.query.users.findFirst({ where: eq(users.id, actor.userId), columns: { name: true } })
         : undefined;
 
-    return db.transaction(async (tx) => {
+    const run = await db.transaction(async (tx) => {
         const [created] = await tx.insert(memberBulkRuns).values({
             locationId: lid,
             action: body.action,
@@ -147,4 +148,13 @@ export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateB
         await tx.insert(memberBulkRunItems).values(memberIds.map((memberId) => ({ runId: created.id, memberId })));
         return created;
     });
+
+    try {
+        await bulkRunQueue.add("run", { runId: run.id });
+    } catch (error) {
+        // Without a job the run would wait forever, so remove it and let staff retry.
+        await db.delete(memberBulkRuns).where(eq(memberBulkRuns.id, run.id));
+        throw error;
+    }
+    return run;
 }

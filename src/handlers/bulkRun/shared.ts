@@ -8,7 +8,7 @@ type BulkItemStatus = (typeof memberBulkRunItems.$inferSelect)["status"];
 export type BulkRunActor = { vendorId?: string; staffId?: string; userId?: string; userRole?: string };
 
 /** What a run acts on, named for the run pages. */
-export type BulkRunTarget = {
+type BulkRunTarget = {
     eventName: string | null;
     ticketName: string | null;
     ticketPrice: number | null;

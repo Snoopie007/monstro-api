@@ -47,20 +47,18 @@ export const memberBulkRuns = pgTable("member_bulk_runs", {
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
 	index("member_bulk_runs_location_created_idx").on(t.locationId, t.created),
-	index("member_bulk_runs_open_idx").on(t.status).where(sql`${t.status} IN ('queued', 'running')`),
 ]);
 
 /**
  * One member's result within a bulk run. The worker takes a pending row, runs the member's
- * action once and saves the result here. `leaseUntil` is set while the member is in progress;
- * a row still in progress after that time is treated as interrupted: it is closed, not run again.
+ * action once and saves the result here. A row left in progress by a stopped worker is closed
+ * as interrupted, not run again.
  */
 export const memberBulkRunItems = pgTable("member_bulk_run_items", {
 	id: text("id").primaryKey().notNull().default(sql`uuid_base62('bki_')`),
 	runId: text("run_id").notNull().references(() => memberBulkRuns.id, { onDelete: "cascade" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	status: MemberBulkItemStatusEnum("status").notNull().default("pending"),
-	leaseUntil: timestamp("lease_until", { withTimezone: true }),
 	code: text("code"),
 	message: text("message"),
 	details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
@@ -69,5 +67,4 @@ export const memberBulkRunItems = pgTable("member_bulk_run_items", {
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
 	uniqueIndex("member_bulk_run_items_run_member_idx").on(t.runId, t.memberId),
-	index("member_bulk_run_items_claim_idx").on(t.status, t.leaseUntil).where(sql`${t.status} IN ('pending', 'processing')`),
 ]);

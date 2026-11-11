@@ -13,7 +13,7 @@ const forbidden = { error: "Forbidden", code: "FORBIDDEN" };
 
 /**
  * Bulk member runs for the vendor portal: start one, list them, read one and cancel one.
- * These routes only save and read rows. The worker (apps/workers, src/jobs/bulkRuns.ts) runs the members.
+ * These routes save and read rows, and queue one job per run. The worker (apps/workers, src/jobs/bulkRuns.ts) runs the members.
  */
 export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
     .get("/", async (ctx) => {

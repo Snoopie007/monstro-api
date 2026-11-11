@@ -34,10 +34,24 @@ export const classQueue = new Queue('classes', {
 
 
 
+export const bulkRunQueue = new Queue('bulkRuns', {
+    connection: redisConfig,
+    defaultJobOptions: {
+        // A run job is never retried: a retry could charge or email a member twice.
+        attempts: 1,
+        removeOnComplete: true,
+        removeOnFail: { age: 60 * 60 * 24 * 7 },
+    }
+});
+
 invoiceQueue.on('error', (err) => {
     console.error('Invoice queue error:', err);
 });
 
 classQueue.on('error', (err) => {
     console.error('Class queue error:', err);
+});
+
+bulkRunQueue.on('error', (err) => {
+    console.error('Bulk run queue error:', err);
 });
