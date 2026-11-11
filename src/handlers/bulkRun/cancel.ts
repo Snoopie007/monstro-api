@@ -21,6 +21,13 @@ export async function handleCancelBulkRun(lid: string, runId: string) {
             .where(and(eq(memberBulkRunItems.runId, run.id), eq(memberBulkRunItems.status, "pending")));
         return run;
     });
-    if (!canceled) throw new BulkRunError(409, "This run has already finished");
+    if (!canceled) {
+        const run = await db.query.memberBulkRuns.findFirst({
+            where: and(eq(memberBulkRuns.id, runId), eq(memberBulkRuns.locationId, lid)),
+            columns: { id: true },
+        });
+        if (!run) throw new BulkRunError(404, "Bulk run not found");
+        throw new BulkRunError(409, "This run has already finished");
+    }
     return { success: true };
 }
