@@ -1,4 +1,5 @@
 import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db/db";
 import {
     courses,
@@ -9,12 +10,24 @@ import {
 } from "@/subtrees/schemas";
 import { emptyCounts, getPaymentGatewayMode, toRunSummary } from "./shared";
 
-/** The location's 100 newest bulk runs with member counts per status, plus how the location charges cards. */
-export async function handleListBulkRuns(lid: string) {
-    const runs = await db.select().from(memberBulkRuns)
-        .where(eq(memberBulkRuns.locationId, lid))
-        .orderBy(desc(memberBulkRuns.created))
-        .limit(100);
+/** `page` starts at 1, like the members list. */
+const PageSchema = z.object({
+    page: z.coerce.number().int().min(1).catch(1),
+    size: z.coerce.number().int().min(1).max(100).catch(25),
+});
+
+/** One page of the location's bulk runs, newest first, with member counts per status, plus how the location charges cards. */
+export async function handleListBulkRuns(lid: string, query: unknown) {
+    const { page, size } = PageSchema.parse(query ?? {});
+    const inLocation = eq(memberBulkRuns.locationId, lid);
+    const [runs, [counted]] = await Promise.all([
+        db.select().from(memberBulkRuns)
+            .where(inLocation)
+            .orderBy(desc(memberBulkRuns.created), desc(memberBulkRuns.id))
+            .limit(size)
+            .offset((page - 1) * size),
+        db.select({ total: count() }).from(memberBulkRuns).where(inLocation),
+    ]);
 
     const runIds = runs.map((run) => run.id);
     const counts = runIds.length > 0
@@ -53,6 +66,9 @@ export async function handleListBulkRuns(lid: string) {
 
     return {
         paymentGateway,
+        page,
+        pageSize: size,
+        total: counted?.total ?? 0,
         runs: runs.map((run) => {
             const runCounts = emptyCounts();
             for (const row of counts) {

@@ -20,7 +20,7 @@ export const xBulkRuns = new Elysia({ prefix: "/bulk-runs" })
         const { lid } = ctx.params as { lid: string };
         if (!await hasLocationPermissions(lid, ctx, ["view members"])) return ctx.status(403, forbidden);
         try {
-            return await handleListBulkRuns(lid);
+            return await handleListBulkRuns(lid, ctx.query);
         } catch (error) {
             return mapBulkRunError(ctx.status, error, "Failed to load bulk runs");
         }
