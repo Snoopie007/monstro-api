@@ -181,19 +181,48 @@ export class SquarePaymentGateway {
         return data.payment;
     }
 
-    async refundPayment(paymentId: string, amount: number, reason?: string) {
+    async retrieveRefund(refundId: string) {
+        const response = await this._client.refunds.get({ refundId });
+
+        if (!response.refund) throw new Error("Square refund was not found");
+
+        return response.refund;
+    }
+
+    async inspectPaymentRefunds(paymentId: string) {
+        const response = await this._client.payments.get({ paymentId });
+
+        if (!response.payment) throw new Error("Square payment was not found");
+
+        const refunds = await Promise.all((response.payment.refundIds ?? []).map((refundId) => this.retrieveRefund(refundId)));
+
+        return { payment: response.payment, refunds };
+    }
+
+    async findRefundByReason(paymentId: string, reason: string, requestedAt: string) {
+        // Square's refund listing is eventually consistent. Absence is never
+        // evidence that an interrupted refund can be submitted again.
+        const refunds = await this._client.refunds.list({ beginTime: requestedAt, limit: 100 });
+
+        for await (const refund of refunds) {
+            if (refund.paymentId === paymentId && refund.reason === reason) return refund;
+        }
+
+        return null;
+    }
+
+    async refundPayment(paymentId: string, amount: number, reason?: string, idempotencyKey?: string, currency: Currency = Currency.Usd) {
         const data = await this._client.refunds.refundPayment({
-            idempotencyKey: this.generateIdempotencyKey(),
+            idempotencyKey: squarePaymentIdempotencyKey(idempotencyKey, () => this.generateIdempotencyKey()),
             paymentId,
             amountMoney: {
                 amount: BigInt(amount),
-                // TEMP: We only accepting usd for now
-                currency: Currency.Usd,
+                currency,
             },
             // Monstro's application fee is vendor-side and is never refunded.
             appFeeMoney: {
                 amount: BigInt(0),
-                currency: Currency.Usd,
+                currency,
             },
             reason,
         });

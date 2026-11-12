@@ -14,6 +14,7 @@ import {
 import { AuthorizePaymentGateway, AuthorizeTransportError, SquarePaymentGateway, StripePaymentGateway } from "@/libs/PaymentGateway";
 import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 import { getRefundAmounts } from "@/utils/refunds";
+import { findBundleChargeOwner } from "@/handlers/addonsBundles/refund/charges";
 import { hasLocationPermissions } from "@/utils/locationAccess";
 
 
@@ -52,6 +53,17 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
         if (!transaction) {
             return status(404, { error: "Transaction not found" });
+        }
+
+        const bundleOwner = await findBundleChargeOwner(lid, tid);
+
+        if (bundleOwner) {
+            return status(409, {
+                error: "Use Refund & cancel bundle to refund this charge.",
+                code: "BUNDLE_REFUND_BLOCKED",
+                bundleId: bundleOwner.bundleId,
+                bundlePurchaseId: bundleOwner.id,
+            });
         }
         const txMeta = (transaction.metadata as Record<string, unknown> | null) || {};
         if (txMeta.gatewayService === "authorize") {
@@ -554,6 +566,17 @@ export const xTransactions = new Elysia({ prefix: "/transactions" })
 
         if (!transaction) {
             return status(404, { error: "Transaction not found" });
+        }
+
+        const bundleOwner = await findBundleChargeOwner(lid, tid);
+
+        if (bundleOwner) {
+            return status(409, {
+                error: "Use Refund & cancel bundle to refund this charge.",
+                code: "BUNDLE_REFUND_BLOCKED",
+                bundleId: bundleOwner.bundleId,
+                bundlePurchaseId: bundleOwner.id,
+            });
         }
 
         if (transaction.refunded) {
