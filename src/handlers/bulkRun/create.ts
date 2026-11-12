@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/db";
@@ -20,27 +21,37 @@ import { getPaymentGatewayMode, type BulkRunActor } from "./shared";
 /** Paid actions are capped lower so a mistake cannot charge a whole roster. */
 const PAID_MEMBER_LIMIT = 50;
 const MEMBER_LIMIT = 1000;
+const PRICE_CHANGED = "The price changed. Check the new price and start again.";
 
 const MemberIds = z.array(z.string().min(1).max(64)).min(1).max(MEMBER_LIMIT);
+/** Made once by the dialog and sent again on a retry, so a retry cannot start a second run. */
+const RequestId = z.string().uuid();
+/** The price the dialog showed staff. 0 when it is free. */
+const ExpectedPrice = z.number().int().min(0);
 
 const BulkRunSchema = z.discriminatedUnion("action", [
-    z.object({ action: z.literal("resend_invite"), memberIds: MemberIds }).strict(),
-    z.object({ action: z.literal("archive"), memberIds: MemberIds }).strict(),
+    z.object({ action: z.literal("resend_invite"), requestId: RequestId, memberIds: MemberIds }).strict(),
+    z.object({ action: z.literal("archive"), requestId: RequestId, memberIds: MemberIds }).strict(),
     z.object({
         action: z.literal("register_event"),
+        requestId: RequestId,
         memberIds: MemberIds,
         eventId: z.string().min(1),
         ticketId: z.string().min(1),
+        expectedPrice: ExpectedPrice,
         includeNonDefaultCards: z.boolean().default(false),
     }).strict(),
     z.object({
         action: z.literal("enroll_course"),
+        requestId: RequestId,
         memberIds: MemberIds,
         courseId: z.string().min(1),
+        expectedPrice: ExpectedPrice,
         includeNonDefaultCards: z.boolean().default(false),
     }).strict(),
     z.object({
         action: z.literal("charge"),
+        requestId: RequestId,
         memberIds: MemberIds,
         amount: z.number().int().min(100).max(10_000_00),
         item: z.string().trim().min(1).max(200),
@@ -86,8 +97,10 @@ export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateB
             throw new BulkRunError(400, "Choose an active ticket for this event");
         }
         paid = ticket.pricingMethod !== "free" && ticket.price > 0;
+        const price = paid ? ticket.price : 0;
+        if (price !== body.expectedPrice) throw new BulkRunError(409, PRICE_CHANGED);
         // The worker refuses to charge if the price differs from what was approved here.
-        Object.assign(input, { eventId: body.eventId, ticketId: body.ticketId, unitPrice: paid ? ticket.price : 0 });
+        Object.assign(input, { eventId: body.eventId, ticketId: body.ticketId, unitPrice: price });
     }
     if (body.action === "enroll_course") {
         const course = await db.query.courses.findFirst({
@@ -98,6 +111,7 @@ export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateB
             throw new BulkRunError(400, "Choose a published course");
         }
         paid = course.price > 0;
+        if (course.price !== body.expectedPrice) throw new BulkRunError(409, PRICE_CHANGED);
         // The worker refuses to charge if the price differs from what was approved here.
         Object.assign(input, { courseId: body.courseId, unitPrice: course.price });
     }
@@ -137,19 +151,28 @@ export async function handleCreateBulkRun({ lid, actor, body: rawBody }: CreateB
         ? await db.query.users.findFirst({ where: eq(users.id, actor.userId), columns: { name: true } })
         : undefined;
 
+    // The same request from the same person always gets the same run ID. Changing any choice gives a new one.
+    const { requestId, ...choices } = body;
+    const runId = `bkr_${createHash("sha256")
+        .update(JSON.stringify([lid, createdBy, requestId, choices])).digest("hex").slice(0, 22)}`;
+
     const run = await db.transaction(async (tx) => {
         const [created] = await tx.insert(memberBulkRuns).values({
+            id: runId,
             locationId: lid,
             action: body.action,
             input,
             total: memberIds.length,
             createdBy,
             createdByName: creator?.name ?? null,
-        }).returning({ id: memberBulkRuns.id });
-        if (!created) throw new Error("Bulk run was not created");
+        }).onConflictDoNothing({ target: memberBulkRuns.id }).returning({ id: memberBulkRuns.id });
+        if (!created) return null;
         await tx.insert(memberBulkRunItems).values(memberIds.map((memberId) => ({ runId: created.id, memberId })));
         return created;
     });
+
+    // A repeat of a request that already saved and queued this run.
+    if (!run) return { id: runId };
 
     try {
         await bulkRunQueue.add(BULK_RUN_JOB, { runId: run.id });
