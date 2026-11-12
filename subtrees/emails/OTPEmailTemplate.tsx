@@ -37,7 +37,7 @@ export default function OTPEmailTemplate({
 						<Text style={styles.paragraph}>Hi {member.firstName}</Text>
 
 						<Text style={styles.paragraph}>
-							An invite to setup an Monstro account was made by{' '}
+							An invite to setup a Monstro X account was made by{' '}
 							<strong>{location.name}</strong>. We've sent you this email to verify
 							that it is indeed you who are setting up the account. To continue,
 							enter the code below on the verification page:

@@ -41,7 +41,8 @@ export function buildContractVariables(input: {
         const plan = pricing.plan;
         variables.plan = {
             name: plan?.name,
-            price: pricing.price,
+            // Stored in cents. Documents show the amount, like 99.00.
+            price: (pricing.price / 100).toFixed(2),
             pricingName: pricing.name,
             interval: formatContractInterval(pricing.interval, pricing.intervalThreshold),
             limit: plan?.totalClassLimit,

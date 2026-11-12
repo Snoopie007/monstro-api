@@ -12,6 +12,7 @@ import { getNextBillingDate } from "./shared";
 import { buildSubscriptionInvoiceQuote } from "../invoices/subscriptionQuote";
 import { ensureCashInvoice } from "@/subtrees/utils/server/cashInvoices";
 import { hasLocationPermissions } from "@/utils/locationAccess";
+import { createActivationDocs } from "./activationDocs";
 
 export async function activateCashSubscriptionRoutes(app: Elysia) {
     return app.post("/:sid/activate-cash", async (ctx) => {
@@ -70,6 +71,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
                     taxRate: sub.location.taxRates.find(rate => rate.isDefault)?.percentage ?? 0,
                 });
             });
+            await createActivationDocs(sub);
             return status(200, { status: "active", nextBillingAt: due, scheduledJobKey: `cashInvoiceDue_${sid}_${due.getTime()}` });
         }
 
@@ -138,6 +140,7 @@ export async function activateCashSubscriptionRoutes(app: Elysia) {
             }
         });
 
+        await createActivationDocs(sub);
         return status(200, {
             status: isTrialing ? "trialing" : "active",
             nextBillingAt: getNextBillingDate(sub),

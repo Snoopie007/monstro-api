@@ -3,6 +3,7 @@ import { getDeferredBilling } from "@/subtrees/utils/deferredBilling";
 import { db } from "@/db/db";
 import { StripePaymentGateway, SquarePaymentGateway, AuthorizePaymentGateway } from "@/libs/PaymentGateway";
 import { getStripeMigration } from "@/subtrees/utils/subscriptionBilling";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 
 export type SupportedStripePaymentMethod = "card" | "us_bank_account" | "link" | "cashapp";
 export type SubscriptionBillingContext = {
@@ -65,7 +66,7 @@ export async function resolveSubscriptionBillingContext(
                 id: true,
                 locationId: true,
                 service: true,
-                accessToken: true, apiKey: true, secretKey: true,
+                accessToken: true, expires: true,
                 accountId: true,
                 metadata: true,
             },
@@ -81,7 +82,7 @@ export async function resolveSubscriptionBillingContext(
                 id: true,
                 locationId: true,
                 service: true,
-                accessToken: true, apiKey: true, secretKey: true,
+                accessToken: true, expires: true,
                 accountId: true,
                 metadata: true,
             },
@@ -178,7 +179,7 @@ export async function resolveSubscriptionBillingContext(
 }
 
 type AuthorizeGateway = Pick<typeof integrations.$inferSelect,
-    "id" | "locationId" | "service" | "accessToken" | "accountId" | "metadata" | "apiKey" | "secretKey">;
+    "id" | "locationId" | "service" | "accessToken" | "expires" | "accountId" | "metadata">;
 
 /** Check that the selected Authorize.net payment profile belongs to this customer. */
 async function resolveAuthorizePaymentMethod(
@@ -186,15 +187,19 @@ async function resolveAuthorizePaymentMethod(
     gatewayCustomerId: string,
     selectedMethodId: string | null,
 ): Promise<SubscriptionBillingContext> {
-    if (!gateway.apiKey || !gateway.secretKey || !selectedMethodId) {
+    if (!selectedMethodId) {
         throw new BillingContextError("Authorize.net payment setup is missing", "PAYMENT_METHOD_MISSING");
     }
-    const profile = await new AuthorizePaymentGateway(gateway.apiKey, gateway.secretKey).getCustomerProfile(gatewayCustomerId);
+    const accessToken = await getAuthorizeAccessToken(db, gateway).catch((error) => {
+        console.error("Authorize.net access token unavailable", error);
+        throw new BillingContextError("Payment gateway integration is not configured", "GATEWAY_NOT_CONFIGURED");
+    });
+    const profile = await new AuthorizePaymentGateway(accessToken).getCustomerProfile(gatewayCustomerId);
     const profiles = Array.isArray(profile.paymentProfiles) ? profile.paymentProfiles : profile.paymentProfiles ? [profile.paymentProfiles] : [];
     if (!profiles.some(method => method.customerPaymentProfileId === selectedMethodId)) {
         throw new BillingContextError("Payment method does not belong to subscription customer", "PAYMENT_METHOD_OWNER_MISMATCH");
     }
-    return { gateway: { ...gateway, integrationId: gateway.id, accessToken: gateway.accessToken ?? "" },
+    return { gateway: { ...gateway, integrationId: gateway.id, accessToken },
         gatewayCustomerId, paymentMethodId: selectedMethodId, paymentMethodType: "card" };
 }
 

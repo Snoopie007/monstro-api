@@ -16,6 +16,8 @@ import { xMerchandise } from './loc/merchandise/root';
 import { xPrograms } from './loc/programs/root';
 import { xEvents } from './loc/events/root';
 import { xCourses } from './loc/courses/root';
+import { xDocs } from './loc/docs/root';
+import { xTemplatePdf } from './loc/docs/templatePdf';
 import { locationEnrollRoutes } from "../protected/locations/enroll";
 import { xAdditionalFees } from "./loc/additionalFees";
 import { xGoogleAds } from "./loc/ads/google/root";
@@ -43,6 +45,7 @@ export const XRoutes = new Elysia()
         app.guard(areaGuard("programs"), (app) => app.use(xPrograms));
         app.guard(areaGuard("events"), (app) => app.use(xEvents));
         app.guard(areaGuard("events"), (app) => app.use(xCourses));
+        app.guard(areaGuard("documents"), (app) => app.use(xDocs).use(xTemplatePdf));
         // The member app shares these enroll handlers, so the staff check lives on this mount.
         app.guard({
             async beforeHandle(ctx) {

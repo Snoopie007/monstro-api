@@ -10,8 +10,9 @@ describe.skipIf(!url)("deferred enrollment", () => {
     const admin = postgres(url!, { max: 1, onnotice: () => {} });
     const sql = postgres(url!, { max: 3, prepare: false, connection: { search_path: `${namespace},public,extensions` }, onnotice: () => {} });
     const db = drizzle(sql, { schema });
-    const tables = ["member_subscriptions", "member_plan_pricing", "member_plans", "members", "member_locations", "locations", "location_state", "tax_rates", "member_invoices", "transactions"];
+    const tables = ["member_subscriptions", "member_plan_pricing", "member_plans", "members", "member_locations", "locations", "location_state", "tax_rates", "member_invoices", "transactions", "contracts", "member_contracts"];
     const schedule = mock(async (..._args: unknown[]) => ({}));
+    const sendEmail = mock(async (..._args: unknown[]) => ({}));
     let app: Pick<Elysia, "handle">;
     const request = (path: string, body: unknown) => app.handle(new Request(`http://localhost/loc/loc/subscriptions${path}`, {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
@@ -23,7 +24,12 @@ describe.skipIf(!url)("deferred enrollment", () => {
         if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url!).hostname)) throw new Error("Local Postgres required");
         await admin`create schema ${admin(namespace)}`;
         for (const table of tables) await admin`create table ${admin(namespace)}.${admin(table)} (like public.${admin(table)} including all)`;
+        // Production-only columns that no migration creates.
+        await admin`alter table ${admin(namespace)}.member_contracts add column if not exists user_agent text, add column if not exists ip_address text`;
         mock.module("@/db/db", () => ({ db }));
+        const locationAccess = await import("@/utils/locationAccess");
+        mock.module("@/utils/locationAccess", () => ({ ...locationAccess, hasLocationPermissions: async () => true }));
+        mock.module("@/libs/email", () => ({ EmailSender: class { sendWithTemplate = sendEmail; } }));
         const { calculateThresholdDate } = await import("@/utils/enrollUtils");
         mock.module("@/utils", () => ({ calculateThresholdDate }));
         mock.module("@/utils/additionalFees", () => ({ getAdditionalFeesForCheckout: async () => [] }));
@@ -43,6 +49,7 @@ describe.skipIf(!url)("deferred enrollment", () => {
     afterEach(() => setSystemTime());
     beforeEach(async () => {
         schedule.mockClear();
+        sendEmail.mockClear();
         for (const table of tables) await sql`truncate ${sql(namespace)}.${sql(table)}`;
         await sql`insert into members (id,user_id,first_name,last_name,email) values ('member','user','Sample','Member','sample@example.test')`;
         await sql`insert into locations (id,name,slug,vendor_id,country,timezone,email) values ('loc','Billing test','billing-test','vendor','US','America/New_York','vendor@example.test')`;
@@ -142,4 +149,26 @@ describe.skipIf(!url)("deferred enrollment", () => {
         expect((await db.select().from(schema.memberSubscriptions))[0]?.status).toBe("active");
     });
 
+    test("cash activation gives the member the plan's agreement and emails it, while creating the draft does not", async () => {
+        await sql`insert into contracts (id,title,description,content,location_id,type,require_signature) values ('agreement','Membership Agreement','','I agree.','loc','contract',true)`;
+        await sql`update member_plans set contract_id = 'agreement' where id = 'plan'`;
+        expect((await request("/", enrollment())).status).toBe(201);
+        expect(await db.select().from(schema.memberContracts)).toHaveLength(0);
+
+        const [sub] = await db.select().from(schema.memberSubscriptions);
+        expect((await request(`/${sub!.id}/activate-cash`, {})).status).toBe(200);
+        expect(await db.select().from(schema.memberContracts)).toMatchObject([{ memberId: "member", templateId: "agreement", memberPlanId: sub!.id, signedOn: null }]);
+        for (let i = 0; i < 50 && sendEmail.mock.calls.length === 0; i++) await Bun.sleep(10);
+        expect(sendEmail).toHaveBeenCalledTimes(1);
+        expect(sendEmail.mock.calls[0]?.[0]).toMatchObject({
+            template: "DocRequestEmail",
+            options: { to: "sample@example.test", subject: "Please sign your agreement for Billing test" },
+        });
+    });
+    test("a broken default waiver blocks the draft, as it blocks self-enrollment", async () => {
+        await sql`insert into contracts (id,title,description,content,location_id,type,require_signature,is_draft) values ('waiver','Waiver','','Terms','loc','waiver',true,true)`;
+        await sql`update location_state set waiver_id = 'waiver' where location_id = 'loc'`;
+        expect((await request("/", enrollment())).status).toBe(400);
+        expect(await db.select().from(schema.memberSubscriptions)).toHaveLength(0);
+    });
 });

@@ -275,6 +275,7 @@ import { z as z5 } from "zod";
 var FormIdSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 var FieldNameSchema = z5.string().min(1).max(128).regex(/^[A-Za-z][A-Za-z0-9_]*$/);
 var FORM_LOCATION_FIELD = "$location";
+var CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
 var ConditionFieldSchema = z5.union([FieldNameSchema, z5.literal(FORM_LOCATION_FIELD)]);
 var RedirectTypeSchema = z5.enum(["page", "url"]);
 var FormFieldSchema = z5.object({
@@ -327,6 +328,7 @@ var NativeSiteFormSchema = z5.object({
   redirectToType: RedirectTypeSchema.optional(),
   redirectRules: z5.union([z5.string(), z5.array(RedirectRuleSchema), z5.null()]).default(null),
   tags: z5.array(z5.string().min(1).max(200)).max(100).default([]),
+  hiddenConsents: z5.array(z5.enum(CONSENT_FIELDS)).optional(),
   fields: z5.array(FormFieldSchema).min(1).max(100)
 }).strict().superRefine((form, issue) => {
   const fields = new Map;
@@ -392,7 +394,6 @@ var FormSubmissionResponseSchema = z5.object({
   redirectTo: z5.string().optional()
 }).strict();
 var SiteFormSchema = NativeSiteFormSchema;
-var CONSENT_FIELDS = ["marketingConsent", "nonMarketingConsent"];
 function matchesFormCondition(condition, values, locationId) {
   if (condition.field === FORM_LOCATION_FIELD) {
     return Boolean(locationId) && locationId === condition.equals;
@@ -452,8 +453,9 @@ function validateFormValues(form, input, locationId) {
       values[field.name] = parsed.data[field.name];
     }
   }
-  for (const field of CONSENT_FIELDS)
-    values[field] = parsed.data[field] === true;
+  for (const field of CONSENT_FIELDS) {
+    values[field] = !form.hiddenConsents?.includes(field) && parsed.data[field] === true;
+  }
   return values;
 }
 function resolveFormRedirect(form, values, pages, locationId, locationName) {
@@ -683,13 +685,20 @@ var HeroSectionSchema = MediaSectionBaseSchema.extend({
 
 // src/sections/how-to-start.ts
 import { z as z15 } from "zod";
+var DEFAULT_HOW_TO_START_CTA = {
+  label: "Get Started",
+  href: "/get-started",
+  external: false,
+  variant: "primary"
+};
 var HowToStartSectionSchema = SectionBaseSchema.extend({
   type: z15.literal("how_to_start"),
   props: SectionHeadingSchema.extend({
     steps: z15.array(z15.object({
       title: z15.string().min(1),
       description: z15.string().min(1)
-    }).strict()).min(1)
+    }).strict()).min(1),
+    cta: SiteLinkSchema.optional()
   }).strict()
 }).strict();
 
@@ -1444,10 +1453,10 @@ var SiteScriptsAndEmbedsSchema = z34.object({
 import { z as z35 } from "zod";
 var PagePathSchema = z35.string().regex(/^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)?$/);
 var RUNTIME_OWNED_PATH_SEGMENTS = new Set([
+  "account",
   "api",
   "auth",
   "blog",
-  "docs",
   "download",
   "legal",
   "member",
@@ -1910,6 +1919,7 @@ var PublicSiteConfigObjectSchema = z37.object({
   }).strict(),
   theme: SiteThemeSchema,
   headerAction: SiteHeaderActionSchema.optional(),
+  headerCta: SiteHeaderActionSchema.optional(),
   navigation: z37.array(NavigationItemSchema),
   footer: z37.object({
     credit: z37.string(),
@@ -3615,6 +3625,7 @@ var SHARED_CONFIG_KEYS = [
   "navigation",
   "footer",
   "headerAction",
+  "headerCta",
   "locationConnections",
   "locationOverride",
   "content",
@@ -3701,7 +3712,7 @@ var PlansQuerySchema = z38.object({
   location: SiteLocationSlugSchema.optional(),
   locations: LocationListSchema.optional()
 }).strict();
-var DocumentSignatureRequestSchema = z38.object({ signature: z38.string().min(1) }).strict();
+var DocumentSignatureRequestSchema = z38.object({ signature: z38.string().min(1).nullable().optional() }).strict();
 var EnrollRequestSchema = z38.object({
   locationId: z38.string().min(1).optional(),
   attemptId: z38.string().min(1),
@@ -4254,6 +4265,7 @@ export {
   EnrollQuoteSchema,
   EnrollQuoteRequestSchema,
   DocumentSignatureRequestSchema,
+  DEFAULT_HOW_TO_START_CTA,
   ContactFormSectionSchema,
   CompareSectionSchema,
   CheckoutAdditionalFeeSchema,

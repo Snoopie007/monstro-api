@@ -7,6 +7,7 @@ export * from "./attendance";
 export * from "./bots";
 export * from "./chat";
 export * from "./contract";
+export * from "./templateFields";
 export * from "./course";
 export * from "./database";
 export * from "./DatabaseEnums";

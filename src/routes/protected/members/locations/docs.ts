@@ -2,7 +2,8 @@ import { db } from "@/db/db";
 import { Elysia, t } from "elysia"
 import { generatePDF } from "@/utils/generatePDF";
 import { renderContractContent } from "@/utils/contractUtils";
-import { MemberDocumentError, signMemberDocument } from "@/utils/memberSignature";
+import { MemberDocumentError } from "@/routes/shared/docs";
+import { signDoc } from "src/routes/shared/docs";
 
 
 export function mlDocsRoutes(app: Elysia) {
@@ -100,6 +101,7 @@ export function mlDocsRoutes(app: Elysia) {
 							id: true,
 							title: true,
 							content: true,
+							requireSignature: true,
 						},
 					},
 					location: true,
@@ -149,17 +151,13 @@ export function mlDocsRoutes(app: Elysia) {
 		const { signature } = body;
 
 		try {
-			const { doc, newlySigned } = await signMemberDocument({ mid, lid, did, signature });
-			if (newlySigned) {
-				setTimeout(() => {
-					const content = renderContractContent(doc.contractTemplate.content, {
-						location: doc.location,
-						member: doc.member,
-						pricing: doc.pricing,
-					});
-					generatePDF({ did, mid, lid, title: doc.contractTemplate.title, content });
-				}, 1000);
-			}
+			await signDoc({
+				docId: did,
+				signature,
+				userAgent: body.userAgent,
+				ipAddress: body.ipAddress,
+			});
+
 
 			return status(200, { success: true });
 		} catch (err) {
@@ -175,6 +173,8 @@ export function mlDocsRoutes(app: Elysia) {
 		}),
 		body: t.Object({
 			signature: t.Optional(t.String()),
+			userAgent: t.Optional(t.String()),
+			ipAddress: t.Optional(t.String()),
 		}),
 	})
 	return app;

@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
 import type { IntegrationMetadata } from "@/subtrees/types";
+import { getAuthorizeAccessToken } from "@/subtrees/utils/server/authorize";
 
 export class CheckoutError extends Error {
 	readonly status: 202 | 400 | 404 | 500;
@@ -13,7 +14,7 @@ export class CheckoutError extends Error {
 type CheckoutGateway =
 	| { service: "stripe"; integrationId: string; accessToken: string; accountId: string; metadata: IntegrationMetadata }
 	| { service: "square"; integrationId: string; accessToken: string; accountId: string; metadata: IntegrationMetadata }
-	| { service: "authorize"; integrationId: string; apiKey: string; secretKey: string; accountId: string; metadata: IntegrationMetadata };
+	| { service: "authorize"; integrationId: string; accessToken: string; accountId: string; metadata: IntegrationMetadata };
 
 
 export async function getMemberCheckoutContext({
@@ -86,9 +87,8 @@ export async function getCheckoutContext(input: {
 		columns: {
 			id: true,
 			accountId: true,
-			apiKey: true,
-			secretKey: true,
 			accessToken: true,
+			expires: true,
 			service: true,
 			metadata: true,
 		},
@@ -100,14 +100,14 @@ export async function getCheckoutContext(input: {
 
 	const { accountId, service, metadata } = gateway;
 	if (service === "authorize") {
-		if (!gateway.apiKey || !gateway.secretKey) {
+		const accessToken = await getAuthorizeAccessToken(db, gateway).catch((error) => {
+			console.error("Authorize.net access token unavailable", error);
 			throw new CheckoutError(400, "Authorize.net gateway credentials not found");
-		}
+		});
 		const authorizeGateway: CheckoutGateway = {
 			service,
 			integrationId: gateway.id,
-			apiKey: gateway.apiKey,
-			secretKey: gateway.secretKey,
+			accessToken,
 			accountId,
 			metadata: (metadata ?? {}) as IntegrationMetadata,
 		};
