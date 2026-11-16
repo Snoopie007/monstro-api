@@ -5,8 +5,9 @@ export async function getAdditionalFeesForCheckout(
 	locationId: string,
 	checkoutType: AdditionalFeeCheckoutType,
 	billingPhase: "initial" | "renewal" = "initial",
+	database: Pick<typeof db, "query"> = db,
 ): Promise<AdditionalFee[]> {
-	const fees = await db.query.additionalFees.findMany({
+	const fees = await database.query.additionalFees.findMany({
 		where: (fee, { and, eq }) => and(
 			eq(fee.locationId, locationId),
 			eq(fee.active, true),

@@ -3,7 +3,29 @@ import type { PaymentType, TransactionStatus, TransactionType } from "./Database
 import type { Member } from "./member";
 import type { InvoiceItem, MemberInvoice } from "./invoices";
 
+export type TransactionRefund = {
+  id?: string;
+  amount: number;
+  nonRefundableAmount?: number;
+  reason?: string | null;
+  note?: string | null;
+  source?: string;
+  initiatedBy?: string;
+  refundedAt?: string;
+  // Bundle refunds keep one current attempt here. Pending or unknown attempts
+  // must be reconciled before another provider operation can be claimed.
+  status?: "pending" | "unknown" | "failed" | "completed";
+  attempt?: number;
+  requestedAt?: string;
+  paymentId?: string;
+  gatewayIntegrationId?: string;
+  gatewayService?: "cash" | "stripe" | "square" | "authorize";
+  operation?: "refund" | "void";
+  error?: string;
+};
+
 export type TransactionMetadata = {
+  refund?: TransactionRefund;
   card?: {
     brand: string;
     last4: string;

@@ -26,6 +26,7 @@ export type SquareWebhookPayment = {
     ]
     source_type?: "CARD" | "BANK_ACCOUNT" | "CASH";
     location_id?: string;
+    customer_id?: string;
     reference_id?: string;
     status?: "APPROVED" | "FAILED" | "CANCELED" | "COMPLETED" | "PENDING" | string;
     note?: string;
@@ -54,6 +55,7 @@ export type SquareWebhookPayment = {
 
 export type NoteData = {
     description: string;
+    billingAttemptId?: string;
     invId: string;
     mid: string;
     lid: string;

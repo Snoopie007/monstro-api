@@ -5,3 +5,4 @@ export * from "./email";
 export * from "./payments";
 export * from "./assistantMemory";
 export * from "./rank";
+export * from "./subscriptionAddons";
