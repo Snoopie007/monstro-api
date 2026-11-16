@@ -975,6 +975,12 @@ var OrderedContentSchema = z31.object({
   visible: z31.boolean().default(true),
   order: z31.number().int().optional()
 });
+var DEFAULT_PROGRAM_DETAIL_CTA = {
+  label: "See Pricing",
+  href: "/pricing",
+  external: false,
+  variant: "primary"
+};
 var SiteProgramSchema = OrderedContentSchema.extend({
   slug: SlugSchema,
   name: z31.string().min(1),
@@ -990,7 +996,8 @@ var SiteProgramSchema = OrderedContentSchema.extend({
     description: z31.string().min(1),
     image: SiteImageSchema.optional(),
     challengeHeading: z31.string().min(1),
-    challenges: z31.array(z31.string().min(1)).min(1)
+    challenges: z31.array(z31.string().min(1)).min(1),
+    cta: SiteLinkSchema.optional()
   }).strict().refine((detail) => detail.ageMinimum === undefined || detail.ageMaximum === undefined || detail.ageMinimum <= detail.ageMaximum, "Program minimum age cannot exceed maximum age").optional()
 }).strict().superRefine((program, issue) => {
   if (program.showLearnMore && !program.detail) {
@@ -4265,6 +4272,7 @@ export {
   EnrollQuoteSchema,
   EnrollQuoteRequestSchema,
   DocumentSignatureRequestSchema,
+  DEFAULT_PROGRAM_DETAIL_CTA,
   DEFAULT_HOW_TO_START_CTA,
   ContactFormSectionSchema,
   CompareSectionSchema,
