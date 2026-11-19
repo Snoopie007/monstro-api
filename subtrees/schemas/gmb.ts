@@ -48,6 +48,8 @@ export const gmb = pgTable(
 		lastProfileCached: timestamp("last_profile_cached", { withTimezone: true }),
 		/** Pro: workers write and publish one post a day (`gmb_posts`). */
 		autoPost: boolean("auto_post").notNull().default(false),
+		/** Pro: workers reply to one 3–5 star review a day. */
+		autoReply: boolean("auto_reply").notNull().default(false),
 		created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updated: timestamp("updated_at", { withTimezone: true }),
 	},

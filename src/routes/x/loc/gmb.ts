@@ -12,7 +12,7 @@ const s3 = new S3Bucket();
 const MAX_PHOTOS = 50;
 /** Published posts the AI sees, so a rewrite doesn't repeat them. */
 const RECENT_SUMMARIES = 10;
-const AutoPostSchema = z.object({ enabled: z.boolean() }).strict();
+const ToggleSchema = z.object({ enabled: z.boolean() }).strict();
 const PhotoSaveSchema = z.object({ url: z.string().url().max(2048) }).strict();
 /** Google caps a post's text at 1,500 characters. `photoId` swaps in a library photo. */
 const PostEditSchema = z.object({
@@ -38,21 +38,41 @@ const PhotoUploadSchema = z.object({
     }),
 }).strict();
 
+/** Why a Pro automation can't be turned on, or null when it can. */
+async function automationBlocker(lid: string, addonStatus: string | undefined) {
+    if (addonStatus !== "active") {
+        return { status: 403, body: { error: "This is part of GMB Pro", code: "PRO_REQUIRED" } } as const;
+    }
+    const integration = await db.query.integrations.findFirst({
+        where: and(eq(integrations.locationId, lid), eq(integrations.service, "gmb")),
+        columns: { id: true },
+    });
+    if (!integration) {
+        return { status: 400, body: { error: "Reconnect Google Business Profile first", code: "GMB_NOT_CONNECTED" } } as const;
+    }
+    return null;
+}
+
+function findAutomationProfile(lid: string) {
+    return db.query.gmb.findFirst({
+        where: eq(gmb.locationId, lid),
+        columns: { id: true },
+        with: { locationAddon: { columns: { status: true } } },
+    });
+}
+
 /**
- * GMB auto-posting for the vendor portal. Turning it on queues the first draft.
- * The worker (apps/workers, src/jobs/gmbPosts) then writes and publishes one post a day.
+ * GMB automations for the vendor portal (Pro). Workers (src/jobs/gmbPosts, gmbReplies) do the work:
+ * one AI post a day, and one AI reply a day to a 3–5 star review.
  */
 export const xGmb = new Elysia({ prefix: "/gmb" })
+    // On: queues the first draft. Off: cancels the scheduled post.
     .put("/auto-post", async (ctx) => {
         const { lid } = ctx.params as { lid: string };
-        const parsed = AutoPostSchema.safeParse(ctx.body);
+        const parsed = ToggleSchema.safeParse(ctx.body);
         if (!parsed.success) return ctx.status(400, { error: "Invalid request" });
 
-        const row = await db.query.gmb.findFirst({
-            where: eq(gmb.locationId, lid),
-            columns: { id: true },
-            with: { locationAddon: { columns: { status: true } } },
-        });
+        const row = await findAutomationProfile(lid);
         if (!row) return ctx.status(404, { error: "Connect a Google Business Profile first", code: "GMB_NOT_FOUND" });
 
         const now = new Date();
@@ -67,21 +87,29 @@ export const xGmb = new Elysia({ prefix: "/gmb" })
             return { autoPost: false };
         }
 
-        if (row.locationAddon?.status !== "active") {
-            return ctx.status(403, { error: "Auto-posting is part of GMB Pro", code: "PRO_REQUIRED" });
-        }
-        const integration = await db.query.integrations.findFirst({
-            where: and(eq(integrations.locationId, lid), eq(integrations.service, "gmb")),
-            columns: { id: true },
-        });
-        if (!integration) {
-            return ctx.status(400, { error: "Reconnect Google Business Profile first", code: "GMB_NOT_CONNECTED" });
-        }
+        const blocked = await automationBlocker(lid, row.locationAddon?.status);
+        if (blocked) return ctx.status(blocked.status, blocked.body);
 
         await db.update(gmb).set({ autoPost: true, updated: now }).where(eq(gmb.id, row.id));
         // Same id all day: a draft still waiting in the queue isn't added twice.
         await gmbPostQueue.add(GMB_DRAFT_JOB, { gmbId: row.id }, { jobId: gmbDraftJobId(row.id, now) });
         return { autoPost: true };
+    })
+    // The workers' daily run (06:00 UTC) picks the profile up, so the first reply goes out the next day.
+    .put("/auto-reply", async (ctx) => {
+        const { lid } = ctx.params as { lid: string };
+        const parsed = ToggleSchema.safeParse(ctx.body);
+        if (!parsed.success) return ctx.status(400, { error: "Invalid request" });
+
+        const row = await findAutomationProfile(lid);
+        if (!row) return ctx.status(404, { error: "Connect a Google Business Profile first", code: "GMB_NOT_FOUND" });
+        if (parsed.data.enabled) {
+            const blocked = await automationBlocker(lid, row.locationAddon?.status);
+            if (blocked) return ctx.status(blocked.status, blocked.body);
+        }
+
+        await db.update(gmb).set({ autoReply: parsed.data.enabled, updated: new Date() }).where(eq(gmb.id, row.id));
+        return { autoReply: parsed.data.enabled };
     })
     // The owner edits a scheduled post: its text, and optionally a library photo in place of its own.
     // The publish job reads the row when it runs.
