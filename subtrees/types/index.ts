@@ -49,3 +49,5 @@ export * from "./website";
 export * from "./wallet";
 export * from "./workflows";
 export * from "./bulkRuns";
+export * from "./gmb";
+export * from "./addon";
