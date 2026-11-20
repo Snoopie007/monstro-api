@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 import { redisConfig, queueConfig } from "@/config";
-import { BULK_RUN_QUEUE, GMB_POST_QUEUE, type BulkRunJobData, type GMBDraftJobData } from "@/subtrees/bullmq";
+import { BULK_RUN_QUEUE, GMB_JOB_OPTIONS, GMB_QUEUE, type BulkRunJobData, type GMBDraftJobData } from "@/subtrees/bullmq";
 
 export const testQueue = new Queue('test', {
     connection: redisConfig,
@@ -45,15 +45,10 @@ export const bulkRunQueue = new Queue<BulkRunJobData>(BULK_RUN_QUEUE, {
     }
 });
 
-// The API only queues the first draft. Keep these options in step with the worker's gmb-posts queue.
-export const gmbPostQueue = new Queue<GMBDraftJobData>(GMB_POST_QUEUE, {
+// The API queues drafts only (buildGMBDraftJob); workers run them.
+export const gmbQueue = new Queue<GMBDraftJobData>(GMB_QUEUE, {
     connection: redisConfig,
-    defaultJobOptions: {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 60 * 1000 },
-        removeOnComplete: true,
-        removeOnFail: { age: 60 * 60 * 24 * 7 },
-    }
+    defaultJobOptions: GMB_JOB_OPTIONS,
 });
 
 invoiceQueue.on('error', (err) => {
@@ -68,6 +63,6 @@ bulkRunQueue.on('error', (err) => {
     console.error('Bulk run queue error:', err);
 });
 
-gmbPostQueue.on('error', (err) => {
-    console.error('GMB post queue error:', err);
+gmbQueue.on('error', (err) => {
+    console.error('GMB queue error:', err);
 });

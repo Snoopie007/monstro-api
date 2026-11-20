@@ -138,14 +138,12 @@ export const gmbPosts = pgTable(
 		/** Every post has a photo. */
 		photoUrl: text("photo_url").notNull(),
 		photoSource: text("photo_source").$type<GMBPostPhotoSource>().notNull(),
-		/** `gmb_post_photos.id` for uploads; the Google review name for review photos. */
-		/** photo_ref: which photo. upload: gmb_post_photos.id; review: "<review name>#<media index>". Published posts are the record of used photos. */
-		photoRef: text("photo_ref"),
+		/** Which photo. upload: `gmb_post_photos.id`; review: `<review name>#<media index>`. Published posts are the record of used photos. */
+		photoRef: text("photo_ref").notNull(),
 		scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
 		publishedAt: timestamp("published_at", { withTimezone: true }),
 		/** Google's `accounts/../locations/../localPosts/..` name once published. */
 		googlePostName: text("google_post_name"),
-		searchUrl: text("search_url"),
 		/** Why the post failed or was canceled. */
 		error: text("error"),
 		created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

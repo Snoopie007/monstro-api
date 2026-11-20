@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { gmb, gmbKeywordScans, gmbKeywords, gmbPostPhotos, gmbPosts } from "./gmb";
+import { gmb, gmbKeywordScans, gmbKeywords } from "./gmb";
 import { locationAddons } from "./addons";
 import { workflows, workflowTriggers, workflowQueues, workflowLogs } from "./workflow";
 
@@ -1314,8 +1314,6 @@ export const gmbRelations = relations(gmb, ({ one, many }) => ({
         references: [locationAddons.id],
     }),
     keywords: many(gmbKeywords),
-    posts: many(gmbPosts),
-    postPhotos: many(gmbPostPhotos),
 }));
 
 export const gmbKeywordsRelations = relations(gmbKeywords, ({ one }) => ({
@@ -1329,19 +1327,5 @@ export const gmbKeywordScansRelations = relations(gmbKeywordScans, ({ one }) => 
     keyword: one(gmbKeywords, {
         fields: [gmbKeywordScans.keywordId],
         references: [gmbKeywords.id],
-    }),
-}));
-
-export const gmbPostsRelations = relations(gmbPosts, ({ one }) => ({
-    gmb: one(gmb, {
-        fields: [gmbPosts.gmbId],
-        references: [gmb.id],
-    }),
-}));
-
-export const gmbPostPhotosRelations = relations(gmbPostPhotos, ({ one }) => ({
-    gmb: one(gmb, {
-        fields: [gmbPostPhotos.gmbId],
-        references: [gmb.id],
     }),
 }));

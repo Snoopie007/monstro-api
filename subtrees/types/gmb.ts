@@ -501,6 +501,19 @@ export type GMBProfileResponse = {
 	performance: GMBPerformance | null;
 };
 
+/** GET /gmb/posts — the Pro automations' switches, the auto-post pipeline and the photo library. */
+export type GMBPostsResponse = {
+	autoPost: boolean;
+	/** The daily review auto-reply (its switch is on the Reviews card). */
+	autoReply: boolean;
+	/** The post waiting to go out. A profile has at most one. */
+	scheduled: GMBPost | null;
+	/** Posts that didn't publish, newest first. */
+	failed: GMBPost[];
+	/** Owner's photo library, newest first. */
+	photos: GMBPostPhoto[];
+};
+
 /** Managed Google Business Profile. `profile` comes from the row select. */
 export type GMB = typeof gmb.$inferSelect & {
 	title: string | null;
