@@ -1,4 +1,6 @@
 import { relations } from "drizzle-orm";
+import { gmb, gmbKeywordScans, gmbKeywords } from "./gmb";
+import { locationAddons } from "./addons";
 import { workflows, workflowTriggers, workflowQueues, workflowLogs } from "./workflow";
 
 export const workflowsRelations = relations(workflows, ({ one, many }) => ({
@@ -1289,4 +1291,41 @@ export const botMessagesRelations = relations(botMessages, ({ one }) => ({
 		fields: [botMessages.botId],
 		references: [bots.id],
 	}),
+}));
+
+export const locationAddonsRelations = relations(locationAddons, ({ one }) => ({
+    location: one(locations, {
+        fields: [locationAddons.locationId],
+        references: [locations.id],
+    }),
+    gmb: one(gmb, {
+        fields: [locationAddons.id],
+        references: [gmb.addonId],
+    }),
+}));
+
+export const gmbRelations = relations(gmb, ({ one, many }) => ({
+    location: one(locations, {
+        fields: [gmb.locationId],
+        references: [locations.id],
+    }),
+    locationAddon: one(locationAddons, {
+        fields: [gmb.addonId],
+        references: [locationAddons.id],
+    }),
+    keywords: many(gmbKeywords),
+}));
+
+export const gmbKeywordsRelations = relations(gmbKeywords, ({ one }) => ({
+    gmb: one(gmb, {
+        fields: [gmbKeywords.gmbId],
+        references: [gmb.id],
+    }),
+}));
+
+export const gmbKeywordScansRelations = relations(gmbKeywordScans, ({ one }) => ({
+    keyword: one(gmbKeywords, {
+        fields: [gmbKeywordScans.keywordId],
+        references: [gmbKeywords.id],
+    }),
 }));
