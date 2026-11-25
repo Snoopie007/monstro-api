@@ -237,13 +237,13 @@ export async function handleStripePlanCharge({
             if (!success && isPaymentDecline("stripe", failedCode)) await dispatchPaymentFailed(tx, transaction.id);
         }
 
-        // The first paid charge is what activates a staff-created card plan, so the member becomes
-        // active with it, as the cash, Square and deferred activations already do. Renewals leave the
-        // member's status alone, and an archived member stays archived.
-        const activateMember = () => tx.update(memberLocations).set({ status: "active", updated: now }).where(and(
+        // A plan's first paid charge makes the member active, as the cash, Square and deferred
+        // activations already do. After that, a paid charge only reactivates a member that staff
+        // marked past due. An archived member stays archived.
+        const activateMember = (isFirstCharge: boolean) => tx.update(memberLocations).set({ status: "active", updated: now }).where(and(
             eq(memberLocations.memberId, memberId),
             eq(memberLocations.locationId, locationId),
-            ne(memberLocations.status, "archived"),
+            isFirstCharge ? ne(memberLocations.status, "archived") : eq(memberLocations.status, "past_due"),
         ));
 
         if (memberPlanId.startsWith("pkg_")) {
@@ -251,7 +251,7 @@ export async function handleStripePlanCharge({
                 const [pkg] = await tx.select({ status: memberPackages.status }).from(memberPackages)
                     .where(eq(memberPackages.id, memberPlanId)).limit(1).for("update");
                 await tx.update(memberPackages).set({ status: "active" }).where(eq(memberPackages.id, memberPlanId));
-                if (pkg?.status === "incomplete") await activateMember();
+                await activateMember(pkg?.status === "incomplete");
             }
             return;
         }
@@ -270,6 +270,6 @@ export async function handleStripePlanCharge({
             eq(memberSubscriptions.id, memberPlanId),
             sql`${memberSubscriptions.parentId} is null`,
         ));
-        if (success && subscription?.status === "incomplete" && subscription.parentId === null) await activateMember();
+        if (success) await activateMember(subscription?.status === "incomplete" && subscription.parentId === null);
     });
 }
