@@ -3,8 +3,8 @@ import { strict as assert } from "node:assert";
 import type { PaymentType } from "@/subtrees/types";
 import type { Currency } from "@/subtrees/types/currency";
 import { db } from "@/db/db";
-import { integrations, locationState, memberInvoices, memberPackages, memberSubscriptions, transactions } from "@/subtrees/schemas";
-import { and, eq, sql } from "drizzle-orm";
+import { integrations, locationState, memberInvoices, memberLocations, memberPackages, memberSubscriptions, transactions } from "@/subtrees/schemas";
+import { and, eq, ne, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { dispatchPaymentFailed } from "@/subtrees/utils/server/workflows";
 import { isPaymentDecline } from "@/subtrees/utils/workflow/payments";
@@ -237,13 +237,27 @@ export async function handleStripePlanCharge({
             if (!success && isPaymentDecline("stripe", failedCode)) await dispatchPaymentFailed(tx, transaction.id);
         }
 
+        // The first paid charge is what activates a staff-created card plan, so the member becomes
+        // active with it, as the cash, Square and deferred activations already do. Renewals leave the
+        // member's status alone, and an archived member stays archived.
+        const activateMember = () => tx.update(memberLocations).set({ status: "active", updated: now }).where(and(
+            eq(memberLocations.memberId, memberId),
+            eq(memberLocations.locationId, locationId),
+            ne(memberLocations.status, "archived"),
+        ));
+
         if (memberPlanId.startsWith("pkg_")) {
             if (success) {
+                const [pkg] = await tx.select({ status: memberPackages.status }).from(memberPackages)
+                    .where(eq(memberPackages.id, memberPlanId)).limit(1).for("update");
                 await tx.update(memberPackages).set({ status: "active" }).where(eq(memberPackages.id, memberPlanId));
+                if (pkg?.status === "incomplete") await activateMember();
             }
             return;
         }
 
+        const [subscription] = await tx.select({ status: memberSubscriptions.status, parentId: memberSubscriptions.parentId })
+            .from(memberSubscriptions).where(eq(memberSubscriptions.id, memberPlanId)).limit(1).for("update");
         await tx.update(memberSubscriptions).set({
             ...(success ? {
                 metadata: sql`case when ${memberSubscriptions.metadata}->'stripeMigration'->>'state' = 'armed'
@@ -256,5 +270,6 @@ export async function handleStripePlanCharge({
             eq(memberSubscriptions.id, memberPlanId),
             sql`${memberSubscriptions.parentId} is null`,
         ));
+        if (success && subscription?.status === "incomplete" && subscription.parentId === null) await activateMember();
     });
 }
