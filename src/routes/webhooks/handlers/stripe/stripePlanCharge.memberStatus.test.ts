@@ -3,7 +3,8 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "@/subtrees/schemas";
 
-// Real database checks: a plan's first paid charge also makes the member active.
+// Real database checks: a plan's first paid charge makes the member active, and a paid charge
+// reactivates a member marked past due.
 describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Stripe plan charge member status", () => {
     const url = process.env.WORKFLOW_TEST_DATABASE_URL!;
     const namespace = `stripe_member_status_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -74,6 +75,18 @@ describe.skipIf(!process.env.WORKFLOW_TEST_DATABASE_URL)("Stripe plan charge mem
         await seed("sub_qa", "incomplete", "incomplete");
         await charge("sub_qa", false);
         expect(await memberStatus()).toBe("incomplete");
+    });
+
+    test("a paid renewal reactivates a member marked past due", async () => {
+        await seed("sub_qa", "past_due", "past_due");
+        await charge("sub_qa");
+        expect(await memberStatus()).toBe("active");
+    });
+
+    test("a declined renewal keeps a member marked past due", async () => {
+        await seed("sub_qa", "past_due", "past_due");
+        await charge("sub_qa", false);
+        expect(await memberStatus()).toBe("past_due");
     });
 
     test("an archived member stays archived", async () => {
