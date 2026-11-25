@@ -299,8 +299,13 @@ export default class S3Bucket {
 
 		if (error) throw error;
 
-		const publicUrl = `https://${this.BUCKET_NAME}.s3.${this.REGION}.amazonaws.com/${key}`;
+		const publicUrl = this.getPublicUrl(key);
 
 		return { uploadUrl, publicUrl };
+	}
+
+	/** Public URL of an object key, the same one getPresignedUploadUrl returns. */
+	getPublicUrl(key: string) {
+		return `https://${this.BUCKET_NAME}.s3.${this.REGION}.amazonaws.com/${key}`;
 	}
 }

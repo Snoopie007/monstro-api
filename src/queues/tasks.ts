@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 import { redisConfig, queueConfig } from "@/config";
-import { BULK_RUN_QUEUE, type BulkRunJobData } from "@/subtrees/bullmq";
+import { BULK_RUN_QUEUE, GMB_JOB_OPTIONS, GMB_QUEUE, type BulkRunJobData, type GMBDraftJobData } from "@/subtrees/bullmq";
 
 export const testQueue = new Queue('test', {
     connection: redisConfig,
@@ -45,6 +45,12 @@ export const bulkRunQueue = new Queue<BulkRunJobData>(BULK_RUN_QUEUE, {
     }
 });
 
+// The API queues drafts only (buildGMBDraftJob); workers run them.
+export const gmbQueue = new Queue<GMBDraftJobData>(GMB_QUEUE, {
+    connection: redisConfig,
+    defaultJobOptions: GMB_JOB_OPTIONS,
+});
+
 invoiceQueue.on('error', (err) => {
     console.error('Invoice queue error:', err);
 });
@@ -55,4 +61,8 @@ classQueue.on('error', (err) => {
 
 bulkRunQueue.on('error', (err) => {
     console.error('Bulk run queue error:', err);
+});
+
+gmbQueue.on('error', (err) => {
+    console.error('GMB queue error:', err);
 });

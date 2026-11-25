@@ -45,3 +45,5 @@ export * from "./relations";
 export * from "./wallets";
 export * from "./WebsiteContents";
 export * from "./workflow";
+export * from "./gmb";
+export * from "./addons";
