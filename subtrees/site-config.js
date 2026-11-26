@@ -1079,7 +1079,8 @@ var SiteLocationSchema = z32.object({
 }).strict();
 var RenderedSiteLocationSchema = SiteLocationSchema.extend({
   mapQuery: z32.string().min(1).max(500).optional(),
-  hoursDescription: z32.string().min(1).max(2000).optional()
+  hoursDescription: z32.string().min(1).max(2000).optional(),
+  reviewPlaceId: z32.string().trim().min(1).max(256).optional()
 }).strict();
 var SiteLocationOverrideSchema = z32.object({
   name: z32.string().trim().max(200).optional(),
@@ -1868,18 +1869,19 @@ function replacePageTemplateTokens(value, businessName) {
 function materializeSitePageTemplate(input, businessName) {
   return SitePageTemplateSchema.parse(normalizeSitePageTemplateV2(replacePageTemplateTokens(input, businessName)));
 }
-var BuiltinPageIdSchema = z37.enum(["schedules", "blog", "download", "shop", "shop-plans"]);
+var BuiltinPageIdSchema = z37.enum(["schedules", "blog", "download", "shop", "shop-plans", "review"]);
 var BUILTIN_PAGE_PATHS = {
   "/schedules": "schedules",
   "/blog": "blog",
   "/download": "download",
   "/shop": "shop",
-  "/shop/plans": "shop-plans"
+  "/shop/plans": "shop-plans",
+  "/lp/review": "review"
 };
 var SiteBuiltinPageSchema = SitePageBaseSchema.extend({
   kind: z37.literal("builtin"),
   id: BuiltinPageIdSchema,
-  path: z37.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans"])
+  path: z37.enum(["/schedules", "/blog", "/download", "/shop", "/shop/plans", "/lp/review"])
 }).strict().refine((page) => BUILTIN_PAGE_PATHS[page.path] === page.id, "Builtin page ID and path must match");
 var SitePageSchema = z37.union([
   SiteSectionsPageSchema,
@@ -2349,6 +2351,7 @@ function resolveRenderedTenantContext(config, context) {
       const override = connection?.override ?? (location.id === context.primaryLocationId ? config.locationOverride : undefined);
       return {
         ...applySiteLocationOverride(location, override),
+        ...location.googlePlaceId ? { reviewPlaceId: location.googlePlaceId } : {},
         ...override?.mapQuery ? { mapQuery: override.mapQuery } : {},
         ...override?.hoursDescription ? { hoursDescription: override.hoursDescription } : {}
       };
