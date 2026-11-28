@@ -4,13 +4,15 @@ import { z } from "zod";
 import { db } from "@/db/db";
 import { gmbQueue } from "@/queues";
 import { buildGMBDraftJob, gmbPhotoKey } from "@/subtrees/bullmq";
-import { gmb, gmbPostPhotos, gmbPosts, integrations } from "@/subtrees/schemas";
+import { gmb, gmbPostPhotos, gmbPosts, integrations, locations } from "@/subtrees/schemas";
 import { AddonStatus, type GMBPost } from "@/subtrees/types";
 import { loadPostContext, writeGMBPost } from "@/subtrees/utils/server/gmbPostWriter";
+import { geotagJpeg, photoCoordinates } from "@/libs/photoGeotag";
 import S3Bucket from "@/libs/s3";
 
 const s3 = new S3Bucket();
 const MAX_PHOTOS = 50;
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ToggleSchema = z.object({ enabled: z.boolean() }).strict();
 const PhotoSaveSchema = z.object({ url: z.string().url().max(2048) }).strict();
 
@@ -19,7 +21,7 @@ const PhotoUploadSchema = z.object({
     file: z.object({
         name: z.string().trim().min(1).max(200),
         type: z.enum(["image/jpeg", "image/png"]),
-        size: z.number().int().positive().max(5 * 1024 * 1024),
+        size: z.number().int().positive().max(MAX_PHOTO_BYTES),
     }),
 }).strict();
 
@@ -75,6 +77,33 @@ function isOurUpload(value: string, lid: string, gmbId: string) {
     const url = new URL(value);
 
     return !url.search && !url.hash && url.href.startsWith(s3.getPublicUrl(`${photoFolder(lid, gmbId)}/`));
+}
+
+/**
+ * Writes the business's coordinates into an uploaded JPEG and overwrites it, so the URL stays the same.
+ * Best effort: a PNG, a profile with no coordinates, or a failure leaves the file as uploaded.
+ */
+async function geotagUpload(url: string, gmbRow: Pick<typeof gmb.$inferSelect, "locationId" | "profile">) {
+    try {
+        const location = await db.query.locations.findFirst({
+            where: eq(locations.id, gmbRow.locationId),
+            columns: { metadata: true },
+        });
+        const coordinates = photoCoordinates(gmbRow.profile, location?.metadata);
+        if (!coordinates) return;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Download failed (${res.status})`);
+        if (Number(res.headers.get("content-length")) > MAX_PHOTO_BYTES) return;
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        // Only JPEGs get EXIF here; PNGs are left as uploaded.
+        if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return;
+
+        // isOurUpload checked the URL, so its path is the S3 key.
+        await s3.uploadBuffer(geotagJpeg(bytes, coordinates), new URL(url).pathname.slice(1), "image/jpeg");
+    } catch (error) {
+        console.error("[GMB Photos] Geotag failed", error);
+    }
 }
 
 /**
@@ -225,6 +254,7 @@ export const xGmb = new Elysia({ prefix: "/gmb" })
         const total = await db.$count(gmbPostPhotos, eq(gmbPostPhotos.gmbId, gmbRow.id));
         if (total >= MAX_PHOTOS) return status(400, { error: `You can keep up to ${MAX_PHOTOS} photos`, code: "PHOTO_LIMIT" });
 
+        await geotagUpload(parsed.data.url, gmbRow);
         const [photo] = await db.insert(gmbPostPhotos).values({ gmbId: gmbRow.id, url: parsed.data.url }).returning();
 
         return status(201, { photo });
